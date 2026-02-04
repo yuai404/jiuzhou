@@ -7,7 +7,12 @@
         reverse_proxy {$API_HOST:server:6011}
     }
 
-    # WebSocket proxy
+    # WebSocket proxy for game socket
+    handle /game-socket/* {
+        reverse_proxy {$API_HOST:server:6011}
+    }
+
+    # WebSocket proxy for socket.io (fallback)
     handle /socket.io/* {
         reverse_proxy {$API_HOST:server:6011}
     }
