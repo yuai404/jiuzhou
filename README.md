@@ -35,8 +35,8 @@ docker-compose up -d
 # 初始化 Swarm（首次）
 docker swarm init
 
-# 部署服务
-docker stack deploy -c docker-stack.yml jiuzhou
+# 部署服务（--with-registry-auth 传递镜像仓库认证信息）
+docker stack deploy --with-registry-auth -c docker-stack.yml jiuzhou
 
 # 查看服务状态
 docker stack services jiuzhou
@@ -46,13 +46,13 @@ docker stack services jiuzhou
 
 ```bash
 # 更新前端
-docker service update --image ccr.ccs.tencentyun.com/tcb-100001011660-qtgo/jiuzhou-client:latest jiuzhou_client
+docker service update --with-registry-auth --image ccr.ccs.tencentyun.com/tcb-100001011660-qtgo/jiuzhou-client:latest jiuzhou_client
 
 # 更新后端
-docker service update --image ccr.ccs.tencentyun.com/tcb-100001011660-qtgo/jiuzhou-server:latest jiuzhou_server
+docker service update --with-registry-auth --image ccr.ccs.tencentyun.com/tcb-100001011660-qtgo/jiuzhou-server:latest jiuzhou_server
 
 # 或重新部署整个 stack
-docker stack deploy -c docker-stack.yml jiuzhou
+docker stack deploy --with-registry-auth -c docker-stack.yml jiuzhou
 ```
 
 **常用管理命令：**
