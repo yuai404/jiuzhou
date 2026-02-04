@@ -20,7 +20,12 @@ const resolveApiBase = (): string => {
 
   const protocol = window.location.protocol || 'http:';
   const hostname = window.location.hostname;
-  const runtimeDefault = `${protocol}//${hostname}:6011/api`;
+
+  // 生产环境使用同域名，开发环境使用 6011 端口
+  const isDev = isLoopbackHostname(hostname);
+  const runtimeDefault = isDev
+    ? `${protocol}//${hostname}:6011/api`
+    : `${protocol}//${hostname}/api`;
 
   const base = fromEnv || runtimeDefault;
 
