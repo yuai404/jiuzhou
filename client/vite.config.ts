@@ -14,12 +14,36 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     base,
     build: {
-      // 资源文件名带哈希，利于 CDN 缓存
       rollupOptions: {
         output: {
           assetFileNames: 'assets/[name]-[hash][extname]',
           chunkFileNames: 'assets/[name]-[hash].js',
           entryFileNames: 'assets/[name]-[hash].js',
+          // 基于模块路径的智能分包策略
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              // Ant Design 全家桶（包括 dayjs，避免循环依赖）
+              if (id.includes('antd') || id.includes('@ant-design') || id.includes('rc-')) {
+                return 'antd-vendor'
+              }
+              // React 核心
+              if (id.includes('react-dom') || id.includes('/react/')) {
+                return 'react-vendor'
+              }
+              // 路由
+              if (id.includes('react-router')) {
+                return 'router'
+              }
+              // 游戏框架
+              if (id.includes('boardgame.io')) {
+                return 'boardgame'
+              }
+              // 网络相关
+              if (id.includes('socket.io') || id.includes('axios')) {
+                return 'network'
+              }
+            }
+          },
         },
       },
     },

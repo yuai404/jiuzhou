@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import { ConfigProvider, App as AntdApp, Modal, theme as antdTheme } from 'antd';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { ConfigProvider, App as AntdApp, Modal, Spin, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import Auth from './pages/Auth';
-import Game from './pages/Game';
 import { verifySession, checkCharacter } from './services/api';
 import { gameSocket } from './services/gameSocket';
 import './App.css';
+
+// 懒加载 Game 组件，减少首屏加载体积
+const Game = lazy(() => import('./pages/Game'));
 
 const THEME_STORAGE_KEY = 'ui_theme_v1';
 
@@ -126,7 +128,13 @@ function App() {
     >
       <AntdApp>
         {isLoggedIn ? (
-          <Game onLogout={handleLogout} />
+          <Suspense fallback={
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+              <Spin size="large" tip="加载游戏中..." />
+            </div>
+          }>
+            <Game onLogout={handleLogout} />
+          </Suspense>
         ) : (
           <Auth onLoginSuccess={() => setIsLoggedIn(true)} />
         )}
