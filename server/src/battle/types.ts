@@ -1,0 +1,399 @@
+/**
+ * 九州修仙录 - 战斗系统类型定义
+ */
+
+// ============================================
+// 战斗单位
+// ============================================
+export interface BattleUnit {
+  id: string;
+  name: string;
+  type: 'player' | 'monster' | 'npc' | 'summon';
+  sourceId: number | string;  // 原始数据ID（角色ID/怪物定义ID）
+  
+  // 基础属性快照（战斗开始时从数据库读取）
+  baseAttrs: BattleAttrs;
+  // 当前属性（含Buff修正）
+  currentAttrs: BattleAttrs;
+  
+  // 当前状态
+  qixue: number;
+  lingqi: number;
+  
+  // 护盾
+  shields: Shield[];
+  
+  // Buff/Debuff
+  buffs: ActiveBuff[];
+  
+  // 技能与冷却
+  skills: BattleSkill[];
+  skillCooldowns: Record<string, number>;
+  
+  // 控制递减（PVP用）
+  controlDiminishing: Record<string, ControlDiminishing>;
+  
+  // 状态
+  isAlive: boolean;
+  canAct: boolean;
+  
+  // 战斗统计
+  stats: BattleStats;
+}
+
+export interface BattleAttrs {
+  max_qixue: number;
+  max_lingqi: number;
+  wugong: number;
+  fagong: number;
+  wufang: number;
+  fafang: number;
+  sudu: number;
+  mingzhong: number;
+  shanbi: number;
+  zhaojia: number;
+  baoji: number;
+  baoshang: number;
+  kangbao: number;
+  zengshang: number;
+  zhiliao: number;
+  jianliao: number;
+  xixue: number;
+  lengque: number;
+  kongzhi_kangxing: number;
+  jin_kangxing: number;
+  mu_kangxing: number;
+  shui_kangxing: number;
+  huo_kangxing: number;
+  tu_kangxing: number;
+  qixue_huifu: number;
+  lingqi_huifu: number;
+  realm?: string;
+  element?: string;
+}
+
+
+export interface BattleStats {
+  damageDealt: number;
+  damageTaken: number;
+  healingDone: number;
+  healingReceived: number;
+  killCount: number;
+}
+
+export interface ControlDiminishing {
+  count: number;
+  resetRound: number;
+}
+
+// ============================================
+// 护盾
+// ============================================
+export interface Shield {
+  id: string;
+  sourceSkillId: string;
+  value: number;
+  maxValue: number;
+  duration: number;  // -1为永久
+  absorbType: 'all' | 'physical' | 'magic';
+  priority: number;
+}
+
+// ============================================
+// Buff/Debuff
+// ============================================
+export interface ActiveBuff {
+  id: string;
+  buffDefId: string;
+  name: string;
+  type: 'buff' | 'debuff';
+  category: string;
+  sourceUnitId: string;
+  
+  remainingDuration: number;
+  stacks: number;
+  maxStacks: number;
+  
+  attrModifiers?: AttrModifier[];
+  dot?: DotEffect;
+  hot?: HotEffect;
+  control?: string;
+  
+  tags: string[];
+  dispellable: boolean;
+}
+
+export interface AttrModifier {
+  attr: string;
+  value: number;
+  mode: 'flat' | 'percent';
+}
+
+export interface DotEffect {
+  damage: number;
+  damageType: 'physical' | 'magic' | 'true';
+  element?: string;
+}
+
+export interface HotEffect {
+  heal: number;
+}
+
+// ============================================
+// 技能
+// ============================================
+export interface BattleSkill {
+  id: string;
+  name: string;
+  source: 'innate' | 'technique' | 'equipment' | 'item';
+  sourceId?: string;
+  
+  cost: SkillCost;
+  cooldown: number;
+  
+  targetType: SkillTargetType;
+  targetCount: number;
+  
+  damageType?: 'physical' | 'magic' | 'true';
+  element: string;
+  coefficient: number;
+  fixedDamage: number;
+  
+  effects: SkillEffect[];
+  conditions?: SkillConditions;
+  
+  triggerType: 'active' | 'passive' | 'counter' | 'chase';
+  aiPriority: number;
+}
+
+export interface SkillCost {
+  lingqi?: number;
+  qixue?: number;
+}
+
+export type SkillTargetType = 
+  | 'self' 
+  | 'single_enemy' 
+  | 'single_ally' 
+  | 'all_enemy' 
+  | 'all_ally' 
+  | 'random_enemy'
+  | 'random_ally';
+
+export interface SkillEffect {
+  type: 'damage' | 'heal' | 'shield' | 'buff' | 'debuff' | 'dispel' | 'resource';
+  value?: number;
+  valueType?: 'flat' | 'percent' | 'scale';
+  scaleAttr?: string;
+  scaleRate?: number;
+  buffDefId?: string;
+  buffDuration?: number;
+  buffStacks?: number;
+  dispelType?: 'buff' | 'debuff' | 'all';
+  dispelCount?: number;
+  controlType?: string;
+  controlRate?: number;  // 万分比
+  controlDuration?: number;
+  chance?: number;  // 万分比
+  resourceType?: 'lingqi' | 'qixue';  // 资源类型
+}
+
+export interface SkillConditions {
+  minQixuePercent?: number;
+  maxQixuePercent?: number;
+  requireBuff?: string;
+  requireDebuff?: string;
+}
+
+// ============================================
+// 战斗状态
+// ============================================
+export interface BattleState {
+  battleId: string;
+  battleType: 'pve' | 'pvp';
+  
+  teams: {
+    attacker: BattleTeam;
+    defender: BattleTeam;
+  };
+  
+  roundCount: number;
+  currentTeam: 'attacker' | 'defender';
+  currentUnitIndex: number;
+  phase: 'roundStart' | 'action' | 'roundEnd' | 'finished';
+  
+  firstMover: 'attacker' | 'defender';
+  
+  logs: BattleLogEntry[];
+  
+  result?: 'attacker_win' | 'defender_win' | 'draw';
+  rewards?: BattleRewards;
+  
+  // 防作弊：服务端随机种子
+  randomSeed: number;
+  randomIndex: number;
+}
+
+export interface BattleTeam {
+  odwnerId?: number;  // 玩家用户ID
+  units: BattleUnit[];
+  totalSpeed: number;
+}
+
+// ============================================
+// 战斗日志
+// ============================================
+export type BattleLogEntry = 
+  | ActionLog 
+  | DotLog 
+  | HotLog 
+  | BuffExpireLog 
+  | DeathLog
+  | RoundLog;
+
+export interface ActionLog {
+  type: 'action';
+  round: number;
+  actorId: string;
+  actorName: string;
+  skillId: string;
+  skillName: string;
+  targets: TargetResult[];
+}
+
+export interface TargetResult {
+  targetId: string;
+  targetName: string;
+  damage?: number;
+  heal?: number;
+  isMiss?: boolean;
+  isCrit?: boolean;
+  isParry?: boolean;
+  isElementBonus?: boolean;
+  shieldAbsorbed?: number;
+  buffsApplied?: string[];
+  buffsRemoved?: string[];
+  controlApplied?: string;
+  controlResisted?: boolean;
+}
+
+export interface DotLog {
+  type: 'dot';
+  round: number;
+  unitId: string;
+  unitName: string;
+  buffName: string;
+  damage: number;
+}
+
+export interface HotLog {
+  type: 'hot';
+  round: number;
+  unitId: string;
+  unitName: string;
+  buffName: string;
+  heal: number;
+}
+
+export interface BuffExpireLog {
+  type: 'buff_expire';
+  round: number;
+  unitId: string;
+  unitName: string;
+  buffName: string;
+}
+
+export interface DeathLog {
+  type: 'death';
+  round: number;
+  unitId: string;
+  unitName: string;
+  killerId?: string;
+  killerName?: string;
+}
+
+export interface RoundLog {
+  type: 'round_start' | 'round_end';
+  round: number;
+}
+
+// ============================================
+// 战斗奖励
+// ============================================
+export interface BattleRewards {
+  exp: number;
+  silver: number;
+  items: Array<{
+    itemDefId: string;
+    quantity: number;
+  }>;
+}
+
+// ============================================
+// 伤害计算结果
+// ============================================
+export interface DamageResult {
+  damage: number;
+  isMiss: boolean;
+  isParry: boolean;
+  isCrit: boolean;
+  isElementBonus: boolean;
+  shieldAbsorbed: number;
+  actualDamage: number;  // 扣血后的实际伤害
+}
+
+// ============================================
+// 战斗常量
+// ============================================
+export const BATTLE_CONSTANTS = {
+  MAX_ROUNDS_PVE: 50,
+  MAX_ROUNDS_PVP: 30,
+  
+  MIN_HIT_RATE: 2000,
+  MAX_HIT_RATE: 10000,
+  MAX_DODGE_RATE: 8000,
+  MAX_PARRY_RATE: 6000,
+  PARRY_REDUCTION: 0.7,
+  
+  MAX_CRIT_RATE: 10000,
+  MAX_CRIT_DAMAGE: 30000,
+  MAX_CRIT_RESIST: 8000,
+  
+  MAX_DAMAGE_BONUS: 10000,
+  MAX_HEAL_BONUS: 10000,
+  MAX_HEAL_REDUCTION: 8000,
+  HEAL_CAP_PERCENT: 0.5,
+  
+  MAX_LIFESTEAL: 5000,
+  MAX_CONTROL_RESIST: 8000,
+  CONTROL_DIMINISHING_RESET: 5,
+  
+  ELEMENT_COUNTER_BONUS: 1500,
+  MAX_ELEMENT_RESIST: 8000,
+  
+  BASE_LINGQI_REGEN: 10,
+  
+  DEFENSE_CONSTANT: {
+    '凡人': 50,
+    '炼精化炁·养气期': 80,
+    '炼精化炁·通脉期': 100,
+    '炼精化炁·凝炁期': 120,
+    '炼炁化神·炼己期': 160,
+    '炼炁化神·采药期': 200,
+    '炼炁化神·结胎期': 250,
+    '炼神返虚·养神期': 320,
+    '炼神返虚·还虚期': 400,
+    '炼神返虚·合道期': 500,
+    '炼虚合道·证道期': 640,
+    '炼虚合道·历劫期': 800,
+    '炼虚合道·成圣期': 1000,
+  } as Record<string, number>,
+  
+  ELEMENT_COUNTER: {
+    'jin': 'mu',
+    'mu': 'tu',
+    'tu': 'shui',
+    'shui': 'huo',
+    'huo': 'jin',
+  } as Record<string, string>,
+} as const;

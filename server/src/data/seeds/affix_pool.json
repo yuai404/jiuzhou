@@ -1,0 +1,3812 @@
+{
+  "version": 1,
+  "description": "词条池种子数据 - 完整版（覆盖所有角色属性）",
+  "pools": [
+    {
+      "id": "ap-weapon-common",
+      "name": "普通武器词条池",
+      "description": "黄品武器可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "黄": {
+            "min": 1,
+            "max": 2
+          },
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "mutex_groups": [
+          [
+            "wugong_flat",
+            "wugong_percent"
+          ],
+          [
+            "fagong_flat",
+            "fagong_percent"
+          ]
+        ],
+        "max_per_group": {
+          "output": 3,
+          "survival": 2,
+          "resource": 1
+        }
+      },
+      "affixes": [
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 3,
+              "max": 5,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 6,
+              "max": 8,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 4,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 5,
+              "max": 6,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 240,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "mingzhong_flat",
+          "name": "命中+",
+          "attr_key": "mingzhong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 8,
+              "max": 16,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 30,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 1,
+              "realm_rank_min": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-weapon-uncommon",
+      "name": "中品武器词条池",
+      "description": "玄品武器可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "mutex_groups": [
+          [
+            "wugong_flat",
+            "wugong_percent"
+          ],
+          [
+            "fagong_flat",
+            "fagong_percent"
+          ]
+        ]
+      },
+      "affixes": [
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 3,
+              "max": 6,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 6,
+              "max": 12,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 12,
+              "max": 20,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 5,
+              "max": 10,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 10,
+              "max": 16,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 85,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 280,
+              "max": 400,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 560,
+              "max": 800,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "mingzhong_flat",
+          "name": "命中+",
+          "attr_key": "mingzhong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zengshang_flat",
+          "name": "增伤+",
+          "attr_key": "zengshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "xixue_flat",
+          "name": "吸血+",
+          "attr_key": "xixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "shuxing_shuzhi_flat",
+          "name": "属性数值+",
+          "attr_key": "shuxing_shuzhi",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 2,
+              "max": 2,
+              "realm_rank_min": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-weapon-rare",
+      "name": "高品武器词条池",
+      "description": "地品及以上武器可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "legendary_chance": 0.1,
+        "mutex_groups": [
+          [
+            "wugong_flat",
+            "wugong_percent"
+          ],
+          [
+            "fagong_flat",
+            "fagong_percent"
+          ]
+        ]
+      },
+      "affixes": [
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 8,
+              "max": 16,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 16,
+              "max": 28,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 28,
+              "max": 40,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "wugong_percent",
+          "name": "物攻%",
+          "attr_key": "wugong",
+          "apply_type": "percent",
+          "group": "output",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 240,
+              "max": 400,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 640,
+              "max": 960,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 6,
+              "max": 13,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 13,
+              "max": 22,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 22,
+              "max": 32,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "fagong_percent",
+          "name": "法攻%",
+          "attr_key": "fagong",
+          "apply_type": "percent",
+          "group": "output",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 240,
+              "max": 400,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 200,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 480,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 480,
+              "max": 640,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 85,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 640,
+              "max": 960,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 960,
+              "max": 1440,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "mingzhong_flat",
+          "name": "命中+",
+          "attr_key": "mingzhong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 280,
+              "max": 400,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "zengshang_flat",
+          "name": "增伤+",
+          "attr_key": "zengshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 560,
+              "max": 800,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "xixue_flat",
+          "name": "吸血+",
+          "attr_key": "xixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 120,
+              "max": 200,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 200,
+              "max": 320,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "shuxing_shuzhi_flat",
+          "name": "属性数值+",
+          "attr_key": "shuxing_shuzhi",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 200,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 480,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 3,
+              "max": 5,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "legendary_slay",
+          "name": "斩杀（传奇）",
+          "attr_key": "special_slay",
+          "apply_type": "special",
+          "group": "legendary",
+          "weight": 5,
+          "is_legendary": true,
+          "tiers": [
+            {
+              "tier": 5,
+              "min": 400,
+              "max": 800,
+              "realm_rank_min": 4,
+              "description": "对气血低于20%的目标造成额外伤害"
+            }
+          ]
+        },
+        {
+          "key": "legendary_penetrate",
+          "name": "破甲（传奇）",
+          "attr_key": "special_penetrate",
+          "apply_type": "special",
+          "group": "legendary",
+          "weight": 5,
+          "is_legendary": true,
+          "tiers": [
+            {
+              "tier": 5,
+              "min": 800,
+              "max": 1600,
+              "realm_rank_min": 4,
+              "description": "无视目标部分防御"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-armor-common",
+      "name": "普通防具词条池",
+      "description": "黄品防具可用的词条池（头部、衣服、鞋子等）",
+      "rules": {
+        "count_by_quality": {
+          "黄": {
+            "min": 1,
+            "max": 2
+          },
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "mutex_groups": [
+          [
+            "max_qixue_flat",
+            "max_qixue_percent"
+          ],
+          [
+            "wufang_flat",
+            "wufang_percent"
+          ],
+          [
+            "fafang_flat",
+            "fafang_percent"
+          ]
+        ],
+        "max_per_group": {
+          "survival": 4,
+          "resistance": 2,
+          "utility": 1
+        }
+      },
+      "affixes": [
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 8,
+              "max": 16,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 16,
+              "max": 32,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 32,
+              "max": 48,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 8,
+              "max": 16,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 16,
+              "max": 28,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "wufang_flat",
+          "name": "物防+",
+          "attr_key": "wufang",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 5,
+              "max": 8,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "fafang_flat",
+          "name": "法防+",
+          "attr_key": "fafang",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 4,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 4,
+              "max": 6,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 24,
+              "max": 48,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "zhaojia_flat",
+          "name": "招架+",
+          "attr_key": "zhaojia",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 65,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 24,
+              "max": 48,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "kangbao_flat",
+          "name": "抗暴+",
+          "attr_key": "kangbao",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "qixue_huifu_flat",
+          "name": "气血恢复+",
+          "attr_key": "qixue_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "jin_kangxing_flat",
+          "name": "金抗+",
+          "attr_key": "jin_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "mu_kangxing_flat",
+          "name": "木抗+",
+          "attr_key": "mu_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "shui_kangxing_flat",
+          "name": "水抗+",
+          "attr_key": "shui_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "huo_kangxing_flat",
+          "name": "火抗+",
+          "attr_key": "huo_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "tu_kangxing_flat",
+          "name": "土抗+",
+          "attr_key": "tu_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "kongzhi_kangxing_flat",
+          "name": "控制抗性+",
+          "attr_key": "kongzhi_kangxing",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "jianliao_flat",
+          "name": "减疗+",
+          "attr_key": "jianliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 30,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-armor-uncommon",
+      "name": "中品防具词条池",
+      "description": "玄品防具可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "mutex_groups": [
+          [
+            "max_qixue_flat",
+            "max_qixue_percent"
+          ],
+          [
+            "wufang_flat",
+            "wufang_percent"
+          ],
+          [
+            "fafang_flat",
+            "fafang_percent"
+          ]
+        ]
+      },
+      "affixes": [
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 24,
+              "max": 48,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 48,
+              "max": 80,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 80,
+              "max": 120,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 12,
+              "max": 24,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 24,
+              "max": 40,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 40,
+              "max": 64,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "wufang_flat",
+          "name": "物防+",
+          "attr_key": "wufang",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 8,
+              "max": 14,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 14,
+              "max": 22,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "fafang_flat",
+          "name": "法防+",
+          "attr_key": "fafang",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 3,
+              "max": 6,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 6,
+              "max": 12,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 12,
+              "max": 19,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 120,
+              "max": 200,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 200,
+              "max": 320,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "zhaojia_flat",
+          "name": "招架+",
+          "attr_key": "zhaojia",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 120,
+              "max": 200,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 200,
+              "max": 320,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "kangbao_flat",
+          "name": "抗暴+",
+          "attr_key": "kangbao",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 65,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 240,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 240,
+              "max": 400,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "qixue_huifu_flat",
+          "name": "气血恢复+",
+          "attr_key": "qixue_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 5,
+              "max": 8,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "lingqi_huifu_flat",
+          "name": "灵气恢复+",
+          "attr_key": "lingqi_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 3,
+              "max": 6,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "jin_kangxing_flat",
+          "name": "金抗+",
+          "attr_key": "jin_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 200,
+              "max": 400,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "mu_kangxing_flat",
+          "name": "木抗+",
+          "attr_key": "mu_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 200,
+              "max": 400,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "shui_kangxing_flat",
+          "name": "水抗+",
+          "attr_key": "shui_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 200,
+              "max": 400,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "huo_kangxing_flat",
+          "name": "火抗+",
+          "attr_key": "huo_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 200,
+              "max": 400,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "tu_kangxing_flat",
+          "name": "土抗+",
+          "attr_key": "tu_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 200,
+              "max": 400,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "kongzhi_kangxing_flat",
+          "name": "控制抗性+",
+          "attr_key": "kongzhi_kangxing",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 240,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 240,
+              "max": 400,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "jianliao_flat",
+          "name": "减疗+",
+          "attr_key": "jianliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zhiliao_flat",
+          "name": "治疗+",
+          "attr_key": "zhiliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 30,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-armor-rare",
+      "name": "高品防具词条池",
+      "description": "地品及以上防具可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "legendary_chance": 0.1,
+        "mutex_groups": [
+          [
+            "max_qixue_flat",
+            "max_qixue_percent"
+          ],
+          [
+            "wufang_flat",
+            "wufang_percent"
+          ],
+          [
+            "fafang_flat",
+            "fafang_percent"
+          ]
+        ]
+      },
+      "affixes": [
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 120,
+              "max": 200,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 200,
+              "max": 320,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "max_qixue_percent",
+          "name": "气血上限%",
+          "attr_key": "max_qixue",
+          "apply_type": "percent",
+          "group": "survival",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 560,
+              "max": 800,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 32,
+              "max": 56,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 56,
+              "max": 96,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 96,
+              "max": 160,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "wufang_flat",
+          "name": "物防+",
+          "attr_key": "wufang",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 12,
+              "max": 20,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 20,
+              "max": 32,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 32,
+              "max": 48,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "wufang_percent",
+          "name": "物防%",
+          "attr_key": "wufang",
+          "apply_type": "percent",
+          "group": "survival",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "fafang_flat",
+          "name": "法防+",
+          "attr_key": "fafang",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 10,
+              "max": 18,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 18,
+              "max": 28,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 28,
+              "max": 40,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "fafang_percent",
+          "name": "法防%",
+          "attr_key": "fafang",
+          "apply_type": "percent",
+          "group": "survival",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 280,
+              "max": 440,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 440,
+              "max": 640,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "zhaojia_flat",
+          "name": "招架+",
+          "attr_key": "zhaojia",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 280,
+              "max": 440,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 440,
+              "max": 640,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "kangbao_flat",
+          "name": "抗暴+",
+          "attr_key": "kangbao",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 560,
+              "max": 880,
+              "realm_rank_min": 4
+            },
+            {
+              "tier": 5,
+              "min": 880,
+              "max": 1200,
+              "realm_rank_min": 5
+            }
+          ]
+        },
+        {
+          "key": "qixue_huifu_flat",
+          "name": "气血恢复+",
+          "attr_key": "qixue_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 6,
+              "max": 12,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 12,
+              "max": 20,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "lingqi_huifu_flat",
+          "name": "灵气恢复+",
+          "attr_key": "lingqi_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 8,
+              "max": 14,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "jin_kangxing_flat",
+          "name": "金抗+",
+          "attr_key": "jin_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 480,
+              "max": 800,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 800,
+              "max": 1200,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "mu_kangxing_flat",
+          "name": "木抗+",
+          "attr_key": "mu_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 480,
+              "max": 800,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 800,
+              "max": 1200,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "shui_kangxing_flat",
+          "name": "水抗+",
+          "attr_key": "shui_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 480,
+              "max": 800,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 800,
+              "max": 1200,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "huo_kangxing_flat",
+          "name": "火抗+",
+          "attr_key": "huo_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 480,
+              "max": 800,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 800,
+              "max": 1200,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "tu_kangxing_flat",
+          "name": "土抗+",
+          "attr_key": "tu_kangxing",
+          "apply_type": "flat",
+          "group": "resistance",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 480,
+              "max": 800,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 800,
+              "max": 1200,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "kongzhi_kangxing_flat",
+          "name": "控制抗性+",
+          "attr_key": "kongzhi_kangxing",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 560,
+              "max": 880,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "jianliao_flat",
+          "name": "减疗+",
+          "attr_key": "jianliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 200,
+              "max": 360,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 360,
+              "max": 560,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "zhiliao_flat",
+          "name": "治疗+",
+          "attr_key": "zhiliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 200,
+              "max": 360,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 360,
+              "max": 560,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "legendary_thorns",
+          "name": "荆棘（传奇）",
+          "attr_key": "special_thorns",
+          "apply_type": "special",
+          "group": "legendary",
+          "weight": 5,
+          "is_legendary": true,
+          "tiers": [
+            {
+              "tier": 5,
+              "min": 400,
+              "max": 800,
+              "realm_rank_min": 4,
+              "description": "反弹受到伤害的一部分"
+            }
+          ]
+        },
+        {
+          "key": "legendary_shield",
+          "name": "护盾（传奇）",
+          "attr_key": "special_shield",
+          "apply_type": "special",
+          "group": "legendary",
+          "weight": 5,
+          "is_legendary": true,
+          "tiers": [
+            {
+              "tier": 5,
+              "min": 800,
+              "max": 1600,
+              "realm_rank_min": 4,
+              "description": "战斗开始时获得护盾"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-accessory-common",
+      "name": "普通饰品词条池",
+      "description": "黄品饰品可用的词条池（项链、戒指、腰带等）",
+      "rules": {
+        "count_by_quality": {
+          "黄": {
+            "min": 1,
+            "max": 2
+          },
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "max_per_group": {
+          "output": 2,
+          "survival": 2,
+          "utility": 2
+        }
+      },
+      "affixes": [
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 2,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 4,
+              "max": 10,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 10,
+              "max": 20,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 8,
+              "max": 16,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 24,
+              "max": 48,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 65,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "mingzhong_flat",
+          "name": "命中+",
+          "attr_key": "mingzhong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 24,
+              "max": 48,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 16,
+              "max": 32,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 32,
+              "max": 64,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "qixue_huifu_flat",
+          "name": "气血恢复+",
+          "attr_key": "qixue_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            }
+          ]
+        },
+        {
+          "key": "lingqi_huifu_flat",
+          "name": "灵气恢复+",
+          "attr_key": "lingqi_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 85,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 1,
+              "realm_rank_min": 1
+            }
+          ]
+        },
+        {
+          "key": "fuyuan_flat",
+          "name": "福源+",
+          "attr_key": "fuyuan",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 1,
+              "realm_rank_min": 1
+            }
+          ]
+        },
+        {
+          "key": "lengque_flat",
+          "name": "冷却缩减+",
+          "attr_key": "lengque",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "zengshang_flat",
+          "name": "增伤+",
+          "attr_key": "zengshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 30,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-accessory-uncommon",
+      "name": "中品饰品词条池",
+      "description": "玄品及以上饰品可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "legendary_chance": 0.05
+      },
+      "affixes": [
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 85,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 5,
+              "max": 10,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 10,
+              "max": 16,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 4,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 8,
+              "max": 13,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 16,
+              "max": 32,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 32,
+              "max": 56,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 56,
+              "max": 88,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 12,
+              "max": 24,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 24,
+              "max": 44,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 44,
+              "max": 72,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 64,
+              "max": 128,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 128,
+              "max": 224,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 224,
+              "max": 360,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 240,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 240,
+              "max": 440,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 440,
+              "max": 680,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "mingzhong_flat",
+          "name": "命中+",
+          "attr_key": "mingzhong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 65,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 64,
+              "max": 128,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 128,
+              "max": 224,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 96,
+              "max": 176,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zhaojia_flat",
+          "name": "招架+",
+          "attr_key": "zhaojia",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 96,
+              "max": 176,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "kangbao_flat",
+          "name": "抗暴+",
+          "attr_key": "kangbao",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "qixue_huifu_flat",
+          "name": "气血恢复+",
+          "attr_key": "qixue_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 3,
+              "max": 6,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "lingqi_huifu_flat",
+          "name": "灵气恢复+",
+          "attr_key": "lingqi_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 5,
+              "max": 10,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 10,
+              "max": 16,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "fuyuan_flat",
+          "name": "福源+",
+          "attr_key": "fuyuan",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 2,
+              "max": 2,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "lengque_flat",
+          "name": "冷却缩减+",
+          "attr_key": "lengque",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 240,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 240,
+              "max": 400,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zengshang_flat",
+          "name": "增伤+",
+          "attr_key": "zengshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "xixue_flat",
+          "name": "吸血+",
+          "attr_key": "xixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 30,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zhiliao_flat",
+          "name": "治疗+",
+          "attr_key": "zhiliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 25,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "shuxing_shuzhi_flat",
+          "name": "属性数值+",
+          "attr_key": "shuxing_shuzhi",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 20,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 280,
+              "realm_rank_min": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-artifact-common",
+      "name": "普通法宝词条池",
+      "description": "黄品法宝可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "黄": {
+            "min": 1,
+            "max": 2
+          },
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "max_per_group": {
+          "output": 2,
+          "survival": 2,
+          "utility": 2
+        }
+      },
+      "affixes": [
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 3,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 6,
+              "max": 12,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 12,
+              "max": 24,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 8,
+              "max": 16,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 32,
+              "max": 64,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "lengque_flat",
+          "name": "冷却缩减+",
+          "attr_key": "lengque",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "lingqi_huifu_flat",
+          "name": "灵气恢复+",
+          "attr_key": "lingqi_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 85,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 5,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 65,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 1,
+              "max": 1,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 24,
+              "max": 48,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 48,
+              "max": 96,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "zengshang_flat",
+          "name": "增伤+",
+          "attr_key": "zengshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        },
+        {
+          "key": "shuxing_shuzhi_flat",
+          "name": "属性数值+",
+          "attr_key": "shuxing_shuzhi",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 1,
+              "min": 40,
+              "max": 80,
+              "realm_rank_min": 1
+            },
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 160,
+              "realm_rank_min": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-artifact-uncommon",
+      "name": "中品法宝词条池",
+      "description": "玄品及以上法宝可用的词条池",
+      "rules": {
+        "count_by_quality": {
+          "玄": {
+            "min": 2,
+            "max": 4
+          },
+          "地": {
+            "min": 4,
+            "max": 5
+          },
+          "天": {
+            "min": 6,
+            "max": 6
+          }
+        },
+        "allow_duplicate": false,
+        "legendary_chance": 0.08
+      },
+      "affixes": [
+        {
+          "key": "fagong_flat",
+          "name": "法攻+",
+          "attr_key": "fagong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 100,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 8,
+              "max": 14,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 14,
+              "max": 24,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "fagong_percent",
+          "name": "法攻%",
+          "attr_key": "fagong",
+          "apply_type": "percent",
+          "group": "output",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 3,
+              "min": 160,
+              "max": 320,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "wugong_flat",
+          "name": "物攻+",
+          "attr_key": "wugong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 75,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 2,
+              "max": 6,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 6,
+              "max": 11,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 11,
+              "max": 19,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "max_lingqi_flat",
+          "name": "灵气上限+",
+          "attr_key": "max_lingqi",
+          "apply_type": "flat",
+          "group": "resource",
+          "weight": 95,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 20,
+              "max": 40,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 40,
+              "max": 72,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 72,
+              "max": 120,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "max_qixue_flat",
+          "name": "气血上限+",
+          "attr_key": "max_qixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 65,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 12,
+              "max": 24,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 24,
+              "max": 44,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "baoji_flat",
+          "name": "暴击+",
+          "attr_key": "baoji",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 85,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 96,
+              "max": 176,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 176,
+              "max": 304,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 304,
+              "max": 480,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "baoshang_flat",
+          "name": "爆伤+",
+          "attr_key": "baoshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 80,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 176,
+              "max": 320,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 560,
+              "max": 880,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "lengque_flat",
+          "name": "冷却缩减+",
+          "attr_key": "lengque",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 90,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 176,
+              "max": 320,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 320,
+              "max": 560,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 560,
+              "max": 800,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "lingqi_huifu_flat",
+          "name": "灵气恢复+",
+          "attr_key": "lingqi_huifu",
+          "apply_type": "flat",
+          "group": "recovery",
+          "weight": 88,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 4,
+              "max": 8,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 8,
+              "max": 14,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 14,
+              "max": 24,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "sudu_flat",
+          "name": "速度+",
+          "attr_key": "sudu",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 70,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 1,
+              "max": 2,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 2,
+              "max": 4,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 4,
+              "max": 6,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "shanbi_flat",
+          "name": "闪避+",
+          "attr_key": "shanbi",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 60,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 144,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 144,
+              "max": 256,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "mingzhong_flat",
+          "name": "命中+",
+          "attr_key": "mingzhong",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 80,
+              "max": 144,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 144,
+              "max": 256,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zengshang_flat",
+          "name": "增伤+",
+          "attr_key": "zengshang",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 55,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 224,
+              "max": 400,
+              "realm_rank_min": 3
+            },
+            {
+              "tier": 4,
+              "min": 400,
+              "max": 640,
+              "realm_rank_min": 4
+            }
+          ]
+        },
+        {
+          "key": "shuxing_shuzhi_flat",
+          "name": "属性数值+",
+          "attr_key": "shuxing_shuzhi",
+          "apply_type": "flat",
+          "group": "output",
+          "weight": 50,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 224,
+              "max": 400,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "xixue_flat",
+          "name": "吸血+",
+          "attr_key": "xixue",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 45,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 64,
+              "max": 120,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "zhiliao_flat",
+          "name": "治疗+",
+          "attr_key": "zhiliao",
+          "apply_type": "flat",
+          "group": "utility",
+          "weight": 40,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 224,
+              "max": 400,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "kongzhi_kangxing_flat",
+          "name": "控制抗性+",
+          "attr_key": "kongzhi_kangxing",
+          "apply_type": "flat",
+          "group": "survival",
+          "weight": 35,
+          "tiers": [
+            {
+              "tier": 2,
+              "min": 120,
+              "max": 224,
+              "realm_rank_min": 2
+            },
+            {
+              "tier": 3,
+              "min": 224,
+              "max": 400,
+              "realm_rank_min": 3
+            }
+          ]
+        },
+        {
+          "key": "legendary_mana_burst",
+          "name": "灵气爆发（传奇）",
+          "attr_key": "special_mana_burst",
+          "apply_type": "special",
+          "group": "legendary",
+          "weight": 5,
+          "is_legendary": true,
+          "tiers": [
+            {
+              "tier": 5,
+              "min": 400,
+              "max": 800,
+              "realm_rank_min": 4,
+              "description": "消耗灵气时有几率不消耗"
+            }
+          ]
+        },
+        {
+          "key": "legendary_echo",
+          "name": "回响（传奇）",
+          "attr_key": "special_echo",
+          "apply_type": "special",
+          "group": "legendary",
+          "weight": 5,
+          "is_legendary": true,
+          "tiers": [
+            {
+              "tier": 5,
+              "min": 240,
+              "max": 480,
+              "realm_rank_min": 4,
+              "description": "技能有几率触发两次"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

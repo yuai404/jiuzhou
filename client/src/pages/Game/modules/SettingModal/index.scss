@@ -1,0 +1,30 @@
+.setting-modal {
+  .ant-modal-content {
+    padding: 0;
+  }
+}
+
+.setting-modal-body {
+  display: flex;
+  height: 520px;
+}
+
+.setting-left {
+  width: 180px;
+  border-right: 1px solid var(--border-color);
+}
+
+.setting-right {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}

@@ -1,0 +1,564 @@
+import { App, Button, Input, Modal, Tag } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
+import lingshiIcon from '../../../../assets/images/ui/lingshi.png';
+import tongqianIcon from '../../../../assets/images/ui/tongqian.png';
+import { SERVER_BASE, claimTaskReward, getBountyTaskOverview, getTaskOverview, setTaskTracked, submitBountyMaterials } from '../../../../services/api';
+import MainQuestPanel from './MainQuestPanel';
+import './index.scss';
+import './MainQuestPanel.scss';
+
+type TaskCategory = 'main' | 'side' | 'daily' | 'event' | 'bounty';
+
+type TaskStatus = 'ongoing' | 'turnin' | 'claimable' | 'completed';
+
+type TaskReward = { id: string; name: string; icon: string; amount: number };
+
+type TaskObjective = { text: string; done: number; total: number };
+
+type TaskItem = {
+  id: string;
+  category: TaskCategory;
+  title: string;
+  realm: string;
+  status: TaskStatus;
+  tracked: boolean;
+  desc: string;
+  objectives: TaskObjective[];
+  rewards: TaskReward[];
+  expiresAt?: string | null;
+  sourceType?: 'daily' | 'player';
+  remainingSeconds?: number | null;
+};
+
+const ITEM_ICON_GLOB = import.meta.glob('../../../../assets/images/**/*.{png,jpg,jpeg,webp,gif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const ITEM_ICON_BY_FILENAME: Record<string, string> = Object.fromEntries(
+  Object.entries(ITEM_ICON_GLOB).map(([p, url]) => {
+    const parts = p.split(/[/\\]/);
+    return [parts[parts.length - 1] ?? p, url];
+  }),
+);
+
+const resolveRewardIcon = (icon: string | null | undefined): string => {
+  const raw = (icon ?? '').trim();
+  if (!raw) return coin01;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  if (raw.startsWith('/uploads/')) return `${SERVER_BASE}${raw}`;
+  if (raw.startsWith('/assets/')) {
+    const filename = raw.split('/').filter(Boolean).pop() ?? raw;
+    return ITEM_ICON_BY_FILENAME[filename] ?? raw;
+  }
+  if (raw.startsWith('/')) return `${SERVER_BASE}${raw}`;
+  const filename = raw.split('/').filter(Boolean).pop() ?? raw;
+  return ITEM_ICON_BY_FILENAME[filename] ?? coin01;
+};
+
+const REALM_ORDER = [
+  '凡人',
+  '炼精化炁·养气期',
+  '炼精化炁·通脉期',
+  '炼精化炁·凝炁期',
+  '炼炁化神·炼己期',
+  '炼炁化神·采药期',
+  '炼炁化神·结胎期',
+  '炼神返虚·养神期',
+  '炼神返虚·还虚期',
+  '炼神返虚·合道期',
+  '炼虚合道·证道期',
+  '炼虚合道·历劫期',
+  '炼虚合道·成圣期',
+];
+
+const getRealmRank = (realm: string): number => {
+  const idx = REALM_ORDER.indexOf(realm);
+  return idx >= 0 ? idx : 0;
+};
+
+const hasMessage = (value: unknown): value is { message: string } => {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.message === 'string' && record.message.trim().length > 0;
+};
+
+const getErrorMessage = (err: unknown): string => {
+  if (typeof err === 'string') return err;
+  if (hasMessage(err)) return err.message;
+  return '';
+};
+
+const categoryLabels: Record<TaskCategory, string> = {
+  main: '主线任务',
+  side: '支线任务',
+  daily: '日常任务',
+  event: '活动任务',
+  bounty: '悬赏任务',
+};
+
+const statusText: Record<TaskStatus, string> = {
+  ongoing: '进行中',
+  turnin: '可提交',
+  claimable: '可领取',
+  completed: '已完成',
+};
+
+const statusColor: Record<TaskStatus, string> = {
+  ongoing: 'blue',
+  turnin: 'purple',
+  claimable: 'gold',
+  completed: 'default',
+};
+
+interface TaskModalProps {
+  open: boolean;
+  onClose: () => void;
+  onTrackedChange?: () => void;
+}
+
+const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange }) => {
+  const { message } = App.useApp();
+  const [category, setCategory] = useState<TaskCategory>('main');
+  const [query, setQuery] = useState('');
+  const [activeId, setActiveId] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [submittingTaskId, setSubmittingTaskId] = useState<string>('');
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [nowTs, setNowTs] = useState<number>(() => Date.now());
+  const lastExpireRefreshAtRef = useRef<number>(0);
+
+  const appendSystemChat = useCallback((content: string) => {
+    const text = String(content || '').trim();
+    if (!text) return;
+    window.dispatchEvent(
+      new CustomEvent('chat:append', {
+        detail: {
+          channel: 'system',
+          content: text,
+          senderName: '系统',
+          senderTitle: '',
+          timestamp: Date.now(),
+        },
+      }),
+    );
+  }, []);
+
+  const formatTaskRewardsToText = useCallback((rewards: unknown): string => {
+    const list = Array.isArray(rewards) ? rewards : [];
+    const parts: string[] = [];
+    for (const r of list) {
+      const type = (r as { type?: unknown })?.type;
+      if (type === 'silver') {
+        const amount = Math.max(0, Math.floor(Number((r as { amount?: unknown })?.amount) || 0));
+        if (amount > 0) parts.push(`银两 +${amount.toLocaleString()}`);
+      } else if (type === 'spirit_stones') {
+        const amount = Math.max(0, Math.floor(Number((r as { amount?: unknown })?.amount) || 0));
+        if (amount > 0) parts.push(`灵石 +${amount.toLocaleString()}`);
+      } else if (type === 'item') {
+        const itemDefId = String((r as { itemDefId?: unknown })?.itemDefId ?? '').trim();
+        const qty = Math.max(1, Math.floor(Number((r as { qty?: unknown })?.qty) || 1));
+        if (itemDefId) parts.push(`物品(${itemDefId}) ×${qty.toLocaleString()}`);
+      }
+    }
+    return parts.join('，');
+  }, []);
+
+  const getRemainingSeconds = useCallback((expiresAt?: string | null): number | null => {
+    if (!expiresAt) return null;
+    const ms = Date.parse(expiresAt);
+    if (!Number.isFinite(ms)) return null;
+    return Math.max(0, Math.floor((ms - nowTs) / 1000));
+  }, [nowTs]);
+
+  const formatCountdown = useCallback((seconds: number): string => {
+    const s = Math.max(0, Math.floor(seconds));
+    if (s <= 0) return '已过期';
+    const hours = Math.floor(s / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const hh = hours % 24;
+      return `${days}天${String(hh).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [res, bountyRes] = await Promise.all([getTaskOverview(), getBountyTaskOverview()]);
+      if (!res?.success || !res.data) throw new Error(res?.message || '加载任务失败');
+
+      const mapped: TaskItem[] = (res.data.tasks || [])
+        .map((t) => {
+          const rewards: TaskReward[] = (t.rewards || []).map((r) => {
+            if (r.type === 'item') {
+              return {
+                id: r.itemDefId,
+                name: r.name || r.itemDefId,
+                icon: resolveRewardIcon(r.icon),
+                amount: Number.isFinite(Number(r.amount)) ? Number(r.amount) : 1,
+              };
+            }
+            return {
+              id: `${t.id}:${r.type}`,
+              name: r.name || (r.type === 'silver' ? '银两' : '灵石'),
+              icon: r.type === 'silver' ? tongqianIcon : lingshiIcon,
+              amount: Number.isFinite(Number(r.amount)) ? Number(r.amount) : 0,
+            };
+          });
+
+          const objectives: TaskObjective[] = (t.objectives || [])
+            .map((o) => ({
+              text: String(o.text || ''),
+              done: Number.isFinite(Number(o.done)) ? Number(o.done) : 0,
+              total: Number.isFinite(Number(o.target)) ? Number(o.target) : 1,
+            }))
+            .filter((o) => o.text);
+
+          return {
+            id: String(t.id || ''),
+            category: (t.category || 'main') as TaskCategory,
+            title: String(t.title || ''),
+            realm: typeof t.realm === 'string' && t.realm.trim() ? t.realm.trim() : '凡人',
+            status: (t.status || 'ongoing') as TaskStatus,
+            tracked: Boolean(t.tracked),
+            desc: String(t.description || ''),
+            objectives,
+            rewards,
+          };
+        })
+        .filter((x) => x.id);
+
+      const mappedBounty: TaskItem[] = (bountyRes?.success && bountyRes.data ? bountyRes.data.tasks || [] : [])
+        .map((t): TaskItem => {
+          const rawRemaining = Number((t as { remainingSeconds?: unknown })?.remainingSeconds);
+          const remainingSeconds = Number.isFinite(rawRemaining) ? Math.max(0, Math.floor(rawRemaining)) : null;
+          const rawExpiresAt = typeof (t as { expiresAt?: unknown })?.expiresAt === 'string' ? String((t as { expiresAt?: unknown }).expiresAt) : null;
+          const expiresAt = rawExpiresAt || (remainingSeconds !== null ? new Date(Date.now() + remainingSeconds * 1000).toISOString() : null);
+          const sourceTypeRaw = String((t as { sourceType?: unknown })?.sourceType ?? '').trim();
+          const sourceType = sourceTypeRaw === 'player' ? 'player' : 'daily';
+
+          const rewards: TaskReward[] = (t.rewards || []).map((r) => {
+            if (r.type === 'item') {
+              return {
+                id: r.itemDefId,
+                name: r.name || r.itemDefId,
+                icon: resolveRewardIcon(r.icon),
+                amount: Number.isFinite(Number(r.amount)) ? Number(r.amount) : 1,
+              };
+            }
+            return {
+              id: `${t.id}:${r.type}`,
+              name: r.name || (r.type === 'silver' ? '银两' : '灵石'),
+              icon: r.type === 'silver' ? tongqianIcon : lingshiIcon,
+              amount: Number.isFinite(Number(r.amount)) ? Number(r.amount) : 0,
+            };
+          });
+
+          const objectives: TaskObjective[] = (t.objectives || [])
+            .map((o) => ({
+              text: String(o.text || ''),
+              done: Number.isFinite(Number(o.done)) ? Number(o.done) : 0,
+              total: Number.isFinite(Number(o.target)) ? Number(o.target) : 1,
+            }))
+            .filter((o) => o.text);
+
+          return {
+            id: String(t.id || ''),
+            category: 'bounty',
+            title: String(t.title || ''),
+            realm: typeof t.realm === 'string' && t.realm.trim() ? t.realm.trim() : '凡人',
+            status: (t.status || 'ongoing') as TaskStatus,
+            tracked: Boolean(t.tracked),
+            desc: String(t.description || ''),
+            objectives,
+            rewards,
+            expiresAt,
+            sourceType,
+            remainingSeconds,
+          };
+        })
+        .filter((x) => x.id);
+
+      const bountyTaskIds = new Set(mappedBounty.map((x) => x.id));
+      const mappedNoOverlap = mapped.filter((t) => !bountyTaskIds.has(t.id));
+      setTasks([...mappedNoOverlap, ...mappedBounty]);
+    } catch (e: unknown) {
+      message.error(getErrorMessage(e) || '加载任务失败');
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [message]);
+
+  useEffect(() => {
+    if (!open) return;
+    setCategory('main');
+    setQuery('');
+    setActiveId('');
+    void refresh();
+  }, [open, refresh]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (category !== 'bounty') return;
+    setNowTs(Date.now());
+    const timer = window.setInterval(() => setNowTs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [category, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (category !== 'bounty') return;
+    if (loading) return;
+
+    const hasExpiredDaily = tasks.some((t) => {
+      if (t.category !== 'bounty') return false;
+      if (t.sourceType !== 'daily') return false;
+      if (!t.expiresAt) return false;
+      return (getRemainingSeconds(t.expiresAt) ?? 0) <= 0;
+    });
+    if (!hasExpiredDaily) return;
+
+    const now = Date.now();
+    if (now - lastExpireRefreshAtRef.current < 5000) return;
+    lastExpireRefreshAtRef.current = now;
+    void refresh();
+  }, [category, getRemainingSeconds, loading, open, refresh, tasks]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = tasks
+      .filter((t) => t.category === category)
+      .filter((t) => {
+        if (category !== 'bounty') return true;
+        if (t.sourceType !== 'daily') return true;
+        if (!t.expiresAt) return true;
+        return (getRemainingSeconds(t.expiresAt) ?? 0) > 0;
+      });
+    const searched = q ? list.filter((t) => t.title.toLowerCase().includes(q)) : list;
+    const rank: Record<TaskStatus, number> = { claimable: 0, turnin: 1, ongoing: 2, completed: 3 };
+    return [...searched].sort(
+      (a, b) => rank[a.status] - rank[b.status] || getRealmRank(a.realm) - getRealmRank(b.realm) || a.id.localeCompare(b.id),
+    );
+  }, [category, getRemainingSeconds, query, tasks]);
+
+  const safeActiveId = useMemo(() => {
+    if (activeId && filtered.some((t) => t.id === activeId)) return activeId;
+    return filtered[0]?.id ?? '';
+  }, [activeId, filtered]);
+
+  const activeTask = useMemo(() => filtered.find((t) => t.id === safeActiveId) ?? null, [filtered, safeActiveId]);
+
+  const toggleTrack = useCallback(async () => {
+    if (!activeTask?.id) return;
+    const nextTracked = !activeTask.tracked;
+    try {
+      const res = await setTaskTracked(activeTask.id, nextTracked);
+      if (!res?.success) throw new Error(res?.message || '更新追踪失败');
+      setTasks((prev) => prev.map((t) => (t.id === activeTask.id ? { ...t, tracked: nextTracked } : t)));
+      message.success(nextTracked ? '已追踪' : '已取消追踪');
+      onTrackedChange?.();
+    } catch (e: unknown) {
+      message.error(getErrorMessage(e) || '更新追踪失败');
+    }
+  }, [activeTask?.id, activeTask?.tracked, message, onTrackedChange]);
+
+  const claimReward = useCallback(async (task: TaskItem | null) => {
+    if (!task?.id) return;
+    try {
+      const res = await claimTaskReward(task.id);
+      if (!res?.success) throw new Error(res?.message || '领取失败');
+      message.success('领取成功');
+      const rewardText = formatTaskRewardsToText(res.data?.rewards);
+      appendSystemChat(`【任务】领取奖励：${task.title}${rewardText ? `（${rewardText}）` : ''}`);
+      await refresh();
+    } catch (e: unknown) {
+      message.error(getErrorMessage(e) || '领取失败');
+    }
+  }, [appendSystemChat, formatTaskRewardsToText, message, refresh]);
+
+  const submitMaterials = useCallback(
+    async (task: TaskItem | null) => {
+      if (!task?.id) return;
+      setSubmittingTaskId(task.id);
+      try {
+        const res = await submitBountyMaterials(task.id);
+        if (!res?.success) throw new Error(res?.message || '提交失败');
+        message.success('提交成功');
+        appendSystemChat(`【悬赏】已提交材料：${task.title}`);
+        await refresh();
+      } catch (e: unknown) {
+        message.error(getErrorMessage(e) || '提交失败');
+      } finally {
+        setSubmittingTaskId('');
+      }
+    },
+    [appendSystemChat, message, refresh],
+  );
+
+  return (
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      title={null}
+      centered
+      width={1080}
+      className="task-modal"
+      destroyOnHidden
+      maskClosable
+    >
+      <div className="task-modal-shell">
+        <div className="task-modal-left">
+          <div className="task-left-title">
+            <img className="task-left-icon" src={coin01} alt="任务" />
+            <div className="task-left-name">任务</div>
+          </div>
+          <div className="task-left-list">
+            {(Object.keys(categoryLabels) as TaskCategory[]).map((k) => (
+              <Button
+                key={k}
+                type={category === k ? 'primary' : 'default'}
+                className="task-left-item"
+                onClick={() => {
+                  setCategory(k);
+                  setActiveId('');
+                }}
+              >
+                {categoryLabels[k]}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="task-modal-right">
+          {category === 'main' ? (
+            <div className="task-main-wrap">
+              <MainQuestPanel onClose={onClose} />
+            </div>
+          ) : (
+          <div className="task-pane">
+            <div className="task-pane-top">
+              <div className="task-search">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  allowClear
+                  placeholder="搜索任务"
+                  prefix={<SearchOutlined />}
+                />
+              </div>
+            </div>
+
+            <div className="task-pane-body">
+              <div className="task-list">
+                {filtered.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`task-item ${t.id === safeActiveId ? 'is-active' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveId(t.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') setActiveId(t.id);
+                    }}
+                  >
+                    <div className="task-item-top">
+                      <div className="task-item-title">{t.title}</div>
+                      <Tag color={statusColor[t.status]}>{statusText[t.status]}</Tag>
+                    </div>
+                    <div className="task-item-meta">
+                      <span>推荐境界 {t.realm}</span>
+                      <span>目标 {t.objectives.length} 项</span>
+                      {t.category === 'bounty' && t.sourceType === 'daily' ? (
+                        <span>剩余 {formatCountdown(getRemainingSeconds(t.expiresAt ?? null) ?? 0)}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+                {loading ? <div className="task-empty">加载中...</div> : null}
+                {!loading && filtered.length === 0 ? <div className="task-empty">暂无任务</div> : null}
+              </div>
+
+              <div className="task-detail">
+                {activeTask ? (
+                  <>
+                    <div className="task-detail-header">
+                      <div className="task-detail-title">{activeTask.title}</div>
+                      <div className="task-detail-tags">
+                        <Tag color={statusColor[activeTask.status]}>{statusText[activeTask.status]}</Tag>
+                        <Tag color="default">推荐境界 {activeTask.realm}</Tag>
+                        {activeTask.category === 'bounty' && activeTask.sourceType === 'daily' && activeTask.expiresAt ? (
+                          <Tag color="volcano">剩余 {formatCountdown(getRemainingSeconds(activeTask.expiresAt) ?? 0)}</Tag>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="task-detail-desc">{activeTask.desc}</div>
+                    <div className="task-section-title">目标</div>
+                    <div className="task-objectives">
+                      {activeTask.objectives.map((o) => (
+                        <div key={o.text} className="task-objective">
+                          <div className="task-objective-text">{o.text}</div>
+                          <div className="task-objective-progress">
+                            {o.done}/{o.total}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="task-section-title">奖励</div>
+                    <div className="task-rewards">
+                      {activeTask.rewards.map((r) => (
+                        <div key={r.id} className="task-reward">
+                          <div className="task-reward-icon-wrap">
+                            <img className="task-reward-icon" src={r.icon} alt={r.name} />
+                            <div className="task-reward-amount">×{r.amount.toLocaleString()}</div>
+                          </div>
+                          <div className="task-reward-name">{r.name}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="task-detail-actions">
+                      <Button className="task-action" type={activeTask.tracked ? 'primary' : 'default'} onClick={toggleTrack} disabled={loading}>
+                        {activeTask.tracked ? '取消追踪' : '追踪'}
+                      </Button>
+                      {activeTask.status === 'turnin' && activeTask.objectives.some((o) => o.text.includes('提交材料')) ? (
+                        <Button
+                          className="task-action"
+                          type="primary"
+                          disabled={loading || submittingTaskId === activeTask.id}
+                          loading={submittingTaskId === activeTask.id}
+                          onClick={() => submitMaterials(activeTask)}
+                        >
+                          提交材料
+                        </Button>
+                      ) : null}
+                      <Button
+                        className="task-action"
+                        type="primary"
+                        disabled={activeTask.status !== 'claimable' || loading}
+                        onClick={() => claimReward(activeTask)}
+                      >
+                        领取
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="task-empty">请选择任务</div>
+                )}
+              </div>
+            </div>
+          </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+export default TaskModal;

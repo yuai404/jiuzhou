@@ -1,0 +1,1626 @@
+{
+  "version": 2,
+  "description": "装备定义种子数据 - 含养气期四套装备",
+  "items": [
+    {
+      "id": "equip-weapon-001",
+      "code": "xin_shou_jian",
+      "name": "新手剑",
+      "category": "equipment",
+      "sub_category": "sword",
+      "quality": "黄",
+      "quality_rank": 1,
+      "rarity": "common",
+      "level": 1,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 20,
+      "icon": "/assets/items/chen_tie_jian.png",
+      "description": "新手用的普通长剑",
+      "equip_slot": "weapon",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "wugong": 4
+      },
+      "implicit_attrs": {
+        "wugong": 3
+      },
+      "affix_pool_id": "ap-weapon-common",
+      "affix_count_min": 1,
+      "affix_count_max": 2,
+      "tags": [
+        "武器",
+        "剑",
+        "新手"
+      ],
+      "quality_min": "黄",
+      "quality_max": "玄"
+    },
+    {
+      "id": "equip-weapon-002",
+      "code": "qing_feng_jian",
+      "name": "清风剑",
+      "category": "equipment",
+      "sub_category": "sword",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 200,
+      "sell_price_spirit_stones": 5,
+      "icon": "/assets/items/bai_sui_jian.png",
+      "description": "轻盈的长剑，蕴含风之灵气",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wugong": 11,
+        "sudu": 1
+      },
+      "implicit_attrs": {
+        "wugong": 8
+      },
+      "affix_pool_id": "ap-weapon-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 4,
+      "tags": [
+        "武器",
+        "剑",
+        "风属性"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "equip-weapon-003",
+      "code": "xuan_yuan_jian",
+      "name": "玄元剑",
+      "category": "equipment",
+      "sub_category": "sword",
+      "quality": "地",
+      "quality_rank": 3,
+      "rarity": "rare",
+      "level": 30,
+      "stack_max": 1,
+      "bind_type": "pickup",
+      "tradeable": false,
+      "sellable": true,
+      "sell_price_silver": 1000,
+      "sell_price_spirit_stones": 50,
+      "icon": "/assets/items/bin_tie_heng_dao.png",
+      "description": "上古名剑，蕴含玄元之力",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼精化炁·通脉期",
+      "base_attrs": {
+        "wugong": 35,
+        "baoji": 140
+      },
+      "implicit_attrs": {
+        "wugong": 25,
+        "mingzhong": 100
+      },
+      "affix_pool_id": "ap-weapon-rare",
+      "affix_count_min": 4,
+      "affix_count_max": 5,
+      "tags": [
+        "武器",
+        "剑",
+        "上古"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "equip-head-001",
+      "code": "bu_yi_mao",
+      "name": "布衣帽",
+      "category": "equipment",
+      "sub_category": "hat",
+      "quality": "黄",
+      "quality_rank": 1,
+      "rarity": "common",
+      "level": 1,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 10,
+      "icon": "/assets/items/icon_Hat_1_01.png",
+      "description": "普通的布帽",
+      "equip_slot": "head",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "wufang": 1
+      },
+      "implicit_attrs": {
+        "max_qixue": 10
+      },
+      "affix_pool_id": "ap-armor-common",
+      "affix_count_min": 1,
+      "affix_count_max": 2,
+      "tags": [
+        "防具",
+        "头部",
+        "新手"
+      ],
+      "quality_min": "黄",
+      "quality_max": "玄"
+    },
+    {
+      "id": "equip-clothes-001",
+      "code": "bu_yi",
+      "name": "布衣",
+      "category": "equipment",
+      "sub_category": "robe",
+      "quality": "黄",
+      "quality_rank": 1,
+      "rarity": "common",
+      "level": 1,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 15,
+      "icon": "/assets/items/chang_sheng_men_bu_yi.png",
+      "description": "普通的布衣",
+      "equip_slot": "clothes",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "wufang": 2,
+        "fafang": 1
+      },
+      "implicit_attrs": {
+        "max_qixue": 20
+      },
+      "affix_pool_id": "ap-armor-common",
+      "affix_count_min": 1,
+      "affix_count_max": 2,
+      "tags": [
+        "防具",
+        "衣服",
+        "新手"
+      ],
+      "quality_min": "黄",
+      "quality_max": "玄"
+    },
+    {
+      "id": "equip-clothes-002",
+      "code": "xuan_ling_pao",
+      "name": "玄灵袍",
+      "category": "equipment",
+      "sub_category": "robe",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 150,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/qing_er_zhi_pao.png",
+      "description": "蕴含灵气的道袍",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 7,
+        "fafang": 6
+      },
+      "implicit_attrs": {
+        "max_qixue": 50,
+        "max_lingqi": 20
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 4,
+      "tags": [
+        "防具",
+        "衣服",
+        "灵气"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "equip-necklace-001",
+      "code": "ling_shi_zhui",
+      "name": "灵石坠",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "quality": "黄",
+      "quality_rank": 1,
+      "rarity": "common",
+      "level": 1,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 25,
+      "icon": "/assets/items/shou_ya_xiang_lian.png",
+      "description": "镶嵌灵石的项链",
+      "equip_slot": "necklace",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "max_lingqi": 7
+      },
+      "implicit_attrs": {
+        "lingqi_huifu": 1
+      },
+      "affix_pool_id": "ap-accessory-common",
+      "affix_count_min": 1,
+      "affix_count_max": 2,
+      "tags": [
+        "饰品",
+        "项链"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "equip-artifact-001",
+      "code": "yu_jian",
+      "name": "御剑符",
+      "category": "equipment",
+      "sub_category": "talisman",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 15,
+      "stack_max": 1,
+      "bind_type": "pickup",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 300,
+      "sell_price_spirit_stones": 10,
+      "icon": "/assets/items/Props-taofaquan.png",
+      "description": "可御剑飞行的法宝",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼精化炁·通脉期",
+      "base_attrs": {
+        "sudu": 2
+      },
+      "implicit_attrs": {
+        "shanbi": 100
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 4,
+      "tags": [
+        "法宝",
+        "飞行"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "_comment": "========== 养气期物攻套装1：青锋套装（剑客风格，追求暴击） =========="
+    },
+    {
+      "id": "set-qingfeng-weapon",
+      "code": "qing_feng_jian_set",
+      "name": "青锋剑",
+      "category": "equipment",
+      "sub_category": "sword",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 180,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/qing_wen_jian.png",
+      "description": "青锋门弟子佩剑，剑身泛青光，锋利无比",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wugong": 8,
+        "baoji": 56
+      },
+      "implicit_attrs": {
+        "wugong": 5,
+        "mingzhong": 50
+      },
+      "affix_pool_id": "ap-weapon-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "武器",
+        "剑",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-head",
+      "code": "qing_feng_guan",
+      "name": "青锋冠",
+      "category": "equipment",
+      "sub_category": "hat",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 120,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_Hat_1_02.png",
+      "description": "青锋门制式头冠，轻便灵动",
+      "equip_slot": "head",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 4,
+        "fafang": 2
+      },
+      "implicit_attrs": {
+        "max_qixue": 30,
+        "baoji": 30
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "防具",
+        "头部",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-clothes",
+      "code": "qing_feng_yi",
+      "name": "青锋衣",
+      "category": "equipment",
+      "sub_category": "robe",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 150,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/icon_clothes_1_03.png",
+      "description": "青锋门制式劲装，便于施展剑法",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 6,
+        "fafang": 3
+      },
+      "implicit_attrs": {
+        "max_qixue": 40,
+        "shanbi": 50
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "防具",
+        "衣服",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-gloves",
+      "code": "qing_feng_shou",
+      "name": "青锋护手",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 100,
+      "sell_price_spirit_stones": 2,
+      "icon": "/assets/items/leng_gang_hu_tui.png",
+      "description": "青锋门护手，增强握剑稳定性",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 3,
+        "wugong": 2
+      },
+      "implicit_attrs": {
+        "baoji": 40,
+        "mingzhong": 30
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "防具",
+        "手部",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-pants",
+      "code": "qing_feng_ku",
+      "name": "青锋裤",
+      "category": "equipment",
+      "sub_category": "pants",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 110,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_pants_1_02.png",
+      "description": "青锋门制式长裤，轻便利落",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 4,
+        "fafang": 2
+      },
+      "implicit_attrs": {
+        "max_qixue": 25,
+        "sudu": 1
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "防具",
+        "腿部",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-necklace",
+      "code": "qing_feng_pei",
+      "name": "青锋玉佩",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 130,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_mpyp.png",
+      "description": "青锋门信物，蕴含剑意",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "max_lingqi": 11,
+        "wugong": 3
+      },
+      "implicit_attrs": {
+        "baoshang": 100,
+        "lingqi_huifu": 1
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "饰品",
+        "项链",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-accessory",
+      "code": "qing_feng_jie",
+      "name": "青锋戒",
+      "category": "equipment",
+      "sub_category": "ring",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 140,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/kun_lun_jie.png",
+      "description": "青锋门戒指，刻有剑纹",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wugong": 4,
+        "baoji": 35
+      },
+      "implicit_attrs": {
+        "baoshang": 80,
+        "mingzhong": 40
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "饰品",
+        "戒指",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-qingfeng-artifact",
+      "code": "qing_feng_ling",
+      "name": "青锋令",
+      "category": "equipment",
+      "sub_category": "token",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 160,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/guan_yin_yu_pai.png",
+      "description": "青锋门令牌法宝，可召唤剑气护体",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wugong": 4,
+        "sudu": 1
+      },
+      "implicit_attrs": {
+        "baoji": 60,
+        "shanbi": 60
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-qingfeng",
+      "tags": [
+        "法宝",
+        "令牌",
+        "青锋套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "_comment": "========== 养气期物攻套装2：玄铁套装（刚猛风格，追求高攻高防） =========="
+    },
+    {
+      "id": "set-xuantie-weapon",
+      "code": "xuan_tie_dao",
+      "name": "玄铁刀",
+      "category": "equipment",
+      "sub_category": "blade",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 200,
+      "sell_price_spirit_stones": 5,
+      "icon": "/assets/items/gu_tong_huai_dao.png",
+      "description": "以玄铁锻造的重刀，刀身厚重，一刀劈山",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wugong": 11,
+        "zhaojia": 42
+      },
+      "implicit_attrs": {
+        "wugong": 8,
+        "wufang": 3
+      },
+      "affix_pool_id": "ap-weapon-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "武器",
+        "刀",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-head",
+      "code": "xuan_tie_kui",
+      "name": "玄铁盔",
+      "category": "equipment",
+      "sub_category": "helmet",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 140,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_Hat_1_03.png",
+      "description": "玄铁打造的头盔，坚固异常",
+      "equip_slot": "head",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 7,
+        "fafang": 4
+      },
+      "implicit_attrs": {
+        "max_qixue": 50,
+        "kangbao": 80
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "防具",
+        "头部",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-clothes",
+      "code": "xuan_tie_jia",
+      "name": "玄铁甲",
+      "category": "equipment",
+      "sub_category": "armor",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 180,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/qian_chao_jiang_jun_jia.png",
+      "description": "玄铁锻造的战甲，防御力极强",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 10,
+        "fafang": 4
+      },
+      "implicit_attrs": {
+        "max_qixue": 60,
+        "zhaojia": 80
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "防具",
+        "衣服",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-gloves",
+      "code": "xuan_tie_wan",
+      "name": "玄铁腕甲",
+      "category": "equipment",
+      "sub_category": "gauntlets",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 110,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/leng_gang_hu_tui.png",
+      "description": "玄铁腕甲，攻守兼备",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 4,
+        "wugong": 4
+      },
+      "implicit_attrs": {
+        "wugong": 4,
+        "zhaojia": 50
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "防具",
+        "手部",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-pants",
+      "code": "xuan_tie_qun",
+      "name": "玄铁战裙",
+      "category": "equipment",
+      "sub_category": "legguards",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 130,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/leng_gang_xie.png",
+      "description": "玄铁战裙，护住下盘要害",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 6,
+        "fafang": 3
+      },
+      "implicit_attrs": {
+        "max_qixue": 40,
+        "kangbao": 60
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "防具",
+        "腿部",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-necklace",
+      "code": "xuan_tie_suo",
+      "name": "玄铁锁",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 120,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/jin_xiang_lian.png",
+      "description": "玄铁打造的护心锁，坚不可摧",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "max_qixue": 21,
+        "wufang": 3
+      },
+      "implicit_attrs": {
+        "kangbao": 100,
+        "qixue_huifu": 2
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "饰品",
+        "项链",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-accessory",
+      "code": "xuan_tie_huan",
+      "name": "玄铁环",
+      "category": "equipment",
+      "sub_category": "ring",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 130,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/jia_chuan_yu_zhuo.png",
+      "description": "玄铁指环，增强力量",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wugong": 4,
+        "wufang": 2
+      },
+      "implicit_attrs": {
+        "wugong": 4,
+        "zengshang": 80
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "饰品",
+        "戒指",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-xuantie-artifact",
+      "code": "xuan_tie_dun",
+      "name": "玄铁盾符",
+      "category": "equipment",
+      "sub_category": "shield",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 170,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/icon_qljd.png",
+      "description": "玄铁盾形法宝，可化出护盾抵挡攻击",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "wufang": 6,
+        "fafang": 3
+      },
+      "implicit_attrs": {
+        "max_qixue": 40,
+        "kangbao": 80
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-xuantie",
+      "tags": [
+        "法宝",
+        "盾",
+        "玄铁套装",
+        "物攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "_comment": "========== 养气期法攻套装1：紫霄套装（道法风格，追求法攻与灵气） =========="
+    },
+    {
+      "id": "set-zixiao-weapon",
+      "code": "zi_xiao_jian",
+      "name": "紫霄剑",
+      "category": "equipment",
+      "sub_category": "sword",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 190,
+      "sell_price_spirit_stones": 5,
+      "icon": "/assets/items/fu_guang_yu.png",
+      "description": "紫霄宫法剑，剑身流转紫气，可引天雷",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fagong": 10,
+        "baoji": 42
+      },
+      "implicit_attrs": {
+        "fagong": 6,
+        "max_lingqi": 15
+      },
+      "affix_pool_id": "ap-weapon-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "武器",
+        "剑",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-head",
+      "code": "zi_xiao_guan",
+      "name": "紫霄道冠",
+      "category": "equipment",
+      "sub_category": "hat",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 130,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_cape_1_01.png",
+      "description": "紫霄宫道冠，凝神静气",
+      "equip_slot": "head",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 6,
+        "wufang": 3
+      },
+      "implicit_attrs": {
+        "max_lingqi": 25,
+        "lengque": 80
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "防具",
+        "头部",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-clothes",
+      "code": "zi_xiao_pao",
+      "name": "紫霄道袍",
+      "category": "equipment",
+      "sub_category": "robe",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 160,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/icon_clothes_1_04.png",
+      "description": "紫霄宫道袍，绣有云纹，灵气流转",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 7,
+        "wufang": 4
+      },
+      "implicit_attrs": {
+        "max_lingqi": 35,
+        "lingqi_huifu": 2
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "防具",
+        "衣服",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-gloves",
+      "code": "zi_xiao_xiu",
+      "name": "紫霄袖套",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 100,
+      "sell_price_spirit_stones": 2,
+      "icon": "/assets/items/icon_shoulder armour_1_03.png",
+      "description": "紫霄宫袖套，便于掐诀施法",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 3,
+        "fagong": 3
+      },
+      "implicit_attrs": {
+        "fagong": 3,
+        "lengque": 60
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "防具",
+        "手部",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-pants",
+      "code": "zi_xiao_qun",
+      "name": "紫霄道裙",
+      "category": "equipment",
+      "sub_category": "pants",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 110,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_shoes_1_05.png",
+      "description": "紫霄宫道裙，飘逸出尘",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 4,
+        "wufang": 3
+      },
+      "implicit_attrs": {
+        "max_lingqi": 20,
+        "shanbi": 60
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "防具",
+        "腿部",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-necklace",
+      "code": "zi_xiao_ling",
+      "name": "紫霄灵珠",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 140,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/frame_qiu4sangpokuangtu.png",
+      "description": "紫霄宫灵珠，蕴含紫霄真气",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "max_lingqi": 18,
+        "fagong": 4
+      },
+      "implicit_attrs": {
+        "baoshang": 100,
+        "lingqi_huifu": 2
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "饰品",
+        "项链",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-accessory",
+      "code": "zi_xiao_jie",
+      "name": "紫霄戒",
+      "category": "equipment",
+      "sub_category": "ring",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 135,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/du_lao_qian_de_ban_zhi.png",
+      "description": "紫霄宫法戒，增强法力",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fagong": 4,
+        "baoji": 35
+      },
+      "implicit_attrs": {
+        "fagong": 4,
+        "zengshang": 80
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "饰品",
+        "戒指",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-zixiao-artifact",
+      "code": "zi_xiao_fu",
+      "name": "紫霄符箓",
+      "category": "equipment",
+      "sub_category": "talisman",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 175,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/018.png",
+      "description": "紫霄宫符箓法宝，可召唤雷电",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fagong": 6,
+        "baoji": 42
+      },
+      "implicit_attrs": {
+        "baoshang": 120,
+        "lengque": 100
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-zixiao",
+      "tags": [
+        "法宝",
+        "符箓",
+        "紫霄套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "_comment": "========== 养气期法攻套装2：碧落套装（灵修风格，追求治疗与续航） =========="
+    },
+    {
+      "id": "set-biluo-weapon",
+      "code": "bi_luo_zhang",
+      "name": "碧落杖",
+      "category": "equipment",
+      "sub_category": "staff",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 185,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/chan_you_ling_zhang.png",
+      "description": "碧落派法杖，杖首镶嵌碧玉，可引天地灵气",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fagong": 8,
+        "zhiliao": 70
+      },
+      "implicit_attrs": {
+        "fagong": 5,
+        "max_lingqi": 20
+      },
+      "affix_pool_id": "ap-weapon-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "武器",
+        "杖",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-head",
+      "code": "bi_luo_guan",
+      "name": "碧落莲冠",
+      "category": "equipment",
+      "sub_category": "hat",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 125,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_cape_1_06.png",
+      "description": "碧落派莲花冠，清心寡欲",
+      "equip_slot": "head",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 5,
+        "wufang": 3
+      },
+      "implicit_attrs": {
+        "max_lingqi": 30,
+        "zhiliao": 60
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "防具",
+        "头部",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-clothes",
+      "code": "bi_luo_yi",
+      "name": "碧落仙衣",
+      "category": "equipment",
+      "sub_category": "robe",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 155,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/icon_clothes_1_05.png",
+      "description": "碧落派仙衣，轻若云烟，灵气充盈",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 6,
+        "wufang": 4
+      },
+      "implicit_attrs": {
+        "max_lingqi": 40,
+        "qixue_huifu": 3
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "防具",
+        "衣服",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-gloves",
+      "code": "bi_luo_shou",
+      "name": "碧落玉手",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 95,
+      "sell_price_spirit_stones": 2,
+      "icon": "/assets/items/icon_shoulder armour_1_04.png",
+      "description": "碧落派玉手套，施法如行云流水",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 3,
+        "fagong": 2
+      },
+      "implicit_attrs": {
+        "zhiliao": 80,
+        "lingqi_huifu": 1
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "防具",
+        "手部",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-pants",
+      "code": "bi_luo_qun",
+      "name": "碧落云裙",
+      "category": "equipment",
+      "sub_category": "pants",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 105,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/icon_shoes_1_10.png",
+      "description": "碧落派云裙，飘逸若仙",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fafang": 4,
+        "wufang": 3
+      },
+      "implicit_attrs": {
+        "max_qixue": 30,
+        "lingqi_huifu": 2
+      },
+      "affix_pool_id": "ap-armor-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "防具",
+        "腿部",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-necklace",
+      "code": "bi_luo_zhu",
+      "name": "碧落念珠",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 145,
+      "sell_price_spirit_stones": 4,
+      "icon": "/assets/items/chen_xiang_zhu_lian.png",
+      "description": "碧落派念珠，每颗皆蕴灵气",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "max_lingqi": 21,
+        "zhiliao": 56
+      },
+      "implicit_attrs": {
+        "lingqi_huifu": 3,
+        "qixue_huifu": 2
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "饰品",
+        "项链",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-accessory",
+      "code": "bi_luo_huan",
+      "name": "碧落玉环",
+      "category": "equipment",
+      "sub_category": "ring",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 130,
+      "sell_price_spirit_stones": 3,
+      "icon": "/assets/items/0112.png",
+      "description": "碧落派玉环，温润如玉",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fagong": 4,
+        "max_lingqi": 11
+      },
+      "implicit_attrs": {
+        "zhiliao": 100,
+        "xixue": 50
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "饰品",
+        "戒指",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    },
+    {
+      "id": "set-biluo-artifact",
+      "code": "bi_luo_jing",
+      "name": "碧落宝镜",
+      "category": "equipment",
+      "sub_category": "mirror",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 10,
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "sellable": true,
+      "sell_price_silver": 180,
+      "sell_price_spirit_stones": 5,
+      "icon": "/assets/items/guan_tian_jing.png",
+      "description": "碧落派宝镜法宝，可照见本心，治愈伤痛",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼精化炁·养气期",
+      "base_attrs": {
+        "fagong": 4,
+        "zhiliao": 84
+      },
+      "implicit_attrs": {
+        "max_lingqi": 25,
+        "qixue_huifu": 4
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "affix_count_min": 2,
+      "affix_count_max": 3,
+      "set_id": "set-biluo",
+      "tags": [
+        "法宝",
+        "镜",
+        "碧落套装",
+        "法攻"
+      ],
+      "quality_min": "黄",
+      "quality_max": "天"
+    }
+  ]
+}

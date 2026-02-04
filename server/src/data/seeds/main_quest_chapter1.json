@@ -1,0 +1,277 @@
+{
+  "chapters": [
+    {
+      "id": "mq-chapter-1",
+      "chapter_num": 1,
+      "name": "第一章：踏入仙途",
+      "description": "玩家从青云村起步，在村中长者引导下踏上修仙之路。",
+      "background": "青云村，九州大陆东洲边陲的一个宁静小村，灵气稀薄但民风淳朴。村外有低级妖兽出没，是新手修士历练的好去处。",
+      "min_realm": "凡人",
+      "chapter_rewards": {},
+      "unlock_features": [],
+      "sort_weight": 1000,
+      "enabled": true
+    }
+  ],
+  "sections": [
+    {
+      "id": "main-1-001",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 1,
+      "name": "初入青云",
+      "description": "在村口醒来后，与引路童子交谈，前往村中广场。",
+      "brief": "与引路童子交谈，前往村中广场。",
+      "npc_id": "npc-guide",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-entrance",
+      "min_realm": "凡人",
+      "dialogue_id": "dlg-main-1-001",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "前往村中广场",
+          "target": 1,
+          "params": { "room_id": "room-village-center" }
+        }
+      ],
+      "rewards": { "exp": 30, "silver": 50 },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 1000,
+      "enabled": true
+    },
+    {
+      "id": "main-1-002",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 2,
+      "name": "初试身手",
+      "description": "村长让你去南林小道历练，击败野兔证明自己。",
+      "brief": "前往南林小道，击败野兔×5。",
+      "npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-center",
+      "min_realm": "凡人",
+      "dialogue_id": "dlg-main-1-002",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "前往南林小道",
+          "target": 1,
+          "params": { "room_id": "room-south-forest" }
+        },
+        {
+          "id": "obj-2",
+          "type": "kill_monster",
+          "text": "击败野兔",
+          "target": 5,
+          "params": { "monster_id": "monster-wild-rabbit" }
+        }
+      ],
+      "rewards": { "exp": 50, "silver": 80, "items": [{ "item_def_id": "cons-001", "quantity": 5 }] },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 990,
+      "enabled": true
+    },
+    {
+      "id": "main-1-003",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 3,
+      "name": "野猪之患",
+      "description": "林中空地出现野猪伤人，前往清理并收集兽皮。",
+      "brief": "前往林中空地，击败野猪×5，收集兽皮×3。",
+      "npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-center",
+      "min_realm": "凡人",
+      "dialogue_id": "dlg-main-1-003",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "前往林中空地",
+          "target": 1,
+          "params": { "room_id": "room-forest-clearing" }
+        },
+        {
+          "id": "obj-2",
+          "type": "kill_monster",
+          "text": "击败野猪",
+          "target": 5,
+          "params": { "monster_id": "monster-wild-boar" }
+        },
+        {
+          "id": "obj-3",
+          "type": "collect",
+          "text": "收集兽皮",
+          "target": 3,
+          "params": { "item_id": "mat-005" }
+        }
+      ],
+      "rewards": { "exp": 80, "silver": 100, "items": [{ "item_def_id": "cons-002", "quantity": 5 }], "techniques": ["tech-yangqi-jue"] },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 980,
+      "enabled": true
+    },
+    {
+      "id": "main-1-004",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 4,
+      "name": "采药之行",
+      "description": "药婆婆需要灵草炼丹。前往西溪边采集灵草并击退毒蛇。",
+      "brief": "前往西溪边，采集灵草×10，击败毒蛇×3。",
+      "npc_id": "npc-herbalist",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-herb-shop",
+      "min_realm": "凡人",
+      "dialogue_id": "dlg-main-1-004",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "前往西溪边",
+          "target": 1,
+          "params": { "room_id": "room-west-stream" }
+        },
+        {
+          "id": "obj-2",
+          "type": "gather_resource",
+          "text": "采集灵草",
+          "target": 10,
+          "params": { "resource_id": "mat-001" }
+        },
+        {
+          "id": "obj-3",
+          "type": "kill_monster",
+          "text": "击败毒蛇",
+          "target": 3,
+          "params": { "monster_id": "monster-venomous-snake" }
+        }
+      ],
+      "rewards": { "exp": 100, "silver": 120, "items": [{ "item_def_id": "cons-006", "quantity": 5 }, { "item_def_id": "mat-001", "quantity": 20 }] },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 970,
+      "enabled": true
+    },
+    {
+      "id": "main-1-005",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 5,
+      "name": "狼患初现",
+      "description": "密林深处出现狼群，前往调查并清理威胁。",
+      "brief": "前往密林深处，击败灰狼×5、山野妖狼×3。",
+      "npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-center",
+      "min_realm": "凡人",
+      "dialogue_id": "dlg-main-1-005",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "前往密林深处",
+          "target": 1,
+          "params": { "room_id": "room-deep-forest" }
+        },
+        {
+          "id": "obj-2",
+          "type": "kill_monster",
+          "text": "击败灰狼",
+          "target": 5,
+          "params": { "monster_id": "monster-gray-wolf" }
+        },
+        {
+          "id": "obj-3",
+          "type": "kill_monster",
+          "text": "击败山野妖狼",
+          "target": 3,
+          "params": { "monster_id": "monster-mountain-wolf" }
+        }
+      ],
+      "rewards": { "exp": 150, "silver": 200, "items": [{ "item_def_id": "mat-gongfa-canye", "quantity": 20 }], "techniques": ["tech-jichu-jianfa"] },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 960,
+      "enabled": true
+    },
+    {
+      "id": "main-1-006",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 6,
+      "name": "踏入仙途",
+      "description": "修炼养气诀并突破境界，正式踏入修仙之路。",
+      "brief": "养气诀修炼至第2层，并突破到炼精化炁·养气期。",
+      "npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-center",
+      "min_realm": "凡人",
+      "dialogue_id": "dlg-main-1-006",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "upgrade_technique",
+          "text": "将养气诀修炼至第2层",
+          "target": 1,
+          "params": { "technique_id": "tech-yangqi-jue", "layer": 2 }
+        },
+        {
+          "id": "obj-2",
+          "type": "upgrade_realm",
+          "text": "突破到炼精化炁·养气期",
+          "target": 1,
+          "params": { "realm": "炼精化炁·养气期" }
+        }
+      ],
+      "rewards": { "exp": 300, "silver": 300, "spirit_stones": 30, "items": [{ "item_def_id": "box-002", "quantity": 1 }], "techniques": ["tech-tunajue"] },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 950,
+      "enabled": true
+    },
+    {
+      "id": "main-1-007",
+      "chapter_id": "mq-chapter-1",
+      "section_num": 7,
+      "name": "狼王之战",
+      "description": "前往狼窝挑战狼王，为青云村除此大患。",
+      "brief": "前往狼窝，击败狼王。",
+      "npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-center",
+      "min_realm": "炼精化炁·养气期",
+      "dialogue_id": "dlg-main-1-007",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "前往狼窝",
+          "target": 1,
+          "params": { "room_id": "room-wolf-den" }
+        },
+        {
+          "id": "obj-2",
+          "type": "kill_monster",
+          "text": "击败狼王",
+          "target": 1,
+          "params": { "monster_id": "monster-elite-wolf-king" }
+        }
+      ],
+      "rewards": { "exp": 500, "silver": 500, "spirit_stones": 50, "items": [{ "item_def_id": "box-003", "quantity": 1 }, { "item_def_id": "mat-006", "quantity": 3 }] },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": true,
+      "sort_weight": 940,
+      "enabled": true
+    }
+  ]
+}

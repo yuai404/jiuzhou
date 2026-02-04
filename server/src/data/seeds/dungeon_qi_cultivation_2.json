@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "description": "秘境种子数据 - 养气期 - 石窟矿洞",
+  "dungeons": [
+    {
+      "def": {
+        "id": "dungeon-qiqi-stone-mine",
+        "name": "石窟矿洞",
+        "type": "material",
+        "category": "境界",
+        "description": "山腹中的幽暗矿洞，毒蛇盘踞，石傀儡守护着灵矿脉。",
+        "icon": "/assets/dungeon/stone_mine.png",
+        "background": "/assets/dungeon/bg_stone_mine.png",
+        "min_players": 1,
+        "max_players": 4,
+        "min_realm": "炼精化炁·养气期",
+        "recommended_realm": "炼精化炁·养气期",
+        "unlock_condition": {},
+        "daily_limit": 10,
+        "weekly_limit": 0,
+        "stamina_cost": 8,
+        "time_limit_sec": 900,
+        "revive_limit": 3,
+        "tags": ["养气期", "材料", "矿洞"],
+        "sort_weight": 110,
+        "enabled": true,
+        "version": 1
+      },
+      "difficulties": [
+        {
+          "id": "dd-qiqi-stone-mine-n",
+          "dungeon_id": "dungeon-qiqi-stone-mine",
+          "name": "普通",
+          "difficulty_rank": 1,
+          "monster_level_add": 0,
+          "monster_attr_mult": 1.0,
+          "reward_mult": 1.0,
+          "min_realm": "炼精化炁·养气期",
+          "unlock_prev_difficulty": false,
+          "first_clear_rewards": {
+            "items": [{ "item_def_id": "mat-002", "qty": 5 }],
+            "silver": 40
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-qiqi-stone-mine-n-1",
+              "difficulty_id": "dd-qiqi-stone-mine-n",
+              "stage_index": 1,
+              "name": "洞口蛇影",
+              "type": "battle",
+              "description": "洞口湿滑阴冷，毒蛇潜伏在碎石间发起突袭。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-venomous-snake", "count": 3 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 1 },
+                    { "monster_def_id": "monster-venomous-snake", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-stone-mine-n-2",
+              "difficulty_id": "dd-qiqi-stone-mine-n",
+              "stage_index": 2,
+              "name": "碎岩回廊",
+              "type": "battle",
+              "description": "碎岩回廊中石傀儡不断苏醒，阻挡前行之路。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 2 },
+                    { "monster_def_id": "monster-venomous-snake", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-stone-mine-n-3",
+              "difficulty_id": "dd-qiqi-stone-mine-n",
+              "stage_index": 3,
+              "name": "矿脉守卫",
+              "type": "boss",
+              "description": "灵矿脉前的石傀儡守卫强悍无比，必须将其击溃才能安全采掘。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {
+                "silver": { "min": 15, "max": 35 },
+                "exp": 55,
+                "items": [{ "item_def_id": "mat-002", "qty_min": 1, "qty_max": 3, "chance": 0.7 }]
+              },
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    { "monster_def_id": "monster-venomous-snake", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd-qiqi-stone-mine-h",
+          "dungeon_id": "dungeon-qiqi-stone-mine",
+          "name": "困难",
+          "difficulty_rank": 2,
+          "monster_level_add": 2,
+          "monster_attr_mult": 1.18,
+          "reward_mult": 1.2,
+          "min_realm": "炼精化炁·养气期",
+          "unlock_prev_difficulty": true,
+          "first_clear_rewards": {
+            "items": [{ "item_def_id": "enhance-001", "qty": 1 }],
+            "silver": 70
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-qiqi-stone-mine-h-1",
+              "difficulty_id": "dd-qiqi-stone-mine-h",
+              "stage_index": 1,
+              "name": "毒雾洞口",
+              "type": "battle",
+              "description": "毒雾弥漫，蛇群更加狡诈，稍有不慎便会中毒。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-venomous-snake", "count": 4 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-stone-mine-h-2",
+              "difficulty_id": "dd-qiqi-stone-mine-h",
+              "stage_index": 2,
+              "name": "崩塌矿道",
+              "type": "battle",
+              "description": "矿道不断崩塌，石傀儡趁机围攻闯入者。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 3 },
+                    { "monster_def_id": "monster-venomous-snake", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 3 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-stone-mine-h-3",
+              "difficulty_id": "dd-qiqi-stone-mine-h",
+              "stage_index": 3,
+              "name": "灵矿核心",
+              "type": "boss",
+              "description": "核心矿室中石傀儡守卫全面苏醒，必须在其重组前将其击碎。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {
+                "silver": { "min": 25, "max": 55 },
+                "exp": 85,
+                "items": [
+                  { "item_def_id": "mat-002", "qty_min": 2, "qty_max": 5, "chance": 0.8 },
+                  { "item_def_id": "mat-007", "qty_min": 1, "qty_max": 2, "chance": 0.25 }
+                ]
+              },
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    { "monster_def_id": "monster-stone-golem", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

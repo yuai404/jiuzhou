@@ -1,0 +1,19 @@
+.signin-modal .ant-modal-body {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 12px;
+  max-height: 75vh;
+  overflow: auto;
+}
+
+.signin-modal .signin-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signin-modal .signin-footer {
+  margin-top: auto;
+  padding: 0 6px 2px;
+}

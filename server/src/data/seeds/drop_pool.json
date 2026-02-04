@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "description": "掉落池种子数据 - 新手村怪物",
+  "pools": [
+    {
+      "id": "dp-wild-rabbit",
+      "name": "野兔掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "equip-weapon-001", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-head-001", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-clothes-001", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-wild-boar",
+      "name": "野猪掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "equip-weapon-002", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-weapon-003", "chance": 0.04, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "mat-005", "chance": 1.0, "qty_min": 1, "qty_max": 2, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-gray-wolf",
+      "name": "灰狼掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "equip-weapon-002", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-weapon-003", "chance": 0.01, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "cons-001", "chance": 0.08, "qty_min": 1, "qty_max": 2, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-mountain-wolf",
+      "name": "山野妖狼掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "cons-001", "chance": 0.10, "qty_min": 1, "qty_max": 2, "show_in_ui": true },
+        { "item_def_id": "cons-002", "chance": 0.07, "qty_min": 1, "qty_max": 2, "show_in_ui": true },
+        { "item_def_id": "equip-clothes-002", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-necklace-001", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-venomous-snake",
+      "name": "毒蛇掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "equip-weapon-001", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-head-001", "chance": 0.015, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "equip-clothes-001", "chance": 0.015, "qty_min": 1, "qty_max": 1, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-stone-golem",
+      "name": "石傀儡掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "mat-002", "chance": 0.5, "qty_min": 1, "qty_max": 3, "show_in_ui": true },
+        { "item_def_id": "mat-007", "chance": 0.2, "qty_min": 1, "qty_max": 2, "show_in_ui": true },
+        { "item_def_id": "enhance-001", "chance": 0.1, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-weapon", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-head", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-clothes", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-gloves", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-weapon", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-head", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-clothes", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-gloves", "chance": 0.02, "qty_min": 1, "qty_max": 1, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-wolf-king",
+      "name": "狼王掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "set-qingfeng-weapon", "chance": 0.07, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-head", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-clothes", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-gloves", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-pants", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-necklace", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-accessory", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-artifact", "chance": 0.045, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+
+        { "item_def_id": "set-zixiao-weapon", "chance": 0.07, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-head", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-clothes", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-gloves", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-pants", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-necklace", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-accessory", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-artifact", "chance": 0.045, "qty_min": 1, "qty_max": 1, "show_in_ui": true }
+      ]
+    },
+    {
+      "id": "dp-ancient-tree",
+      "name": "千年古树妖掉落池",
+      "mode": "prob",
+      "entries": [
+        { "item_def_id": "mat-001", "chance": 1.0, "qty_min": 5, "qty_max": 10, "show_in_ui": true },
+        { "item_def_id": "mat-004", "chance": 1.0, "qty_min": 3, "qty_max": 6, "show_in_ui": true },
+        { "item_def_id": "mat-006", "chance": 0.5, "qty_min": 1, "qty_max": 2, "show_in_ui": true },
+        { "item_def_id": "cons-003", "chance": 0.8, "qty_min": 2, "qty_max": 5, "show_in_ui": true },
+        { "item_def_id": "cons-005", "chance": 0.2, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-weapon", "chance": 0.07, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-head", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-clothes", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-gloves", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-pants", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-necklace", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-accessory", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-qingfeng-artifact", "chance": 0.045, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+
+        { "item_def_id": "set-zixiao-weapon", "chance": 0.07, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-head", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-clothes", "chance": 0.06, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-gloves", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-pants", "chance": 0.055, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-necklace", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-accessory", "chance": 0.05, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "set-zixiao-artifact", "chance": 0.045, "qty_min": 1, "qty_max": 1, "show_in_ui": true },
+        { "item_def_id": "enhance-002", "chance": 0.3, "qty_min": 1, "qty_max": 3, "show_in_ui": true },
+        { "item_def_id": "box-001", "chance": 0.5, "qty_min": 1, "qty_max": 3, "show_in_ui": true }
+      ]
+    }
+  ]
+}

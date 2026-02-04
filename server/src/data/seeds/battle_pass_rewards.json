@@ -1,0 +1,49 @@
+{
+  "season": {
+    "id": "bp-season-001",
+    "name": "第一赛季",
+    "start_at": "2026-01-01T00:00:00.000Z",
+    "end_at": "2026-04-01T00:00:00.000Z",
+    "max_level": 30,
+    "exp_per_level": 1000,
+    "enabled": true,
+    "sort_weight": 0
+  },
+  "rewards": [
+    { "level": 1, "free": [{ "type": "currency", "currency": "silver", "amount": 100 }, { "type": "item", "item_def_id": "cons-001", "qty": 5 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 10 }, { "type": "item", "item_def_id": "mat-001", "qty": 20 }] },
+    { "level": 2, "free": [{ "type": "currency", "currency": "silver", "amount": 120 }, { "type": "item", "item_def_id": "cons-002", "qty": 5 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 10 }, { "type": "item", "item_def_id": "mat-002", "qty": 20 }] },
+    { "level": 3, "free": [{ "type": "currency", "currency": "silver", "amount": 140 }, { "type": "item", "item_def_id": "mat-001", "qty": 30 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 12 }, { "type": "item", "item_def_id": "mat-007", "qty": 20 }] },
+    { "level": 4, "free": [{ "type": "currency", "currency": "silver", "amount": 160 }, { "type": "item", "item_def_id": "mat-004", "qty": 25 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 12 }, { "type": "item", "item_def_id": "mat-005", "qty": 25 }] },
+    { "level": 5, "free": [{ "type": "currency", "currency": "silver", "amount": 200 }, { "type": "item", "item_def_id": "box-001", "qty": 1 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 15 }, { "type": "item", "item_def_id": "mat-003", "qty": 10 }] },
+
+    { "level": 6, "free": [{ "type": "currency", "currency": "silver", "amount": 220 }, { "type": "item", "item_def_id": "cons-001", "qty": 8 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 15 }, { "type": "item", "item_def_id": "mat-001", "qty": 40 }] },
+    { "level": 7, "free": [{ "type": "currency", "currency": "silver", "amount": 240 }, { "type": "item", "item_def_id": "cons-002", "qty": 8 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 16 }, { "type": "item", "item_def_id": "mat-002", "qty": 40 }] },
+    { "level": 8, "free": [{ "type": "currency", "currency": "silver", "amount": 260 }, { "type": "item", "item_def_id": "mat-004", "qty": 35 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 16 }, { "type": "item", "item_def_id": "mat-007", "qty": 30 }] },
+    { "level": 9, "free": [{ "type": "currency", "currency": "silver", "amount": 280 }, { "type": "item", "item_def_id": "token-001", "qty": 5 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 18 }, { "type": "item", "item_def_id": "mat-006", "qty": 6 }] },
+    { "level": 10, "free": [{ "type": "currency", "currency": "silver", "amount": 320 }, { "type": "item", "item_def_id": "box-001", "qty": 2 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 20 }, { "type": "item", "item_def_id": "cons-003", "qty": 5 }] },
+
+    { "level": 11, "free": [{ "type": "currency", "currency": "silver", "amount": 340 }, { "type": "item", "item_def_id": "cons-001", "qty": 10 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 20 }, { "type": "item", "item_def_id": "mat-001", "qty": 60 }] },
+    { "level": 12, "free": [{ "type": "currency", "currency": "silver", "amount": 360 }, { "type": "item", "item_def_id": "cons-002", "qty": 10 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 22 }, { "type": "item", "item_def_id": "mat-002", "qty": 60 }] },
+    { "level": 13, "free": [{ "type": "currency", "currency": "silver", "amount": 380 }, { "type": "item", "item_def_id": "mat-007", "qty": 50 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 22 }, { "type": "item", "item_def_id": "mat-003", "qty": 12 }] },
+    { "level": 14, "free": [{ "type": "currency", "currency": "silver", "amount": 400 }, { "type": "item", "item_def_id": "token-001", "qty": 8 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 25 }, { "type": "item", "item_def_id": "cons-004", "qty": 5 }] },
+    { "level": 15, "free": [{ "type": "currency", "currency": "silver", "amount": 450 }, { "type": "item", "item_def_id": "box-002", "qty": 1 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 30 }, { "type": "item", "item_def_id": "mat-006", "qty": 10 }] },
+
+    { "level": 16, "free": [{ "type": "currency", "currency": "silver", "amount": 480 }, { "type": "item", "item_def_id": "cons-001", "qty": 12 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 30 }, { "type": "item", "item_def_id": "mat-001", "qty": 80 }] },
+    { "level": 17, "free": [{ "type": "currency", "currency": "silver", "amount": 500 }, { "type": "item", "item_def_id": "cons-002", "qty": 12 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 32 }, { "type": "item", "item_def_id": "mat-002", "qty": 80 }] },
+    { "level": 18, "free": [{ "type": "currency", "currency": "silver", "amount": 520 }, { "type": "item", "item_def_id": "mat-004", "qty": 60 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 32 }, { "type": "item", "item_def_id": "mat-007", "qty": 60 }] },
+    { "level": 19, "free": [{ "type": "currency", "currency": "silver", "amount": 540 }, { "type": "item", "item_def_id": "token-001", "qty": 10 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 35 }, { "type": "item", "item_def_id": "mat-003", "qty": 15 }] },
+    { "level": 20, "free": [{ "type": "currency", "currency": "silver", "amount": 600 }, { "type": "item", "item_def_id": "box-001", "qty": 3 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 40 }, { "type": "item", "item_def_id": "cons-005", "qty": 1 }] },
+
+    { "level": 21, "free": [{ "type": "currency", "currency": "silver", "amount": 620 }, { "type": "item", "item_def_id": "cons-001", "qty": 15 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 40 }, { "type": "item", "item_def_id": "mat-001", "qty": 100 }] },
+    { "level": 22, "free": [{ "type": "currency", "currency": "silver", "amount": 640 }, { "type": "item", "item_def_id": "cons-002", "qty": 15 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 45 }, { "type": "item", "item_def_id": "mat-002", "qty": 100 }] },
+    { "level": 23, "free": [{ "type": "currency", "currency": "silver", "amount": 660 }, { "type": "item", "item_def_id": "mat-007", "qty": 90 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 45 }, { "type": "item", "item_def_id": "mat-006", "qty": 12 }] },
+    { "level": 24, "free": [{ "type": "currency", "currency": "silver", "amount": 680 }, { "type": "item", "item_def_id": "token-001", "qty": 12 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 50 }, { "type": "item", "item_def_id": "cons-003", "qty": 8 }] },
+    { "level": 25, "free": [{ "type": "currency", "currency": "silver", "amount": 750 }, { "type": "item", "item_def_id": "box-003", "qty": 1 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 60 }, { "type": "item", "item_def_id": "mat-003", "qty": 20 }] },
+
+    { "level": 26, "free": [{ "type": "currency", "currency": "silver", "amount": 780 }, { "type": "item", "item_def_id": "cons-001", "qty": 20 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 60 }, { "type": "item", "item_def_id": "mat-001", "qty": 120 }] },
+    { "level": 27, "free": [{ "type": "currency", "currency": "silver", "amount": 800 }, { "type": "item", "item_def_id": "cons-002", "qty": 20 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 65 }, { "type": "item", "item_def_id": "mat-002", "qty": 120 }] },
+    { "level": 28, "free": [{ "type": "currency", "currency": "silver", "amount": 820 }, { "type": "item", "item_def_id": "mat-004", "qty": 120 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 65 }, { "type": "item", "item_def_id": "mat-007", "qty": 120 }] },
+    { "level": 29, "free": [{ "type": "currency", "currency": "silver", "amount": 840 }, { "type": "item", "item_def_id": "token-001", "qty": 15 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 70 }, { "type": "item", "item_def_id": "mat-006", "qty": 15 }] },
+    { "level": 30, "free": [{ "type": "currency", "currency": "silver", "amount": 1000 }, { "type": "item", "item_def_id": "box-002", "qty": 2 }], "premium": [{ "type": "currency", "currency": "spirit_stones", "amount": 100 }, { "type": "item", "item_def_id": "book-jichu-jianfa", "qty": 1 }] }
+  ]
+}

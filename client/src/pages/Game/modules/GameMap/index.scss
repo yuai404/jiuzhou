@@ -1,0 +1,244 @@
+.game-map {
+  height: 100%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+
+  .map-header-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .map-room-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 20px;
+  }
+
+  .map-room-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    line-height: 16px;
+  }
+
+  .map-header-right {
+    margin-left: 12px;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 20px;
+  }
+}
+
+.map-canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.map-content {
+  position: relative;
+  transform-origin: center;
+}
+
+.map-connections {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.map-nodes {
+  --room-w: 140px;
+  --room-h: 64px;
+  --map-gap: 16px;
+
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--map-cols), var(--room-w));
+  grid-template-rows: repeat(var(--map-rows), var(--room-h));
+  gap: var(--map-gap);
+  padding: 8px;
+}
+
+.room-node {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: var(--panel-bg-soft);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.12s ease;
+  position: relative;
+  z-index: 0;
+
+  &:hover {
+    border-color: var(--text-secondary);
+    background: var(--hover-bg);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--text-color);
+    box-shadow: 0 0 0 3px var(--primary-shadow);
+  }
+
+  &.current {
+    background: var(--text-color);
+    border-color: var(--text-color);
+
+    .room-node-name {
+      color: var(--panel-bg);
+    }
+  }
+
+  &.selected {
+    border-color: var(--text-color);
+    box-shadow: 0 0 0 2px var(--primary-shadow);
+  }
+
+  &.blocked {
+    cursor: not-allowed;
+    opacity: 0.65;
+
+    &:hover {
+      border-color: var(--border-color);
+      background: var(--panel-bg-soft);
+      transform: none;
+    }
+  }
+
+  &.tracked::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 14px;
+    background: radial-gradient(circle at 50% 50%, rgba(22, 119, 255, 0.35), rgba(22, 119, 255, 0) 60%);
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.35), 0 0 18px rgba(22, 119, 255, 0.35);
+    opacity: 0.75;
+    animation: task-track-pulse 1.4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+.room-node-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  line-height: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes task-track-pulse {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  55% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+}
+
+.map-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--panel-bg-soft);
+  border-radius: 8px;
+
+  .area-info {
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-color);
+      margin: 0 0 4px;
+    }
+
+    p {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin: 0 0 4px;
+    }
+
+    .area-level {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+  }
+
+  .move-btn {
+    padding: 8px 24px;
+    background: var(--text-color);
+    color: var(--panel-bg);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: var(--text-tertiary);
+    }
+  }
+}
+
+// 手机端适配
+@media screen and (max-width: 768px) {
+  .game-map {
+    padding: 12px;
+  }
+
+  .map-canvas {
+    padding: 6px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .map-nodes {
+    --room-w: 120px;
+    --room-h: 56px;
+    --map-gap: 12px;
+    padding: 6px;
+  }
+
+  .map-action {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+
+    .move-btn {
+      width: 100%;
+    }
+  }
+}

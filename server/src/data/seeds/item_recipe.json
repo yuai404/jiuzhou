@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "description": "合成配方种子数据",
+  "recipes": [
+    {
+      "id": "recipe-qing-ling-dan",
+      "name": "清灵丹配方",
+      "recipe_type": "craft",
+      "product_item_def_id": "cons-001",
+      "product_qty": 1,
+      "cost_silver": 10,
+      "cost_spirit_stones": 0,
+      "cost_items": [
+        { "item_def_id": "mat-001", "qty": 3 }
+      ],
+      "req_realm": "凡人",
+      "success_rate": 100.00
+    },
+    {
+      "id": "recipe-hui-qi-dan",
+      "name": "回气丹配方",
+      "recipe_type": "craft",
+      "product_item_def_id": "cons-002",
+      "product_qty": 1,
+      "cost_silver": 15,
+      "cost_spirit_stones": 0,
+      "cost_items": [
+        { "item_def_id": "mat-001", "qty": 5 }
+      ],
+      "req_realm": "凡人",
+      "success_rate": 100.00
+    },
+    {
+      "id": "recipe-xuan-ling-dan",
+      "name": "玄灵丹配方",
+      "recipe_type": "craft",
+      "product_item_def_id": "cons-003",
+      "product_qty": 1,
+      "cost_silver": 50,
+      "cost_spirit_stones": 1,
+      "cost_items": [
+        { "item_def_id": "mat-001", "qty": 10 },
+        { "item_def_id": "cons-001", "qty": 2 }
+      ],
+      "req_realm": "炼精化炁·养气期",
+      "success_rate": 80.00,
+      "fail_return_rate": 50.00
+    },
+    {
+      "id": "recipe-xuan-tie",
+      "name": "玄铁精炼",
+      "recipe_type": "refine",
+      "product_item_def_id": "mat-003",
+      "product_qty": 1,
+      "cost_silver": 30,
+      "cost_spirit_stones": 0,
+      "cost_items": [
+        { "item_def_id": "mat-002", "qty": 5 }
+      ],
+      "req_realm": "炼精化炁·养气期",
+      "req_building": "forge-1",
+      "success_rate": 90.00
+    },
+    {
+      "id": "recipe-xin-shou-jian",
+      "name": "新手剑锻造",
+      "recipe_type": "craft",
+      "product_item_def_id": "equip-weapon-001",
+      "product_qty": 1,
+      "cost_silver": 50,
+      "cost_spirit_stones": 0,
+      "cost_items": [
+        { "item_def_id": "mat-002", "qty": 3 }
+      ],
+      "req_realm": "凡人",
+      "req_building": "forge-1",
+      "success_rate": 100.00
+    },
+    {
+      "id": "recipe-qing-feng-jian",
+      "name": "清风剑锻造",
+      "recipe_type": "craft",
+      "product_item_def_id": "equip-weapon-002",
+      "product_qty": 1,
+      "product_quality_min": "玄",
+      "product_quality_max": "地",
+      "cost_silver": 200,
+      "cost_spirit_stones": 5,
+      "cost_items": [
+        { "item_def_id": "mat-003", "qty": 5 },
+        { "item_def_id": "mat-002", "qty": 10 }
+      ],
+      "req_realm": "炼精化炁·养气期",
+      "req_building": "forge-2",
+      "success_rate": 70.00,
+      "fail_return_rate": 30.00
+    }
+  ]
+}

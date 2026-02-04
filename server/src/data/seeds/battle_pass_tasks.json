@@ -1,0 +1,83 @@
+{
+  "season_id": "bp-season-001",
+  "tasks": [
+    {
+      "id": "bp-task-daily-001",
+      "code": "daily_login",
+      "name": "每日登录",
+      "description": "登录游戏1次",
+      "task_type": "daily",
+      "condition": { "event": "login" },
+      "target_value": 1,
+      "reward_exp": 100,
+      "reward_extra": [{ "type": "currency", "currency": "silver", "amount": 50 }],
+      "enabled": true,
+      "sort_weight": 10
+    },
+    {
+      "id": "bp-task-daily-002",
+      "code": "daily_battle_win",
+      "name": "每日胜利",
+      "description": "战斗胜利3次",
+      "task_type": "daily",
+      "condition": { "event": "battle_win" },
+      "target_value": 3,
+      "reward_exp": 180,
+      "reward_extra": [{ "type": "item", "item_def_id": "cons-001", "qty": 2 }],
+      "enabled": true,
+      "sort_weight": 20
+    },
+    {
+      "id": "bp-task-daily-003",
+      "code": "daily_dungeon_clear",
+      "name": "每日秘境",
+      "description": "通关秘境1次",
+      "task_type": "daily",
+      "condition": { "event": "dungeon_clear" },
+      "target_value": 1,
+      "reward_exp": 220,
+      "reward_extra": [{ "type": "item", "item_def_id": "token-001", "qty": 2 }],
+      "enabled": true,
+      "sort_weight": 30
+    },
+    {
+      "id": "bp-task-weekly-001",
+      "code": "weekly_battle_win",
+      "name": "周常胜利",
+      "description": "战斗胜利20次",
+      "task_type": "weekly",
+      "condition": { "event": "battle_win" },
+      "target_value": 20,
+      "reward_exp": 1200,
+      "reward_extra": [{ "type": "currency", "currency": "silver", "amount": 800 }],
+      "enabled": true,
+      "sort_weight": 110
+    },
+    {
+      "id": "bp-task-weekly-002",
+      "code": "weekly_dungeon_clear",
+      "name": "周常秘境",
+      "description": "通关秘境5次",
+      "task_type": "weekly",
+      "condition": { "event": "dungeon_clear" },
+      "target_value": 5,
+      "reward_exp": 1500,
+      "reward_extra": [{ "type": "item", "item_def_id": "box-001", "qty": 1 }],
+      "enabled": true,
+      "sort_weight": 120
+    },
+    {
+      "id": "bp-task-season-001",
+      "code": "season_battle_win",
+      "name": "赛季挑战",
+      "description": "战斗胜利100次",
+      "task_type": "season",
+      "condition": { "event": "battle_win" },
+      "target_value": 100,
+      "reward_exp": 6000,
+      "reward_extra": [{ "type": "currency", "currency": "spirit_stones", "amount": 30 }],
+      "enabled": true,
+      "sort_weight": 210
+    }
+  ]
+}

@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "description": "秘境种子数据 - 养气期 - 苍狼巢穴",
+  "dungeons": [
+    {
+      "def": {
+        "id": "dungeon-qiqi-wolf-den",
+        "name": "苍狼巢穴",
+        "type": "trial",
+        "category": "境界",
+        "description": "山林深处的狼群盘踞之地，狼王凶悍，常有修士前来历练。",
+        "icon": "/assets/dungeon/wolf_den.png",
+        "background": "/assets/dungeon/bg_wolf_den.png",
+        "min_players": 1,
+        "max_players": 4,
+        "min_realm": "炼精化炁·养气期",
+        "recommended_realm": "炼精化炁·养气期",
+        "unlock_condition": {},
+        "daily_limit": 5,
+        "weekly_limit": 0,
+        "stamina_cost": 10,
+        "time_limit_sec": 900,
+        "revive_limit": 3,
+        "tags": ["养气期", "历练", "狼王"],
+        "sort_weight": 120,
+        "enabled": true,
+        "version": 1
+      },
+      "difficulties": [
+        {
+          "id": "dd-qiqi-wolf-den-n",
+          "dungeon_id": "dungeon-qiqi-wolf-den",
+          "name": "普通",
+          "difficulty_rank": 1,
+          "monster_level_add": 0,
+          "monster_attr_mult": 1.0,
+          "reward_mult": 1.0,
+          "min_realm": "炼精化炁·养气期",
+          "unlock_prev_difficulty": false,
+          "first_clear_rewards": {
+            "items": [{ "item_def_id": "cons-001", "qty": 2 }],
+            "silver": 50
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-qiqi-wolf-den-n-1",
+              "difficulty_id": "dd-qiqi-wolf-den-n",
+              "stage_index": 1,
+              "name": "林间伏影",
+              "type": "battle",
+              "description": "狼群在林间游弋，伺机袭击闯入者。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-gray-wolf", "count": 2 },
+                    { "monster_def_id": "monster-wild-boar", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-gray-wolf", "count": 3 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-wolf-den-n-2",
+              "difficulty_id": "dd-qiqi-wolf-den-n",
+              "stage_index": 2,
+              "name": "狼群围猎",
+              "type": "battle",
+              "description": "更凶猛的山野妖狼加入战局，战斗愈发激烈。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-mountain-wolf", "count": 2 },
+                    { "monster_def_id": "monster-venomous-snake", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-mountain-wolf", "count": 3 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-wolf-den-n-3",
+              "difficulty_id": "dd-qiqi-wolf-den-n",
+              "stage_index": 3,
+              "name": "狼王现身",
+              "type": "boss",
+              "description": "狼王咆哮而出，率领残余狼群发动最后的猛攻。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {
+                "silver": { "min": 20, "max": 40 },
+                "exp": 60
+              },
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-elite-wolf-king", "count": 1 },
+                    { "monster_def_id": "monster-gray-wolf", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd-qiqi-wolf-den-h",
+          "dungeon_id": "dungeon-qiqi-wolf-den",
+          "name": "困难",
+          "difficulty_rank": 2,
+          "monster_level_add": 2,
+          "monster_attr_mult": 1.15,
+          "reward_mult": 1.2,
+          "min_realm": "炼精化炁·养气期",
+          "unlock_prev_difficulty": true,
+          "first_clear_rewards": {
+            "items": [{ "item_def_id": "cons-002", "qty": 1 }],
+            "silver": 80
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-qiqi-wolf-den-h-1",
+              "difficulty_id": "dd-qiqi-wolf-den-h",
+              "stage_index": 1,
+              "name": "血影狼踪",
+              "type": "battle",
+              "description": "狼群更为凶残，攻击频率与配合显著提升。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-mountain-wolf", "count": 2 },
+                    { "monster_def_id": "monster-gray-wolf", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-mountain-wolf", "count": 3 },
+                    { "monster_def_id": "monster-venomous-snake", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-wolf-den-h-2",
+              "difficulty_id": "dd-qiqi-wolf-den-h",
+              "stage_index": 2,
+              "name": "踏入巢穴",
+              "type": "battle",
+              "description": "巢穴入口守卫森严，稍有不慎便会被围攻。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-mountain-wolf", "count": 4 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    { "monster_def_id": "monster-gray-wolf", "count": 3 },
+                    { "monster_def_id": "monster-wild-boar", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-qiqi-wolf-den-h-3",
+              "difficulty_id": "dd-qiqi-wolf-den-h",
+              "stage_index": 3,
+              "name": "血牙狼王",
+              "type": "boss",
+              "description": "狼王更为狂暴，呼啸声中带着压迫的杀意。",
+              "time_limit_sec": 0,
+              "clear_condition": { "type": "kill_all" },
+              "fail_condition": {},
+              "stage_rewards": {
+                "silver": { "min": 30, "max": 60 },
+                "exp": 90,
+                "items": [{ "item_def_id": "mat-005", "qty_min": 1, "qty_max": 2, "chance": 0.6 }]
+              },
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    { "monster_def_id": "monster-elite-wolf-king", "count": 1 }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 5,
+                  "monsters": [
+                    { "monster_def_id": "monster-gray-wolf", "count": 2 }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "description": "刷新规则种子数据 - 新手村",
+  "rules": [
+    {
+      "id": "spawn-c-normal",
+      "area": "C",
+      "pool_type": "monster",
+      "pool_entries": [
+        { "monster_def_id": "monster-wild-rabbit", "weight": 40 },
+        { "monster_def_id": "monster-wild-boar", "weight": 30 },
+        { "monster_def_id": "monster-gray-wolf", "weight": 20 },
+        { "monster_def_id": "monster-venomous-snake", "weight": 10 }
+      ],
+      "max_alive": 15,
+      "respawn_sec": 30,
+      "elite_chance": 0.02,
+      "req_realm_min": "凡人",
+      "enabled": true
+    },
+    {
+      "id": "spawn-nw-normal",
+      "area": "NW",
+      "pool_type": "monster",
+      "pool_entries": [
+        { "monster_def_id": "monster-gray-wolf", "weight": 40 },
+        { "monster_def_id": "monster-mountain-wolf", "weight": 35 },
+        { "monster_def_id": "monster-venomous-snake", "weight": 25 }
+      ],
+      "max_alive": 12,
+      "respawn_sec": 45,
+      "elite_chance": 0.05,
+      "req_realm_min": "凡人",
+      "enabled": true
+    },
+    {
+      "id": "spawn-ne-normal",
+      "area": "NE",
+      "pool_type": "monster",
+      "pool_entries": [
+        { "monster_def_id": "monster-stone-golem", "weight": 50 },
+        { "monster_def_id": "monster-mountain-wolf", "weight": 30 },
+        { "monster_def_id": "monster-gray-wolf", "weight": 20 }
+      ],
+      "max_alive": 10,
+      "respawn_sec": 60,
+      "elite_chance": 0.08,
+      "req_realm_min": "凡人",
+      "enabled": true
+    },
+    {
+      "id": "spawn-n-elite",
+      "area": "N",
+      "pool_type": "monster",
+      "pool_entries": [
+        { "monster_def_id": "monster-mountain-wolf", "weight": 50 },
+        { "monster_def_id": "monster-stone-golem", "weight": 30 },
+        { "monster_def_id": "monster-elite-wolf-king", "weight": 20 }
+      ],
+      "max_alive": 8,
+      "respawn_sec": 90,
+      "elite_chance": 0.15,
+      "req_realm_min": "凡人",
+      "enabled": true
+    },
+    {
+      "id": "spawn-s-boss",
+      "area": "S",
+      "pool_type": "monster",
+      "pool_entries": [
+        { "monster_def_id": "monster-boss-ancient-tree", "weight": 100 }
+      ],
+      "max_alive": 1,
+      "respawn_sec": 3600,
+      "elite_chance": 0,
+      "boss_window": {
+        "spawn_hours": [12, 20],
+        "announce_before_sec": 300
+      },
+      "req_realm_min": "炼精化炁·养气期",
+      "enabled": true
+    }
+  ]
+}

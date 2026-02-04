@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "description": "NPC定义种子数据 - 新手村",
+  "npcs": [
+    {
+      "id": "npc-village-elder",
+      "code": "village_elder",
+      "name": "村长",
+      "title": "青云村村长",
+      "gender": "男",
+      "realm": "炼精化炁·养气期",
+      "avatar": "/assets/npc/village_elder.png",
+      "description": "青云村的村长，德高望重，见证了无数修士踏上修仙之路。",
+      "npc_type": "quest",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 500,
+        "max_qixue": 500,
+        "wugong": 30,
+        "fagong": 20,
+        "wufang": 25,
+        "fafang": 20,
+        "sudu": 8
+      },
+      "talk_tree_id": "talk-village-elder",
+      "quest_giver_id": "qg-newbie-main",
+      "sort_weight": 100,
+      "enabled": true
+    },
+    {
+      "id": "npc-blacksmith",
+      "code": "blacksmith",
+      "name": "铁匠张",
+      "title": "锻造师",
+      "gender": "男",
+      "realm": "凡人",
+      "avatar": "/assets/npc/blacksmith.png",
+      "description": "青云村的铁匠，虽是凡人，但锻造手艺精湛，能打造出不错的新手装备。",
+      "npc_type": "merchant",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 200,
+        "max_qixue": 200,
+        "wugong": 15,
+        "wufang": 10,
+        "sudu": 5
+      },
+      "shop_id": "shop-blacksmith",
+      "sort_weight": 90,
+      "enabled": true
+    },
+    {
+      "id": "npc-herbalist",
+      "code": "herbalist",
+      "name": "药婆婆",
+      "title": "采药人",
+      "gender": "女",
+      "realm": "凡人",
+      "avatar": "/assets/npc/herbalist.png",
+      "description": "常年在山中采药的老婆婆，对各种草药了如指掌，出售基础丹药和材料。",
+      "npc_type": "merchant",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 150,
+        "max_qixue": 150,
+        "fagong": 10,
+        "fafang": 8,
+        "sudu": 4
+      },
+      "shop_id": "shop-herbalist",
+      "sort_weight": 85,
+      "enabled": true
+    },
+    {
+      "id": "npc-warehouse-keeper",
+      "code": "warehouse_keeper",
+      "name": "仓库管事",
+      "title": "管事",
+      "gender": "男",
+      "realm": "凡人",
+      "avatar": "/assets/npc/warehouse_keeper.png",
+      "description": "负责管理村中仓库的管事，可以帮助修士存取物品。",
+      "npc_type": "function",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 100,
+        "max_qixue": 100,
+        "wufang": 5,
+        "sudu": 3
+      },
+      "sort_weight": 80,
+      "enabled": true
+    },
+    {
+      "id": "npc-teleporter",
+      "code": "teleporter",
+      "name": "传送使者",
+      "title": "传送师",
+      "gender": "女",
+      "realm": "炼精化炁·通脉期",
+      "avatar": "/assets/npc/teleporter.png",
+      "description": "掌握传送法阵的修士，可以帮助修士传送到各个区域。",
+      "npc_type": "function",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 800,
+        "max_qixue": 800,
+        "fagong": 50,
+        "fafang": 40,
+        "sudu": 15
+      },
+      "sort_weight": 95,
+      "enabled": true
+    },
+    {
+      "id": "npc-guide",
+      "code": "guide",
+      "name": "引路童子",
+      "title": "向导",
+      "gender": "男",
+      "realm": "凡人",
+      "avatar": "/assets/npc/guide.png",
+      "description": "热心的小童子，会为初来乍到的修士指引方向，介绍村中各处。",
+      "npc_type": "story",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 80,
+        "max_qixue": 80,
+        "sudu": 6
+      },
+      "talk_tree_id": "talk-guide",
+      "sort_weight": 70,
+      "enabled": true
+    },
+    {
+      "id": "npc-bounty-board",
+      "code": "bounty_board",
+      "name": "悬赏榜",
+      "title": "告示牌",
+      "gender": "-",
+      "realm": "-",
+      "avatar": "/assets/npc/bounty_board.png",
+      "description": "村口的悬赏榜，张贴着各种悬赏任务，击杀妖兽可获得奖励。",
+      "npc_type": "quest",
+      "area": "C",
+      "quest_giver_id": "qg-bounty-newbie",
+      "sort_weight": 75,
+      "enabled": true
+    },
+    {
+      "id": "npc-mysterious-merchant",
+      "code": "mysterious_merchant",
+      "name": "神秘商人",
+      "title": "游商",
+      "gender": "男",
+      "realm": "炼精化炁·凝炁期",
+      "avatar": "/assets/npc/mysterious_merchant.png",
+      "description": "来历不明的神秘商人，偶尔出现在村中，出售一些稀有物品。",
+      "npc_type": "merchant",
+      "area": "C",
+      "base_attrs": {
+        "qixue": 1200,
+        "max_qixue": 1200,
+        "wugong": 60,
+        "fagong": 60,
+        "wufang": 50,
+        "fafang": 50,
+        "sudu": 20
+      },
+      "shop_id": "shop-mysterious",
+      "sort_weight": 60,
+      "enabled": true
+    }
+  ],
+  "talk_trees": [
+    {
+      "id": "talk-guide",
+      "name": "引路童子对话",
+      "greeting_lines": ["欢迎来到青云村！修行之路漫漫，先从认识这里开始吧。", "你若有疑问，尽管问我。"],
+      "enabled": true,
+      "sort_weight": 100,
+      "version": 1
+    },
+    {
+      "id": "talk-village-elder",
+      "name": "村长对话",
+      "greeting_lines": ["你来了。青云村虽小，却也暗流涌动。", "若想在这世道立足，先练胆，再练心。"],
+      "enabled": true,
+      "sort_weight": 90,
+      "version": 1
+    }
+  ]
+}

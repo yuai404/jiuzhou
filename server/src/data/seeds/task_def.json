@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "description": "任务定义种子数据 - 新手村与外围",
+  "tasks": [
+    {
+      "id": "task-main-001",
+      "category": "main",
+      "title": "初入青云村",
+      "realm": "凡人",
+      "description": "前往青云村村口，与引路童子交谈，了解修行基础。",
+      "giver_npc_id": "npc-guide",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-entrance",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "talk_npc",
+          "text": "与引路童子交谈",
+          "target": 1,
+          "params": { "npc_id": "npc-guide" }
+        }
+      ],
+      "rewards": [
+        { "type": "silver", "amount": 100 },
+        { "type": "item", "item_def_id": "mat-gongfa-canye", "qty": 1 }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 1000
+    },
+    {
+      "id": "task-main-002",
+      "category": "main",
+      "title": "拜访村长",
+      "realm": "凡人",
+      "description": "前往村中广场，拜访村长，了解村中近况。",
+      "giver_npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-village-center",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "talk_npc",
+          "text": "与村长交谈",
+          "target": 1,
+          "params": { "npc_id": "npc-village-elder" }
+        }
+      ],
+      "rewards": [
+        { "type": "silver", "amount": 150 }
+      ],
+      "prereq_task_ids": ["task-main-001"],
+      "enabled": true,
+      "sort_weight": 990
+    },
+    {
+      "id": "task-main-003",
+      "category": "main",
+      "title": "南林试炼",
+      "realm": "凡人",
+      "description": "前往青云村外南林小道，击杀野兔，证明自己的战斗能力。",
+      "giver_npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-outskirts",
+      "room_id": "room-south-forest",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击杀野兔",
+          "target": 3,
+          "params": { "monster_id": "monster-wild-rabbit" }
+        }
+      ],
+      "rewards": [
+        { "type": "silver", "amount": 200 },
+        { "type": "spirit_stones", "amount": 5 }
+      ],
+      "prereq_task_ids": ["task-main-002"],
+      "enabled": true,
+      "sort_weight": 980
+    },
+    {
+      "id": "task-side-001",
+      "category": "side",
+      "title": "采药人的委托",
+      "realm": "凡人",
+      "description": "药婆婆需要一些野外药草。前往村外采集后交给她。",
+      "giver_npc_id": "npc-herbalist",
+      "map_id": "map-qingyun-outskirts",
+      "room_id": "room-south-forest",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "gather_resource",
+          "text": "采集野外药草",
+          "target": 5,
+          "params": { "resource_id": "res-wild-herb" }
+        }
+      ],
+      "rewards": [
+        { "type": "silver", "amount": 120 }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 800
+    },
+    {
+      "id": "task-side-002",
+      "category": "side",
+      "title": "灵草献礼",
+      "realm": "凡人",
+      "description": "村长宅邸有灵草生长。采集一株灵草，献给村长。",
+      "giver_npc_id": "npc-village-elder",
+      "map_id": "map-qingyun-village",
+      "room_id": "room-elder-house",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "gather_resource",
+          "text": "采集灵草",
+          "target": 1,
+          "params": { "resource_id": "res-spirit-grass" }
+        }
+      ],
+      "rewards": [
+        { "type": "spirit_stones", "amount": 10 }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 790
+    },
+    {
+      "id": "task-daily-001",
+      "category": "daily",
+      "title": "日常：清理野兔",
+      "realm": "凡人",
+      "description": "每日小试身手，击杀一些野兔。",
+      "giver_npc_id": "npc-bounty-board",
+      "map_id": "map-qingyun-outskirts",
+      "room_id": "room-south-forest",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击杀野兔",
+          "target": 5,
+          "params": { "monster_id": "monster-wild-rabbit" }
+        }
+      ],
+      "rewards": [
+        { "type": "silver", "amount": 80 }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 500
+    }
+  ]
+}

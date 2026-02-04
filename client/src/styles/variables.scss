@@ -1,0 +1,38 @@
+// 九州修仙录 - 配色规范
+// 主题：白色为主，黑色为配色
+
+// 主色
+$color-primary: #1a1a1a;        // 主色-黑
+$color-primary-light: #333333;  // 主色-浅黑
+$color-primary-dark: #000000;   // 主色-纯黑
+
+// 背景色
+$color-bg: #ffffff;             // 背景-白
+$color-bg-secondary: #fafafa;   // 背景-浅灰
+$color-bg-tertiary: #f5f5f5;    // 背景-灰
+
+// 文字色
+$color-text: #1a1a1a;           // 文字-主要
+$color-text-secondary: #666666; // 文字-次要
+$color-text-tertiary: #999999;  // 文字-辅助
+$color-text-placeholder: #bbbbbb; // 文字-占位
+
+// 边框色
+$color-border: #e0e0e0;         // 边框-默认
+$color-border-light: #f0f0f0;   // 边框-浅
+$color-border-dark: #cccccc;    // 边框-深
+
+// 阴影
+$shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.1);
+
+// 圆角
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 16px;
+
+// 过渡
+$transition-fast: 0.2s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;

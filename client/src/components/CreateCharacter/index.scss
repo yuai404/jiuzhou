@@ -1,0 +1,135 @@
+.create-character-modal {
+  .ant-modal-content {
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+
+  .modal-header {
+    text-align: center;
+    margin-bottom: 24px;
+
+    h2 {
+      font-size: 24px;
+      color: #1a1a1a;
+      margin: 0 0 8px;
+      font-weight: 600;
+    }
+
+    p {
+      color: #666666;
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+
+  .ant-form-item-label > label {
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  .ant-input-affix-wrapper {
+    background: #fafafa;
+    border-color: #e0e0e0;
+
+    &:hover {
+      border-color: #999999;
+    }
+
+    &.ant-input-affix-wrapper-focused {
+      border-color: #1a1a1a;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .ant-input-prefix {
+      color: #999999;
+    }
+
+    input {
+      background: transparent;
+
+      &::placeholder {
+        color: #bbbbbb;
+      }
+    }
+  }
+
+  .gender-select {
+    display: flex;
+    gap: 12px;
+
+    .ant-radio-button-wrapper {
+      flex: 1;
+      height: 44px;
+      line-height: 42px;
+      text-align: center;
+      border-radius: 8px;
+      border-color: #e0e0e0;
+      background: #fafafa;
+
+      &:not(:first-child)::before {
+        display: none;
+      }
+
+      &:hover {
+        color: #1a1a1a;
+        border-color: #999999;
+      }
+
+      &.ant-radio-button-wrapper-checked {
+        background: #1a1a1a;
+        border-color: #1a1a1a;
+        color: #ffffff;
+
+        &:hover {
+          background: #333333;
+          border-color: #333333;
+        }
+      }
+
+      .anticon {
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .ant-btn-primary {
+    background: #1a1a1a;
+    border: none;
+    height: 44px;
+    font-size: 16px;
+    letter-spacing: 2px;
+    margin-top: 8px;
+
+    &:hover {
+      background: #333333 !important;
+    }
+  }
+}
+
+// 手机端适配
+@media screen and (max-width: 480px) {
+  .create-character-modal {
+    .ant-modal {
+      max-width: calc(100vw - 32px);
+      margin: 16px;
+    }
+
+    .ant-modal-content {
+      padding: 24px 20px;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+    }
+
+    .gender-select .ant-radio-button-wrapper {
+      height: 40px;
+      line-height: 38px;
+    }
+
+    .ant-btn-primary {
+      height: 40px;
+      font-size: 15px;
+    }
+  }
+}

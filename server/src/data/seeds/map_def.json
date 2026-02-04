@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "description": "地图定义种子数据 - 新手村青云村",
+  "maps": [
+    {
+      "id": "map-qingyun-village",
+      "code": "qingyun_village",
+      "name": "青云村",
+      "description": "九州大陆东洲边陲的一个宁静小村，灵气稀薄但民风淳朴。许多修士从这里踏上修仙之路。",
+      "background_image": "/assets/map/qingyun_village.png",
+      "map_type": "city",
+      "region": "东洲",
+      "world_position": { "x": 100, "y": 200 },
+      "req_realm_min": null,
+      "safe_zone": true,
+      "pk_mode": "normal",
+      "revive_map_id": "map-qingyun-village",
+      "revive_room_id": "room-village-center",
+      "sort_weight": 1000,
+      "enabled": true,
+      "rooms": [
+        {
+          "id": "room-village-entrance",
+          "name": "村口",
+          "description": "青云村的入口，一块刻有'青云村'三字的石碑立于道旁。远处可见袅袅炊烟。",
+          "position": { "x": 0, "y": 2 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-village-center" },
+            { "direction": "south", "target_room_id": "room-south-forest", "target_map_id": "map-qingyun-outskirts" }
+          ],
+          "npcs": ["npc-guide"],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": [
+            { "event_id": "evt-newbie-welcome", "trigger": "enter", "once": true }
+          ]
+        },
+        {
+          "id": "room-village-center",
+          "name": "村中广场",
+          "description": "青云村的中心广场，村民们常在此聚集。村长的宅邸就在广场北侧。",
+          "position": { "x": 0, "y": 1 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "south", "target_room_id": "room-village-entrance" },
+            { "direction": "north", "target_room_id": "room-elder-house" },
+            { "direction": "east", "target_room_id": "room-blacksmith" },
+            { "direction": "west", "target_room_id": "room-herb-shop" }
+          ],
+          "npcs": ["npc-village-elder", "npc-bounty-board", "npc-teleporter"],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [
+            { "target_map_id": "map-dongzhou-city", "target_room_id": "room-teleport-hall", "name": "东洲城传送阵", "req_realm_min": "炼精化炁·通脉期" }
+          ],
+          "events": []
+        },
+        {
+          "id": "room-elder-house",
+          "name": "村长宅邸",
+          "description": "村长居住的宅院，院内种满了灵草，隐约能感受到一丝灵气波动。",
+          "position": { "x": 0, "y": 0 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "south", "target_room_id": "room-village-center" }
+          ],
+          "npcs": [],
+          "monsters": [],
+          "resources": [
+            { "resource_id": "res-spirit-grass", "count": 20, "collect_limit": 20, "respawn_sec": 180 }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-blacksmith",
+          "name": "铁匠铺",
+          "description": "叮叮当当的打铁声不绝于耳，铁匠张正在锻造兵器。",
+          "position": { "x": 1, "y": 1 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "west", "target_room_id": "room-village-center" },
+            { "direction": "east", "target_room_id": "room-warehouse" }
+          ],
+          "npcs": ["npc-blacksmith"],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-warehouse",
+          "name": "仓库",
+          "description": "村中的公共仓库，由管事看守，可以存放物品。",
+          "position": { "x": 2, "y": 1 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "west", "target_room_id": "room-blacksmith" }
+          ],
+          "npcs": ["npc-warehouse-keeper"],
+          "monsters": [],
+          "resources": [],
+          "items": [
+            { "item_def_id": "obj-warehouse", "once": false, "chance": 0 }
+          ],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-herb-shop",
+          "name": "药草铺",
+          "description": "空气中弥漫着草药的清香，药婆婆正在整理各种药材。",
+          "position": { "x": -1, "y": 1 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "east", "target_room_id": "room-village-center" },
+            { "direction": "north", "target_room_id": "room-mysterious-corner" }
+          ],
+          "npcs": ["npc-herbalist"],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-mysterious-corner",
+          "name": "幽暗角落",
+          "description": "村子西北角的一处僻静之地，偶尔会有神秘商人出没。",
+          "position": { "x": -1, "y": 0 },
+          "room_type": "safe",
+          "connections": [
+            { "direction": "south", "target_room_id": "room-herb-shop" }
+          ],
+          "npcs": ["npc-mysterious-merchant"],
+          "monsters": [],
+          "resources": [],
+          "items": [
+            { "item_def_id": "item-hidden-chest", "once": true, "req_quest_id": "quest-find-treasure" }
+          ],
+          "portals": [],
+          "events": []
+        }
+      ]
+    },
+    {
+      "id": "map-qingyun-outskirts",
+      "code": "qingyun_outskirts",
+      "name": "青云村外",
+      "description": "青云村外围的野外区域，有一些低级妖兽出没，是新手修士历练的好去处。",
+      "background_image": "/assets/map/qingyun_outskirts.png",
+      "map_type": "field",
+      "parent_map_id": "map-qingyun-village",
+      "region": "东洲",
+      "world_position": { "x": 100, "y": 210 },
+      "req_realm_min": null,
+      "safe_zone": false,
+      "pk_mode": "normal",
+      "revive_map_id": "map-qingyun-village",
+      "revive_room_id": "room-village-center",
+      "sort_weight": 999,
+      "enabled": true,
+      "rooms": [
+        {
+          "id": "room-south-forest",
+          "name": "南林小道",
+          "description": "通往青云村的林间小道，偶尔能看到野兔出没。",
+          "position": { "x": 0, "y": 0 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-village-entrance", "target_map_id": "map-qingyun-village" },
+            { "direction": "south", "target_room_id": "room-forest-clearing" },
+            { "direction": "east", "target_room_id": "room-east-grassland" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-wild-rabbit", "count": 3, "respawn_sec": 30 }
+          ],
+          "resources": [
+            { "resource_id": "res-wild-herb", "count": 50, "collect_limit": 50, "respawn_sec": 180 }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-forest-clearing",
+          "name": "林中空地",
+          "description": "森林中的一片空地，野猪经常在此觅食。",
+          "position": { "x": 0, "y": 1 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-south-forest" },
+            { "direction": "south", "target_room_id": "room-deep-forest" },
+            { "direction": "west", "target_room_id": "room-west-stream" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-wild-rabbit", "count": 2, "respawn_sec": 30 },
+            { "monster_def_id": "monster-wild-boar", "count": 2, "respawn_sec": 45 }
+          ],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-east-grassland",
+          "name": "东边草地",
+          "description": "村东的一片草地，灰狼偶尔会在此出没。",
+          "position": { "x": 1, "y": 0 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "west", "target_room_id": "room-south-forest" },
+            { "direction": "south", "target_room_id": "room-rocky-area" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-wild-boar", "count": 2, "respawn_sec": 45 },
+            { "monster_def_id": "monster-gray-wolf", "count": 1, "respawn_sec": 60 }
+          ],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-west-stream",
+          "name": "西溪边",
+          "description": "一条清澈的小溪从此流过，溪边长满了药草，但也有毒蛇出没。",
+          "position": { "x": -1, "y": 1 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "east", "target_room_id": "room-forest-clearing" },
+            { "direction": "south", "target_room_id": "room-snake-nest" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-venomous-snake", "count": 2, "respawn_sec": 60 }
+          ],
+          "resources": [
+            { "resource_id": "mat-001", "count": 20, "collect_limit": 20, "respawn_sec": 300 }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-snake-nest",
+          "name": "蛇窟入口",
+          "description": "阴暗潮湿的洞穴入口，空气中弥漫着腥臭味，是毒蛇的巢穴。",
+          "position": { "x": -1, "y": 2 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-west-stream" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-venomous-snake", "count": 4, "respawn_sec": 45 }
+          ],
+          "resources": [],
+          "items": [
+            { "item_def_id": "item-snake-egg", "once": false, "chance": 0.1 }
+          ],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-deep-forest",
+          "name": "密林深处",
+          "description": "森林深处，树木遮天蔽日，山野妖狼在此游荡。",
+          "position": { "x": 0, "y": 2 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-forest-clearing" },
+            { "direction": "east", "target_room_id": "room-rocky-area" },
+            { "direction": "south", "target_room_id": "room-wolf-den" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-gray-wolf", "count": 2, "respawn_sec": 60 },
+            { "monster_def_id": "monster-mountain-wolf", "count": 1, "respawn_sec": 90 }
+          ],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-rocky-area",
+          "name": "乱石岗",
+          "description": "布满巨石的区域，石傀儡在此徘徊，据说是上古阵法的残留。",
+          "position": { "x": 1, "y": 1 },
+          "room_type": "normal",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-east-grassland" },
+            { "direction": "west", "target_room_id": "room-deep-forest" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-stone-golem", "count": 2, "respawn_sec": 120 }
+          ],
+          "resources": [
+            { "resource_id": "res-spirit-stone-ore", "count": 10, "collect_limit": 10, "respawn_sec": 600 }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-wolf-den",
+          "name": "狼窝",
+          "description": "山野妖狼的巢穴，狼王就在此处。危险区域，需要做好准备再进入。",
+          "position": { "x": 0, "y": 3 },
+          "room_type": "boss",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-deep-forest" },
+            { "direction": "south", "target_room_id": "room-ancient-tree" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-mountain-wolf", "count": 2, "respawn_sec": 90 },
+            { "monster_def_id": "monster-elite-wolf-king", "count": 1, "respawn_sec": 600 }
+          ],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": [
+            { "event_id": "evt-wolf-king-spawn", "trigger": "enter", "once": false }
+          ]
+        },
+        {
+          "id": "room-ancient-tree",
+          "name": "古树之地",
+          "description": "一棵参天古树矗立于此，树身散发着诡异的绿光。传说这是一只修炼千年的树妖。",
+          "position": { "x": 0, "y": 4 },
+          "room_type": "boss",
+          "connections": [
+            { "direction": "north", "target_room_id": "room-wolf-den" }
+          ],
+          "npcs": [],
+          "monsters": [
+            { "monster_def_id": "monster-boss-ancient-tree", "count": 1, "respawn_sec": 3600 }
+          ],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": [
+            { "event_id": "evt-boss-ancient-tree", "trigger": "enter", "once": false }
+          ]
+        }
+      ]
+    }
+  ]
+}

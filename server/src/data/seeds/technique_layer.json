@@ -1,0 +1,886 @@
+{
+  "version": 1,
+  "description": "功法层级种子数据",
+  "layers": [
+    {
+      "technique_id": "tech-jichu-quanfa",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 200 }],
+      "unlock_skill_ids": ["skill-jichu-quan"],
+      "layer_desc": "拳法入门，物攻+2%"
+    },
+    {
+      "technique_id": "tech-jichu-quanfa",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "mingzhong", "value": 200 }],
+      "layer_desc": "拳法小成，命中+2%"
+    },
+    {
+      "technique_id": "tech-jichu-quanfa",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 300 }, { "key": "baoji", "value": 100 }],
+      "upgrade_skill_ids": ["skill-jichu-quan"],
+      "layer_desc": "拳法大成，物攻+3%，暴击+1%"
+    },
+    {
+      "technique_id": "tech-jichu-jianfa",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 200 }],
+      "unlock_skill_ids": ["skill-jichu-jian"],
+      "layer_desc": "剑法入门，物攻+2%"
+    },
+    {
+      "technique_id": "tech-jichu-jianfa",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "baoji", "value": 150 }],
+      "layer_desc": "剑法小成，暴击+1.5%"
+    },
+    {
+      "technique_id": "tech-jichu-jianfa",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 300 }, { "key": "baoshang", "value": 500 }],
+      "upgrade_skill_ids": ["skill-jichu-jian"],
+      "layer_desc": "剑法大成，物攻+3%，爆伤+5%"
+    }
+,
+    {
+      "technique_id": "tech-jichu-daofa",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 250 }],
+      "unlock_skill_ids": ["skill-jichu-dao"],
+      "layer_desc": "刀法入门，物攻+2.5%"
+    },
+    {
+      "technique_id": "tech-jichu-daofa",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "zengshang", "value": 200 }],
+      "layer_desc": "刀法小成，增伤+2%"
+    },
+    {
+      "technique_id": "tech-jichu-daofa",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 300 }],
+      "upgrade_skill_ids": ["skill-jichu-dao"],
+      "layer_desc": "刀法大成，物攻+3%"
+    },
+    {
+      "technique_id": "tech-yangqi-jue",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "lingqi_huifu", "value": 50 }],
+      "unlock_skill_ids": ["skill-yangqi"],
+      "layer_desc": "养气入门，灵气恢复+0.5/回合"
+    },
+    {
+      "technique_id": "tech-yangqi-jue",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "max_lingqi", "value": 500 }],
+      "layer_desc": "养气小成，灵气上限+5"
+    },
+    {
+      "technique_id": "tech-yangqi-jue",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "lingqi_huifu", "value": 100 }],
+      "upgrade_skill_ids": ["skill-yangqi"],
+      "layer_desc": "养气大成，灵气恢复+1/回合"
+    },
+    {
+      "technique_id": "tech-jichu-fushu",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "fagong", "value": 200 }],
+      "unlock_skill_ids": ["skill-jichu-fu"],
+      "layer_desc": "符术入门，法攻+2%"
+    },
+    {
+      "technique_id": "tech-jichu-fushu",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "mingzhong", "value": 200 }],
+      "layer_desc": "符术小成，命中+2%"
+    },
+    {
+      "technique_id": "tech-jichu-fushu",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "fagong", "value": 300 }],
+      "upgrade_skill_ids": ["skill-jichu-fu"],
+      "layer_desc": "符术大成，法攻+3%"
+    }
+,
+    {
+      "technique_id": "tech-qinggong-ru",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "shanbi", "value": 200 }],
+      "unlock_skill_ids": ["skill-qinggong"],
+      "layer_desc": "轻功入门，闪避+2%"
+    },
+    {
+      "technique_id": "tech-qinggong-ru",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "sudu", "value": 100 }],
+      "layer_desc": "轻功小成，速度+1"
+    },
+    {
+      "technique_id": "tech-qinggong-ru",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "shanbi", "value": 300 }],
+      "upgrade_skill_ids": ["skill-qinggong"],
+      "layer_desc": "轻功大成，闪避+3%"
+    },
+    {
+      "technique_id": "tech-huifu-shu",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "zhiliao", "value": 200 }],
+      "unlock_skill_ids": ["skill-huifu"],
+      "layer_desc": "恢复术入门，治疗效果+2%"
+    },
+    {
+      "technique_id": "tech-huifu-shu",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "qixue_huifu", "value": 50 }],
+      "layer_desc": "恢复术小成，气血恢复+0.5%"
+    },
+    {
+      "technique_id": "tech-huifu-shu",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "zhiliao", "value": 300 }],
+      "upgrade_skill_ids": ["skill-huifu"],
+      "layer_desc": "恢复术大成，治疗效果+3%"
+    },
+    {
+      "technique_id": "tech-tiebu-quan",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 150 }, { "key": "wufang", "value": 150 }],
+      "unlock_skill_ids": ["skill-tiebu"],
+      "layer_desc": "铁布拳入门，物攻+1.5%，物防+1.5%"
+    },
+    {
+      "technique_id": "tech-tiebu-quan",
+      "layer": 2,
+      "cost_spirit_stones": 50,
+      "cost_exp": 100,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 3 }],
+      "passives": [{ "key": "wufang", "value": 200 }],
+      "layer_desc": "铁布拳小成，物防+2%"
+    },
+    {
+      "technique_id": "tech-tiebu-quan",
+      "layer": 3,
+      "cost_spirit_stones": 150,
+      "cost_exp": 300,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 200 }, { "key": "wufang", "value": 200 }],
+      "upgrade_skill_ids": ["skill-tiebu"],
+      "layer_desc": "铁布拳大成，物攻+2%，物防+2%"
+    }
+,
+    {
+      "technique_id": "tech-jingang-quan",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 300 }],
+      "unlock_skill_ids": ["skill-jingang"],
+      "layer_desc": "金刚拳入门，物攻+3%"
+    },
+    {
+      "technique_id": "tech-jingang-quan",
+      "layer": 2,
+      "cost_spirit_stones": 100,
+      "cost_exp": 200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 5 }],
+      "passives": [{ "key": "zengshang", "value": 200 }],
+      "layer_desc": "金刚拳小成，增伤+2%"
+    },
+    {
+      "technique_id": "tech-jingang-quan",
+      "layer": 3,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }],
+      "passives": [{ "key": "wugong", "value": 400 }],
+      "unlock_skill_ids": ["skill-pojia"],
+      "required_realm": "炼精化炁·养气期",
+      "layer_desc": "金刚拳圆融，物攻+4%，解锁破甲"
+    },
+    {
+      "technique_id": "tech-jingang-quan",
+      "layer": 4,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1500,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-lingmo", "qty": 3 }],
+      "passives": [{ "key": "baoji", "value": 300 }],
+      "upgrade_skill_ids": ["skill-jingang"],
+      "layer_desc": "金刚拳大成，暴击+3%"
+    },
+    {
+      "technique_id": "tech-jingang-quan",
+      "layer": 5,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 500 }, { "key": "zengshang", "value": 300 }],
+      "upgrade_skill_ids": ["skill-pojia"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "金刚拳圆满，物攻+5%，增伤+3%"
+    },
+    {
+      "technique_id": "tech-qingfeng-jian",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 250 }, { "key": "sudu", "value": 50 }],
+      "unlock_skill_ids": ["skill-qingfeng"],
+      "layer_desc": "清风剑入门，物攻+2.5%，速度+0.5"
+    },
+    {
+      "technique_id": "tech-qingfeng-jian",
+      "layer": 2,
+      "cost_spirit_stones": 100,
+      "cost_exp": 200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 5 }],
+      "passives": [{ "key": "baoji", "value": 200 }],
+      "layer_desc": "清风剑小成，暴击+2%"
+    },
+    {
+      "technique_id": "tech-qingfeng-jian",
+      "layer": 3,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }],
+      "passives": [{ "key": "sudu", "value": 100 }],
+      "unlock_skill_ids": ["skill-jianhua"],
+      "required_realm": "炼精化炁·养气期",
+      "layer_desc": "清风剑圆融，速度+1，解锁剑花"
+    },
+    {
+      "technique_id": "tech-qingfeng-jian",
+      "layer": 4,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1500,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-lingmo", "qty": 3 }],
+      "passives": [{ "key": "baoshang", "value": 500 }],
+      "upgrade_skill_ids": ["skill-qingfeng"],
+      "layer_desc": "清风剑大成，爆伤+5%"
+    },
+    {
+      "technique_id": "tech-qingfeng-jian",
+      "layer": 5,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 400 }, { "key": "sudu", "value": 150 }],
+      "upgrade_skill_ids": ["skill-jianhua"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "清风剑圆满，物攻+4%，速度+1.5"
+    }
+,
+    {
+      "technique_id": "tech-qingmu-jue",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "zhiliao", "value": 300 }],
+      "unlock_skill_ids": ["skill-qingmu-zhi"],
+      "layer_desc": "青木诀入门，治疗效果+3%"
+    },
+    {
+      "technique_id": "tech-qingmu-jue",
+      "layer": 2,
+      "cost_spirit_stones": 100,
+      "cost_exp": 200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 5 }],
+      "passives": [{ "key": "qixue_huifu", "value": 100 }],
+      "layer_desc": "青木诀小成，气血恢复+1%"
+    },
+    {
+      "technique_id": "tech-qingmu-jue",
+      "layer": 3,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }],
+      "passives": [{ "key": "fagong", "value": 300 }],
+      "unlock_skill_ids": ["skill-qingmu-hot"],
+      "required_realm": "炼精化炁·养气期",
+      "layer_desc": "青木诀圆融，法攻+3%，解锁持续治疗"
+    },
+    {
+      "technique_id": "tech-qingmu-jue",
+      "layer": 4,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1500,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-lingmo", "qty": 3 }],
+      "passives": [{ "key": "zhiliao", "value": 400 }],
+      "upgrade_skill_ids": ["skill-qingmu-zhi"],
+      "layer_desc": "青木诀大成，治疗效果+4%"
+    },
+    {
+      "technique_id": "tech-qingmu-jue",
+      "layer": 5,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 6 }],
+      "passives": [{ "key": "zhiliao", "value": 500 }, { "key": "max_qixue", "value": 500 }],
+      "upgrade_skill_ids": ["skill-qingmu-hot"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "青木诀圆满，治疗效果+5%，气血上限+5%"
+    },
+    {
+      "technique_id": "tech-houtu-gong",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wufang", "value": 300 }, { "key": "fafang", "value": 300 }],
+      "unlock_skill_ids": ["skill-houtu-dun"],
+      "layer_desc": "厚土功入门，物防+3%，法防+3%"
+    },
+    {
+      "technique_id": "tech-houtu-gong",
+      "layer": 2,
+      "cost_spirit_stones": 100,
+      "cost_exp": 200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 5 }],
+      "passives": [{ "key": "max_qixue", "value": 300 }],
+      "layer_desc": "厚土功小成，气血上限+3%"
+    },
+    {
+      "technique_id": "tech-houtu-gong",
+      "layer": 3,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }],
+      "passives": [{ "key": "wufang", "value": 400 }],
+      "unlock_skill_ids": ["skill-houtu-shield"],
+      "required_realm": "炼精化炁·养气期",
+      "layer_desc": "厚土功圆融，物防+4%，解锁护盾"
+    },
+    {
+      "technique_id": "tech-houtu-gong",
+      "layer": 4,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1500,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-lingmo", "qty": 3 }],
+      "passives": [{ "key": "kongzhi_kangxing", "value": 300 }],
+      "upgrade_skill_ids": ["skill-houtu-dun"],
+      "layer_desc": "厚土功大成，控制抗性+3%"
+    },
+    {
+      "technique_id": "tech-houtu-gong",
+      "layer": 5,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 6 }],
+      "passives": [{ "key": "wufang", "value": 500 }, { "key": "fafang", "value": 500 }],
+      "upgrade_skill_ids": ["skill-houtu-shield"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "厚土功圆满，物防+5%，法防+5%"
+    }
+,
+    {
+      "technique_id": "tech-tunajue",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "max_lingqi", "value": 500 }],
+      "unlock_skill_ids": ["skill-tuna"],
+      "layer_desc": "吐纳诀入门，灵气上限+5"
+    },
+    {
+      "technique_id": "tech-tunajue",
+      "layer": 2,
+      "cost_spirit_stones": 100,
+      "cost_exp": 200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 5 }],
+      "passives": [{ "key": "max_qixue", "value": 300 }],
+      "unlock_skill_ids": ["skill-ningxi"],
+      "layer_desc": "吐纳诀小成，气血上限+3%"
+    },
+    {
+      "technique_id": "tech-tunajue",
+      "layer": 3,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }],
+      "passives": [{ "key": "lingqi_huifu", "value": 100 }],
+      "upgrade_skill_ids": ["skill-tuna"],
+      "required_realm": "炼精化炁·养气期",
+      "layer_desc": "吐纳诀圆融，灵气恢复+1/回合"
+    },
+    {
+      "technique_id": "tech-tunajue",
+      "layer": 4,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1500,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-lingmo", "qty": 3 }],
+      "passives": [{ "key": "zhiliao", "value": 300 }],
+      "unlock_skill_ids": ["skill-guiyuan"],
+      "layer_desc": "吐纳诀大成，治疗效果+3%"
+    },
+    {
+      "technique_id": "tech-tunajue",
+      "layer": 5,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 6 }],
+      "passives": [{ "key": "max_lingqi", "value": 1000 }, { "key": "kongzhi_kangxing", "value": 300 }],
+      "upgrade_skill_ids": ["skill-ningxi", "skill-guiyuan"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "吐纳诀圆满，灵气上限+10，控制抗性+3%"
+    },
+    {
+      "technique_id": "tech-shuiyun-zhang",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 200 }, { "key": "shanbi", "value": 200 }],
+      "unlock_skill_ids": ["skill-shuiyun"],
+      "layer_desc": "水云掌入门，物攻+2%，闪避+2%"
+    },
+    {
+      "technique_id": "tech-shuiyun-zhang",
+      "layer": 2,
+      "cost_spirit_stones": 100,
+      "cost_exp": 200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 5 }],
+      "passives": [{ "key": "shanbi", "value": 300 }],
+      "layer_desc": "水云掌小成，闪避+3%"
+    },
+    {
+      "technique_id": "tech-shuiyun-zhang",
+      "layer": 3,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }],
+      "passives": [{ "key": "wugong", "value": 300 }],
+      "unlock_skill_ids": ["skill-shuibo"],
+      "required_realm": "炼精化炁·养气期",
+      "layer_desc": "水云掌圆融，物攻+3%，解锁水波"
+    },
+    {
+      "technique_id": "tech-shuiyun-zhang",
+      "layer": 4,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1500,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-lingmo", "qty": 3 }],
+      "passives": [{ "key": "xixue", "value": 200 }],
+      "upgrade_skill_ids": ["skill-shuiyun"],
+      "layer_desc": "水云掌大成，吸血+2%"
+    },
+    {
+      "technique_id": "tech-shuiyun-zhang",
+      "layer": 5,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 6 }],
+      "passives": [{ "key": "wugong", "value": 400 }, { "key": "shanbi", "value": 400 }],
+      "upgrade_skill_ids": ["skill-shuibo"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "水云掌圆满，物攻+4%，闪避+4%"
+    }
+,
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "shanbi", "value": 400 }, { "key": "sudu", "value": 100 }],
+      "unlock_skill_ids": ["skill-lingbo"],
+      "layer_desc": "凌波微步入门，闪避+4%，速度+1"
+    },
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 2,
+      "cost_spirit_stones": 200,
+      "cost_exp": 400,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 8 }],
+      "passives": [{ "key": "sudu", "value": 150 }],
+      "layer_desc": "凌波微步小成，速度+1.5"
+    },
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 3,
+      "cost_spirit_stones": 600,
+      "cost_exp": 1200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 15 }],
+      "passives": [{ "key": "shanbi", "value": 500 }],
+      "unlock_skill_ids": ["skill-jiekong"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "凌波微步圆融，闪避+5%，解锁解控"
+    },
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 4,
+      "cost_spirit_stones": 1500,
+      "cost_exp": 3000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 25 }, { "itemId": "mat-lingmo", "qty": 5 }],
+      "passives": [{ "key": "kongzhi_kangxing", "value": 400 }],
+      "upgrade_skill_ids": ["skill-lingbo"],
+      "layer_desc": "凌波微步大成，控制抗性+4%"
+    },
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 5,
+      "cost_spirit_stones": 4000,
+      "cost_exp": 8000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 40 }, { "itemId": "mat-lingmo", "qty": 10 }],
+      "passives": [{ "key": "shanbi", "value": 600 }, { "key": "sudu", "value": 200 }],
+      "unlock_skill_ids": ["skill-huanying"],
+      "required_realm": "炼精化炁·凝炁期",
+      "layer_desc": "凌波微步圆融，闪避+6%，速度+2，解锁幻影"
+    },
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 6,
+      "cost_spirit_stones": 10000,
+      "cost_exp": 20000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 55 }, { "itemId": "mat-lingmo", "qty": 15 }],
+      "passives": [{ "key": "kongzhi_kangxing", "value": 500 }],
+      "upgrade_skill_ids": ["skill-jiekong"],
+      "required_realm": "炼炁化神·炼己期",
+      "layer_desc": "凌波微步大成，控制抗性+5%"
+    },
+    {
+      "technique_id": "tech-lingbo-weibu",
+      "layer": 7,
+      "cost_spirit_stones": 25000,
+      "cost_exp": 50000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 75 }, { "itemId": "mat-lingmo", "qty": 20 }, { "itemId": "mat-wudao-yujian", "qty": 1 }],
+      "passives": [{ "key": "shanbi", "value": 800 }, { "key": "sudu", "value": 300 }, { "key": "kongzhi_kangxing", "value": 600 }],
+      "upgrade_skill_ids": ["skill-huanying"],
+      "required_realm": "炼炁化神·采药期",
+      "layer_desc": "凌波微步圆满，闪避+8%，速度+3，控制抗性+6%"
+    }
+,
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "zhiliao", "value": 400 }],
+      "unlock_skill_ids": ["skill-chunyang-zhi"],
+      "layer_desc": "纯阳功入门，治疗效果+4%"
+    },
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 2,
+      "cost_spirit_stones": 200,
+      "cost_exp": 400,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 8 }],
+      "passives": [{ "key": "fagong", "value": 300 }],
+      "layer_desc": "纯阳功小成，法攻+3%"
+    },
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 3,
+      "cost_spirit_stones": 600,
+      "cost_exp": 1200,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 15 }],
+      "passives": [{ "key": "zhiliao", "value": 500 }],
+      "unlock_skill_ids": ["skill-chunyang-dun"],
+      "required_realm": "炼精化炁·通脉期",
+      "layer_desc": "纯阳功圆融，治疗效果+5%，解锁护盾"
+    },
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 4,
+      "cost_spirit_stones": 1500,
+      "cost_exp": 3000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 25 }, { "itemId": "mat-lingmo", "qty": 5 }],
+      "passives": [{ "key": "max_qixue", "value": 400 }],
+      "upgrade_skill_ids": ["skill-chunyang-zhi"],
+      "layer_desc": "纯阳功大成，气血上限+4%"
+    },
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 5,
+      "cost_spirit_stones": 4000,
+      "cost_exp": 8000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 40 }, { "itemId": "mat-lingmo", "qty": 10 }],
+      "passives": [{ "key": "zhiliao", "value": 600 }],
+      "unlock_skill_ids": ["skill-chunyang-buff"],
+      "required_realm": "炼精化炁·凝炁期",
+      "layer_desc": "纯阳功圆融，治疗效果+6%，解锁增益"
+    },
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 6,
+      "cost_spirit_stones": 10000,
+      "cost_exp": 20000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 55 }, { "itemId": "mat-lingmo", "qty": 15 }],
+      "passives": [{ "key": "fagong", "value": 500 }],
+      "upgrade_skill_ids": ["skill-chunyang-dun"],
+      "required_realm": "炼炁化神·炼己期",
+      "layer_desc": "纯阳功大成，法攻+5%"
+    },
+    {
+      "technique_id": "tech-chunyang-gong",
+      "layer": 7,
+      "cost_spirit_stones": 25000,
+      "cost_exp": 50000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 75 }, { "itemId": "mat-lingmo", "qty": 20 }, { "itemId": "mat-wudao-yujian", "qty": 1 }],
+      "passives": [{ "key": "zhiliao", "value": 800 }, { "key": "fagong", "value": 600 }],
+      "upgrade_skill_ids": ["skill-chunyang-buff"],
+      "required_realm": "炼炁化神·采药期",
+      "layer_desc": "纯阳功圆满，治疗效果+8%，法攻+6%"
+    }
+,
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "wugong", "value": 500 }],
+      "unlock_skill_ids": ["skill-lieyang-zhan"],
+      "layer_desc": "烈阳剑入门，物攻+5%"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 2,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }, { "itemId": "mat-huo-lingsha", "qty": 2 }],
+      "passives": [{ "key": "baoji", "value": 300 }],
+      "layer_desc": "烈阳剑小成，暴击+3%"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 3,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-huo-lingsha", "qty": 5 }],
+      "passives": [{ "key": "zengshang", "value": 500 }],
+      "unlock_skill_ids": ["skill-jianqi-zonghen"],
+      "upgrade_skill_ids": ["skill-lieyang-zhan"],
+      "required_realm": "炼精化炁·凝炁期",
+      "layer_desc": "烈阳剑圆融，增伤+5%，解锁剑气纵横"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 4,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-huo-lingsha", "qty": 8 }],
+      "passives": [{ "key": "baoshang", "value": 800 }],
+      "layer_desc": "烈阳剑大成，爆伤+8%"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 5,
+      "cost_spirit_stones": 5000,
+      "cost_exp": 10000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 45 }, { "itemId": "mat-huo-lingsha", "qty": 12 }, { "itemId": "mat-lingmo", "qty": 8 }],
+      "passives": [{ "key": "wugong", "value": 600 }],
+      "upgrade_skill_ids": ["skill-jianqi-zonghen"],
+      "required_realm": "炼炁化神·炼己期",
+      "layer_desc": "烈阳剑圆融，物攻+6%"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 6,
+      "cost_spirit_stones": 12000,
+      "cost_exp": 24000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 60 }, { "itemId": "mat-huo-lingsha", "qty": 16 }, { "itemId": "mat-lingmo", "qty": 12 }],
+      "passives": [{ "key": "huo_kangxing", "value": 500 }, { "key": "zengshang", "value": 600 }],
+      "unlock_skill_ids": ["skill-fentian"],
+      "required_realm": "炼炁化神·采药期",
+      "layer_desc": "烈阳剑大成，火抗+5%，增伤+6%，解锁焚天"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 7,
+      "cost_spirit_stones": 28000,
+      "cost_exp": 56000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 80 }, { "itemId": "mat-huo-lingsha", "qty": 20 }, { "itemId": "mat-lingmo", "qty": 16 }],
+      "passives": [{ "key": "baoji", "value": 500 }],
+      "upgrade_skill_ids": ["skill-fentian"],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "烈阳剑圆融，暴击+5%"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 8,
+      "cost_spirit_stones": 60000,
+      "cost_exp": 120000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 100 }, { "itemId": "mat-huo-lingsha", "qty": 25 }, { "itemId": "mat-lingmo", "qty": 20 }, { "itemId": "mat-wudao-yujian", "qty": 1 }],
+      "passives": [{ "key": "wugong", "value": 800 }, { "key": "baoshang", "value": 1000 }],
+      "layer_desc": "烈阳剑大成，物攻+8%，爆伤+10%"
+    },
+    {
+      "technique_id": "tech-lieyang-jian",
+      "layer": 9,
+      "cost_spirit_stones": 150000,
+      "cost_exp": 300000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 120 }, { "itemId": "mat-huo-lingsha", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 25 }, { "itemId": "mat-daoyun-jinghe", "qty": 1 }],
+      "passives": [{ "key": "wugong", "value": 1000 }, { "key": "zengshang", "value": 800 }, { "key": "baoji", "value": 600 }],
+      "unlock_skill_ids": ["skill-lieyang-final"],
+      "required_realm": "炼神返虚·养神期",
+      "layer_desc": "烈阳剑圆满，物攻+10%，增伤+8%，暴击+6%，解锁终式"
+    }
+,
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [{ "key": "fagong", "value": 500 }],
+      "unlock_skill_ids": ["skill-hanbing-ci"],
+      "layer_desc": "寒冰诀入门，法攻+5%"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 2,
+      "cost_spirit_stones": 300,
+      "cost_exp": 600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 10 }, { "itemId": "mat-shui-lingsu", "qty": 2 }],
+      "passives": [{ "key": "kongzhi_kangxing", "value": 300 }],
+      "layer_desc": "寒冰诀小成，控制抗性+3%"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 3,
+      "cost_spirit_stones": 800,
+      "cost_exp": 1600,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 18 }, { "itemId": "mat-shui-lingsu", "qty": 5 }],
+      "passives": [{ "key": "fagong", "value": 400 }],
+      "unlock_skill_ids": ["skill-hanbing-qun"],
+      "upgrade_skill_ids": ["skill-hanbing-ci"],
+      "required_realm": "炼精化炁·凝炁期",
+      "layer_desc": "寒冰诀圆融，法攻+4%，解锁群体冰冻"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 4,
+      "cost_spirit_stones": 2000,
+      "cost_exp": 4000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 30 }, { "itemId": "mat-shui-lingsu", "qty": 8 }],
+      "passives": [{ "key": "zengshang", "value": 500 }],
+      "layer_desc": "寒冰诀大成，增伤+5%"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 5,
+      "cost_spirit_stones": 5000,
+      "cost_exp": 10000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 45 }, { "itemId": "mat-shui-lingsu", "qty": 12 }, { "itemId": "mat-lingmo", "qty": 8 }],
+      "passives": [{ "key": "fagong", "value": 500 }],
+      "upgrade_skill_ids": ["skill-hanbing-qun"],
+      "required_realm": "炼炁化神·炼己期",
+      "layer_desc": "寒冰诀圆融，法攻+5%"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 6,
+      "cost_spirit_stones": 12000,
+      "cost_exp": 24000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 60 }, { "itemId": "mat-shui-lingsu", "qty": 16 }, { "itemId": "mat-lingmo", "qty": 12 }],
+      "passives": [{ "key": "shui_kangxing", "value": 500 }, { "key": "kongzhi_kangxing", "value": 400 }],
+      "unlock_skill_ids": ["skill-bingfeng"],
+      "required_realm": "炼炁化神·采药期",
+      "layer_desc": "寒冰诀大成，水抗+5%，控制抗性+4%，解锁冰封"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 7,
+      "cost_spirit_stones": 28000,
+      "cost_exp": 56000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 80 }, { "itemId": "mat-shui-lingsu", "qty": 20 }, { "itemId": "mat-lingmo", "qty": 16 }],
+      "passives": [{ "key": "zengshang", "value": 600 }],
+      "upgrade_skill_ids": ["skill-bingfeng"],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "寒冰诀圆融，增伤+6%"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 8,
+      "cost_spirit_stones": 60000,
+      "cost_exp": 120000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 100 }, { "itemId": "mat-shui-lingsu", "qty": 25 }, { "itemId": "mat-lingmo", "qty": 20 }, { "itemId": "mat-wudao-yujian", "qty": 1 }],
+      "passives": [{ "key": "fagong", "value": 700 }, { "key": "kongzhi_kangxing", "value": 500 }],
+      "layer_desc": "寒冰诀大成，法攻+7%，控制抗性+5%"
+    },
+    {
+      "technique_id": "tech-hanbing-jue",
+      "layer": 9,
+      "cost_spirit_stones": 150000,
+      "cost_exp": 300000,
+      "cost_materials": [{ "itemId": "mat-gongfa-canye", "qty": 120 }, { "itemId": "mat-shui-lingsu", "qty": 30 }, { "itemId": "mat-lingmo", "qty": 25 }, { "itemId": "mat-daoyun-jinghe", "qty": 1 }],
+      "passives": [{ "key": "fagong", "value": 1000 }, { "key": "zengshang", "value": 800 }],
+      "unlock_skill_ids": ["skill-hanbing-final"],
+      "required_realm": "炼神返虚·养神期",
+      "layer_desc": "寒冰诀圆满，法攻+10%，增伤+8%，解锁终式"
+    }
+  ]
+}

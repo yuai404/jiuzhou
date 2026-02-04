@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "realmOrder": [
+    "凡人",
+    "炼精化炁·养气期",
+    "炼精化炁·通脉期",
+    "炼精化炁·凝炁期"
+  ],
+  "breakthroughs": [
+    {
+      "from": "凡人",
+      "to": "炼精化炁·养气期",
+      "requirements": [
+        { "id": "exp", "type": "exp_min", "min": 100000, "title": "修为经验" },
+        {
+          "id": "tech-yangqi",
+          "type": "main_technique_layer_min",
+          "minLayer": 2,
+          "title": "功法修炼"
+        }
+      ],
+      "costs": [
+        { "type": "exp", "amount": 100000 }
+      ],
+      "rewards": {
+        "attributePoints": 5,
+        "pct": { "max_qixue": 10, "max_lingqi": 10 }
+      }
+    },
+    {
+      "from": "炼精化炁·养气期",
+      "to": "炼精化炁·通脉期",
+      "requirements": [
+        { "id": "exp", "type": "exp_min", "min": 200000, "title": "修为经验" },
+        { "id": "tech-main", "type": "main_technique_layer_min", "minLayer": 4, "title": "功法修炼" }
+      ],
+      "costs": [
+        { "type": "spirit_stones", "amount": 200 },
+        { "type": "exp", "amount": 200000 }
+      ],
+      "rewards": {
+        "attributePoints": 5,
+        "pct": { "max_qixue": 15, "max_lingqi": 15, "wugong": 5, "fagong": 5 }
+      }
+    },
+    {
+      "from": "炼精化炁·通脉期",
+      "to": "炼精化炁·凝炁期",
+      "requirements": [
+        { "id": "exp", "type": "exp_min", "min": 400000, "title": "修为经验" },
+        { "id": "tech-main-sub", "type": "main_and_sub_technique_layer_min", "minLayer": 4, "title": "功法装配" }
+      ],
+      "costs": [
+        { "type": "spirit_stones", "amount": 800 },
+        { "type": "exp", "amount": 400000 }
+      ],
+      "rewards": {
+        "attributePoints": 10,
+        "pct": { "max_qixue": 15, "max_lingqi": 15, "wugong": 6, "fagong": 6, "wufang": 6, "fafang": 6 }
+      }
+    }
+  ]
+}

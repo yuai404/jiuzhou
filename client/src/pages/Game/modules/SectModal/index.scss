@@ -1,0 +1,382 @@
+.sect-modal {
+  .ant-modal-content {
+    padding: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+}
+
+.sect-modal-shell {
+  height: 680px;
+  background: var(--panel-bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sect-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sect-pane-top {
+  flex: 0 0 auto;
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--border-color-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sect-top-left {
+  min-width: 0;
+}
+
+.sect-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-subtitle {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.sect-top-actions {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.sect-pane-body {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 14px 14px;
+  overflow: auto;
+}
+
+.sect-table {
+  .ant-table {
+    font-size: 11px;
+  }
+
+  .ant-table-thead > tr > th {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  .ant-table-tbody > tr > td {
+    font-size: 11px;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+}
+
+.sect-joined {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sect-joined-top {
+  flex: 0 0 auto;
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--border-color-soft);
+}
+
+.sect-joined-tabs {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 14px 14px;
+}
+
+.sect-joined-tabs .ant-tabs {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sect-joined-tabs .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sect-joined-tabs .ant-tabs-content {
+  height: 100%;
+}
+
+.sect-joined-tabs .ant-tabs-tabpane {
+  height: 100%;
+}
+
+.sect-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sect-card {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 12px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sect-card-left {
+  min-width: 0;
+}
+
+.sect-card-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-card-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sect-card-meta .ant-tag {
+  margin: 0;
+}
+
+.sect-card-notice {
+  margin-top: 10px;
+  color: var(--text-tertiary);
+  line-height: 1.7;
+  font-size: 12px;
+}
+
+.sect-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sect-stat {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sect-stat-k {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-stat-v {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+}
+
+.sect-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sect-panel-footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sect-empty {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 14px 14px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-panel-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-buildings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sect-building {
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg-soft);
+  border-radius: 14px;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sect-building-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sect-building-name {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-building-desc {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.sect-building-effect {
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  border-radius: 12px;
+  padding: 10px 10px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 900;
+}
+
+.sect-building-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.sect-manage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sect-manage-card {
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg-soft);
+  border-radius: 14px;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sect-manage-name {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-manage-desc {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.sect-submodal {
+  .ant-modal-content {
+    border-radius: 14px;
+  }
+}
+
+.sect-create {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sect-create-cost {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 10px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sect-create-cost-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+
+.sect-create-cost-text {
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-create-balance {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  padding: 10px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sect-create-balance-text {
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-create-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sect-create-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+@media screen and (max-width: 768px) {
+  .sect-modal-shell {
+    height: 82vh;
+  }
+
+  .sect-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sect-buildings {
+    grid-template-columns: 1fr;
+  }
+}

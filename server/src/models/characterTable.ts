@@ -1,0 +1,305 @@
+import { query } from '../config/database.js';
+
+// 角色表结构定义
+const characterTableSQL = `
+CREATE TABLE IF NOT EXISTS characters (
+  id SERIAL PRIMARY KEY,                              -- 角色ID，自增主键
+  user_id INTEGER NOT NULL REFERENCES users(id),      -- 关联用户ID
+  nickname VARCHAR(50) NOT NULL,                      -- 昵称
+  title VARCHAR(50) DEFAULT '散修',                   -- 称号
+  gender VARCHAR(10) NOT NULL,                        -- 性别：male/female
+  avatar VARCHAR(255) DEFAULT NULL,                   -- 头像路径
+  
+  -- 货币
+  spirit_stones BIGINT DEFAULT 0,                     -- 灵石
+  silver BIGINT DEFAULT 0,                            -- 银两
+  stamina INTEGER NOT NULL DEFAULT 100,               -- 体力
+  
+  -- 境界与经验
+  realm VARCHAR(50) DEFAULT '凡人',                   -- 境界
+  sub_realm VARCHAR(50) DEFAULT NULL,                 -- 子境界
+  exp BIGINT DEFAULT 0,                               -- 经验
+  
+  -- 属性点
+  attribute_points INTEGER DEFAULT 0,                 -- 可分配属性点
+  jing INTEGER DEFAULT 0,                             -- 精
+  qi INTEGER DEFAULT 0,                               -- 气
+  shen INTEGER DEFAULT 0,                             -- 神
+  
+  -- 属性类型：physical/magic + 五行(none/jin/mu/shui/huo/tu)
+  attribute_type VARCHAR(20) DEFAULT 'physical',      -- 属性类型
+  attribute_element VARCHAR(10) DEFAULT 'none',       -- 五行属性
+  
+  -- 基础属性
+  qixue INTEGER DEFAULT 100,                          -- 气血
+  max_qixue INTEGER DEFAULT 100,                      -- 最大气血
+  lingqi INTEGER DEFAULT 0,                           -- 灵气
+  max_lingqi INTEGER DEFAULT 0,                       -- 最大灵气
+  
+  -- 攻防属性
+  wugong INTEGER DEFAULT 5,                           -- 物攻
+  fagong INTEGER DEFAULT 0,                           -- 法攻
+  wufang INTEGER DEFAULT 2,                           -- 物防
+  fafang INTEGER DEFAULT 0,                           -- 法防
+  
+  -- 战斗属性（万分比，10000=100%）
+  mingzhong INTEGER DEFAULT 9000,                     -- 命中 90%
+  shanbi INTEGER DEFAULT 500,                         -- 闪避 5%
+  zhaojia INTEGER DEFAULT 500,                        -- 招架 5%
+  baoji INTEGER DEFAULT 1000,                         -- 暴击 10%
+  baoshang INTEGER DEFAULT 15000,                     -- 爆伤 150%
+  kangbao INTEGER DEFAULT 0,                          -- 抗暴 0%
+  zengshang INTEGER DEFAULT 0,                        -- 增伤 0%
+  zhiliao INTEGER DEFAULT 0,                          -- 治疗 0%
+  jianliao INTEGER DEFAULT 0,                         -- 减疗 0%
+  xixue INTEGER DEFAULT 0,                            -- 吸血 0%
+  lengque INTEGER DEFAULT 0,                          -- 技能冷却 0%
+  shuxing_shuzhi INTEGER DEFAULT 0,                   -- 属性数值 0%
+  kongzhi_kangxing INTEGER DEFAULT 0,                 -- 控制抗性 0%
+  
+  -- 五行抗性（万分比）
+  jin_kangxing INTEGER DEFAULT 0,                     -- 金属性抗性 0%
+  mu_kangxing INTEGER DEFAULT 0,                      -- 木属性抗性 0%
+  shui_kangxing INTEGER DEFAULT 0,                    -- 水属性抗性 0%
+  huo_kangxing INTEGER DEFAULT 0,                     -- 火属性抗性 0%
+  tu_kangxing INTEGER DEFAULT 0,                      -- 土属性抗性 0%
+  
+  -- 恢复与其他
+  qixue_huifu INTEGER DEFAULT 0,                      -- 气血恢复
+  lingqi_huifu INTEGER DEFAULT 0,                     -- 灵气恢复
+  sudu INTEGER DEFAULT 1,                             -- 速度
+  fuyuan INTEGER DEFAULT 1,                           -- 福源
+
+  -- 位置（用于下次登录/刷新回到上次位置）
+  current_map_id VARCHAR(64) DEFAULT 'map-qingyun-village',  -- 当前所在地图ID
+  current_room_id VARCHAR(64) DEFAULT 'room-village-center', -- 当前所在房间ID
+
+  -- 战斗设置
+  auto_cast_skills BOOLEAN DEFAULT true,               -- 自动释放技能开关
+  
+  -- 时间戳
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,     -- 创建时间
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,     -- 更新时间
+  
+  UNIQUE(user_id)                                     -- 一个用户只能有一个角色
+);
+
+-- 添加表注释
+COMMENT ON TABLE characters IS '玩家角色表';
+COMMENT ON COLUMN characters.id IS '角色ID，自增主键';
+COMMENT ON COLUMN characters.user_id IS '关联用户ID';
+COMMENT ON COLUMN characters.nickname IS '昵称';
+COMMENT ON COLUMN characters.title IS '称号';
+COMMENT ON COLUMN characters.gender IS '性别：male/female';
+COMMENT ON COLUMN characters.avatar IS '头像路径';
+COMMENT ON COLUMN characters.spirit_stones IS '灵石';
+COMMENT ON COLUMN characters.silver IS '银两';
+COMMENT ON COLUMN characters.realm IS '境界';
+COMMENT ON COLUMN characters.sub_realm IS '子境界';
+COMMENT ON COLUMN characters.exp IS '经验';
+COMMENT ON COLUMN characters.attribute_points IS '可分配属性点';
+COMMENT ON COLUMN characters.jing IS '精';
+COMMENT ON COLUMN characters.qi IS '气';
+COMMENT ON COLUMN characters.shen IS '神';
+COMMENT ON COLUMN characters.attribute_type IS '属性类型：physical物理/magic法术';
+COMMENT ON COLUMN characters.attribute_element IS '五行属性：none/jin/mu/shui/huo/tu';
+COMMENT ON COLUMN characters.qixue IS '当前气血';
+COMMENT ON COLUMN characters.max_qixue IS '最大气血';
+COMMENT ON COLUMN characters.lingqi IS '当前灵气';
+COMMENT ON COLUMN characters.max_lingqi IS '最大灵气';
+COMMENT ON COLUMN characters.wugong IS '物理攻击';
+COMMENT ON COLUMN characters.fagong IS '法术攻击';
+COMMENT ON COLUMN characters.wufang IS '物理防御';
+COMMENT ON COLUMN characters.fafang IS '法术防御';
+COMMENT ON COLUMN characters.mingzhong IS '命中率（万分比）';
+COMMENT ON COLUMN characters.shanbi IS '闪避率（万分比）';
+COMMENT ON COLUMN characters.zhaojia IS '招架率（万分比）';
+COMMENT ON COLUMN characters.baoji IS '暴击率（万分比）';
+COMMENT ON COLUMN characters.baoshang IS '爆伤（万分比）';
+COMMENT ON COLUMN characters.kangbao IS '抗暴（万分比）';
+COMMENT ON COLUMN characters.zengshang IS '增伤（万分比）';
+COMMENT ON COLUMN characters.zhiliao IS '治疗（万分比）';
+COMMENT ON COLUMN characters.jianliao IS '减疗（万分比）';
+COMMENT ON COLUMN characters.xixue IS '吸血（万分比）';
+COMMENT ON COLUMN characters.lengque IS '技能冷却（万分比）';
+COMMENT ON COLUMN characters.shuxing_shuzhi IS '属性数值（万分比）';
+COMMENT ON COLUMN characters.kongzhi_kangxing IS '控制抗性（万分比）';
+COMMENT ON COLUMN characters.jin_kangxing IS '金属性抗性（万分比）';
+COMMENT ON COLUMN characters.mu_kangxing IS '木属性抗性（万分比）';
+COMMENT ON COLUMN characters.shui_kangxing IS '水属性抗性（万分比）';
+COMMENT ON COLUMN characters.huo_kangxing IS '火属性抗性（万分比）';
+COMMENT ON COLUMN characters.tu_kangxing IS '土属性抗性（万分比）';
+COMMENT ON COLUMN characters.qixue_huifu IS '气血恢复';
+COMMENT ON COLUMN characters.lingqi_huifu IS '灵气恢复';
+COMMENT ON COLUMN characters.sudu IS '速度';
+COMMENT ON COLUMN characters.fuyuan IS '福源';
+DO $do$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'characters' AND column_name = 'stamina'
+  ) THEN
+    EXECUTE $$COMMENT ON COLUMN characters.stamina IS '体力'$$;
+  END IF;
+END
+$do$;
+DO $do$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'characters' AND column_name = 'auto_cast_skills'
+  ) THEN
+    EXECUTE $$COMMENT ON COLUMN characters.auto_cast_skills IS '自动释放技能开关'$$;
+  END IF;
+END
+$do$;
+`;
+
+// 创建属性计算触发器函数
+const createAttributeTriggerSQL = `
+-- 创建或替换属性计算函数
+CREATE OR REPLACE FUNCTION calculate_attributes()
+RETURNS TRIGGER AS $$
+DECLARE
+  jing_diff INTEGER;
+  qi_diff INTEGER;
+  shen_diff INTEGER;
+BEGIN
+  -- 计算精气神的变化量
+  jing_diff := NEW.jing - COALESCE(OLD.jing, 0);
+  qi_diff := NEW.qi - COALESCE(OLD.qi, 0);
+  shen_diff := NEW.shen - COALESCE(OLD.shen, 0);
+  
+  -- 精每点加成：生命+5、物防+2、法防+2
+  IF jing_diff != 0 THEN
+    NEW.max_qixue := NEW.max_qixue + (jing_diff * 5);
+    NEW.qixue := LEAST(NEW.qixue, NEW.max_qixue);
+    NEW.wufang := NEW.wufang + (jing_diff * 2);
+    NEW.fafang := NEW.fafang + (jing_diff * 2);
+  END IF;
+  
+  -- 气每点加成：灵气+5、物攻+2、法攻+2
+  IF qi_diff != 0 THEN
+    NEW.max_lingqi := NEW.max_lingqi + (qi_diff * 5);
+    NEW.lingqi := LEAST(NEW.lingqi, NEW.max_lingqi);
+    NEW.wugong := NEW.wugong + (qi_diff * 2);
+    NEW.fagong := NEW.fagong + (qi_diff * 2);
+  END IF;
+  
+  -- 神每点加成：命中+0.2%（20万分比）、暴击+0.1%（10万分比）
+  IF shen_diff != 0 THEN
+    NEW.mingzhong := NEW.mingzhong + (shen_diff * 20);
+    NEW.baoji := NEW.baoji + (shen_diff * 10);
+  END IF;
+  
+  -- 更新时间
+  NEW.updated_at := CURRENT_TIMESTAMP;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 删除已存在的触发器（如果存在）
+DROP TRIGGER IF EXISTS trigger_calculate_attributes ON characters;
+
+-- 创建触发器
+CREATE TRIGGER trigger_calculate_attributes
+  BEFORE INSERT OR UPDATE OF jing, qi, shen ON characters
+  FOR EACH ROW
+  EXECUTE FUNCTION calculate_attributes();
+`;
+
+// 需要检查的字段列表
+const columnsToCheck = [
+  { name: 'title', type: "VARCHAR(50) DEFAULT '散修'", comment: '称号' },
+  { name: 'avatar', type: 'VARCHAR(255) DEFAULT NULL', comment: '头像路径' },
+  { name: 'stamina', type: 'INTEGER NOT NULL DEFAULT 100', comment: '体力' },
+  { name: 'attribute_type', type: "VARCHAR(20) DEFAULT 'physical'", comment: '属性类型' },
+  { name: 'attribute_element', type: "VARCHAR(10) DEFAULT 'none'", comment: '五行属性' },
+  { name: 'lengque', type: 'INTEGER DEFAULT 0', comment: '技能冷却（万分比）' },
+  { name: 'shuxing_shuzhi', type: 'INTEGER DEFAULT 0', comment: '属性数值（万分比）' },
+  { name: 'kongzhi_kangxing', type: 'INTEGER DEFAULT 0', comment: '控制抗性（万分比）' },
+  { name: 'jin_kangxing', type: 'INTEGER DEFAULT 0', comment: '金属性抗性（万分比）' },
+  { name: 'mu_kangxing', type: 'INTEGER DEFAULT 0', comment: '木属性抗性（万分比）' },
+  { name: 'shui_kangxing', type: 'INTEGER DEFAULT 0', comment: '水属性抗性（万分比）' },
+  { name: 'huo_kangxing', type: 'INTEGER DEFAULT 0', comment: '火属性抗性（万分比）' },
+  { name: 'tu_kangxing', type: 'INTEGER DEFAULT 0', comment: '土属性抗性（万分比）' },
+  { name: 'qixue_huifu', type: 'INTEGER DEFAULT 0', comment: '气血恢复' },
+  { name: 'lingqi_huifu', type: 'INTEGER DEFAULT 0', comment: '灵气恢复' },
+  { name: 'sudu', type: 'INTEGER DEFAULT 1', comment: '速度' },
+  { name: 'fuyuan', type: 'INTEGER DEFAULT 1', comment: '福源' },
+  { name: 'current_map_id', type: "VARCHAR(64) DEFAULT 'map-qingyun-village'", comment: '当前所在地图ID' },
+  { name: 'current_room_id', type: "VARCHAR(64) DEFAULT 'room-village-center'", comment: '当前所在房间ID' },
+  { name: 'auto_cast_skills', type: 'BOOLEAN DEFAULT true', comment: '自动释放技能开关' },
+];
+
+// 检查并添加缺失字段
+const checkAndAddColumns = async () => {
+  const addedFields: string[] = [];
+  for (const col of columnsToCheck) {
+    try {
+      const checkSQL = `
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'characters' AND column_name = $1
+      `;
+      const result = await query(checkSQL, [col.name]);
+      
+      if (result.rows.length === 0) {
+        const addSQL = `ALTER TABLE characters ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`;
+        await query(addSQL);
+        addedFields.push(col.name);
+      }
+
+      const commentSQL = `COMMENT ON COLUMN characters.${col.name} IS '${col.comment}'`;
+      await query(commentSQL);
+    } catch (error) {
+      console.error(`  ✗ 检查字段 ${col.name} 时出错:`, error);
+    }
+  }
+  if (addedFields.length > 0) {
+    console.log(`  → 角色表已添加字段: ${addedFields.join(', ')}`);
+  }
+};
+
+// 初始化角色表
+export const initCharacterTable = async (): Promise<void> => {
+  try {
+    // 检查表是否存在
+    const tableCheck = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'characters'
+      )
+    `);
+    
+    if (tableCheck.rows[0].exists) {
+      // 检查关键字段是否存在，如果不存在则删除重建
+      const columnCheck = await query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'characters' AND column_name = 'spirit_stones'
+      `);
+      
+      if (columnCheck.rows.length === 0) {
+        console.log('  → 角色表结构不完整，重建表...');
+        await query('DROP TABLE IF EXISTS characters CASCADE');
+      }
+    }
+    
+    // 创建角色表
+    await query(characterTableSQL);
+    
+    // 检查并补齐缺失字段
+    await checkAndAddColumns();
+    
+    // 创建触发器
+    await query(createAttributeTriggerSQL);
+    
+    console.log('✓ 角色表检测完成');
+    
+  } catch (error) {
+    console.error('✗ 角色表初始化失败:', error);
+    throw error;
+  }
+};
+
+export default initCharacterTable;

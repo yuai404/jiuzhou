@@ -1,0 +1,207 @@
+.monthcard-modal {
+  .ant-modal-content {
+    padding: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+}
+
+.monthcard-shell {
+  height: 560px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+}
+
+.monthcard-header {
+  flex: 0 0 auto;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border-color-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--panel-bg);
+}
+
+.monthcard-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.monthcard-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.monthcard-hero {
+  border: 1px solid var(--border-color-soft);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 12px 12px;
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+  align-items: center;
+}
+
+.monthcard-hero-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.monthcard-hero-name {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.monthcard-hero-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
+.monthcard-hero-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.monthcard-hero-tags .ant-tag {
+  margin: 0;
+}
+
+.monthcard-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.monthcard-progress-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.monthcard-progress-meta {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+}
+
+.monthcard-section {
+  border: 1px solid var(--border-color-soft);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.monthcard-section-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.monthcard-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monthcard-reward {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 10px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 110px;
+}
+
+.monthcard-reward-icon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: block;
+  border-radius: 12px;
+  border: 1px solid var(--border-color-soft);
+  background: var(--panel-bg);
+  padding: 6px;
+}
+
+.monthcard-reward-name {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+}
+
+.monthcard-reward-amount {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.monthcard-claim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monthcard-claim-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monthcard-claim-k {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.monthcard-claim-v {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.monthcard-tip {
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  padding: 12px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
+@media screen and (max-width: 768px) {
+  .monthcard-shell {
+    height: 76vh;
+  }
+
+  .monthcard-hero {
+    grid-template-columns: 1fr;
+  }
+}

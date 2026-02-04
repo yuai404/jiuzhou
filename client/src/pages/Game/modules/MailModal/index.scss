@@ -1,0 +1,231 @@
+.mail-modal {
+  .ant-modal-content {
+    padding: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+}
+
+.mail-modal-shell {
+  height: 640px;
+  display: flex;
+  background: var(--panel-bg);
+}
+
+.mail-modal-left {
+  flex: 0 0 360px;
+  border-right: 1px solid var(--border-color-soft);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mail-left-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mail-left-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.mail-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mail-item {
+  border: 1px solid var(--border-color-soft);
+  border-radius: 12px;
+  background: var(--panel-bg-soft);
+  padding: 10px 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.mail-item:hover {
+  border-color: var(--border-color);
+  background: var(--hover-bg);
+  transform: translateY(-1px);
+}
+
+.mail-item.is-active {
+  border-color: var(--primary-color);
+  background: var(--primary-bg-soft);
+}
+
+.mail-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mail-item-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mail-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--primary-color);
+  flex: 0 0 auto;
+}
+
+.mail-title-text {
+  font-weight: 800;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-item-time {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mail-item-meta {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mail-from {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-tags .ant-tag {
+  margin-inline-end: 0;
+}
+
+.mail-empty {
+  padding: 30px 0;
+}
+
+.mail-modal-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mail-detail-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mail-detail-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-detail-meta {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mail-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+}
+
+.mail-content {
+  margin-bottom: 0;
+  color: var(--text-color);
+  line-height: 1.7;
+}
+
+.mail-detail-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color-soft);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mail-attachments-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.mail-attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mail-attachment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 10px;
+  background: var(--panel-bg-soft);
+  min-width: 260px;
+}
+
+.mail-attachment-name {
+  color: var(--text-color);
+  font-weight: 700;
+}
+
+.mail-attachment-amount {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.mail-attachments-empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.mail-right-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

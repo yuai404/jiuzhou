@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "description": "悬赏定义种子数据 - 每日随机悬赏池",
+  "bounties": [
+    {
+      "id": "bounty-daily-001",
+      "pool": "daily",
+      "task_id": "task-daily-001",
+      "title": "悬赏：清理野兔",
+      "description": "村外野兔泛滥，清理一些以免祸害庄稼。",
+      "claim_policy": "unlimited",
+      "max_claims": 0,
+      "weight": 10,
+      "enabled": true,
+      "version": 1
+    },
+    {
+      "id": "bounty-daily-002",
+      "pool": "daily",
+      "task_id": "task-side-001",
+      "title": "悬赏：采集野外药草",
+      "description": "药婆婆急需药草炼制丹药，谁能多采一些？",
+      "claim_policy": "limited",
+      "max_claims": 20,
+      "weight": 6,
+      "enabled": true,
+      "version": 1
+    },
+    {
+      "id": "bounty-daily-003",
+      "pool": "daily",
+      "task_id": "task-side-002",
+      "title": "悬赏：灵草献礼",
+      "description": "村长赏识有心之人，献上一株灵草可得回报。",
+      "claim_policy": "unique",
+      "max_claims": 1,
+      "weight": 2,
+      "enabled": true,
+      "version": 1
+    }
+  ]
+}

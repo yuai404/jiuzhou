@@ -1,0 +1,174 @@
+{
+  "dialogues": [
+    {
+      "id": "dlg-main-1-001",
+      "name": "第一章-001 初入青云",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "narration",
+          "text": "你从梦中惊醒，发现自己躺在青云村的村口。\n阳光透过树叶洒落，远处传来鸡鸣声。\n那个奇怪的梦……白发老者的话还在耳边回响。"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "与村口的引路童子对话，了解村中情况。",
+          "next": "npc-1"
+        },
+        {
+          "id": "npc-1",
+          "type": "npc",
+          "speaker": "引路童子",
+          "text": "欢迎来到青云村！修行之路漫漫，先从认识这里开始吧。\n（童子热情地指向北方）\n村中广场在北边，村长大人就在那里。\n你若有疑问，尽管问我。",
+          "next": "choice-1"
+        },
+        {
+          "id": "choice-1",
+          "type": "choice",
+          "choices": [
+            { "id": "c1", "text": "村长是什么人？", "next": "npc-elder" },
+            { "id": "c2", "text": "我该怎么开始修行？", "next": "npc-start" }
+          ]
+        },
+        {
+          "id": "npc-elder",
+          "type": "npc",
+          "speaker": "引路童子",
+          "text": "村长大人虽然只是养气期的修为，但他见多识广。\n听说年轻时也是闯荡过江湖的人物呢！\n你去找他，说不定会有意外收获。",
+          "next": "sys-2"
+        },
+        {
+          "id": "npc-start",
+          "type": "npc",
+          "speaker": "引路童子",
+          "text": "修行之路，首先要找到引路人。\n村长大人会指点你的，快去吧！",
+          "next": "sys-2"
+        },
+        {
+          "id": "sys-2",
+          "type": "system",
+          "text": "前往村中广场（北方），寻找村长。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-1-002",
+      "name": "第一章-002 初试身手",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "村长",
+          "text": "你来了。青云村虽小，却也暗流涌动。\n若想在这世道立足，先练胆，再练心。\n村外的南林小道有些野兔出没，虽然弱小，但对你来说正好练手。\n老夫先传你一门入门武技，你拿去修炼。",
+          "effects": [
+            { "type": "give_technique", "params": { "technique_id": "tech-jichu-quanfa" } },
+            { "type": "give_item", "params": { "item_def_id": "equip-weapon-001", "quantity": 1 } }
+          ],
+          "next": "sys-1"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "获得功法：基础拳法\n获得装备：新手剑\n前往青云村外·南林小道，击败野兔（0/5）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-1-003",
+      "name": "第一章-003 野猪之患",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "村长",
+          "text": "不错，看来你有些天赋。\n最近林中空地出现了野猪，比野兔凶猛得多。\n有村民被它们伤到了，你能去处理一下吗？",
+          "next": "sys-1"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "前往林中空地，击败野猪并收集兽皮（0/3）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-1-004",
+      "name": "第一章-004 采药之行",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "药婆婆",
+          "text": "孩子，你来得正好。\n我需要一些灵草来炼制丹药，但我年纪大了，不方便出村。\n西溪边长满了药草，不过也有毒蛇出没。\n你能帮我采些回来吗？",
+          "next": "sys-1"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "前往西溪边，采集灵草（0/10）并击败毒蛇（0/3）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-1-005",
+      "name": "第一章-005 狼患初现",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "村长",
+          "text": "你来得正好。最近密林深处出现了狼群。\n不是普通的野狼，而是灰狼和山野妖狼。\n它们比野猪凶猛得多，已经有猎人失踪了。\n以你现在的实力，应该能对付它们，但要小心狼群围攻。",
+          "next": "sys-1"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "前往密林深处，击败灰狼（0/5）与山野妖狼（0/3）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-1-006",
+      "name": "第一章-006 踏入仙途",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "村长",
+          "text": "你的表现让我刮目相看。\n修仙之路，分为四大境界：炼精化炁、炼炁化神、炼神返虚、炼虚合道。\n你现在还是凡人之躯，需要先突破到炼精化炁·养气期。\n先将养气诀修炼到第二层，积累足够的修为，然后尝试突破。",
+          "next": "sys-1"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "修炼养气诀至第2层，并突破到炼精化炁·养气期。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-1-007",
+      "name": "第一章-007 狼王之战",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "村长",
+          "text": "你已踏入养气期，真正的修行才刚开始。\n狼窝里的狼王必须被清除，否则狼群还会卷土重来。\n去吧，为青云村除此大患！",
+          "next": "sys-1"
+        },
+        {
+          "id": "sys-1",
+          "type": "system",
+          "text": "前往狼窝，击败狼王（0/1）。"
+        }
+      ],
+      "enabled": true
+    }
+  ]
+}

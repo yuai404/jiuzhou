@@ -1,0 +1,1129 @@
+import { pool, query } from '../config/database.js';
+import { createItem } from './itemService.js';
+import type { PoolClient } from 'pg';
+import { updateSectionProgress } from './mainQuestService.js';
+
+export type TaskCategory = 'main' | 'side' | 'daily' | 'event';
+
+export type TaskStatus = 'ongoing' | 'turnin' | 'claimable' | 'completed';
+
+export type TaskObjectiveDto = {
+  id: string;
+  type: string;
+  text: string;
+  done: number;
+  target: number;
+  params?: Record<string, unknown>;
+};
+
+export type TaskRewardDto =
+  | { type: 'silver'; name: string; amount: number }
+  | { type: 'spirit_stones'; name: string; amount: number }
+  | { type: 'item'; itemDefId: string; name: string; icon: string | null; amount: number };
+
+export type TaskOverviewDto = {
+  id: string;
+  category: TaskCategory;
+  title: string;
+  realm: string;
+  mapId: string | null;
+  roomId: string | null;
+  status: TaskStatus;
+  tracked: boolean;
+  description: string;
+  objectives: TaskObjectiveDto[];
+  rewards: TaskRewardDto[];
+};
+
+export type BountyTaskSourceType = 'daily' | 'player';
+
+export type BountyTaskOverviewDto = Omit<TaskOverviewDto, 'category'> & {
+  category: 'bounty';
+  bountyInstanceId: number;
+  sourceType: BountyTaskSourceType;
+  expiresAt: string | null;
+  remainingSeconds: number | null;
+};
+
+type RawReward = {
+  type?: unknown;
+  item_def_id?: unknown;
+  qty?: unknown;
+  amount?: unknown;
+};
+
+type RawObjective = {
+  id?: unknown;
+  type?: unknown;
+  text?: unknown;
+  target?: unknown;
+  params?: unknown;
+};
+
+const asNonEmptyString = (v: unknown): string | null => {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  return s ? s : null;
+};
+
+const asFiniteNonNegativeInt = (v: unknown, fallback: number): number => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.floor(n));
+};
+
+export const getCharacterIdByUserId = async (userId: number): Promise<number | null> => {
+  const uid = Number(userId);
+  if (!Number.isFinite(uid) || uid <= 0) return null;
+  const res = await query('SELECT id FROM characters WHERE user_id = $1 LIMIT 1', [uid]);
+  const characterId = Number(res.rows?.[0]?.id);
+  return Number.isFinite(characterId) && characterId > 0 ? characterId : null;
+};
+
+const normalizeTaskCategory = (v: unknown): TaskCategory | null => {
+  const s = asNonEmptyString(v);
+  if (!s) return null;
+  if (s === 'main' || s === 'side' || s === 'daily' || s === 'event') return s;
+  return null;
+};
+
+const mapProgressStatusToUiStatus = (v: unknown): TaskStatus => {
+  const s = asNonEmptyString(v) || 'ongoing';
+  if (s === 'turnin') return 'turnin';
+  if (s === 'claimable') return 'claimable';
+  if (s === 'completed' || s === 'claimed') return 'completed';
+  return 'ongoing';
+};
+
+const parseObjectives = (objectives: unknown): RawObjective[] => (Array.isArray(objectives) ? (objectives as RawObjective[]) : []);
+
+const parseRewards = (rewards: unknown): RawReward[] => (Array.isArray(rewards) ? (rewards as RawReward[]) : []);
+
+const getProgressValue = (progress: unknown, objectiveId: string): number => {
+  if (!objectiveId) return 0;
+  if (!progress || typeof progress !== 'object') return 0;
+  const record = progress as Record<string, unknown>;
+  return asFiniteNonNegativeInt(record[objectiveId], 0);
+};
+
+const computeRemainingSeconds = (expiresAt: unknown): number | null => {
+  if (!expiresAt) return null;
+  const ms = expiresAt instanceof Date ? expiresAt.getTime() : typeof expiresAt === 'string' ? Date.parse(expiresAt) : NaN;
+  if (!Number.isFinite(ms)) return null;
+  return Math.max(0, Math.floor((ms - Date.now()) / 1000));
+};
+
+export const getTaskOverview = async (
+  characterId: number,
+  category?: TaskCategory
+): Promise<{ tasks: TaskOverviewDto[] }> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { tasks: [] };
+
+  const resolvedCategory = normalizeTaskCategory(category);
+  const params: unknown[] = [cid];
+  let where = 'd.enabled = true';
+  if (resolvedCategory) {
+    params.push(resolvedCategory);
+    where += ` AND d.category = $${params.length}`;
+  }
+
+  const res = await query(
+    `
+      SELECT
+        d.id,
+        d.category,
+        d.title,
+        d.realm,
+        d.map_id,
+        d.room_id,
+        COALESCE(d.description, '') AS description,
+        d.objectives,
+        d.rewards,
+        d.sort_weight,
+        COALESCE(p.status, 'ongoing') AS progress_status,
+        COALESCE(p.tracked, false) AS tracked,
+        COALESCE(p.progress, '{}'::jsonb) AS progress
+      FROM task_def d
+      LEFT JOIN character_task_progress p
+        ON p.task_id = d.id
+       AND p.character_id = $1
+      WHERE ${where}
+      ORDER BY d.category ASC, d.sort_weight DESC, d.id ASC
+    `,
+    params
+  );
+
+  const rows = (res.rows ?? []) as Array<{
+    id: unknown;
+    category: unknown;
+    title: unknown;
+    realm: unknown;
+    map_id: unknown;
+    room_id: unknown;
+    description: unknown;
+    objectives: unknown;
+    rewards: unknown;
+    progress_status: unknown;
+    tracked: unknown;
+    progress: unknown;
+  }>;
+
+  const itemRewardIds = new Set<string>();
+  for (const r of rows) {
+    const rewards = parseRewards(r.rewards);
+    for (const rw of rewards) {
+      if (asNonEmptyString(rw?.type) !== 'item') continue;
+      const itemDefId = asNonEmptyString(rw?.item_def_id);
+      if (itemDefId) itemRewardIds.add(itemDefId);
+    }
+  }
+
+  const itemMeta = new Map<string, { name: string; icon: string | null }>();
+  if (itemRewardIds.size > 0) {
+    const ids = Array.from(itemRewardIds);
+    const metaRes = await query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::varchar[])`, [ids]);
+    for (const row of metaRes.rows ?? []) {
+      const id = asNonEmptyString(row?.id);
+      if (!id) continue;
+      const name = String(row?.name ?? id);
+      const icon = typeof row?.icon === 'string' ? row.icon : null;
+      itemMeta.set(id, { name, icon });
+    }
+  }
+
+  const tasks: TaskOverviewDto[] = rows
+    .map((r) => {
+      const id = asNonEmptyString(r.id) ?? '';
+      const category = normalizeTaskCategory(r.category) ?? 'main';
+      const title = String(r.title ?? id);
+      const realm = asNonEmptyString(r.realm) ?? '凡人';
+      const mapId = asNonEmptyString(r.map_id);
+      const roomId = asNonEmptyString(r.room_id);
+      const description = String(r.description ?? '');
+      const tracked = r.tracked === true;
+      const status = mapProgressStatusToUiStatus(r.progress_status);
+
+      const objectives = parseObjectives(r.objectives)
+        .map((o) => {
+          const oid = asNonEmptyString(o?.id) ?? '';
+          const text = String(o?.text ?? '');
+          const target = Math.max(1, asFiniteNonNegativeInt(o?.target, 1));
+          const done = Math.min(target, getProgressValue(r.progress, oid));
+          const type = String(o?.type ?? 'unknown');
+          const paramsValue = o?.params;
+          const params = paramsValue && typeof paramsValue === 'object' ? (paramsValue as Record<string, unknown>) : undefined;
+          return { id: oid, type, text, done, target, ...(params ? { params } : {}) };
+        })
+        .filter((x) => x.text);
+
+      const rewards = parseRewards(r.rewards)
+        .map((rw): TaskRewardDto | null => {
+          const type = asNonEmptyString(rw?.type) ?? '';
+          if (type === 'silver') {
+            return { type: 'silver', name: '银两', amount: asFiniteNonNegativeInt(rw?.amount, 0) };
+          }
+          if (type === 'spirit_stones') {
+            return { type: 'spirit_stones', name: '灵石', amount: asFiniteNonNegativeInt(rw?.amount, 0) };
+          }
+          if (type === 'item') {
+            const itemDefId = asNonEmptyString(rw?.item_def_id);
+            if (!itemDefId) return null;
+            const qty = Math.max(1, asFiniteNonNegativeInt(rw?.qty, 1));
+            const meta = itemMeta.get(itemDefId) ?? { name: itemDefId, icon: null };
+            return { type: 'item', itemDefId, name: meta.name, icon: meta.icon, amount: qty };
+          }
+          return null;
+        })
+        .filter((x): x is TaskRewardDto => x !== null && x.amount > 0);
+
+      return { id, category, title, realm, mapId, roomId, status, tracked, description, objectives, rewards };
+    })
+    .filter((t) => t.id);
+
+  return { tasks };
+};
+
+export const getBountyTaskOverview = async (characterId: number): Promise<{ tasks: BountyTaskOverviewDto[] }> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { tasks: [] };
+
+  await query(
+    `
+      DELETE FROM bounty_instance
+      WHERE source_type = 'daily'
+        AND (
+          (expires_at IS NOT NULL AND expires_at <= NOW())
+          OR (refresh_date IS NOT NULL AND refresh_date < CURRENT_DATE)
+        )
+    `,
+  );
+
+  const res = await query(
+    `
+      SELECT
+        i.id AS bounty_instance_id,
+        i.source_type,
+        i.task_id,
+        i.title AS bounty_title,
+        COALESCE(i.description, '') AS bounty_description,
+        CASE
+          WHEN i.source_type = 'daily' AND i.expires_at IS NULL THEN (date_trunc('day', NOW()) + interval '1 day')
+          ELSE i.expires_at
+        END AS expires_at,
+        i.spirit_stones_reward,
+        i.silver_reward,
+        d.realm,
+        d.map_id,
+        d.room_id,
+        d.objectives,
+        d.rewards,
+        COALESCE(p.status, 'ongoing') AS progress_status,
+        COALESCE(p.tracked, false) AS tracked,
+        COALESCE(p.progress, '{}'::jsonb) AS progress
+      FROM bounty_claim c
+      JOIN bounty_instance i ON i.id = c.bounty_instance_id
+      JOIN task_def d ON d.id = i.task_id AND d.enabled = true
+      LEFT JOIN character_task_progress p
+        ON p.task_id = i.task_id
+       AND p.character_id = $1
+      WHERE c.character_id = $1
+        AND c.status IN ('claimed','completed')
+        AND (
+          i.source_type <> 'daily'
+          OR i.expires_at IS NULL
+          OR i.expires_at > NOW()
+        )
+        AND (
+          i.source_type <> 'player'
+          OR i.expires_at IS NULL
+          OR i.expires_at > NOW()
+        )
+      ORDER BY c.claimed_at DESC, i.id DESC
+    `,
+    [cid],
+  );
+
+  const rows = (res.rows ?? []) as Array<{
+    bounty_instance_id: unknown;
+    source_type: unknown;
+    task_id: unknown;
+    bounty_title: unknown;
+    bounty_description: unknown;
+    expires_at: unknown;
+    spirit_stones_reward: unknown;
+    silver_reward: unknown;
+    realm: unknown;
+    map_id: unknown;
+    room_id: unknown;
+    objectives: unknown;
+    rewards: unknown;
+    progress_status: unknown;
+    tracked: unknown;
+    progress: unknown;
+  }>;
+
+  const itemRewardIds = new Set<string>();
+  for (const r of rows) {
+    const rewards = parseRewards(r.rewards);
+    for (const rw of rewards) {
+      if (asNonEmptyString(rw?.type) !== 'item') continue;
+      const itemDefId = asNonEmptyString(rw?.item_def_id);
+      if (itemDefId) itemRewardIds.add(itemDefId);
+    }
+  }
+
+  const itemMeta = new Map<string, { name: string; icon: string | null }>();
+  if (itemRewardIds.size > 0) {
+    const ids = Array.from(itemRewardIds);
+    const metaRes = await query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::varchar[])`, [ids]);
+    for (const row of metaRes.rows ?? []) {
+      const id = asNonEmptyString(row?.id);
+      if (!id) continue;
+      const name = String(row?.name ?? id);
+      const icon = typeof row?.icon === 'string' ? row.icon : null;
+      itemMeta.set(id, { name, icon });
+    }
+  }
+
+  const tasks: BountyTaskOverviewDto[] = rows
+    .map((r) => {
+      const taskId = asNonEmptyString(r.task_id) ?? '';
+      if (!taskId) return null;
+
+      const bountyInstanceIdRaw = typeof r.bounty_instance_id === 'number' ? r.bounty_instance_id : Number(r.bounty_instance_id);
+      const bountyInstanceId = Number.isFinite(bountyInstanceIdRaw) ? Math.trunc(bountyInstanceIdRaw) : 0;
+      const sourceType = (asNonEmptyString(r.source_type) ?? 'daily') as BountyTaskSourceType;
+      const expiresAt = r.expires_at ? new Date(r.expires_at as any).toISOString() : null;
+      const remainingSeconds = computeRemainingSeconds(expiresAt);
+
+      const title = String(r.bounty_title ?? taskId);
+      const realm = asNonEmptyString(r.realm) ?? '凡人';
+      const mapId = asNonEmptyString(r.map_id);
+      const roomId = asNonEmptyString(r.room_id);
+      const description = String(r.bounty_description ?? '');
+      const tracked = r.tracked === true;
+      const status = mapProgressStatusToUiStatus(r.progress_status);
+
+      const objectives = parseObjectives(r.objectives)
+        .map((o) => {
+          const oid = asNonEmptyString(o?.id) ?? '';
+          const text = String(o?.text ?? '');
+          const target = Math.max(1, asFiniteNonNegativeInt(o?.target, 1));
+          const done = Math.min(target, getProgressValue(r.progress, oid));
+          const type = String(o?.type ?? 'unknown');
+          const paramsValue = o?.params;
+          const params = paramsValue && typeof paramsValue === 'object' ? (paramsValue as Record<string, unknown>) : undefined;
+          return { id: oid, type, text, done, target, ...(params ? { params } : {}) };
+        })
+        .filter((x) => x.text);
+
+      const rewardOut: TaskRewardDto[] = [];
+      const extraSpirit = asFiniteNonNegativeInt(r.spirit_stones_reward, 0);
+      const extraSilver = asFiniteNonNegativeInt(r.silver_reward, 0);
+      if (extraSilver > 0) rewardOut.push({ type: 'silver', name: '银两', amount: extraSilver });
+      if (extraSpirit > 0) rewardOut.push({ type: 'spirit_stones', name: '灵石', amount: extraSpirit });
+
+      const taskRewards = parseRewards(r.rewards)
+        .map((rw): TaskRewardDto | null => {
+          const type = asNonEmptyString(rw?.type) ?? '';
+          if (type === 'silver') return { type: 'silver', name: '银两', amount: asFiniteNonNegativeInt(rw?.amount, 0) };
+          if (type === 'spirit_stones') return { type: 'spirit_stones', name: '灵石', amount: asFiniteNonNegativeInt(rw?.amount, 0) };
+          if (type === 'item') {
+            const itemDefId = asNonEmptyString(rw?.item_def_id);
+            if (!itemDefId) return null;
+            const qty = Math.max(1, asFiniteNonNegativeInt(rw?.qty, 1));
+            const meta = itemMeta.get(itemDefId) ?? { name: itemDefId, icon: null };
+            return { type: 'item', itemDefId, name: meta.name, icon: meta.icon, amount: qty };
+          }
+          return null;
+        })
+        .filter((x): x is TaskRewardDto => x !== null && x.amount > 0);
+
+      rewardOut.push(...taskRewards);
+
+      return {
+        id: taskId,
+        category: 'bounty',
+        title,
+        realm,
+        mapId,
+        roomId,
+        status,
+        tracked,
+        description,
+        objectives,
+        rewards: rewardOut,
+        bountyInstanceId,
+        sourceType,
+        expiresAt,
+        remainingSeconds,
+      };
+    })
+    .filter((x): x is BountyTaskOverviewDto => x !== null);
+
+  return { tasks };
+};
+
+export const setTaskTracked = async (
+  characterId: number,
+  taskId: string,
+  tracked: boolean
+): Promise<{ success: boolean; message: string; data?: { taskId: string; tracked: boolean } }> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+  const tid = asNonEmptyString(taskId);
+  if (!tid) return { success: false, message: '任务ID不能为空' };
+
+  const existsRes = await query(`SELECT 1 FROM task_def WHERE id = $1 AND enabled = true LIMIT 1`, [tid]);
+  if ((existsRes.rows ?? []).length === 0) return { success: false, message: '任务不存在' };
+
+  const res = await query(
+    `
+      INSERT INTO character_task_progress (character_id, task_id, tracked)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (character_id, task_id) DO UPDATE SET
+        tracked = EXCLUDED.tracked,
+        updated_at = NOW()
+      RETURNING tracked
+    `,
+    [cid, tid, tracked]
+  );
+
+  const saved = res.rows?.[0]?.tracked === true;
+  return { success: true, message: 'ok', data: { taskId: tid, tracked: saved } };
+};
+
+type ClaimedRewardResult =
+  | { type: 'silver'; amount: number }
+  | { type: 'spirit_stones'; amount: number }
+  | { type: 'item'; itemDefId: string; qty: number; itemIds?: number[]; itemName?: string; itemIcon?: string };
+
+const applyTaskRewardsTx = async (
+  client: PoolClient,
+  userId: number,
+  characterId: number,
+  rewards: RawReward[]
+): Promise<{ success: boolean; message: string; rewards: ClaimedRewardResult[] }> => {
+  const out: ClaimedRewardResult[] = [];
+
+  for (const rw of rewards) {
+    const type = asNonEmptyString(rw?.type) ?? '';
+    if (type === 'silver') {
+      const amount = asFiniteNonNegativeInt(rw?.amount, 0);
+      if (amount <= 0) continue;
+      await client.query(`UPDATE characters SET silver = silver + $1, updated_at = NOW() WHERE id = $2`, [amount, characterId]);
+      out.push({ type: 'silver', amount });
+      continue;
+    }
+    if (type === 'spirit_stones') {
+      const amount = asFiniteNonNegativeInt(rw?.amount, 0);
+      if (amount <= 0) continue;
+      await client.query(`UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = NOW() WHERE id = $2`, [amount, characterId]);
+      out.push({ type: 'spirit_stones', amount });
+      continue;
+    }
+    if (type === 'item') {
+      const itemDefId = asNonEmptyString(rw?.item_def_id);
+      if (!itemDefId) continue;
+      const qty = Math.max(1, asFiniteNonNegativeInt(rw?.qty, 1));
+      const itemDefRes = await client.query(
+        `SELECT name, icon FROM item_def WHERE id = $1 AND enabled = true`,
+        [itemDefId]
+      );
+      const itemName = asNonEmptyString(itemDefRes.rows?.[0]?.name);
+      const itemIcon = asNonEmptyString(itemDefRes.rows?.[0]?.icon);
+      const result = await createItem(userId, characterId, itemDefId, qty, { dbClient: client, obtainedFrom: 'task_reward' });
+      if (!result.success) return { success: false, message: result.message, rewards: out };
+      out.push({
+        type: 'item',
+        itemDefId,
+        qty,
+        itemIds: result.itemIds,
+        itemName: itemName || undefined,
+        itemIcon: itemIcon || undefined,
+      });
+      continue;
+    }
+  }
+
+  return { success: true, message: 'ok', rewards: out };
+};
+
+const applyBountyRewardOnTaskClaimTx = async (
+  client: PoolClient,
+  characterId: number,
+  taskId: string
+): Promise<ClaimedRewardResult[]> => {
+  const res = await client.query(
+    `
+      SELECT
+        c.id AS claim_id,
+        i.spirit_stones_reward,
+        i.silver_reward
+      FROM bounty_claim c
+      JOIN bounty_instance i ON i.id = c.bounty_instance_id
+      WHERE c.character_id = $1
+        AND i.task_id = $2
+        AND c.status IN ('claimed','completed')
+      LIMIT 1
+      FOR UPDATE
+    `,
+    [characterId, taskId]
+  );
+  if ((res.rows ?? []).length === 0) return [];
+
+  const row = res.rows[0] as any;
+  const claimId = Number(row?.claim_id);
+  if (!Number.isFinite(claimId) || claimId <= 0) return [];
+
+  const spirit = asFiniteNonNegativeInt(row?.spirit_stones_reward, 0);
+  const silver = asFiniteNonNegativeInt(row?.silver_reward, 0);
+  const out: ClaimedRewardResult[] = [];
+
+  if (spirit > 0) {
+    await client.query(`UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = NOW() WHERE id = $2`, [
+      spirit,
+      characterId,
+    ]);
+    out.push({ type: 'spirit_stones', amount: spirit });
+  }
+  if (silver > 0) {
+    await client.query(`UPDATE characters SET silver = silver + $1, updated_at = NOW() WHERE id = $2`, [silver, characterId]);
+    out.push({ type: 'silver', amount: silver });
+  }
+
+  await client.query(`UPDATE bounty_claim SET status = 'rewarded', updated_at = NOW() WHERE id = $1`, [claimId]);
+  return out;
+};
+
+export const claimTaskReward = async (
+  userId: number,
+  characterId: number,
+  taskId: string
+): Promise<{ success: boolean; message: string; data?: { taskId: string; rewards: ClaimedRewardResult[] } }> => {
+  const uid = Number(userId);
+  const cid = Number(characterId);
+  if (!Number.isFinite(uid) || uid <= 0) return { success: false, message: '未登录' };
+  if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+  const tid = asNonEmptyString(taskId);
+  if (!tid) return { success: false, message: '任务ID不能为空' };
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const progressRes = await client.query(
+      `SELECT status FROM character_task_progress WHERE character_id = $1 AND task_id = $2 FOR UPDATE`,
+      [cid, tid]
+    );
+    if ((progressRes.rows ?? []).length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '任务未接取' };
+    }
+    const status = asNonEmptyString(progressRes.rows[0]?.status) ?? 'ongoing';
+    if (status !== 'claimable') {
+      await client.query('ROLLBACK');
+      return { success: false, message: '任务不可领取' };
+    }
+
+    const defRes = await client.query(`SELECT rewards FROM task_def WHERE id = $1 AND enabled = true LIMIT 1`, [tid]);
+    if ((defRes.rows ?? []).length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '任务不存在' };
+    }
+
+    const rewards = parseRewards(defRes.rows[0]?.rewards);
+    const applyResult = await applyTaskRewardsTx(client, uid, cid, rewards);
+    if (!applyResult.success) {
+      await client.query('ROLLBACK');
+      return { success: false, message: applyResult.message };
+    }
+
+    const bountyRewards = await applyBountyRewardOnTaskClaimTx(client, cid, tid);
+    if (bountyRewards.length > 0) applyResult.rewards.push(...bountyRewards);
+
+    await client.query(
+      `
+        UPDATE character_task_progress
+        SET status = 'claimed',
+            completed_at = COALESCE(completed_at, NOW()),
+            claimed_at = NOW(),
+            tracked = false,
+            updated_at = NOW()
+        WHERE character_id = $1 AND task_id = $2
+      `,
+      [cid, tid]
+    );
+
+    await client.query('COMMIT');
+    return { success: true, message: 'ok', data: { taskId: tid, rewards: applyResult.rewards } };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('领取任务奖励失败:', error);
+    return { success: false, message: '服务器错误' };
+  } finally {
+    client.release();
+  }
+};
+
+type TaskProgressStatusDb = 'ongoing' | 'turnin' | 'claimable' | 'claimed';
+
+const asTaskProgressStatusDb = (v: unknown): TaskProgressStatusDb => {
+  const s = asNonEmptyString(v) || 'ongoing';
+  if (s === 'turnin') return 'turnin';
+  if (s === 'claimable') return 'claimable';
+  if (s === 'claimed') return 'claimed';
+  return 'ongoing';
+};
+
+const asStringArray = (v: unknown): string[] => {
+  if (!Array.isArray(v)) return [];
+  return v.map((x) => String(x ?? '').trim()).filter(Boolean);
+};
+
+const parseProgressRecord = (progress: unknown): Record<string, number> => {
+  if (!progress || typeof progress !== 'object') return {};
+  const record = progress as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(record)) {
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+    if (Number.isFinite(n)) out[k] = Math.max(0, Math.floor(n));
+  }
+  return out;
+};
+
+const objectiveMatchesEvent = (
+  objective: RawObjective,
+  event: { type: 'talk_npc'; npcId: string } | { type: 'kill_monster'; monsterId: string; count: number } | { type: 'gather_resource'; resourceId: string; count: number },
+): { matched: boolean; delta: number } => {
+  const type = String(objective?.type ?? '').trim();
+  const params = objective?.params && typeof objective.params === 'object' ? (objective.params as Record<string, unknown>) : {};
+  if (event.type === 'talk_npc') {
+    if (type !== 'talk_npc') return { matched: false, delta: 0 };
+    const npcId = asNonEmptyString(params?.npc_id);
+    if (!npcId || npcId !== event.npcId) return { matched: false, delta: 0 };
+    return { matched: true, delta: 1 };
+  }
+  if (event.type === 'kill_monster') {
+    if (type !== 'kill_monster') return { matched: false, delta: 0 };
+    const monsterId = asNonEmptyString(params?.monster_id);
+    if (!monsterId || monsterId !== event.monsterId) return { matched: false, delta: 0 };
+    return { matched: true, delta: Math.max(1, Math.floor(event.count)) };
+  }
+  if (event.type === 'gather_resource') {
+    if (type !== 'gather_resource') return { matched: false, delta: 0 };
+    const resourceId = asNonEmptyString(params?.resource_id);
+    if (!resourceId || resourceId !== event.resourceId) return { matched: false, delta: 0 };
+    return { matched: true, delta: Math.max(1, Math.floor(event.count)) };
+  }
+  return { matched: false, delta: 0 };
+};
+
+const computeAllObjectivesDone = (objectives: RawObjective[], progressRecord: Record<string, number>): boolean => {
+  const list = objectives.filter((o) => asNonEmptyString(o?.id));
+  if (list.length === 0) return false;
+  for (const o of list) {
+    const oid = asNonEmptyString(o?.id) ?? '';
+    const target = Math.max(1, asFiniteNonNegativeInt(o?.target, 1));
+    const done = Math.min(target, asFiniteNonNegativeInt(progressRecord[oid], 0));
+    if (done < target) return false;
+  }
+  return true;
+};
+
+const checkPrereqSatisfied = async (characterId: number, prereqTaskIds: string[]): Promise<boolean> => {
+  const prereqIds = prereqTaskIds.map((x) => x.trim()).filter(Boolean);
+  if (prereqIds.length === 0) return true;
+  const res = await query(
+    `
+      SELECT task_id, status
+      FROM character_task_progress
+      WHERE character_id = $1 AND task_id = ANY($2::varchar[])
+    `,
+    [characterId, prereqIds],
+  );
+  const statusById = new Map<string, TaskProgressStatusDb>();
+  for (const r of res.rows ?? []) {
+    const tid = asNonEmptyString(r?.task_id);
+    if (!tid) continue;
+    statusById.set(tid, asTaskProgressStatusDb(r?.status));
+  }
+  for (const tid of prereqIds) {
+    const st = statusById.get(tid);
+    if (!st) return false;
+    if (st !== 'turnin' && st !== 'claimable' && st !== 'claimed') return false;
+  }
+  return true;
+};
+
+export const acceptTask = async (
+  characterId: number,
+  taskId: string,
+): Promise<{ success: boolean; message: string; data?: { taskId: string } }> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+  const tid = asNonEmptyString(taskId);
+  if (!tid) return { success: false, message: '任务ID不能为空' };
+
+  const defRes = await query(`SELECT id, prereq_task_ids FROM task_def WHERE id = $1 AND enabled = true LIMIT 1`, [tid]);
+  if ((defRes.rows ?? []).length === 0) return { success: false, message: '任务不存在' };
+  const prereqTaskIds = asStringArray(defRes.rows[0]?.prereq_task_ids);
+  const prereqOk = await checkPrereqSatisfied(cid, prereqTaskIds);
+  if (!prereqOk) return { success: false, message: '前置任务未完成' };
+
+  const existsRes = await query(
+    `SELECT status FROM character_task_progress WHERE character_id = $1 AND task_id = $2 LIMIT 1`,
+    [cid, tid],
+  );
+  if ((existsRes.rows ?? []).length > 0) {
+    const st = asTaskProgressStatusDb(existsRes.rows[0]?.status);
+    if (st !== 'claimed') return { success: false, message: '任务已接取' };
+  }
+
+  await query(
+    `
+      INSERT INTO character_task_progress (character_id, task_id, status, progress, tracked, accepted_at, completed_at, claimed_at, updated_at)
+      VALUES ($1, $2, 'ongoing', '{}'::jsonb, true, NOW(), NULL, NULL, NOW())
+      ON CONFLICT (character_id, task_id) DO UPDATE SET
+        status = EXCLUDED.status,
+        progress = EXCLUDED.progress,
+        tracked = EXCLUDED.tracked,
+        accepted_at = NOW(),
+        completed_at = NULL,
+        claimed_at = NULL,
+        updated_at = NOW()
+    `,
+    [cid, tid],
+  );
+
+  return { success: true, message: 'ok', data: { taskId: tid } };
+};
+
+export const acceptTaskFromNpc = async (
+  characterId: number,
+  taskId: string,
+  npcId: string,
+): Promise<{ success: boolean; message: string; data?: { taskId: string } }> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+  const tid = asNonEmptyString(taskId);
+  if (!tid) return { success: false, message: '任务ID不能为空' };
+  const nid = asNonEmptyString(npcId);
+  if (!nid) return { success: false, message: 'NPC不存在' };
+
+  const defRes = await query(
+    `SELECT id, giver_npc_id, prereq_task_ids FROM task_def WHERE id = $1 AND enabled = true LIMIT 1`,
+    [tid],
+  );
+  if ((defRes.rows ?? []).length === 0) return { success: false, message: '任务不存在' };
+  const giverNpcId = asNonEmptyString(defRes.rows[0]?.giver_npc_id);
+  if (!giverNpcId || giverNpcId !== nid) return { success: false, message: '该NPC无法发放此任务' };
+  const prereqTaskIds = asStringArray(defRes.rows[0]?.prereq_task_ids);
+  const prereqOk = await checkPrereqSatisfied(cid, prereqTaskIds);
+  if (!prereqOk) return { success: false, message: '前置任务未完成' };
+
+  const existsRes = await query(
+    `SELECT status FROM character_task_progress WHERE character_id = $1 AND task_id = $2 LIMIT 1`,
+    [cid, tid],
+  );
+  if ((existsRes.rows ?? []).length > 0) {
+    const st = asTaskProgressStatusDb(existsRes.rows[0]?.status);
+    if (st !== 'claimed') return { success: false, message: '任务已接取' };
+  }
+
+  await query(
+    `
+      INSERT INTO character_task_progress (character_id, task_id, status, progress, tracked, accepted_at, completed_at, claimed_at, updated_at)
+      VALUES ($1, $2, 'ongoing', '{}'::jsonb, true, NOW(), NULL, NULL, NOW())
+      ON CONFLICT (character_id, task_id) DO UPDATE SET
+        status = EXCLUDED.status,
+        progress = EXCLUDED.progress,
+        tracked = EXCLUDED.tracked,
+        accepted_at = NOW(),
+        completed_at = NULL,
+        claimed_at = NULL,
+        updated_at = NOW()
+    `,
+    [cid, tid],
+  );
+
+  return { success: true, message: 'ok', data: { taskId: tid } };
+};
+
+export const submitTask = async (
+  characterId: number,
+  taskId: string,
+  npcId: string,
+): Promise<{ success: boolean; message: string; data?: { taskId: string } }> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+  const tid = asNonEmptyString(taskId);
+  if (!tid) return { success: false, message: '任务ID不能为空' };
+  const nid = asNonEmptyString(npcId);
+  if (!nid) return { success: false, message: 'NPC不存在' };
+
+  const res = await query(
+    `
+      SELECT
+        p.status,
+        p.progress,
+        d.objectives,
+        d.giver_npc_id
+      FROM character_task_progress p
+      JOIN task_def d ON d.id = p.task_id
+      WHERE p.character_id = $1 AND p.task_id = $2 AND d.enabled = true
+      LIMIT 1
+    `,
+    [cid, tid],
+  );
+  if ((res.rows ?? []).length === 0) return { success: false, message: '任务未接取' };
+
+  const row = res.rows[0] as { status?: unknown; progress?: unknown; objectives?: unknown; giver_npc_id?: unknown };
+  const giverNpcId = asNonEmptyString(row?.giver_npc_id);
+  if (!giverNpcId || giverNpcId !== nid) return { success: false, message: '该任务无法在此提交' };
+  const status = asTaskProgressStatusDb(row?.status);
+  if (status === 'claimed') return { success: false, message: '任务已完成' };
+  if (status === 'claimable') return { success: true, message: 'ok', data: { taskId: tid } };
+
+  const objectives = parseObjectives(row?.objectives);
+  const progressRecord = parseProgressRecord(row?.progress);
+  const allDone = computeAllObjectivesDone(objectives, progressRecord);
+  if (!allDone) return { success: false, message: '任务未完成' };
+
+  await query(
+    `
+      UPDATE character_task_progress
+      SET status = 'claimable',
+          completed_at = COALESCE(completed_at, NOW()),
+          updated_at = NOW()
+      WHERE character_id = $1 AND task_id = $2
+    `,
+    [cid, tid],
+  );
+  return { success: true, message: 'ok', data: { taskId: tid } };
+};
+
+const applyTaskEvent = async (
+  characterId: number,
+  event: { type: 'talk_npc'; npcId: string } | { type: 'kill_monster'; monsterId: string; count: number } | { type: 'gather_resource'; resourceId: string; count: number },
+): Promise<void> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return;
+
+  const res = await query(
+    `
+      SELECT
+        p.task_id,
+        p.status,
+        p.progress,
+        d.objectives,
+        d.giver_npc_id
+      FROM character_task_progress p
+      JOIN task_def d ON d.id = p.task_id
+      WHERE p.character_id = $1
+        AND d.enabled = true
+        AND COALESCE(p.status, 'ongoing') <> 'claimed'
+    `,
+    [cid],
+  );
+
+  for (const row of res.rows ?? []) {
+    const taskId = asNonEmptyString(row?.task_id);
+    if (!taskId) continue;
+    const status = asTaskProgressStatusDb(row?.status);
+    if (status === 'claimed') continue;
+
+    const objectives = parseObjectives(row?.objectives);
+    const progressRecord = parseProgressRecord(row?.progress);
+
+    let changed = false;
+    for (const o of objectives) {
+      const oid = asNonEmptyString(o?.id);
+      if (!oid) continue;
+      const match = objectiveMatchesEvent(o, event);
+      if (!match.matched) continue;
+      const target = Math.max(1, asFiniteNonNegativeInt(o?.target, 1));
+      const cur = asFiniteNonNegativeInt(progressRecord[oid], 0);
+      const next = Math.min(target, cur + match.delta);
+      if (next !== cur) {
+        progressRecord[oid] = next;
+        changed = true;
+      }
+    }
+
+    const giverNpcId = asNonEmptyString(row?.giver_npc_id);
+    const allDone = computeAllObjectivesDone(objectives, progressRecord);
+
+    let nextStatus: TaskProgressStatusDb = status;
+    let promoteToClaimable = false;
+    if (event.type === 'talk_npc' && giverNpcId && giverNpcId === event.npcId) {
+      if (status === 'turnin' && allDone) promoteToClaimable = true;
+    }
+    if (allDone) {
+      if (status === 'ongoing') nextStatus = 'turnin';
+      if (promoteToClaimable) nextStatus = 'claimable';
+    }
+
+    if (!changed && nextStatus === status) continue;
+
+    await query(
+      `
+        UPDATE character_task_progress
+        SET progress = $3::jsonb,
+            status = $4::varchar(16),
+            completed_at = CASE WHEN $4::varchar(16) = 'claimable'::varchar(16) THEN COALESCE(completed_at, NOW()) ELSE completed_at END,
+            updated_at = NOW()
+        WHERE character_id = $1 AND task_id = $2
+      `,
+      [cid, taskId, JSON.stringify(progressRecord), nextStatus],
+    );
+  }
+};
+
+export const recordTalkNpcEvent = async (characterId: number, npcId: string): Promise<void> => {
+  const nid = asNonEmptyString(npcId);
+  if (!nid) return;
+  await applyTaskEvent(characterId, { type: 'talk_npc', npcId: nid });
+  try {
+    await updateSectionProgress(characterId, { type: 'talk_npc', npcId: nid });
+  } catch {}
+};
+
+export const recordKillMonsterEvent = async (characterId: number, monsterId: string, count: number): Promise<void> => {
+  const mid = asNonEmptyString(monsterId);
+  if (!mid) return;
+  const c = Math.max(1, Math.floor(Number(count)));
+  await applyTaskEvent(characterId, { type: 'kill_monster', monsterId: mid, count: c });
+  try {
+    await updateSectionProgress(characterId, { type: 'kill_monster', monsterId: mid, count: c });
+  } catch {}
+};
+
+export const recordGatherResourceEvent = async (characterId: number, resourceId: string, count: number): Promise<void> => {
+  const rid = asNonEmptyString(resourceId);
+  if (!rid) return;
+  const c = Math.max(1, Math.floor(Number(count)));
+  await applyTaskEvent(characterId, { type: 'gather_resource', resourceId: rid, count: c });
+  try {
+    await updateSectionProgress(characterId, { type: 'gather_resource', resourceId: rid, count: c });
+    await updateSectionProgress(characterId, { type: 'collect', itemId: rid, count: c });
+  } catch {}
+};
+
+export const recordCollectItemEvent = async (characterId: number, itemId: string, count: number): Promise<void> => {
+  const iid = asNonEmptyString(itemId);
+  if (!iid) return;
+  const c = Math.max(1, Math.floor(Number(count)));
+  try {
+    await updateSectionProgress(characterId, { type: 'collect', itemId: iid, count: c });
+  } catch {}
+};
+
+export type NpcTalkTaskOption = {
+  taskId: string;
+  title: string;
+  category: TaskCategory;
+  status: 'locked' | 'available' | 'accepted' | 'turnin' | 'claimable' | 'claimed';
+};
+
+export type NpcTalkMainQuestOption = {
+  sectionId: string;
+  sectionName: string;
+  chapterName: string;
+  status: 'not_started' | 'dialogue' | 'objectives' | 'turnin' | 'completed';
+  canStartDialogue: boolean;
+  canComplete: boolean;
+};
+
+export const npcTalk = async (
+  characterId: number,
+  npcId: string,
+): Promise<{
+  success: boolean;
+  message: string;
+  data?: { 
+    npcId: string; 
+    npcName: string; 
+    lines: string[]; 
+    tasks: NpcTalkTaskOption[];
+    mainQuest?: NpcTalkMainQuestOption;
+  };
+}> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+  const nid = asNonEmptyString(npcId);
+  if (!nid) return { success: false, message: 'NPC不存在' };
+
+  const npcRes = await query(`SELECT id, name, talk_tree_id FROM npc_def WHERE enabled = true AND id = $1 LIMIT 1`, [nid]);
+  if ((npcRes.rows ?? []).length === 0) return { success: false, message: 'NPC不存在' };
+  const npcName = String(npcRes.rows[0]?.name ?? nid);
+  const talkTreeId = asNonEmptyString(npcRes.rows[0]?.talk_tree_id);
+
+  await recordTalkNpcEvent(cid, nid);
+
+  const lines: string[] = [];
+  if (talkTreeId) {
+    const talkRes = await query(`SELECT greeting_lines FROM talk_tree_def WHERE enabled = true AND id = $1 LIMIT 1`, [talkTreeId]);
+    if ((talkRes.rows ?? []).length > 0) {
+      try {
+        const parsed = talkRes.rows[0]?.greeting_lines;
+        const list = Array.isArray(parsed) ? parsed : typeof parsed === 'string' ? JSON.parse(parsed) : [];
+        lines.push(...(Array.isArray(list) ? list.map((x) => String(x ?? '').trim()).filter(Boolean) : []));
+      } catch {}
+    }
+  }
+  if (lines.length === 0) {
+    lines.push(`${npcName}看着你，没有多说什么。`);
+  }
+
+  const taskRes = await query(
+    `
+      SELECT
+        d.id,
+        d.title,
+        d.category,
+        d.prereq_task_ids,
+        d.objectives,
+        p.status,
+        p.progress
+      FROM task_def d
+      LEFT JOIN character_task_progress p
+        ON p.task_id = d.id
+       AND p.character_id = $2
+      WHERE d.enabled = true AND d.giver_npc_id = $1
+      ORDER BY d.sort_weight DESC, d.id ASC
+    `,
+    [nid, cid],
+  );
+
+  const tasks: NpcTalkTaskOption[] = [];
+  for (const r of taskRes.rows ?? []) {
+    const tid = asNonEmptyString(r?.id);
+    if (!tid) continue;
+    const title = String(r?.title ?? tid);
+    const category = normalizeTaskCategory(r?.category) ?? 'main';
+    const status = asTaskProgressStatusDb(r?.status);
+
+    const objectives = parseObjectives(r?.objectives);
+    const progressRecord = parseProgressRecord(r?.progress);
+    const allDone = computeAllObjectivesDone(objectives, progressRecord);
+
+    if (!r?.status) {
+      const prereqTaskIds = asStringArray(r?.prereq_task_ids);
+      const prereqOk = await checkPrereqSatisfied(cid, prereqTaskIds);
+      tasks.push({ taskId: tid, title, category, status: prereqOk ? 'available' : 'locked' });
+      continue;
+    }
+
+    if (status === 'claimed') {
+      tasks.push({ taskId: tid, title, category, status: 'claimed' });
+      continue;
+    }
+    if (status === 'claimable') {
+      tasks.push({ taskId: tid, title, category, status: 'claimable' });
+      continue;
+    }
+    if ((status === 'turnin' && allDone) || (status === 'ongoing' && allDone)) {
+      tasks.push({ taskId: tid, title, category, status: 'turnin' });
+      continue;
+    }
+    tasks.push({ taskId: tid, title, category, status: 'accepted' });
+  }
+
+  // 查询主线任务
+  let mainQuest: NpcTalkMainQuestOption | undefined;
+  const mainQuestRes = await query(
+    `SELECT 
+       p.current_section_id, p.section_status,
+       s.id as section_id, s.name as section_name, s.npc_id, s.objectives,
+       c.name as chapter_name
+     FROM character_main_quest_progress p
+     JOIN main_quest_section s ON s.id = p.current_section_id
+     JOIN main_quest_chapter c ON c.id = s.chapter_id
+     WHERE p.character_id = $1 AND s.npc_id = $2 AND s.enabled = true`,
+    [cid, nid]
+  );
+  
+  if (mainQuestRes.rows?.[0]) {
+    const mq = mainQuestRes.rows[0];
+    const sectionStatus = mq.section_status as 'not_started' | 'dialogue' | 'objectives' | 'turnin' | 'completed';
+    const objectives = Array.isArray(mq.objectives) ? mq.objectives : [];
+    
+    // 判断是否可以开始对话（未开始或对话中）
+    const canStartDialogue = sectionStatus === 'not_started' || sectionStatus === 'dialogue';
+    // 判断是否可以完成（可交付状态）
+    const canComplete = sectionStatus === 'turnin';
+    
+    mainQuest = {
+      sectionId: String(mq.section_id),
+      sectionName: String(mq.section_name),
+      chapterName: String(mq.chapter_name),
+      status: sectionStatus,
+      canStartDialogue,
+      canComplete
+    };
+  }
+
+  return { success: true, message: 'ok', data: { npcId: nid, npcName, lines, tasks, mainQuest } };
+};
