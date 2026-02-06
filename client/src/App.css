@@ -90,6 +90,49 @@ body.theme-dark {
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
 }
 
+/* 深色主题下统一修复 Ant Design 交互态文字发黑问题 */
+body.theme-dark .ant-btn-color-default,
+body.theme-dark .ant-btn-color-default.ant-btn-variant-outlined,
+body.theme-dark .ant-btn-color-default.ant-btn-variant-filled,
+body.theme-dark .ant-btn-color-default.ant-btn-variant-text,
+body.theme-dark .ant-btn-color-default.ant-btn-variant-link {
+  color: var(--text-color);
+}
+
+body.theme-dark .ant-btn-color-default:not(:disabled):not(.ant-btn-disabled):hover,
+body.theme-dark .ant-btn-color-default:not(:disabled):not(.ant-btn-disabled):focus-visible,
+body.theme-dark .ant-btn-color-default:not(:disabled):not(.ant-btn-disabled):active {
+  color: var(--text-color) !important;
+}
+
+/* 深色主题下统一修复 Spin 提示文字颜色 */
+body.theme-dark .ant-spin,
+body.theme-dark .ant-spin .ant-spin-text {
+  color: var(--text-color) !important;
+}
+
+body.theme-dark .ant-spin-dot-item {
+  background-color: var(--text-color);
+}
+
+/* 深色主题下统一修复 Tabs 文本在 hover/active 场景发黑问题 */
+body.theme-dark .ant-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  color: var(--text-color);
+}
+
+body.theme-dark .ant-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn,
+body.theme-dark .ant-tabs .ant-tabs-tab:focus-within .ant-tabs-tab-btn {
+  color: var(--text-color) !important;
+}
+
+body.theme-dark .ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--primary-color) !important;
+}
+
+body.theme-dark .ant-tabs .ant-tabs-ink-bar {
+  background: var(--primary-color);
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);

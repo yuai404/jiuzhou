@@ -1,6 +1,63 @@
 .setting-modal {
   .ant-modal-content {
     padding: 0;
+    background: var(--panel-bg);
+    color: var(--text-color);
+  }
+
+  .ant-modal-close {
+    color: var(--text-color);
+  }
+
+  .ant-modal-close:hover {
+    color: var(--text-color);
+    background: var(--hover-bg);
+  }
+
+  .ant-menu {
+    background: transparent;
+    border-inline-end: none !important;
+    color: var(--text-color);
+  }
+
+  .ant-menu-item {
+    color: var(--text-color) !important;
+  }
+
+  .ant-menu-item:hover {
+    color: var(--text-color) !important;
+    background: var(--hover-bg) !important;
+  }
+
+  .ant-menu-item-selected {
+    color: var(--text-color) !important;
+    background: var(--active-bg) !important;
+    font-weight: 600;
+  }
+
+  .ant-menu-item-selected::after {
+    border-inline-end-color: var(--primary-color) !important;
+  }
+
+  .ant-typography {
+    color: var(--text-color);
+  }
+
+  .ant-input {
+    color: var(--text-color);
+    background: var(--panel-bg-soft);
+    border-color: var(--border-color);
+  }
+
+  .ant-input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .ant-input:hover,
+  .ant-input:focus,
+  .ant-input-focused {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-bg-soft);
   }
 }
 
@@ -12,12 +69,14 @@
 .setting-left {
   width: 180px;
   border-right: 1px solid var(--border-color);
+  background: var(--panel-bg);
 }
 
 .setting-right {
   flex: 1;
   padding: 16px;
   overflow: auto;
+  color: var(--text-color);
 }
 
 .setting-row {
@@ -27,4 +86,5 @@
   padding: 10px 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
+  background: var(--panel-bg-soft);
 }
