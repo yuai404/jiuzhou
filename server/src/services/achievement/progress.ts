@@ -285,10 +285,13 @@ export const updateAchievementProgress = async (
       await client.query(
         `
           UPDATE character_achievement
-          SET status = $4,
+          SET status = $4::varchar(32),
               progress = $3,
               progress_data = $5::jsonb,
-              completed_at = CASE WHEN $4 = 'completed' THEN COALESCE(completed_at, NOW()) ELSE completed_at END,
+              completed_at = CASE
+                WHEN $4::varchar(32) = 'completed'::varchar(32) THEN COALESCE(completed_at, NOW())
+                ELSE completed_at
+              END,
               updated_at = NOW()
           WHERE character_id = $1
             AND achievement_id = $2

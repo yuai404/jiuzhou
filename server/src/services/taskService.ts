@@ -942,56 +942,102 @@ const applyTaskEvent = async (
   }
 };
 
+const normalizePositiveInt = (value: unknown, fallback = 1): number => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  const floor = Math.floor(n);
+  return floor > 0 ? floor : fallback;
+};
+
 export const recordTalkNpcEvent = async (characterId: number, npcId: string): Promise<void> => {
   const nid = asNonEmptyString(npcId);
   if (!nid) return;
-  await applyTaskEvent(characterId, { type: 'talk_npc', npcId: nid });
+
+  try {
+    await applyTaskEvent(characterId, { type: 'talk_npc', npcId: nid });
+  } catch (error) {
+    console.error('记录任务事件（对话）失败:', error);
+  }
+
   try {
     await updateSectionProgress(characterId, { type: 'talk_npc', npcId: nid });
-  } catch {}
+  } catch (error) {
+    console.error('记录主线事件（对话）失败:', error);
+  }
+
   try {
     await updateAchievementProgress(characterId, `talk:npc:${nid}`, 1);
-  } catch {}
+  } catch (error) {
+    console.error('记录成就事件（对话）失败:', error);
+  }
 };
 
 export const recordKillMonsterEvent = async (characterId: number, monsterId: string, count: number): Promise<void> => {
   const mid = asNonEmptyString(monsterId);
   if (!mid) return;
-  const c = Math.max(1, Math.floor(Number(count)));
-  await applyTaskEvent(characterId, { type: 'kill_monster', monsterId: mid, count: c });
+  const c = normalizePositiveInt(count, 1);
+
+  try {
+    await applyTaskEvent(characterId, { type: 'kill_monster', monsterId: mid, count: c });
+  } catch (error) {
+    console.error('记录任务事件（击杀）失败:', error);
+  }
+
   try {
     await updateSectionProgress(characterId, { type: 'kill_monster', monsterId: mid, count: c });
-  } catch {}
+  } catch (error) {
+    console.error('记录主线事件（击杀）失败:', error);
+  }
+
   try {
     await updateAchievementProgress(characterId, `kill:monster:${mid}`, c);
-  } catch {}
+  } catch (error) {
+    console.error('记录成就事件（击杀）失败:', error);
+  }
 };
 
 export const recordGatherResourceEvent = async (characterId: number, resourceId: string, count: number): Promise<void> => {
   const rid = asNonEmptyString(resourceId);
   if (!rid) return;
-  const c = Math.max(1, Math.floor(Number(count)));
-  await applyTaskEvent(characterId, { type: 'gather_resource', resourceId: rid, count: c });
+  const c = normalizePositiveInt(count, 1);
+
+  try {
+    await applyTaskEvent(characterId, { type: 'gather_resource', resourceId: rid, count: c });
+  } catch (error) {
+    console.error('记录任务事件（采集）失败:', error);
+  }
+
   try {
     await updateSectionProgress(characterId, { type: 'gather_resource', resourceId: rid, count: c });
     await updateSectionProgress(characterId, { type: 'collect', itemId: rid, count: c });
-  } catch {}
+  } catch (error) {
+    console.error('记录主线事件（采集）失败:', error);
+  }
+
   try {
     await updateAchievementProgress(characterId, `gather:resource:${rid}`, c);
     await updateAchievementProgress(characterId, `item:obtain:${rid}`, c);
-  } catch {}
+  } catch (error) {
+    console.error('记录成就事件（采集）失败:', error);
+  }
 };
 
 export const recordCollectItemEvent = async (characterId: number, itemId: string, count: number): Promise<void> => {
   const iid = asNonEmptyString(itemId);
   if (!iid) return;
-  const c = Math.max(1, Math.floor(Number(count)));
+  const c = normalizePositiveInt(count, 1);
+
   try {
     await updateSectionProgress(characterId, { type: 'collect', itemId: iid, count: c });
-  } catch {}
+  } catch (error) {
+    console.error('记录主线事件（收集）失败:', error);
+  }
+
   try {
     await updateAchievementProgress(characterId, `item:obtain:${iid}`, c);
-  } catch {}
+  } catch (error) {
+    console.error('记录成就事件（收集）失败:', error);
+  }
 };
 
 export type NpcTalkTaskOption = {
