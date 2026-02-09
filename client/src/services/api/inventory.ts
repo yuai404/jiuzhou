@@ -95,7 +95,10 @@ export interface InventoryUseResponse {
   success: boolean;
   message: string;
   effects?: unknown[];
-  data?: { character: unknown };
+  data?: {
+    character: unknown;
+    lootResults?: { type: string; name?: string; amount: number }[];
+  };
 }
 
 export const inventoryUseItem = (body: {

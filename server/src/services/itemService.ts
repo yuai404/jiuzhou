@@ -204,7 +204,7 @@ export const useItem = async (
   characterId: number,
   instanceId: number,
   qty: number = 1
-): Promise<{ success: boolean; message: string; effects?: any[]; character?: any }> => {
+): Promise<{ success: boolean; message: string; effects?: any[]; character?: any; lootResults?: { type: string; name?: string; amount: number }[] }> => {
   const client = await pool.connect();
   
   try {
@@ -308,6 +308,12 @@ export const useItem = async (
     const effectDefs = Array.isArray(item.effect_defs) ? item.effect_defs : [];
     let deltaQixue = 0;
     let deltaLingqi = 0;
+    let hasLoot = false;
+    const lootResults: { type: string; name?: string; amount: number }[] = [];
+    const lootItemsToAdd: { itemDefId: string; qty: number }[] = [];
+    let deltaSilver = 0;
+    let deltaSpiritStones = 0;
+
     for (const rawEffect of effectDefs) {
       if (!rawEffect || typeof rawEffect !== 'object') continue;
       const effect: any = rawEffect;
@@ -315,6 +321,51 @@ export const useItem = async (
       if (String(effect.target || 'self') !== 'self') continue;
 
       const effectType = typeof effect.effect_type === 'string' ? effect.effect_type : undefined;
+
+      if (effectType === 'loot') {
+        hasLoot = true;
+        const params = effect.params && typeof effect.params === 'object' ? effect.params : {};
+        const lootType = String(params.loot_type || '');
+
+        if (lootType === 'currency') {
+          const currency = String(params.currency || '');
+          const min = Math.max(0, Math.floor(Number(params.min) || 0));
+          const max = Math.max(min, Math.floor(Number(params.max) || 0));
+          const amount = (min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min) * qty;
+          if (amount > 0) {
+            if (currency === 'spirit_stones') {
+              deltaSpiritStones += amount;
+              lootResults.push({ type: 'spirit_stones', name: '灵石', amount });
+            } else if (currency === 'silver') {
+              deltaSilver += amount;
+              lootResults.push({ type: 'silver', name: '银两', amount });
+            }
+          }
+        } else if (lootType === 'multi') {
+          const items = Array.isArray(params.items) ? params.items : [];
+          for (const li of items) {
+            if (!li || typeof li !== 'object') continue;
+            const itemDefId = String(li.item_id || '');
+            const itemQty = Math.max(1, Math.floor(Number(li.qty) || 1)) * qty;
+            if (itemDefId) {
+              lootItemsToAdd.push({ itemDefId, qty: itemQty });
+            }
+          }
+          const currency = params.currency && typeof params.currency === 'object' ? params.currency : {};
+          const silverAmt = Math.max(0, Math.floor(Number(currency.silver) || 0)) * qty;
+          const ssAmt = Math.max(0, Math.floor(Number(currency.spirit_stones) || 0)) * qty;
+          if (silverAmt > 0) {
+            deltaSilver += silverAmt;
+            lootResults.push({ type: 'silver', name: '银两', amount: silverAmt });
+          }
+          if (ssAmt > 0) {
+            deltaSpiritStones += ssAmt;
+            lootResults.push({ type: 'spirit_stones', name: '灵石', amount: ssAmt });
+          }
+        }
+        continue;
+      }
+
       const value = Number(effect.value);
       if (!Number.isFinite(value)) continue;
 
@@ -334,7 +385,7 @@ export const useItem = async (
       }
     }
 
-    if (deltaQixue === 0 && deltaLingqi === 0) {
+    if (deltaQixue === 0 && deltaLingqi === 0 && !hasLoot) {
       await client.query('ROLLBACK');
       return { success: false, message: '该物品暂不支持使用效果' };
     }
@@ -357,10 +408,37 @@ export const useItem = async (
       Math.max(0, (Number(charResult.rows[0].lingqi) || 0) + deltaLingqi)
     );
 
+    const setClauses = ['qixue = $2', 'lingqi = $3', 'updated_at = NOW()'];
+    const setValues: any[] = [characterId, nextQixue, nextLingqi];
+    let paramIdx = 4;
+
+    if (deltaSilver > 0) {
+      setClauses.push(`silver = silver + $${paramIdx}`);
+      setValues.push(deltaSilver);
+      paramIdx++;
+    }
+    if (deltaSpiritStones > 0) {
+      setClauses.push(`spirit_stones = spirit_stones + $${paramIdx}`);
+      setValues.push(deltaSpiritStones);
+      paramIdx++;
+    }
+
     const updatedCharResult = await client.query(
-      'UPDATE characters SET qixue = $2, lingqi = $3, updated_at = NOW() WHERE id = $1 RETURNING id, qixue, max_qixue, lingqi, max_lingqi',
-      [characterId, nextQixue, nextLingqi]
+      `UPDATE characters SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, qixue, max_qixue, lingqi, max_lingqi, silver, spirit_stones`,
+      setValues
     );
+
+    for (const lootItem of lootItemsToAdd) {
+      const addRes = await addItemToInventoryTx(client, characterId, userId, lootItem.itemDefId, lootItem.qty, {
+        location: 'bag',
+        obtainedFrom: `use_item:${item.def_id}`
+      });
+      if (addRes.success) {
+        const nameResult = await client.query('SELECT name FROM item_def WHERE id = $1', [lootItem.itemDefId]);
+        const itemName = nameResult.rows[0]?.name || lootItem.itemDefId;
+        lootResults.push({ type: 'item', name: itemName, amount: lootItem.qty });
+      }
+    }
 
     if (effectiveCdSec > 0) {
       await client.query(
@@ -410,7 +488,8 @@ export const useItem = async (
       success: true,
       message: '使用成功',
       effects: item.effect_defs || [],
-      character: updatedChar
+      character: updatedChar,
+      lootResults: lootResults.length > 0 ? lootResults : undefined
     };
 
   } catch (error) {

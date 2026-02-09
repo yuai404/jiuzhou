@@ -1004,20 +1004,28 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       const res = await inventoryUseItem({ itemInstanceId: activeItem.id, qty: 1 });
       if (!res.success) throw new Error(res.message || '使用失败');
 
-      const afterChar = res.data?.character;
-      const beforeQixue = beforeChar?.qixue ?? null;
-      const afterQixue = pickNumber(afterChar, ['qixue']);
-      const effectDelta = calcUseEffectDelta(res.effects, 1);
-
+      const lootResults = res.data?.lootResults;
       const remaining = Math.max(0, Math.floor(activeItem.qty) - 1);
-      const restoredByStat =
-        beforeQixue !== null && afterQixue !== null ? Math.max(0, Math.floor(afterQixue - beforeQixue)) : null;
-      const restored = restoredByStat !== null ? restoredByStat : Math.max(0, Math.floor(effectDelta.qixue));
 
-      const content =
-        activeItem.category === 'consumable'
-          ? `使用【${activeItem.name}】成功，恢复了${restored}点气血，背包剩余${remaining}。`
-          : `使用【${activeItem.name}】成功，背包剩余${remaining}。`;
+      let content: string;
+      if (lootResults && lootResults.length > 0) {
+        const rewardParts = lootResults.map((r) => `${r.name || r.type}×${r.amount}`);
+        content = `打开【${activeItem.name}】，获得${rewardParts.join('、')}。`;
+      } else {
+        const afterChar = res.data?.character;
+        const beforeQixue = beforeChar?.qixue ?? null;
+        const afterQixue = pickNumber(afterChar, ['qixue']);
+        const effectDelta = calcUseEffectDelta(res.effects, 1);
+
+        const restoredByStat =
+          beforeQixue !== null && afterQixue !== null ? Math.max(0, Math.floor(afterQixue - beforeQixue)) : null;
+        const restored = restoredByStat !== null ? restoredByStat : Math.max(0, Math.floor(effectDelta.qixue));
+
+        content =
+          activeItem.category === 'consumable'
+            ? `使用【${activeItem.name}】成功，恢复了${restored}点气血，背包剩余${remaining}。`
+            : `使用【${activeItem.name}】成功，背包剩余${remaining}。`;
+      }
       window.dispatchEvent(new CustomEvent('chat:append', { detail: { channel: 'system', content } }));
 
       await refresh();

@@ -272,7 +272,7 @@ router.post('/use', async (req: Request, res: Response) => {
     } catch {
     }
 
-    return res.json({ ...result, data: { character: result.character } });
+    return res.json({ ...result, data: { character: result.character, lootResults: result.lootResults } });
   } catch (error) {
     console.error('使用物品失败:', error);
     return res.status(500).json({ success: false, message: '服务器错误' });
