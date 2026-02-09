@@ -603,11 +603,6 @@ const buildRefineCostPlan = (itemLevel: number, targetLevel: number): GrowthCost
   };
 };
 
-const getEnhanceMaterialItemDefId = (targetLevel: number): string => {
-  const lv = Math.max(1, Math.min(15, Math.floor(Number(targetLevel) || 1)));
-  return lv <= 10 ? 'enhance-001' : 'enhance-002';
-};
-
 const collectGemCandidates = (items: BagItem[]): BagItem[] => {
   const gemDefIdSet = new Set(['gem-001', 'gem-002', 'gem-003', 'gem-004']);
   const out: BagItem[] = [];
