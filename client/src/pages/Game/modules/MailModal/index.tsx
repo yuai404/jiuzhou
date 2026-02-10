@@ -1,5 +1,5 @@
 import { App, Badge, Button, Empty, Modal, Space, Spin, Tag, Tooltip, Typography } from 'antd';
-import { DeleteOutlined, EyeOutlined, GiftOutlined, InboxOutlined, MailOutlined, ReloadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, GiftOutlined, InboxOutlined, LeftOutlined, MailOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getMailList,
@@ -17,6 +17,8 @@ interface MailModalProps {
   open: boolean;
   onClose: () => void;
 }
+
+const MOBILE_BREAKPOINT = 768;
 
 const formatTime = (iso: string) => {
   const d = new Date(iso);
@@ -37,6 +39,17 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
   const [claiming, setClaiming] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unclaimedCount, setUnclaimedCount] = useState(0);
+  const [showMobileDetail, setShowMobileDetail] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BREAKPOINT : false
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 加载邮件列表
   const loadMails = useCallback(async (options?: { resetActive?: boolean }) => {
@@ -69,6 +82,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
   // 打开时加载
   useEffect(() => {
     if (open) {
+      setShowMobileDetail(false);
       void loadMails({ resetActive: true });
     }
   }, [open, loadMails]);
@@ -83,6 +97,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
   // 打开邮件（标记已读）
   const openMail = async (id: number) => {
     setActiveId(id);
+    if (isMobile) setShowMobileDetail(true);
     const mail = mails.find((m) => m.id === id);
     if (mail && !mail.readAt) {
       try {
@@ -211,6 +226,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
           if (res.success) {
             setMails([]);
             setActiveId(null);
+            setShowMobileDetail(false);
             setUnreadCount(0);
             setUnclaimedCount(0);
             message.success(`已删除 ${res.deletedCount} 封邮件`);
@@ -249,6 +265,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
             setMails(newMails);
             if (activeId === id) {
               setActiveId(newMails[0]?.id ?? null);
+              if (newMails.length === 0) setShowMobileDetail(false);
             }
             // 更新计数
             if (!target.readAt) setUnreadCount((c) => Math.max(0, c - 1));
@@ -273,21 +290,21 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
       footer={null}
       title={null}
       centered
-      width={980}
+      width="min(980px, calc(100vw - 16px))"
       className="mail-modal"
       destroyOnHidden
       maskClosable
     >
       <Spin spinning={loading}>
         <div className="mail-modal-shell">
-          <div className="mail-modal-left">
+          <div className={`mail-modal-left ${showMobileDetail ? 'mobile-hidden' : ''}`}>
             <div className="mail-left-header">
               <div className="mail-left-title">
                 <MailOutlined />
                 <span>邮箱</span>
                 <Badge count={unreadCount} size="small" />
               </div>
-              <Space size={8}>
+              <Space size={8} className="mail-left-actions">
                 <Tooltip title="刷新">
                   <Button size="small" type="text" icon={<ReloadOutlined />} onClick={() => void loadMails()} />
                 </Tooltip>
@@ -367,12 +384,25 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
             </div>
           </div>
 
-          <div className="mail-modal-right">
+          <div className={`mail-modal-right ${showMobileDetail ? 'mobile-visible' : ''}`}>
             {activeMail ? (
               <>
+                {isMobile ? (
+                  <div
+                    className="mail-modal-mobile-back"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setShowMobileDetail(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') setShowMobileDetail(false);
+                    }}
+                  >
+                    <LeftOutlined /> 返回邮件列表
+                  </div>
+                ) : null}
                 <div className="mail-detail-header">
                   <div className="mail-detail-title">{activeMail.title}</div>
-                  <Space size={8}>
+                  <Space size={8} className="mail-detail-actions">
                     <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteMail(activeMail.id)}>
                       删除
                     </Button>
