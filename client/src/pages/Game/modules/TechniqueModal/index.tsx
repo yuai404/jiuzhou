@@ -239,12 +239,40 @@ const getSkillDetailItems = (skill: TechniqueSkill): Array<{ label: string; valu
 };
 
 const getSkillInlineSummary = (skill: TechniqueSkill): string => {
-  const detailItems = getSkillDetailItems(skill).filter((item) => item.label !== '描述');
+  const detailItems = getSkillDetailItems(skill);
   if (detailItems.length === 0) return '暂无详细信息';
+
   return detailItems
-    .slice(0, 3)
-    .map((item) => `${item.label}:${item.value}`)
+    .map((item) => (item.label === '描述' ? item.value : `${item.label}:${item.value}`))
     .join(' · ');
+};
+
+const renderSkillInlineDetails = (skill: TechniqueSkill): React.ReactNode => {
+  const detailItems = getSkillDetailItems(skill);
+  if (detailItems.length === 0) {
+    return <div className="skill-inline-empty">暂无详细信息</div>;
+  }
+
+  return (
+    <div className="skill-inline-lines">
+      {detailItems.map((item, idx) => {
+        if (item.label === '描述') {
+          return (
+            <div key={`${item.label}-${idx}`} className="skill-inline-row is-description">
+              <span className="skill-inline-value">{item.value}</span>
+            </div>
+          );
+        }
+
+        return (
+          <div key={`${item.label}-${idx}`} className="skill-inline-row">
+            <span className="skill-inline-label">{item.label}：</span>
+            <span className="skill-inline-value">{item.value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 // 技能Tooltip内容渲染
@@ -270,17 +298,44 @@ const renderSkillTooltip = (skill: TechniqueSkill): React.ReactNode => {
   );
 };
 
+const getTechniqueUnlockedInfo = (t: Technique): { bonuses: TechniqueBonus[]; skills: TechniqueSkill[] } => {
+  const unlockedLayers = t.layers.slice(0, Math.max(0, Math.min(t.layer, t.layers.length)));
+  const bonusList = unlockedLayers.flatMap((lv) => lv.bonuses);
+  const skillMap = new Map<string, TechniqueSkill>();
+  unlockedLayers.forEach((lv) => {
+    lv.skills.forEach((s) => {
+      if (!skillMap.has(s.id)) skillMap.set(s.id, s);
+    });
+  });
+
+  return {
+    bonuses: bonusList,
+    skills: Array.from(skillMap.values()),
+  };
+};
+
+const renderTechniqueInlineDetails = (t: Technique): React.ReactNode => {
+  const { bonuses, skills } = getTechniqueUnlockedInfo(t);
+  const bonusText = bonuses.length > 0 ? bonuses.map((b) => `${b.label}${b.value}`).join(' · ') : '暂无';
+  const skillText = skills.length > 0 ? skills.map((s) => s.name).join('、') : '无';
+
+  return (
+    <div className="tech-row-details">
+      <div className="tech-row-detail">
+        <span className="tech-row-detail-label">已解锁加成：</span>
+        <span className="tech-row-detail-value">{bonusText}</span>
+      </div>
+      <div className="tech-row-detail">
+        <span className="tech-row-detail-label">已解锁技能：</span>
+        <span className="tech-row-detail-value">{skillText}</span>
+      </div>
+    </div>
+  );
+};
+
 // 功法Tooltip内容渲染
 const renderTechniqueTooltip = (t: Technique): React.ReactNode => {
-  // 获取当前已解锁层的所有加成
-  const unlockedBonuses = t.layers
-    .slice(0, Math.max(0, Math.min(t.layer, t.layers.length)))
-    .flatMap((lv) => lv.bonuses);
-  
-  // 获取当前已解锁的所有技能
-  const unlockedSkills = t.layers
-    .slice(0, Math.max(0, Math.min(t.layer, t.layers.length)))
-    .flatMap((lv) => lv.skills);
+  const { bonuses: unlockedBonuses, skills: unlockedSkills } = getTechniqueUnlockedInfo(t);
 
   return (
     <div className="technique-tooltip">
@@ -294,7 +349,7 @@ const renderTechniqueTooltip = (t: Technique): React.ReactNode => {
         修炼进度：{t.layer}层 / {t.layers.length}层
       </div>
       {t.desc && <div className="technique-tooltip-desc">{t.desc}</div>}
-      
+
       {unlockedBonuses.length > 0 && (
         <div className="technique-tooltip-section">
           <div className="technique-tooltip-section-title">当前加成</div>
@@ -308,7 +363,7 @@ const renderTechniqueTooltip = (t: Technique): React.ReactNode => {
           </div>
         </div>
       )}
-      
+
       {unlockedSkills.length > 0 && (
         <div className="technique-tooltip-section">
           <div className="technique-tooltip-section-title">已解锁技能</div>
@@ -322,10 +377,8 @@ const renderTechniqueTooltip = (t: Technique): React.ReactNode => {
           </div>
         </div>
       )}
-      
-      {t.layer === 0 && (
-        <div className="technique-tooltip-empty">尚未开始修炼</div>
-      )}
+
+      {t.layer === 0 && <div className="technique-tooltip-empty">尚未开始修炼</div>}
     </div>
   );
 };
@@ -729,50 +782,52 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
 
   const renderSlotCard = (k: SlotKey) => {
     const t = equippedTech[k];
-    return (
-      <Tooltip
+    const content = (
+      <div
         key={k}
-        title={t ? renderTechniqueTooltip(t) : null}
-        placement={isMobile ? 'top' : 'right'}
-        classNames={{ root: 'technique-tooltip-overlay' }}
+        className={`tech-slot ${k === activeSlot ? 'is-active' : ''}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => setActiveSlot(k)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') setActiveSlot(k);
+        }}
       >
-        <div
-          className={`tech-slot ${k === activeSlot ? 'is-active' : ''}`}
-          role="button"
-          tabIndex={0}
-          onClick={() => setActiveSlot(k)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setActiveSlot(k);
-          }}
-        >
-          <div className="tech-slot-label">{slotLabels[k]}</div>
-          <div className="tech-slot-card">
-            <div className="tech-slot-meta">
-              <div className="tech-slot-name">
-                {t ? `${t.name}（${layerText(t.layer)}/${layerText(t.layers.length)}）` : '未装备'}
-              </div>
-              <div className="tech-slot-tags">
-                {t ? <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag> : <Tag>未装配</Tag>}
-                {(t?.tags ?? []).slice(0, 2).map((x) => (
-                  <Tag key={x} color="default">
-                    {x}
-                  </Tag>
-                ))}
-              </div>
+        <div className="tech-slot-label">{slotLabels[k]}</div>
+        <div className="tech-slot-card">
+          <div className="tech-slot-meta">
+            <div className="tech-slot-name">
+              {t ? `${t.name}（${layerText(t.layer)}/${layerText(t.layers.length)}）` : '未装备'}
             </div>
-            <Button
-              size="small"
-              className={`tech-slot-remove ${t ? '' : 'is-placeholder'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                removeFromSlot(k);
-              }}
-            >
-              卸下
-            </Button>
+            <div className="tech-slot-tags">
+              {t ? <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag> : <Tag>未装配</Tag>}
+              {(t?.tags ?? []).slice(0, 2).map((x) => (
+                <Tag key={x} color="default">
+                  {x}
+                </Tag>
+              ))}
+            </div>
           </div>
-          <div className="tech-slot-hint">{t ? '点击下方功法可替换' : '点击下方功法运功装备到此栏位'}</div>
+          <Button
+            size="small"
+            className={`tech-slot-remove ${t ? '' : 'is-placeholder'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              removeFromSlot(k);
+            }}
+          >
+            卸下
+          </Button>
         </div>
+        <div className="tech-slot-hint">{t ? '点击下方功法可替换' : '点击下方功法运功装备到此栏位'}</div>
+      </div>
+    );
+
+    if (isMobile || !t) return content;
+
+    return (
+      <Tooltip key={k} title={renderTechniqueTooltip(t)} placement="right" classNames={{ root: 'technique-tooltip-overlay' }}>
+        {content}
       </Tooltip>
     );
   };
@@ -781,34 +836,42 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
     <div className="tech-learned-list">
       {learned.map((t) => {
         const equippedSlot = equippedSlotByTechId.get(t.id) ?? null;
-        return (
-          <Tooltip key={t.id} title={renderTechniqueTooltip(t)} placement={isMobile ? "top" : "right"} classNames={{ root: 'technique-tooltip-overlay' }}>
-            <div className="tech-row">
-              <div className="tech-row-main">
-                <div className="tech-row-name">{t.name}</div>
-                <div className="tech-row-tags">
-                  <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag>
-                  <Tag color="default">
-                    {layerText(t.layer)}/{layerText(t.layers.length)}
+        const content = (
+          <div className="tech-row">
+            <div className="tech-row-main">
+              <div className="tech-row-name">{t.name}</div>
+              <div className="tech-row-tags">
+                <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag>
+                <Tag color="default">
+                  {layerText(t.layer)}/{layerText(t.layers.length)}
+                </Tag>
+                {equippedSlot ? <Tag color="blue">{slotLabels[equippedSlot]}</Tag> : null}
+                {t.tags.map((x) => (
+                  <Tag key={x} color="default">
+                    {x}
                   </Tag>
-                  {equippedSlot ? <Tag color="blue">{slotLabels[equippedSlot]}</Tag> : null}
-                  {t.tags.slice(0, 2).map((x) => (
-                    <Tag key={x} color="default">
-                      {x}
-                    </Tag>
-                  ))}
-                </div>
+                ))}
               </div>
-              {equippedSlot ? (
-                <Button size="small" danger onClick={() => removeFromSlot(equippedSlot)}>
-                  取消运功
-                </Button>
-              ) : (
-                <Button size="small" type="primary" onClick={() => equipToActiveSlot(t.id)}>
-                  运功
-                </Button>
-              )}
+              <div className="tech-row-desc">{t.desc || '暂无描述'}</div>
+              {renderTechniqueInlineDetails(t)}
             </div>
+            {equippedSlot ? (
+              <Button size="small" danger onClick={() => removeFromSlot(equippedSlot)}>
+                取消运功
+              </Button>
+            ) : (
+              <Button size="small" type="primary" onClick={() => equipToActiveSlot(t.id)}>
+                运功
+              </Button>
+            )}
+          </div>
+        );
+
+        if (isMobile) return <div key={t.id}>{content}</div>;
+
+        return (
+          <Tooltip key={t.id} title={renderTechniqueTooltip(t)} placement="right" classNames={{ root: 'technique-tooltip-overlay' }}>
+            {content}
           </Tooltip>
         );
       })}
@@ -866,8 +929,8 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
       <div className="tech-pane-scroll">
         <div className="tech-subtitle">已学功法</div>
         <div className="tech-learned-list">
-          {learned.map((t) => (
-            <Tooltip key={t.id} title={renderTechniqueTooltip(t)} placement={isMobile ? "top" : "right"} classNames={{ root: 'technique-tooltip-overlay' }}>
+          {learned.map((t) => {
+            const content = (
               <div className="tech-row">
                 <div className="tech-row-main">
                   <div className="tech-row-name">{t.name}</div>
@@ -876,13 +939,14 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
                     <Tag color="default">
                       {layerText(t.layer)}/{layerText(t.layers.length)}
                     </Tag>
-                    {t.tags.slice(0, 3).map((x) => (
+                    {t.tags.map((x) => (
                       <Tag key={x} color="default">
                         {x}
                       </Tag>
                     ))}
                   </div>
-                  <div className="tech-row-desc">{t.desc}</div>
+                  <div className="tech-row-desc">{t.desc || '暂无描述'}</div>
+                  {renderTechniqueInlineDetails(t)}
                 </div>
                 <div className="tech-row-actions">
                   <Button
@@ -897,8 +961,16 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
                   </Button>
                 </div>
               </div>
-            </Tooltip>
-          ))}
+            );
+
+            if (isMobile) return <div key={t.id}>{content}</div>;
+
+            return (
+              <Tooltip key={t.id} title={renderTechniqueTooltip(t)} placement="right" classNames={{ root: 'technique-tooltip-overlay' }}>
+                {content}
+              </Tooltip>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1019,7 +1091,7 @@ mu                    <span className="tech-table-name-text">{row.name}</span>
                   <img className="skill-item-mobile-icon" src={s.icon} alt={s.name} />
                   <div className="skill-item-mobile-main">
                     <div className="skill-item-mobile-name">{s.name}</div>
-                    <div className="skill-item-mobile-summary">{getSkillInlineSummary(s)}</div>
+                    <div className="skill-item-mobile-summary">{renderSkillInlineDetails(s)}</div>
                   </div>
                   <Button
                     size="small"
@@ -1078,7 +1150,7 @@ mu                    <span className="tech-table-name-text">{row.name}</span>
               <div key={s.id} className="skill-item">
                 <img className="skill-item-icon" src={s.icon} alt={s.name} />
                 <div className="skill-item-name">{s.name}</div>
-                <div className="skill-item-summary">{getSkillInlineSummary(s)}</div>
+                <div className="skill-item-summary">{renderSkillInlineDetails(s)}</div>
                 <Button
                   size="small"
                   type="primary"
@@ -1198,69 +1270,117 @@ mu                    <span className="tech-table-name-text">{row.name}</span>
               </div>
               <div className="tech-detail-desc">{t.desc}</div>
               <div className="tech-detail-section-title">层数加成与技能</div>
-              <Table
-                size="small"
-                rowKey={(row) => String(row.layer)}
-                pagination={false}
-                className="tech-layer-table"
-                columns={[
-                  {
-                    title: '层数',
-                    dataIndex: 'layer',
-                    key: 'layer',
-                    width: 70,
-                    render: (v: number) => `第${v}层`,
-                  },
-                  {
-                    title: '状态',
-                    dataIndex: 'unlocked',
-                    key: 'unlocked',
-                    width: 86,
-                    render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? '已解锁' : '未解锁'}</Tag>,
-                  },
-                  {
-                    title: '加成',
-                    dataIndex: 'bonuses',
-                    key: 'bonuses',
-                    render: (list: TechniqueBonus[]) => (
-                      <div className="tech-layer-cell">
-                        {list.length ? (
-                          list.map((b) => (
-                            <div key={`${b.label}-${b.value}`} className="tech-layer-cell-line">
-                              <span className="tech-layer-cell-k">{b.label}</span>
-                              <span className="tech-layer-cell-v">{b.value}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <span className="tech-layer-cell-empty">无</span>
-                        )}
+              {isMobile ? (
+                <div className="tech-layer-mobile-list">
+                  {layerRows.map((row) => (
+                    <div key={`layer-${row.layer}`} className={`tech-layer-mobile-item ${row.unlocked ? 'is-unlocked' : ''}`}>
+                      <div className="tech-layer-mobile-head">
+                        <div className="tech-layer-mobile-title">第{row.layer}层</div>
+                        <Tag color={row.unlocked ? 'green' : 'default'}>{row.unlocked ? '已解锁' : '未解锁'}</Tag>
                       </div>
-                    ),
-                  },
-                  {
-                    title: '解锁技能',
-                    dataIndex: 'skills',
-                    key: 'skills',
-                    render: (list: TechniqueSkill[]) => (
-                      <div className="tech-layer-skill-cell">
-                        {list.length ? (
-                          list.map((s) => (
-                            <Tooltip key={s.id} title={renderSkillTooltip(s)} placement="top" classNames={{ root: 'skill-tooltip-overlay' }}>
-                              <div className="tech-layer-skill-pill">
-                                <img className="tech-layer-skill-pill-icon" src={s.icon} alt={s.name} />
-                                <span className="tech-layer-skill-pill-name">{s.name}</span>
+
+                      <div className="tech-layer-mobile-section">
+                        <div className="tech-layer-mobile-label">加成</div>
+                        {row.bonuses.length ? (
+                          <div className="tech-layer-cell">
+                            {row.bonuses.map((b) => (
+                              <div key={`${row.layer}-${b.label}-${b.value}`} className="tech-layer-cell-line">
+                                <span className="tech-layer-cell-k">{b.label}</span>
+                                <span className="tech-layer-cell-v">{b.value}</span>
                               </div>
-                            </Tooltip>
-                          ))
+                            ))}
+                          </div>
                         ) : (
                           <span className="tech-layer-cell-empty">无</span>
                         )}
                       </div>
-                    ),
-                  },
-                ]}
-                dataSource={layerRows}
-              />
+
+                      <div className="tech-layer-mobile-section">
+                        <div className="tech-layer-mobile-label">技能</div>
+                        {row.skills.length ? (
+                          <div className="tech-layer-mobile-skills">
+                            {row.skills.map((s) => (
+                              <div key={`${row.layer}-${s.id}`} className="tech-layer-mobile-skill">
+                                <div className="tech-layer-mobile-skill-top">
+                                  <img className="tech-layer-mobile-skill-icon" src={s.icon} alt={s.name} />
+                                  <span className="tech-layer-mobile-skill-name">{s.name}</span>
+                                </div>
+                                <div className="tech-layer-mobile-skill-desc">{getSkillInlineSummary(s)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="tech-layer-cell-empty">无</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Table
+                  size="small"
+                  rowKey={(row) => String(row.layer)}
+                  pagination={false}
+                  className="tech-layer-table"
+                  columns={[
+                    {
+                      title: '层数',
+                      dataIndex: 'layer',
+                      key: 'layer',
+                      width: 70,
+                      render: (v: number) => `第${v}层`,
+                    },
+                    {
+                      title: '状态',
+                      dataIndex: 'unlocked',
+                      key: 'unlocked',
+                      width: 86,
+                      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? '已解锁' : '未解锁'}</Tag>,
+                    },
+                    {
+                      title: '加成',
+                      dataIndex: 'bonuses',
+                      key: 'bonuses',
+                      render: (list: TechniqueBonus[]) => (
+                        <div className="tech-layer-cell">
+                          {list.length ? (
+                            list.map((b) => (
+                              <div key={`${b.label}-${b.value}`} className="tech-layer-cell-line">
+                                <span className="tech-layer-cell-k">{b.label}</span>
+                                <span className="tech-layer-cell-v">{b.value}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className="tech-layer-cell-empty">无</span>
+                          )}
+                        </div>
+                      ),
+                    },
+                    {
+                      title: '解锁技能',
+                      dataIndex: 'skills',
+                      key: 'skills',
+                      render: (list: TechniqueSkill[]) => (
+                        <div className="tech-layer-skill-cell">
+                          {list.length ? (
+                            list.map((s) => (
+                              <Tooltip key={s.id} title={renderSkillTooltip(s)} placement="top" classNames={{ root: 'skill-tooltip-overlay' }}>
+                                <div className="tech-layer-skill-pill">
+                                  <img className="tech-layer-skill-pill-icon" src={s.icon} alt={s.name} />
+                                  <span className="tech-layer-skill-pill-name">{s.name}</span>
+                                </div>
+                              </Tooltip>
+                            ))
+                          ) : (
+                            <span className="tech-layer-cell-empty">无</span>
+                          )}
+                        </div>
+                      ),
+                    },
+                  ]}
+                  dataSource={layerRows}
+                />
+              )}
             </div>
           );
         })()}
