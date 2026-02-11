@@ -76,8 +76,10 @@
 .market-right {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .market-pane {
@@ -705,13 +707,21 @@
   .market-modal .ant-modal {
     width: calc(100vw - 16px) !important;
     max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
     margin: 8px auto;
   }
 
+  .market-modal .ant-modal-content,
+  .market-modal .ant-modal-body {
+    height: 100%;
+    min-height: 0;
+  }
+
   .market-modal-shell {
-    height: 88vh;
-    max-height: 760px;
+    height: min(88dvh, 760px);
+    max-height: calc(100dvh - 16px);
     flex-direction: column;
+    overflow: hidden;
   }
 
   .market-left {
