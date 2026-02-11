@@ -1,4 +1,4 @@
-import { App, Button, Modal, Progress, Tag } from 'antd';
+import { App, Button, Modal, Progress, Segmented, Tag } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   claimAchievementPointsReward,
@@ -26,6 +26,7 @@ interface AchievementModalProps {
 }
 
 type AchievementTab = 'all' | 'combat' | 'cultivation' | 'exploration' | 'social' | 'collection';
+const achievementTabKeys: AchievementTab[] = ['all', 'combat', 'cultivation', 'exploration', 'social', 'collection'];
 
 type RewardViewModel = {
   id: string;
@@ -209,6 +210,10 @@ const AchievementModal: React.FC<AchievementModalProps> = ({ open, onClose, onCh
   const { message } = App.useApp();
 
   const [tab, setTab] = useState<AchievementTab>('all');
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
   const [loading, setLoading] = useState(false);
   const [achievements, setAchievements] = useState<AchievementItemDto[]>([]);
   const [pointsInfo, setPointsInfo] = useState({
@@ -265,6 +270,12 @@ const AchievementModal: React.FC<AchievementModalProps> = ({ open, onClose, onCh
     if (!open) return;
     void refreshData();
   }, [open, refreshData]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const overall = useMemo(() => {
     const total = achievements.length;
@@ -348,6 +359,18 @@ const AchievementModal: React.FC<AchievementModalProps> = ({ open, onClose, onCh
     return list;
   }, [titles]);
 
+  const mobileTabOptions = useMemo(
+    () => [
+      { value: 'all', label: '全部' },
+      { value: 'combat', label: '战斗' },
+      { value: 'cultivation', label: '修炼' },
+      { value: 'exploration', label: '探索' },
+      { value: 'social', label: '社交' },
+      { value: 'collection', label: '收集' },
+    ],
+    [],
+  );
+
   return (
     <Modal
       open={open}
@@ -370,18 +393,33 @@ const AchievementModal: React.FC<AchievementModalProps> = ({ open, onClose, onCh
             <img className="achievement-left-icon" src={coin01} alt="成就" />
             <div className="achievement-left-name">成就</div>
           </div>
-          <div className="achievement-left-list">
-            {tabs.map((item) => (
-              <Button
-                key={item.key}
-                type={tab === item.key ? 'primary' : 'default'}
-                className="achievement-left-item"
-                onClick={() => setTab(item.key)}
-              >
-                {item.label}
-              </Button>
-            ))}
-          </div>
+          {isMobile ? (
+            <div className="achievement-left-segmented-wrap">
+              <Segmented
+                className="achievement-left-segmented"
+                value={tab}
+                options={mobileTabOptions}
+                onChange={(value) => {
+                  if (typeof value !== 'string') return;
+                  if (!achievementTabKeys.includes(value as AchievementTab)) return;
+                  setTab(value as AchievementTab);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="achievement-left-list">
+              {tabs.map((item) => (
+                <Button
+                  key={item.key}
+                  type={tab === item.key ? 'primary' : 'default'}
+                  className="achievement-left-item"
+                  onClick={() => setTab(item.key)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="achievement-right">

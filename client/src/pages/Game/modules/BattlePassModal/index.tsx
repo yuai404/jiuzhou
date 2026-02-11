@@ -1,4 +1,4 @@
-import { App, Button, Modal, Progress, Spin, Tag } from 'antd';
+import { App, Button, Modal, Progress, Segmented, Spin, Tag } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import {
@@ -17,6 +17,7 @@ interface BattlePassModalProps {
 }
 
 type BattlePassTab = 'rewards' | 'daily' | 'weekly';
+const battlePassTabKeys: BattlePassTab[] = ['rewards', 'daily', 'weekly'];
 
 type BattlePassTask = {
   id: string;
@@ -75,6 +76,10 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
   const [weeklyTasks, setWeeklyTasks] = useState<BattlePassTask[]>([]);
 
   const [tab, setTab] = useState<BattlePassTab>('rewards');
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
   const [dailyDone, setDailyDone] = useState<Record<string, string>>({});
   const [weeklyDone, setWeeklyDone] = useState<Record<string, string>>({});
   const [todayKey, setTodayKey] = useState('');
@@ -148,6 +153,12 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
     void refreshAll();
   }, [open, refreshAll]);
 
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const levelProgress = useMemo(() => {
     if (level >= maxLevel) return { percent: 100, current: expPerLevel, need: expPerLevel };
     const cappedExp = clamp(exp, 0, expPerLevel * maxLevel);
@@ -206,6 +217,15 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
       { key: 'rewards' as const, label: '战令奖励' },
       { key: 'daily' as const, label: '每日任务' },
       { key: 'weekly' as const, label: '每周任务' },
+    ],
+    [],
+  );
+
+  const mobileTabOptions = useMemo(
+    () => [
+      { value: 'rewards', label: '奖励' },
+      { value: 'daily', label: '每日' },
+      { value: 'weekly', label: '每周' },
     ],
     [],
   );
@@ -352,18 +372,33 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
             <img className="bp-left-icon" src={coin01} alt="战令" />
             <div className="bp-left-name">战令</div>
           </div>
-          <div className="bp-left-list">
-            {leftItems.map((it) => (
-              <Button
-                key={it.key}
-                type={tab === it.key ? 'primary' : 'default'}
-                className="bp-left-item"
-                onClick={() => setTab(it.key)}
-              >
-                {it.label}
-              </Button>
-            ))}
-          </div>
+          {isMobile ? (
+            <div className="bp-left-segmented-wrap">
+              <Segmented
+                className="bp-left-segmented"
+                value={tab}
+                options={mobileTabOptions}
+                onChange={(value) => {
+                  if (typeof value !== 'string') return;
+                  if (!battlePassTabKeys.includes(value as BattlePassTab)) return;
+                  setTab(value as BattlePassTab);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="bp-left-list">
+              {leftItems.map((it) => (
+                <Button
+                  key={it.key}
+                  type={tab === it.key ? 'primary' : 'default'}
+                  className="bp-left-item"
+                  onClick={() => setTab(it.key)}
+                >
+                  {it.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="bp-right">{panelContent()}</div>
       </div>

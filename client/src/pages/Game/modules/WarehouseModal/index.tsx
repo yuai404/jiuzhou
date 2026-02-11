@@ -1,4 +1,4 @@
-import { App, Button, Modal, Spin, Tabs, Tooltip } from 'antd';
+import { App, Button, Drawer, Modal, Segmented, Spin, Tabs, Tooltip } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import { SERVER_BASE, getInventoryInfo, getInventoryItems, moveInventoryItem, type InventoryItemDto, type ItemDefLite } from '../../../../services/api';
@@ -7,6 +7,11 @@ import './index.scss';
 type SlotSide = 'bag' | 'warehouse';
 
 type DragPayload = {
+  side: SlotSide;
+  index: number;
+};
+
+type MobilePreview = {
   side: SlotSide;
   index: number;
 };
@@ -578,6 +583,12 @@ interface WarehouseModalProps {
 const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
+  const [mobileSide, setMobileSide] = useState<SlotSide>('warehouse');
+  const [mobilePreview, setMobilePreview] = useState<MobilePreview | null>(null);
   const [bagCapacity, setBagCapacity] = useState(0);
   const [bagSlots, setBagSlots] = useState<Array<InventoryItemDto | null>>([]);
   const [warehouseCapacity, setWarehouseCapacity] = useState(0);
@@ -599,6 +610,12 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
     () => warehouseSlots.slice(warehouseSubRange.start, warehouseSubRange.end),
     [warehouseSlots, warehouseSubRange.end, warehouseSubRange.start],
   );
+  const mobilePreviewItem = useMemo(() => {
+    if (!mobilePreview) return null;
+    const slots = mobilePreview.side === 'bag' ? bagSlots : warehouseSlots;
+    return slots[mobilePreview.index] ?? null;
+  }, [bagSlots, mobilePreview, warehouseSlots]);
+  const mobilePreviewSide = mobilePreview?.side ?? null;
 
   const fetchAllInventoryItems = useCallback(async (location: 'bag' | 'warehouse'): Promise<InventoryItemDto[]> => {
     const pageSize = 500;
@@ -645,8 +662,22 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
 
   useEffect(() => {
     if (!open) return;
+    setMobileSide('warehouse');
+    setMobilePreview(null);
     void refreshAll();
   }, [open, refreshAll]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (!mobilePreview) return;
+    if (mobilePreviewItem) return;
+    setMobilePreview(null);
+  }, [mobilePreview, mobilePreviewItem]);
 
   const warehouseUsed = useMemo(() => warehouseSlots.reduce((sum, it) => sum + (it ? 1 : 0), 0), [warehouseSlots]);
   const warehouseSubUsed = useMemo(
@@ -772,6 +803,9 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
         }}
         onClick={() => {
           if (!it) return;
+          if (isMobile) {
+            setMobilePreview({ side, index });
+          }
         }}
         title={
           it
@@ -790,7 +824,7 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
       </div>
     );
 
-    if (!it) return node;
+    if (!it || isMobile) return node;
 
     return (
       <Tooltip
@@ -821,8 +855,38 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
       maskClosable={!loading}
     >
       <Spin spinning={loading}>
-        <div className="warehouse-modal-shell">
-          <div className="warehouse-pane">
+        <div className={`warehouse-modal-shell ${isMobile ? `is-mobile mobile-side-${mobileSide}` : ''}`}>
+          {isMobile ? (
+            <div className="warehouse-mobile-toolbar">
+              <Segmented
+                className="warehouse-mobile-segmented"
+                value={mobileSide}
+                options={[
+                  { value: 'warehouse', label: '仓库' },
+                  { value: 'bag', label: '背包' },
+                ]}
+                onChange={(value) => {
+                  if (value !== 'warehouse' && value !== 'bag') return;
+                  setMobileSide(value);
+                  setMobilePreview(null);
+                }}
+              />
+              <Button size="small" onClick={() => void refreshAll()} disabled={loading}>
+                刷新
+              </Button>
+            </div>
+          ) : null}
+
+          <div className="warehouse-mobile-meta">
+            <span className="warehouse-mobile-meta-item">
+              仓库 {warehouseUsed} / {warehouseCapacity}
+            </span>
+            <span className="warehouse-mobile-meta-item">
+              背包 {bagUsed} / {bagCapacity}
+            </span>
+          </div>
+
+          <div className="warehouse-pane warehouse-pane--warehouse">
             <div className="warehouse-pane-header is-warehouse">
               <div className="warehouse-pane-header-row">
                 <div className="warehouse-pane-title">仓库</div>
@@ -849,13 +913,13 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
               {activeWarehouseSlots.map((it, idx) => renderSlot('warehouse', warehouseSubRange.start + idx, it))}
             </div>
             <div className="warehouse-pane-footer">
-              <div className="warehouse-hint">右键：放入/取出；拖拽：移动/交换</div>
+              <div className="warehouse-hint">{isMobile ? '点击物品：查看详情/存取；拖拽：移动/交换' : '右键：放入/取出；拖拽：移动/交换'}</div>
             </div>
           </div>
 
           <div className="warehouse-divider" />
 
-          <div className="warehouse-pane">
+          <div className="warehouse-pane warehouse-pane--bag">
             <div className="warehouse-pane-header">
               <div className="warehouse-pane-title">背包</div>
               <div className="warehouse-pane-sub">已用 {bagUsed} / {bagCapacity} 格</div>
@@ -864,12 +928,49 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
               {bagSlots.map((it, idx) => renderSlot('bag', idx, it))}
             </div>
             <div className="warehouse-pane-footer">
-              <Button size="small" onClick={() => void refreshAll()} disabled={loading}>
-                刷新
-              </Button>
+              {isMobile ? (
+                <div className="warehouse-hint">点击物品：查看详情/存取；拖拽：移动/交换</div>
+              ) : (
+                <Button size="small" onClick={() => void refreshAll()} disabled={loading}>
+                  刷新
+                </Button>
+              )}
             </div>
           </div>
         </div>
+
+        {isMobile ? (
+          <Drawer
+            title={mobilePreviewSide === 'bag' ? '背包物品' : '仓库物品'}
+            placement="bottom"
+            open={Boolean(mobilePreviewItem)}
+            onClose={() => setMobilePreview(null)}
+            height="56dvh"
+            className="warehouse-mobile-preview-drawer"
+            styles={{ body: { padding: '10px 12px 12px' } }}
+          >
+            {mobilePreviewItem ? (
+              <div className="warehouse-mobile-preview">
+                <div className="warehouse-mobile-preview-content">
+                  <WarehouseItemTooltip it={mobilePreviewItem} />
+                </div>
+                <div className="warehouse-mobile-preview-actions">
+                  <Button
+                    type="primary"
+                    block
+                    disabled={loading}
+                    onClick={() => {
+                      if (!mobilePreview) return;
+                      moveToOtherSideFirstEmpty(mobilePreview);
+                    }}
+                  >
+                    {mobilePreviewSide === 'bag' ? '存入仓库' : '取回背包'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </Drawer>
+        ) : null}
       </Spin>
     </Modal>
   );

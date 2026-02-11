@@ -49,6 +49,23 @@
   gap: 10px;
 }
 
+.bp-left-segmented-wrap {
+  display: none;
+}
+
+.bp-left-segmented {
+  width: max-content;
+
+  .ant-segmented-item-label {
+    min-height: 34px;
+    line-height: 34px;
+    padding-inline: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+}
+
 .bp-left-item {
   width: 100%;
   height: 40px;
@@ -59,8 +76,10 @@
 .bp-right {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .bp-pane {
@@ -282,20 +301,171 @@
 }
 
 @media screen and (max-width: 768px) {
+  .bp-modal .ant-modal {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    margin: 8px auto;
+  }
+
+  .bp-modal .ant-modal-content,
+  .bp-modal .ant-modal-body {
+    height: 100%;
+    min-height: 0;
+  }
+
   .bp-shell {
-    height: 76vh;
+    height: min(88dvh, 760px);
+    max-height: calc(100dvh - 16px);
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .bp-left {
+    flex: 0 0 auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color-soft);
+  }
+
+  .bp-left-title {
+    padding: 10px 12px 8px;
+    border-bottom: none;
+    gap: 8px;
+  }
+
+  .bp-left-name {
+    font-size: 13px;
+  }
+
+  .bp-left-list {
+    display: none;
+  }
+
+  .bp-left-segmented-wrap {
+    display: block;
+    padding: 0 12px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+
+  .bp-left-segmented {
+    min-width: 100%;
+  }
+
+  .bp-pane-top {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .bp-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .bp-tags {
+    gap: 6px;
+  }
+
+  .bp-tags .ant-tag {
+    font-size: 11px;
+    line-height: 18px;
   }
 
   .bp-progress {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .bp-pane-body {
+    padding: 10px 12px 12px;
+    gap: 10px;
+  }
+
+  .bp-section {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .bp-section-title {
+    font-size: 12px;
+  }
+
+  .bp-reward-track {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .bp-reward-card {
+    width: auto;
+    min-width: 0;
+    border-radius: 12px;
+    padding: 8px;
+    gap: 5px;
+  }
+
+  .bp-reward-level {
+    font-size: 11px;
+  }
+
+  .bp-reward-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    padding: 5px;
+  }
+
+  .bp-reward-name {
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.35;
+    min-height: 30px;
+  }
+
+  .bp-reward-amount {
+    font-size: 11px;
+  }
+
+  .bp-reward-btn {
+    height: 28px;
+    border-radius: 8px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 
   .bp-task {
     flex-direction: column;
     align-items: stretch;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .bp-task-title {
+    font-size: 12px;
+  }
+
+  .bp-task-desc {
+    font-size: 11px;
+    line-height: 1.45;
   }
 
   .bp-task-right {
     justify-content: space-between;
+    gap: 8px;
+  }
+
+  .bp-task-right .ant-btn {
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .bp-tip {
+    padding: 10px;
+    font-size: 11px;
+    line-height: 1.5;
   }
 }

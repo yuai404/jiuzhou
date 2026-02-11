@@ -42,6 +42,10 @@ interface FunctionMenuProps {
 const FunctionMenu: React.FC<FunctionMenuProps> = ({ onAction, indicators }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const getIndicatorTooltip = (key: string): string | undefined => {
+    if (isMobile) return undefined;
+    return indicators?.[key]?.tooltip || undefined;
+  };
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [
       { key: 'map', icon: <EnvironmentOutlined />, label: '地图' },
@@ -92,7 +96,7 @@ const FunctionMenu: React.FC<FunctionMenuProps> = ({ onAction, indicators }) => 
       <div className={`function-menu ${isMobile ? 'is-mobile' : ''}`}>
         <div className="menu-list">
           {primaryItems.map((item) => (
-            <Tooltip key={item.key} title={indicators?.[item.key]?.tooltip || undefined}>
+            <Tooltip key={item.key} title={getIndicatorTooltip(item.key)}>
               <Button
                 className={`menu-item ${isMobile ? 'mobile-item' : ''}`}
                 type={isMobile ? 'text' : 'default'}
@@ -136,7 +140,7 @@ const FunctionMenu: React.FC<FunctionMenuProps> = ({ onAction, indicators }) => 
         >
           <div className="menu-more-grid">
             {overflowItems.map((item) => (
-              <Tooltip key={item.key} title={indicators?.[item.key]?.tooltip || undefined}>
+              <Tooltip key={item.key} title={getIndicatorTooltip(item.key)}>
                 <Button
                   className="menu-more-item"
                   onClick={() => {

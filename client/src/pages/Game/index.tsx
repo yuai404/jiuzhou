@@ -1851,7 +1851,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
           onClose={() => setPlayerInfoOpen(false)}
           closeIcon={null}
           title={null}
-          styles={{ wrapper: { height: '70vh' }, body: { padding: 0 } }}
+          styles={{ wrapper: { height: '84dvh', maxHeight: '760px' }, body: { padding: 0 } }}
         >
           <PlayerInfo />
         </Drawer>
@@ -1884,9 +1884,9 @@ const Game: FC<GameProps> = ({ onLogout }) => {
               maxHeight: 340,
               overflow: 'auto',
               padding: 12,
-              border: '1px solid rgba(0,0,0,0.08)',
+              border: '1px solid var(--border-color-soft)',
               borderRadius: 8,
-              background: 'rgba(0,0,0,0.02)',
+              background: 'var(--panel-bg-soft)',
               display: 'flex',
               flexDirection: 'column',
               gap: 8,
@@ -1908,8 +1908,9 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                       maxWidth: '86%',
                       padding: '8px 10px',
                       borderRadius: 8,
-                      border: '1px solid rgba(0,0,0,0.06)',
-                      background: d.role === 'player' ? 'rgba(24, 144, 255, 0.08)' : 'rgba(255,255,255,0.9)',
+                      border: d.role === 'player' ? '1px solid var(--primary-color)' : '1px solid var(--border-color-soft)',
+                      background: d.role === 'player' ? 'var(--primary-bg-soft)' : 'var(--panel-bg)',
+                      color: 'var(--text-color)',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                     }}
@@ -2219,29 +2220,29 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                         border: '1px solid rgba(24, 144, 255, 0.2)'
                       }}>
                         {node.type === 'narration' && (
-                          <div style={{ textAlign: 'center', color: 'rgba(0,0,0,0.65)', fontStyle: 'italic', lineHeight: 1.8 }}>
+                          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.8 }}>
                             {node.text}
                           </div>
                         )}
                         {node.type === 'npc' && (
                           <div>
                             <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 8 }}>{node.speaker}</div>
-                            <div style={{ color: 'rgba(0,0,0,0.85)', lineHeight: 1.7 }}>{node.text}</div>
+                            <div style={{ color: 'var(--text-color)', lineHeight: 1.7 }}>{node.text}</div>
                           </div>
                         )}
                         {node.type === 'player' && (
                           <div>
                             <div style={{ fontWeight: 600, color: '#52c41a', marginBottom: 8 }}>你</div>
-                            <div style={{ color: 'rgba(0,0,0,0.85)', lineHeight: 1.7 }}>{node.text}</div>
+                            <div style={{ color: 'var(--text-color)', lineHeight: 1.7 }}>{node.text}</div>
                           </div>
                         )}
                         {node.type === 'action' && (
-                          <div style={{ textAlign: 'center', color: 'rgba(0,0,0,0.45)', fontStyle: 'italic' }}>
+                          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                             *{node.text}*
                           </div>
                         )}
                         {node.type === 'system' && (
-                          <div style={{ textAlign: 'center', color: '#faad14', padding: '8px 16px', background: 'rgba(250, 173, 20, 0.1)', borderRadius: 8 }}>
+                          <div style={{ textAlign: 'center', color: 'var(--warning-color)', padding: '8px 16px', background: 'rgba(250, 173, 20, 0.1)', borderRadius: 8 }}>
                             {node.text}
                           </div>
                         )}

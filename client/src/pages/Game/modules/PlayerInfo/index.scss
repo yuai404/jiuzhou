@@ -302,20 +302,111 @@
 
 @media screen and (max-width: 768px) {
   .player-info {
-    padding: 12px;
-    gap: 10px;
+    padding: 10px;
+    gap: 8px;
   }
 
   .player-top {
     flex-direction: column;
+    gap: 10px;
   }
 
   .player-avatar-card {
     width: 100%;
-    height: 150px;
+    height: 132px;
+  }
+
+  .player-avatar-placeholder .anticon {
+    font-size: 24px;
+  }
+
+  .player-top-right {
+    gap: 5px;
+  }
+
+  .player-name {
+    font-size: 13px;
+  }
+
+  .player-title {
+    font-size: 11px;
+  }
+
+  .player-meta-row {
+    gap: 6px;
+  }
+
+  .player-meta-tag {
+    height: 18px;
+    padding: 0 7px;
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .player-bars {
+    gap: 5px;
+  }
+
+  .bar-progress-text {
+    font-size: 10px;
+  }
+
+  .bar-exp-label {
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .attr-section {
+    border: 1px solid var(--border-color-soft);
+    border-radius: 12px;
+    background: var(--panel-bg-soft);
+    padding: 8px;
+  }
+
+  .attr-section-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .attr-section-title {
+    font-size: 12px;
+  }
+
+  .attr-section-sub {
+    font-size: 11px;
+  }
+
+  .base-rows {
+    gap: 6px;
+  }
+
+  .base-row {
+    gap: 8px;
+  }
+
+  .base-label,
+  .base-value {
+    font-size: 11px;
+  }
+
+  .base-actions {
+    gap: 6px;
+  }
+
+  .base-actions .ant-btn {
+    height: 26px;
+    min-width: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
   }
 
   .player-attrs {
+    gap: 7px;
     grid-template-columns: 1fr;
+  }
+
+  .attr-label,
+  .attr-value {
+    font-size: 11px;
   }
 }

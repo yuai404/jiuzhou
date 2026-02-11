@@ -40,6 +40,20 @@
   min-width: 0;
 }
 
+.signin-header .ant-radio-group {
+  display: inline-flex;
+}
+
+.signin-header .ant-radio-button-wrapper {
+  color: var(--text-secondary);
+}
+
+.signin-header .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled),
+.signin-header .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover,
+.signin-header .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):active {
+  color: var(--text-color);
+}
+
 /* ── 底部区域 ── */
 .signin-modal .signin-footer {
   margin-top: auto;

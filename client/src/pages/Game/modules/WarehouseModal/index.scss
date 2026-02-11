@@ -17,6 +17,11 @@
   color: var(--text-color);
 }
 
+.warehouse-mobile-toolbar,
+.warehouse-mobile-meta {
+  display: none;
+}
+
 .warehouse-pane {
   flex: 1;
   display: flex;
@@ -82,7 +87,10 @@
   margin: 0;
   min-width: 44px;
   height: 34px;
-  padding: 0 16px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   border: 1px solid var(--border-color-soft);
   background: var(--panel-bg-soft);
@@ -90,8 +98,13 @@
 }
 
 .warehouse-subtabs .ant-tabs-tab-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   font-size: 13px;
-  line-height: 34px;
+  line-height: 1;
   user-select: none;
 }
 
@@ -393,4 +406,272 @@ body.theme-dark .warehouse-tooltip-lines {
 .warehouse-tooltip-line {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.warehouse-mobile-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.warehouse-mobile-preview-content {
+  min-height: 0;
+}
+
+.warehouse-mobile-preview-actions {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color-soft);
+}
+
+.warehouse-mobile-preview-actions .ant-btn {
+  height: 36px;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+@media screen and (max-width: 768px) {
+  .warehouse-modal .ant-modal {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    margin: 8px auto;
+  }
+
+  .warehouse-modal .ant-modal-content,
+  .warehouse-modal .ant-modal-body {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .warehouse-modal .ant-modal-body {
+    padding: 0;
+  }
+
+  .warehouse-modal .ant-modal-close {
+    top: 6px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .warehouse-modal-shell {
+    --warehouse-slot-size: clamp(52px, 14vw, 60px);
+    height: min(88dvh, 760px);
+    min-height: 0;
+    max-height: calc(100dvh - 16px);
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .warehouse-mobile-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 52px 10px 12px;
+    border-bottom: 1px solid var(--border-color-soft);
+  }
+
+  .warehouse-mobile-segmented {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .warehouse-mobile-segmented .ant-segmented-item-label {
+    min-height: 32px;
+    line-height: 32px;
+    padding-inline: 12px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .warehouse-mobile-toolbar .ant-btn {
+    height: 32px;
+    border-radius: 8px;
+    padding-inline: 12px;
+  }
+
+  .warehouse-mobile-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--border-color-soft);
+  }
+
+  .warehouse-mobile-meta-item {
+    height: 21px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color-soft);
+    background: var(--panel-bg-soft);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .warehouse-divider {
+    display: none;
+  }
+
+  .warehouse-pane {
+    display: none;
+    min-height: 0;
+  }
+
+  .warehouse-modal-shell.mobile-side-warehouse .warehouse-pane--warehouse,
+  .warehouse-modal-shell.mobile-side-bag .warehouse-pane--bag {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .warehouse-pane-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .warehouse-pane-header-row {
+    align-items: center;
+  }
+
+  .warehouse-pane-title {
+    font-size: 14px;
+  }
+
+  .warehouse-pane-sub {
+    font-size: 11px;
+    height: 20px;
+    padding: 0 8px;
+  }
+
+  .warehouse-pane-subrow {
+    gap: 6px;
+  }
+
+  .warehouse-subtabs .ant-tabs-nav-list {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .warehouse-subtabs .ant-tabs-nav-wrap {
+    overflow: auto;
+    scrollbar-width: none;
+  }
+
+  .warehouse-subtabs .ant-tabs-nav-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .warehouse-subtabs .ant-tabs-tab {
+    min-width: 36px;
+    height: 30px;
+    padding: 0;
+  }
+
+  .warehouse-subtabs .ant-tabs-tab-btn {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .warehouse-submeta {
+    font-size: 11px;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .warehouse-grid {
+    padding: 10px 12px 12px;
+    gap: 6px;
+  }
+
+  .warehouse-slot {
+    border-radius: 10px;
+  }
+
+  .warehouse-slot:hover {
+    transform: none;
+  }
+
+  .warehouse-slot-icon {
+    inset: 5px;
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+  }
+
+  .warehouse-slot-qty {
+    right: 4px;
+    bottom: 4px;
+    font-size: 11px;
+  }
+
+  .warehouse-pane-footer {
+    padding: 8px 12px;
+  }
+
+  .warehouse-hint {
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .warehouse-item-tooltip {
+    max-width: min(92vw, 360px);
+  }
+
+  .warehouse-item-tooltip .ant-tooltip-inner {
+    max-width: min(92vw, 360px);
+    max-height: min(56dvh, 420px);
+  }
+
+  .warehouse-mobile-preview-drawer .ant-drawer-content {
+    background: var(--panel-bg);
+  }
+
+  .warehouse-mobile-preview-drawer .ant-drawer-header {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color-soft);
+  }
+
+  .warehouse-mobile-preview-drawer .ant-drawer-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text-color);
+  }
+
+  .warehouse-mobile-preview-drawer .ant-drawer-body {
+    min-height: 0;
+  }
+
+  .warehouse-mobile-preview-content {
+    max-height: min(34dvh, 300px);
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .warehouse-mobile-preview .warehouse-tooltip {
+    gap: 8px;
+  }
+
+  .warehouse-mobile-preview .warehouse-tooltip-title {
+    font-size: 13px;
+  }
+
+  .warehouse-mobile-preview .warehouse-tooltip-tags {
+    gap: 6px;
+  }
+
+  .warehouse-mobile-preview .warehouse-tooltip-tag {
+    height: 20px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .warehouse-mobile-preview .warehouse-tooltip-desc {
+    font-size: 11px;
+    line-height: 16px;
+  }
 }
