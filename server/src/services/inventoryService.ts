@@ -30,6 +30,7 @@ import {
 } from './equipmentGrowthRules.js';
 import {
   resolveDisassembleRewardItemDefIdByQuality,
+  resolveTechniqueBookDisassembleRewardByQuality,
 } from './equipmentDisassembleRules.js';
 
 // 背包位置类型
@@ -2310,6 +2311,21 @@ export const expandInventory = async (
 };
 
 // ============================================
+const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
+  if (!Array.isArray(effectDefs)) return false;
+  return effectDefs.some((raw) => {
+    if (!raw || typeof raw !== 'object') return false;
+    const row = raw as { effect_type?: unknown };
+    return String(row.effect_type || '') === 'learn_technique';
+  });
+};
+
+const isTechniqueBookItem = (item: { subCategory: string | null; effectDefs: unknown }): boolean => {
+  const subCategory = String(item.subCategory || '').trim();
+  if (subCategory === 'technique_book') return true;
+  return hasLearnTechniqueEffect(item.effectDefs);
+};
+
 export const disassembleEquipment = async (
   characterId: number,
   userId: number,
@@ -2332,6 +2348,8 @@ export const disassembleEquipment = async (
           ii.location,
           ii.locked,
           id.category,
+          id.sub_category,
+          id.effect_defs,
           COALESCE(ii.quality, id.quality) as quality
         FROM item_instance ii
         JOIN item_def id ON id.id = ii.item_def_id
@@ -2352,6 +2370,8 @@ export const disassembleEquipment = async (
       location: InventoryLocation;
       locked: boolean;
       category: string;
+      sub_category: string | null;
+      effect_defs: unknown;
       quality: string;
     };
 
@@ -2360,12 +2380,22 @@ export const disassembleEquipment = async (
       return { success: false, message: '物品已锁定' };
     }
 
-    if (item.category !== 'equipment') {
+    const isTechniqueBook = isTechniqueBookItem({
+      subCategory: item.sub_category,
+      effectDefs: item.effect_defs,
+    });
+    const isEquipment = item.category === 'equipment';
+
+    if (!isEquipment && !isTechniqueBook) {
       await client.query('ROLLBACK');
       return { success: false, message: '该物品不可分解' };
     }
 
     if (item.location === 'equipped') {
+      if (!isEquipment) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '该物品当前位置不可分解' };
+      }
       await client.query('ROLLBACK');
       return { success: false, message: '穿戴中的装备不可分解' };
     }
@@ -2375,24 +2405,46 @@ export const disassembleEquipment = async (
       return { success: false, message: '该物品当前位置不可分解' };
     }
 
-    if (item.qty !== 1) {
+    const rowQty = Math.max(0, Number(item.qty) || 0);
+    if (isEquipment && rowQty !== 1) {
       await client.query('ROLLBACK');
       return { success: false, message: '装备数量异常' };
     }
-
-    const rewardItemDefId = resolveDisassembleRewardItemDefIdByQuality(item.quality);
-
-    if (!rewardItemDefId) {
+    if (!isEquipment && rowQty < 1) {
       await client.query('ROLLBACK');
-      return { success: false, message: '装备品质异常' };
+      return { success: false, message: '物品数量异常' };
     }
 
-    await client.query('DELETE FROM item_instance WHERE id = $1 AND owner_character_id = $2', [
-      itemInstanceId,
-      characterId,
-    ]);
+    let rewardItemDefId: string | null = null;
+    let rewardQty = 0;
+    if (isEquipment) {
+      rewardItemDefId = resolveDisassembleRewardItemDefIdByQuality(item.quality);
+      rewardQty = 1;
+      if (!rewardItemDefId) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '装备品质异常' };
+      }
+    } else {
+      const reward = resolveTechniqueBookDisassembleRewardByQuality(item.quality);
+      if (!reward) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '功法书品质异常' };
+      }
+      rewardItemDefId = reward.itemDefId;
+      rewardQty = reward.qty;
+    }
+    if (!rewardItemDefId || rewardQty <= 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '分解奖励配置异常' };
+    }
 
-    const addResult = await addItemToInventoryTx(client, characterId, userId, rewardItemDefId, 1, {
+    const consumeRes = await consumeSpecificItemInstanceTx(client, characterId, itemInstanceId, 1);
+    if (!consumeRes.success) {
+      await client.query('ROLLBACK');
+      return { success: false, message: consumeRes.message };
+    }
+
+    const addResult = await addItemToInventoryTx(client, characterId, userId, rewardItemDefId, rewardQty, {
       location: 'bag',
       obtainedFrom: 'disassemble',
     });
@@ -2406,12 +2458,12 @@ export const disassembleEquipment = async (
     return {
       success: true,
       message: '分解成功',
-      rewards: { itemDefId: rewardItemDefId, qty: 1, itemIds: addResult.itemIds },
+      rewards: { itemDefId: rewardItemDefId, qty: rewardQty, itemIds: addResult.itemIds },
     };
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('分解装备失败:', error);
-    return { success: false, message: '分解装备失败' };
+    console.error('分解物品失败:', error);
+    return { success: false, message: '分解失败' };
   } finally {
     client.release();
   }

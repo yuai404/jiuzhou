@@ -32,6 +32,8 @@ export interface ItemDefLite {
   base_attrs_raw?: unknown;
   equip_slot: string | null;
   use_type: string | null;
+  use_req_realm?: string | null;
+  use_req_level?: number | null;
   socket_max?: number;
   gem_slot_types?: unknown;
   level?: number | null;

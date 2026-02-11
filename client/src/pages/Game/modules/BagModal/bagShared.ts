@@ -796,6 +796,28 @@ const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
   });
 };
 
+export const isTechniqueBookSubCategory = (subCategoryValue: unknown): boolean => {
+  const subCategory =
+    typeof subCategoryValue === "string" ? subCategoryValue.trim() : "";
+  return subCategory === "technique_book";
+};
+
+const isTechniqueBookLike = (
+  subCategoryValue: unknown,
+  effectDefs: unknown,
+): boolean => {
+  if (isTechniqueBookSubCategory(subCategoryValue)) return true;
+  return hasLearnTechniqueEffect(effectDefs);
+};
+
+export const isDisassemblableBagItem = (item: {
+  category: Exclude<BagCategory, "all">;
+  subCategory: string | null;
+}): boolean => {
+  if (item.category === "equipment") return true;
+  return isTechniqueBookSubCategory(item.subCategory);
+};
+
 const mapCategory = (
   value: unknown,
   subCategoryValue?: unknown,
@@ -805,9 +827,8 @@ const mapCategory = (
     typeof subCategoryValue === "string" ? subCategoryValue.trim() : "";
   if (value === "skillbook") return "skill";
   if (
-    subCategory === "technique_book" ||
-    subCategory === "technique" ||
-    hasLearnTechniqueEffect(effectDefs)
+    isTechniqueBookLike(subCategory, effectDefs) ||
+    subCategory === "technique"
   ) {
     return "skill";
   }
@@ -818,9 +839,17 @@ const mapCategory = (
   return "material";
 };
 
-const mapActions = (category: Exclude<BagCategory, "all">): BagAction[] => {
-  if (category === "consumable" || category === "skill")
+const mapActions = (
+  category: Exclude<BagCategory, "all">,
+  subCategoryValue: unknown,
+  _effectDefs: unknown,
+): BagAction[] => {
+  if (category === "consumable" || category === "skill") {
+    if (isTechniqueBookSubCategory(subCategoryValue)) {
+      return ["use", "disassemble", "show"];
+    }
     return ["use", "show"];
+  }
   if (category === "equipment")
     return ["equip", "enhance", "disassemble", "show"];
   if (category === "material") return ["compose", "show"];
@@ -1011,6 +1040,27 @@ const buildEffects = (def?: ItemDefLite): string[] => {
     if (typeof durationRound === "number" && durationRound > 0)
       effects.push(`持续 ${durationRound} 回合`);
   }
+
+  const isTechniqueBook =
+    isTechniqueBookSubCategory(def?.sub_category) ||
+    hasLearnTechniqueEffect(def?.effect_defs);
+  if (isTechniqueBook) {
+    const reqRealm = typeof def?.use_req_realm === "string" ? def.use_req_realm.trim() : "";
+    const reqLevelRaw =
+      typeof def?.use_req_level === "number"
+        ? def.use_req_level
+        : Number(def?.use_req_level);
+    const reqLevel = Number.isFinite(reqLevelRaw)
+      ? Math.max(0, Math.floor(reqLevelRaw))
+      : 0;
+    const reqParts: string[] = [];
+    if (reqRealm) reqParts.push(`境界≥${reqRealm}`);
+    if (reqLevel > 0) reqParts.push(`等级≥${reqLevel}`);
+    if (reqParts.length > 0) {
+      effects.push(`学习要求：${reqParts.join("，")}`);
+    }
+  }
+
   return effects;
 };
 
@@ -1047,7 +1097,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
     locked: !!it.locked,
     desc: def.long_desc || def.description || "",
     effects: buildEffects(def),
-    actions: mapActions(category),
+    actions: mapActions(category, def.sub_category, def.effect_defs),
     setInfo: buildSetInfo(def),
     equip: isEquip
       ? {

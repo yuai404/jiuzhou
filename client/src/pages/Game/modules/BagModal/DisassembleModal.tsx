@@ -1,8 +1,10 @@
 import { App, Button, Modal, Tag } from 'antd';
 import { useMemo, useState } from 'react';
 import { disassembleInventoryEquipment } from '../../../../services/api';
+import { isDisassemblableBagItem, qualityLabelText } from './bagShared';
+import type { BagCategory, BagQuality } from './bagShared';
 
-type BagQuality = '黄' | '玄' | '地' | '天';
+type DisassembleCategory = Exclude<BagCategory, 'all'>;
 
 export type DisassembleTarget = {
   id: number;
@@ -10,6 +12,8 @@ export type DisassembleTarget = {
   quality: BagQuality;
   location: 'bag' | 'warehouse' | 'equipped';
   locked?: boolean;
+  category: DisassembleCategory;
+  subCategory: string | null;
 };
 
 interface DisassembleModalProps {
@@ -19,28 +23,36 @@ interface DisassembleModalProps {
   onSuccess: () => Promise<void>;
 }
 
-const qualityLabelText: Record<BagQuality, string> = {
-  天: '天品',
-  地: '地品',
-  玄: '玄品',
-  黄: '黄品',
+const techniqueBookRewardQtyByQuality: Record<BagQuality, number> = {
+  黄: 3,
+  玄: 6,
+  地: 12,
+  天: 24,
 };
 
 const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose, onSuccess }) => {
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
 
-  const rewardName = useMemo(() => {
-    const q = item?.quality;
-    if (!q) return '';
-    if (q === '黄' || q === '玄') return '淬灵石';
-    return '蕴灵石';
-  }, [item?.quality]);
+  const rewardPreview = useMemo(() => {
+    if (!item) return '';
+    if (item.category === 'equipment') {
+      if (item.quality === '黄' || item.quality === '玄') return '淬灵石×1';
+      return '蕴灵石×1';
+    }
+    if (item.subCategory === 'technique_book') {
+      const qty = techniqueBookRewardQtyByQuality[item.quality] || 3;
+      return `功法残页×${qty}`;
+    }
+    return '';
+  }, [item]);
 
   const disabledReason = useMemo(() => {
-    if (!item) return '请选择装备';
+    if (!item) return '请选择可分解物品';
+    if (!isDisassemblableBagItem(item)) return '该物品不可分解';
     if (item.locked) return '物品已锁定';
-    if (item.location === 'equipped') return '穿戴中的装备不可分解';
+    if (item.location === 'equipped') return item.category === 'equipment' ? '穿戴中的装备不可分解' : '该物品当前位置不可分解';
+    if (item.location !== 'bag' && item.location !== 'warehouse') return '该物品当前位置不可分解';
     return '';
   }, [item]);
 
@@ -52,7 +64,7 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
         onClose();
       }}
       footer={null}
-      title="分解装备"
+      title={item ? (item.category === 'equipment' ? '分解装备' : '分解功法') : '分解物品'}
       centered
       destroyOnHidden
       maskClosable={!submitting}
@@ -62,7 +74,7 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.name ?? '未选择'}</div>
           {item?.quality ? <Tag>{qualityLabelText[item.quality]}</Tag> : null}
         </div>
-        <div>分解后获得：{rewardName || '-'}</div>
+        <div>分解后获得：{rewardPreview || '-'}</div>
         {disabledReason ? <div style={{ color: 'rgba(255,255,255,0.6)' }}>{disabledReason}</div> : null}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <Button

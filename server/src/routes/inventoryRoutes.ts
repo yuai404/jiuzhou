@@ -131,7 +131,9 @@ router.get('/items', async (req: Request, res: Response) => {
       const defResult = await query(
         `SELECT 
            d.id, d.name, d.icon, d.quality, d.quality_rank, d.category, d.sub_category, d.stack_max,
-           d.description, d.long_desc, d.tags, d.effect_defs, d.base_attrs, d.equip_slot, d.use_type, d.socket_max, d.gem_slot_types, d.level,
+           d.description, d.long_desc, d.tags, d.effect_defs, d.base_attrs, d.equip_slot, d.use_type,
+           d.use_req_realm, d.use_req_level,
+           d.socket_max, d.gem_slot_types, d.level,
            d.set_id, s.name AS set_name
          FROM item_def d
          LEFT JOIN item_set s ON s.id = d.set_id

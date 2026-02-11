@@ -35,6 +35,7 @@ import {
   getEnhanceSuccessRatePermyriad,
   getEquipSlotLabel,
   getRefineSuccessRatePermyriad,
+  isDisassemblableBagItem,
   isGemTypeAllowedInSlot,
   normalizeGemType,
   permyriadPercentKeys,
@@ -254,7 +255,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       if (activeItem.location !== 'bag') return true;
     }
     if (a === 'disassemble') {
-      if (activeItem.category !== 'equipment') return true;
+      if (!isDisassemblableBagItem(activeItem)) return true;
       if (activeItem.locked) return true;
       if (activeItem.location === 'equipped') return true;
     }
@@ -1010,6 +1011,8 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 quality: activeItem.quality,
                 location: activeItem.location,
                 locked: activeItem.locked,
+                category: activeItem.category,
+                subCategory: activeItem.subCategory,
               }
             : null
         }

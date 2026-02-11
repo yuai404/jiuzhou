@@ -1,5 +1,5 @@
 /**
- * 装备分解规则
+ * 分解规则
  */
 
 export const QUALITY_RANK_MAP: Record<string, number> = {
@@ -30,3 +30,29 @@ export const resolveDisassembleRewardItemDefIdByQuality = (quality: unknown): st
   return resolveDisassembleRewardItemDefIdByQualityRank(resolveQualityRank(quality));
 };
 
+export type TechniqueBookDisassembleReward = {
+  itemDefId: string;
+  qty: number;
+};
+
+const TECHNIQUE_BOOK_REWARD_QTY_BY_QUALITY_RANK: Record<number, number> = {
+  1: 3,
+  2: 6,
+  3: 12,
+  4: 24,
+};
+
+export const resolveTechniqueBookDisassembleRewardByQualityRank = (
+  qualityRank: number
+): TechniqueBookDisassembleReward | null => {
+  const safeRank = clampQualityRank(qualityRank, 0);
+  const qty = TECHNIQUE_BOOK_REWARD_QTY_BY_QUALITY_RANK[safeRank];
+  if (!qty) return null;
+  return { itemDefId: 'mat-gongfa-canye', qty };
+};
+
+export const resolveTechniqueBookDisassembleRewardByQuality = (
+  quality: unknown
+): TechniqueBookDisassembleReward | null => {
+  return resolveTechniqueBookDisassembleRewardByQualityRank(resolveQualityRank(quality));
+};

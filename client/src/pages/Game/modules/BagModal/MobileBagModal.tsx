@@ -40,6 +40,7 @@ import {
   formatSignedPermyriadPercent,
   getEnhanceSuccessRatePermyriad,
   getRefineSuccessRatePermyriad,
+  isDisassemblableBagItem,
   permyriadPercentKeys,
   pickNumber,
   qualityClass,
@@ -119,7 +120,7 @@ const ItemSheet: React.FC<SheetProps> = ({
   const actionDisabled = (a: BagAction) => {
     if (!item.actions.includes(a)) return true;
     if (a === 'use') return item.locked || item.qty <= 0 || item.location !== 'bag';
-    if (a === 'disassemble') return item.category !== 'equipment' || item.locked || isEquipped;
+    if (a === 'disassemble') return !isDisassemblableBagItem(item) || item.locked || isEquipped;
     if (a === 'enhance') return item.category !== 'equipment' || !item.equip;
     return false;
   };
@@ -852,6 +853,8 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
           quality: activeItem.quality,
           location: activeItem.location,
           locked: activeItem.locked,
+          category: activeItem.category,
+          subCategory: activeItem.subCategory,
         } : null}
         onClose={() => setDisassembleOpen(false)}
         onSuccess={refresh}
