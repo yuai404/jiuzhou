@@ -112,13 +112,7 @@ const isRealmSufficient = (currentRealm: unknown, requiredRealm: unknown, curren
  * 获取物品定义
  */
 export const getItemDef = async (itemDefId: string): Promise<ItemDef | null> => {
-  const result = await query(
-    `SELECT id, code, name, category, sub_category, quality, quality_rank, 
-            stack_max, bind_type, icon
-     FROM item_def WHERE id = $1 AND enabled = true`,
-    [itemDefId]
-  );
-  return result.rows.length > 0 ? result.rows[0] : null;
+  return getItemDefWithClient(itemDefId);
 };
 
 /**

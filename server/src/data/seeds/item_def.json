@@ -21,7 +21,11 @@
       "icon": "/assets/danyao/bing_xin_dan.png",
       "description": "入门级丹药，服用后恢复少量气血",
       "long_desc": "清灵丹乃修仙入门之丹药，以灵草炼制而成，可恢复气血50点。",
-      "tags": ["丹药", "回复", "入门"],
+      "tags": [
+        "丹药",
+        "回复",
+        "入门"
+      ],
       "use_type": "instant",
       "use_cd_round": 1,
       "use_cd_sec": 0,
@@ -34,7 +38,10 @@
           "duration_round": 0
         }
       ],
-      "source_hint": ["新手村", "炼丹"]
+      "source_hint": [
+        "新手村",
+        "炼丹"
+      ]
     },
     {
       "id": "cons-002",
@@ -55,7 +62,11 @@
       "icon": "/assets/danyao/bing_yuan_dan.png",
       "description": "入门级丹药，服用后恢复少量灵气",
       "long_desc": "回气丹可恢复灵气30点，是修士常备之物。",
-      "tags": ["丹药", "回复", "灵气"],
+      "tags": [
+        "丹药",
+        "回复",
+        "灵气"
+      ],
       "use_type": "instant",
       "use_cd_round": 1,
       "effect_defs": [
@@ -64,7 +75,9 @@
           "target": "self",
           "effect_type": "resource",
           "value": 30,
-          "params": { "resource": "lingqi" }
+          "params": {
+            "resource": "lingqi"
+          }
         }
       ]
     },
@@ -87,7 +100,11 @@
       "icon": "/assets/danyao/da_huo_luo_dan.png",
       "description": "中品丹药，恢复大量气血",
       "long_desc": "玄灵丹以多种灵药炼制，可恢复气血200点。",
-      "tags": ["丹药", "回复", "中品"],
+      "tags": [
+        "丹药",
+        "回复",
+        "中品"
+      ],
       "use_type": "instant",
       "use_cd_round": 2,
       "use_req_realm": "炼精化炁·养气期",
@@ -119,7 +136,12 @@
       "icon": "/assets/danyao/chi_yang_dan.png",
       "description": "中品丹药，恢复大量灵气",
       "long_desc": "大还丹可恢复灵气100点，修士进阶必备。",
-      "tags": ["丹药", "回复", "灵气", "中品"],
+      "tags": [
+        "丹药",
+        "回复",
+        "灵气",
+        "中品"
+      ],
       "use_type": "instant",
       "use_cd_round": 2,
       "use_req_realm": "炼精化炁·养气期",
@@ -129,7 +151,9 @@
           "target": "self",
           "effect_type": "resource",
           "value": 100,
-          "params": { "resource": "lingqi" }
+          "params": {
+            "resource": "lingqi"
+          }
         }
       ]
     },
@@ -152,7 +176,11 @@
       "icon": "/assets/items/pill/zhu_ji_dan.png",
       "description": "珍贵丹药，服用后获得大量经验",
       "long_desc": "筑基丹乃修士突破境界之宝丹，服用可获得1000经验。",
-      "tags": ["丹药", "经验", "珍贵"],
+      "tags": [
+        "丹药",
+        "经验",
+        "珍贵"
+      ],
       "use_type": "instant",
       "use_cd_round": 0,
       "use_limit_daily": 1,
@@ -163,7 +191,9 @@
           "target": "self",
           "effect_type": "resource",
           "value": 1000,
-          "params": { "resource": "exp" }
+          "params": {
+            "resource": "exp"
+          }
         }
       ]
     },
@@ -184,7 +214,10 @@
       "sell_price_silver": 20,
       "icon": "/assets/danyao/dao_yuan_dan.png",
       "description": "解除中毒状态",
-      "tags": ["丹药", "解毒"],
+      "tags": [
+        "丹药",
+        "解毒"
+      ],
       "use_type": "instant",
       "use_cd_round": 0,
       "effect_defs": [
@@ -192,7 +225,9 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "dispel",
-          "params": { "dispel_type": "poison" }
+          "params": {
+            "dispel_type": "poison"
+          }
         }
       ]
     },
@@ -214,7 +249,11 @@
       "icon": "/assets/danyao/gui_ling_dan.png",
       "description": "临时提升物攻",
       "long_desc": "服用后3回合内物攻提升10点。",
-      "tags": ["丹药", "增益", "物攻"],
+      "tags": [
+        "丹药",
+        "增益",
+        "物攻"
+      ],
       "use_type": "instant",
       "use_cd_round": 5,
       "effect_defs": [
@@ -223,7 +262,11 @@
           "target": "self",
           "effect_type": "buff",
           "duration_round": 3,
-          "params": { "attr_key": "wugong", "value": 10, "apply_type": "flat" }
+          "params": {
+            "attr_key": "wugong",
+            "value": 10,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -245,7 +288,11 @@
       "icon": "/assets/danyao/hao_miao_dan.png",
       "description": "临时提升法攻",
       "long_desc": "服用后3回合内法攻提升10点。",
-      "tags": ["丹药", "增益", "法攻"],
+      "tags": [
+        "丹药",
+        "增益",
+        "法攻"
+      ],
       "use_type": "instant",
       "use_cd_round": 5,
       "effect_defs": [
@@ -254,7 +301,11 @@
           "target": "self",
           "effect_type": "buff",
           "duration_round": 3,
-          "params": { "attr_key": "fagong", "value": 10, "apply_type": "flat" }
+          "params": {
+            "attr_key": "fagong",
+            "value": 10,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -277,7 +328,12 @@
       "icon": "/assets/danyao/dao_yuan_dan.png",
       "description": "驱散瘴毒并回复气血",
       "long_desc": "以幽林草木精华炼制，服用后可解除中毒并恢复120点气血。",
-      "tags": ["丹药", "解毒", "回复", "中品"],
+      "tags": [
+        "丹药",
+        "解毒",
+        "回复",
+        "中品"
+      ],
       "use_type": "instant",
       "use_cd_round": 2,
       "use_req_realm": "炼精化炁·养气期",
@@ -286,7 +342,9 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "dispel",
-          "params": { "dispel_type": "poison" }
+          "params": {
+            "dispel_type": "poison"
+          }
         },
         {
           "trigger": "use",
@@ -315,7 +373,12 @@
       "icon": "/assets/danyao/hao_miao_dan.png",
       "description": "回灵并短暂提升身法",
       "long_desc": "服用后可恢复80点灵气，并在3回合内提升速度8点。",
-      "tags": ["丹药", "灵气", "增益", "中品"],
+      "tags": [
+        "丹药",
+        "灵气",
+        "增益",
+        "中品"
+      ],
       "use_type": "instant",
       "use_cd_round": 3,
       "use_req_realm": "炼精化炁·通脉期",
@@ -325,14 +388,20 @@
           "target": "self",
           "effect_type": "resource",
           "value": 80,
-          "params": { "resource": "lingqi" }
+          "params": {
+            "resource": "lingqi"
+          }
         },
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "buff",
           "duration_round": 3,
-          "params": { "attr_key": "sudu", "value": 8, "apply_type": "flat" }
+          "params": {
+            "attr_key": "sudu",
+            "value": 8,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -355,14 +424,21 @@
       "icon": "/assets/items/bag_expansion_token.png",
       "description": "使用后激活或续期修行月卡",
       "long_desc": "使用后激活修行月卡30天；若已激活则在当前到期时间基础上叠加30天。",
-      "tags": ["月卡", "续期", "特权"],
+      "tags": [
+        "月卡",
+        "续期",
+        "特权"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "activate_month_card",
-          "params": { "month_card_id": "monthcard-001", "duration_days": 30 }
+          "params": {
+            "month_card_id": "monthcard-001",
+            "duration_days": 30
+          }
         }
       ]
     },
@@ -385,14 +461,20 @@
       "icon": "/assets/items/icon_bygj.png",
       "description": "使用后解锁本赛季战令特权奖励",
       "long_desc": "使用后解锁本赛季战令特权奖励轨道；若已解锁则无效果。",
-      "tags": ["战令", "特权", "解锁"],
+      "tags": [
+        "战令",
+        "特权",
+        "解锁"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "activate_battle_pass",
-          "params": { "season_id": "bp-season-001" }
+          "params": {
+            "season_id": "bp-season-001"
+          }
         }
       ]
     },
@@ -413,7 +495,11 @@
       "sell_price_silver": 2,
       "icon": "/assets/ui/heng_xin_cao.png",
       "description": "常见的灵草，炼丹基础材料",
-      "tags": ["材料", "灵草", "炼丹"]
+      "tags": [
+        "材料",
+        "灵草",
+        "炼丹"
+      ]
     },
     {
       "id": "mat-002",
@@ -432,7 +518,11 @@
       "sell_price_silver": 3,
       "icon": "/assets/ui/taohuagu_zhangaiwu_1.png",
       "description": "普通的铁矿石，锻造基础材料",
-      "tags": ["材料", "矿石", "锻造"]
+      "tags": [
+        "材料",
+        "矿石",
+        "锻造"
+      ]
     },
     {
       "id": "mat-003",
@@ -451,7 +541,12 @@
       "sell_price_silver": 50,
       "icon": "/assets/ui/icon_hbt.png",
       "description": "蕴含灵气的玄铁，中品锻造材料",
-      "tags": ["材料", "矿石", "锻造", "中品"]
+      "tags": [
+        "材料",
+        "矿石",
+        "锻造",
+        "中品"
+      ]
     },
     {
       "id": "mat-004",
@@ -470,7 +565,11 @@
       "sell_price_silver": 3,
       "icon": "/assets/ui/icon_dpyg.png",
       "description": "蕴含灵气的木材，制符基础材料",
-      "tags": ["材料", "木材", "制符"]
+      "tags": [
+        "材料",
+        "木材",
+        "制符"
+      ]
     },
     {
       "id": "mat-005",
@@ -489,7 +588,11 @@
       "sell_price_silver": 4,
       "icon": "/assets/items/icon_hp.png",
       "description": "妖兽皮毛，制甲材料",
-      "tags": ["材料", "皮革", "制甲"]
+      "tags": [
+        "材料",
+        "皮革",
+        "制甲"
+      ]
     },
     {
       "id": "mat-006",
@@ -508,7 +611,12 @@
       "sell_price_silver": 80,
       "icon": "/assets/items/frame_qiu1shixincunming.png",
       "description": "妖兽内丹，炼丹珍贵材料",
-      "tags": ["材料", "内丹", "炼丹", "中品"]
+      "tags": [
+        "材料",
+        "内丹",
+        "炼丹",
+        "中品"
+      ]
     },
     {
       "id": "mat-007",
@@ -527,7 +635,11 @@
       "sell_price_silver": 5,
       "icon": "/assets/items/icon_bcs01.png",
       "description": "灵石碎片，可合成完整灵石",
-      "tags": ["材料", "灵石", "合成"]
+      "tags": [
+        "材料",
+        "灵石",
+        "合成"
+      ]
     },
     {
       "id": "mat-008",
@@ -546,7 +658,11 @@
       "sell_price_silver": 7,
       "icon": "/assets/ui/icon_dpyg.png",
       "description": "遗迹石碑剥落的碎片，可用于古器修复",
-      "tags": ["材料", "遗迹", "修复"]
+      "tags": [
+        "材料",
+        "遗迹",
+        "修复"
+      ]
     },
     {
       "id": "mat-009",
@@ -565,7 +681,11 @@
       "sell_price_silver": 10,
       "icon": "/assets/items/icon_hp.png",
       "description": "啸风岭妖狼的尖牙，常用于兵刃淬炼",
-      "tags": ["材料", "妖兽", "锻造"]
+      "tags": [
+        "材料",
+        "妖兽",
+        "锻造"
+      ]
     },
     {
       "id": "mat-010",
@@ -584,7 +704,12 @@
       "sell_price_silver": 45,
       "icon": "/assets/items/frame_qiu1shixincunming.png",
       "description": "蕴含剧毒的蛇胆，可用于毒系丹方",
-      "tags": ["材料", "毒系", "炼丹", "中品"]
+      "tags": [
+        "材料",
+        "毒系",
+        "炼丹",
+        "中品"
+      ]
     },
     {
       "id": "mat-011",
@@ -603,7 +728,12 @@
       "sell_price_silver": 60,
       "icon": "/assets/ui/icon_hbt.png",
       "description": "符甲石傀体内的岩核，刻有天然灵纹",
-      "tags": ["材料", "矿石", "符文", "中品"]
+      "tags": [
+        "材料",
+        "矿石",
+        "符文",
+        "中品"
+      ]
     },
     {
       "id": "mat-012",
@@ -621,12 +751,20 @@
       "sellable": true,
       "sell_price_silver": 160,
       "sell_price_spirit_stones": 4,
-      "icon": "/assets/items/material/daoyun_jinghe.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "古树妖核心淬出的灵髓，是炼制上品丹药的主材",
-      "tags": ["材料", "木系", "炼丹", "稀有"],
-      "source_hint": ["枯木幽林", "精英怪", "首领"]
+      "tags": [
+        "材料",
+        "木系",
+        "炼丹",
+        "稀有"
+      ],
+      "source_hint": [
+        "枯木幽林",
+        "精英怪",
+        "首领"
+      ]
     },
-
     {
       "id": "box-001",
       "code": "ling_shi_dai",
@@ -645,7 +783,11 @@
       "icon": "/assets/items/Props-baodai-2.png",
       "description": "打开可获得1-10灵石",
       "long_desc": "一个装有灵石的小袋子，打开后可随机获得1-10枚灵石。",
-      "tags": ["宝箱", "灵石", "随机"],
+      "tags": [
+        "宝箱",
+        "灵石",
+        "随机"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
@@ -679,7 +821,11 @@
       "icon": "/assets/items/Props-baodai-1.png",
       "description": "新手专属礼包，开启获得丰厚奖励",
       "long_desc": "包含新手武器、回复丹药、100银两，助你踏上修仙之路。",
-      "tags": ["礼包", "新手", "限定"],
+      "tags": [
+        "礼包",
+        "新手",
+        "限定"
+      ],
       "use_type": "instant",
       "unique_type": "per_character",
       "unique_limit": 1,
@@ -691,11 +837,22 @@
           "params": {
             "loot_type": "multi",
             "items": [
-              { "item_id": "equip-weapon-001", "qty": 1 },
-              { "item_id": "cons-001", "qty": 10 },
-              { "item_id": "cons-002", "qty": 10 }
+              {
+                "item_id": "equip-weapon-001",
+                "qty": 1
+              },
+              {
+                "item_id": "cons-001",
+                "qty": 10
+              },
+              {
+                "item_id": "cons-002",
+                "qty": 10
+              }
             ],
-            "currency": { "silver": 100 }
+            "currency": {
+              "silver": 100
+            }
           }
         }
       ]
@@ -718,7 +875,11 @@
       "icon": "/assets/items/Props-baohe-1.png",
       "description": "养气期专属礼包",
       "long_desc": "包含50灵石、淬灵石×20、回气丹×10，助你突破境界。",
-      "tags": ["礼包", "养气期", "限定"],
+      "tags": [
+        "礼包",
+        "养气期",
+        "限定"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·养气期",
       "unique_type": "per_character",
@@ -731,10 +892,18 @@
           "params": {
             "loot_type": "multi",
             "items": [
-              { "item_id": "enhance-001", "qty": 20 },
-              { "item_id": "cons-002", "qty": 10 }
+              {
+                "item_id": "enhance-001",
+                "qty": 20
+              },
+              {
+                "item_id": "cons-002",
+                "qty": 10
+              }
             ],
-            "currency": { "spirit_stones": 50 }
+            "currency": {
+              "spirit_stones": 50
+            }
           }
         }
       ]
@@ -758,7 +927,11 @@
       "icon": "/assets/items/Props_challengeletter.png",
       "description": "使用后永久扩容背包10格",
       "long_desc": "蕴含空间法则的符箓，使用后可永久扩展背包容量10格。",
-      "tags": ["功能", "背包", "扩容"],
+      "tags": [
+        "功能",
+        "背包",
+        "扩容"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
@@ -790,8 +963,15 @@
       "icon": "/assets/items/icon_mlj03.png",
       "description": "强化装备材料，可强化1-10级装备",
       "long_desc": "分解黄、玄品质装备可获得，用于强化1-10级装备。",
-      "tags": ["材料", "强化", "分解"],
-      "source_hint": ["分解黄品装备", "分解玄品装备"]
+      "tags": [
+        "材料",
+        "强化",
+        "分解"
+      ],
+      "source_hint": [
+        "分解黄品装备",
+        "分解玄品装备"
+      ]
     },
     {
       "id": "enhance-002",
@@ -812,8 +992,16 @@
       "icon": "/assets/items/icon_mlj06.png",
       "description": "高级强化材料，可强化10-15级装备",
       "long_desc": "分解地、天品质装备可获得，用于强化10-15级装备。",
-      "tags": ["材料", "强化", "分解", "高级"],
-      "source_hint": ["分解地品装备", "分解天品装备"]
+      "tags": [
+        "材料",
+        "强化",
+        "分解",
+        "高级"
+      ],
+      "source_hint": [
+        "分解地品装备",
+        "分解天品装备"
+      ]
     },
     {
       "id": "enhance-003",
@@ -830,15 +1018,21 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/enhance/qiang_hua_fu_huang.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "提升强化成功率10%",
-      "tags": ["强化", "辅助", "成功率"],
+      "tags": [
+        "强化",
+        "辅助",
+        "成功率"
+      ],
       "use_type": "consume_on_use",
       "effect_defs": [
         {
           "trigger": "enhance",
           "effect_type": "buff",
-          "params": { "success_rate_bonus": 1000 }
+          "params": {
+            "success_rate_bonus": 1000
+          }
         }
       ]
     },
@@ -858,15 +1052,21 @@
       "sellable": true,
       "sell_price_silver": 150,
       "sell_price_spirit_stones": 5,
-      "icon": "/assets/items/enhance/qiang_hua_fu_xuan.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "提升强化成功率20%",
-      "tags": ["强化", "辅助", "成功率"],
+      "tags": [
+        "强化",
+        "辅助",
+        "成功率"
+      ],
       "use_type": "consume_on_use",
       "effect_defs": [
         {
           "trigger": "enhance",
           "effect_type": "buff",
-          "params": { "success_rate_bonus": 2000 }
+          "params": {
+            "success_rate_bonus": 2000
+          }
         }
       ]
     },
@@ -886,19 +1086,24 @@
       "sellable": true,
       "sell_price_silver": 200,
       "sell_price_spirit_stones": 10,
-      "icon": "/assets/items/enhance/bao_hu_fu.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "强化失败时保护装备不降级",
-      "tags": ["强化", "辅助", "保护"],
+      "tags": [
+        "强化",
+        "辅助",
+        "保护"
+      ],
       "use_type": "consume_on_use",
       "effect_defs": [
         {
           "trigger": "enhance",
           "effect_type": "protect",
-          "params": { "protect_downgrade": true }
+          "params": {
+            "protect_downgrade": true
+          }
         }
       ]
     },
-
     {
       "id": "scroll-001",
       "code": "chuan_song_fu",
@@ -914,16 +1119,21 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 30,
-      "icon": "/assets/items/scroll/chuan_song_fu.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "使用后传送回主城",
-      "tags": ["符箓", "传送"],
+      "tags": [
+        "符箓",
+        "传送"
+      ],
       "use_type": "instant",
       "use_cd_sec": 60,
       "effect_defs": [
         {
           "trigger": "use",
           "effect_type": "teleport",
-          "params": { "destination": "main_city" }
+          "params": {
+            "destination": "main_city"
+          }
         }
       ]
     },
@@ -942,15 +1152,20 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 25,
-      "icon": "/assets/items/scroll/jian_ding_fu.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "鉴定未鉴定的装备",
-      "tags": ["符箓", "鉴定"],
+      "tags": [
+        "符箓",
+        "鉴定"
+      ],
       "use_type": "target",
       "effect_defs": [
         {
           "trigger": "use",
           "effect_type": "identify",
-          "params": { "target_type": "equipment" }
+          "params": {
+            "target_type": "equipment"
+          }
         }
       ]
     },
@@ -970,15 +1185,21 @@
       "sellable": true,
       "sell_price_silver": 100,
       "sell_price_spirit_stones": 5,
-      "icon": "/assets/items/scroll/xi_lian_fu.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "重新随机装备词条",
-      "tags": ["符箓", "洗练"],
+      "tags": [
+        "符箓",
+        "洗练"
+      ],
       "use_type": "target",
       "effect_defs": [
         {
           "trigger": "use",
           "effect_type": "reroll",
-          "params": { "target_type": "equipment", "reroll_type": "affixes" }
+          "params": {
+            "target_type": "equipment",
+            "reroll_type": "affixes"
+          }
         }
       ]
     },
@@ -998,15 +1219,22 @@
       "sellable": true,
       "sell_price_silver": 80,
       "sell_price_spirit_stones": 3,
-      "icon": "/assets/items/scroll/feng_yin_fu.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "锁定装备一条词条不被洗练",
-      "tags": ["符箓", "封印", "洗练"],
+      "tags": [
+        "符箓",
+        "封印",
+        "洗练"
+      ],
       "use_type": "target",
       "effect_defs": [
         {
           "trigger": "use",
           "effect_type": "lock",
-          "params": { "target_type": "affix", "lock_count": 1 }
+          "params": {
+            "target_type": "affix",
+            "lock_count": 1
+          }
         }
       ]
     },
@@ -1025,14 +1253,22 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 30,
-      "icon": "/assets/items/gem/gong_ji_bao_shi_1.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "镶嵌后物攻+3",
-      "tags": ["宝石", "攻击", "镶嵌"],
+      "tags": [
+        "宝石",
+        "攻击",
+        "镶嵌"
+      ],
       "effect_defs": [
         {
           "trigger": "socket",
           "effect_type": "buff",
-          "params": { "attr_key": "wugong", "value": 3, "apply_type": "flat" }
+          "params": {
+            "attr_key": "wugong",
+            "value": 3,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -1051,14 +1287,22 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 30,
-      "icon": "/assets/items/gem/fang_yu_bao_shi_1.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "镶嵌后物防+3",
-      "tags": ["宝石", "防御", "镶嵌"],
+      "tags": [
+        "宝石",
+        "防御",
+        "镶嵌"
+      ],
       "effect_defs": [
         {
           "trigger": "socket",
           "effect_type": "buff",
-          "params": { "attr_key": "wufang", "value": 3, "apply_type": "flat" }
+          "params": {
+            "attr_key": "wufang",
+            "value": 3,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -1077,14 +1321,22 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 30,
-      "icon": "/assets/items/gem/sheng_ming_bao_shi_1.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "镶嵌后气血上限+20",
-      "tags": ["宝石", "生命", "镶嵌"],
+      "tags": [
+        "宝石",
+        "生命",
+        "镶嵌"
+      ],
       "effect_defs": [
         {
           "trigger": "socket",
           "effect_type": "buff",
-          "params": { "attr_key": "max_qixue", "value": 20, "apply_type": "flat" }
+          "params": {
+            "attr_key": "max_qixue",
+            "value": 20,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -1103,14 +1355,22 @@
       "tradeable": true,
       "sellable": true,
       "sell_price_silver": 30,
-      "icon": "/assets/items/gem/ling_li_bao_shi_1.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "镶嵌后法攻+3",
-      "tags": ["宝石", "灵力", "镶嵌"],
+      "tags": [
+        "宝石",
+        "灵力",
+        "镶嵌"
+      ],
       "effect_defs": [
         {
           "trigger": "socket",
           "effect_type": "buff",
-          "params": { "attr_key": "fagong", "value": 3, "apply_type": "flat" }
+          "params": {
+            "attr_key": "fagong",
+            "value": 3,
+            "apply_type": "flat"
+          }
         }
       ]
     },
@@ -1129,9 +1389,13 @@
       "tradeable": false,
       "sellable": false,
       "sell_price_silver": 0,
-      "icon": "/assets/items/token/ri_chang_ling.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "完成日常任务获得，可兑换奖励",
-      "tags": ["令牌", "日常", "兑换"]
+      "tags": [
+        "令牌",
+        "日常",
+        "兑换"
+      ]
     },
     {
       "id": "token-002",
@@ -1148,9 +1412,13 @@
       "tradeable": false,
       "sellable": false,
       "sell_price_silver": 0,
-      "icon": "/assets/items/token/zong_men_gong_xian.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "宗门贡献点，可在宗门商店兑换物品",
-      "tags": ["令牌", "宗门", "兑换"]
+      "tags": [
+        "令牌",
+        "宗门",
+        "兑换"
+      ]
     },
     {
       "id": "token-003",
@@ -1167,9 +1435,13 @@
       "tradeable": false,
       "sellable": false,
       "sell_price_silver": 0,
-      "icon": "/assets/items/token/jing_ji_bi.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "竞技场获得，可兑换竞技商店物品",
-      "tags": ["令牌", "竞技", "兑换"]
+      "tags": [
+        "令牌",
+        "竞技",
+        "兑换"
+      ]
     },
     {
       "id": "quest-001",
@@ -1187,9 +1459,13 @@
       "sellable": false,
       "sell_price_silver": 0,
       "droppable": false,
-      "icon": "/assets/items/quest/mi_jing_yao_shi.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "开启秘境副本的钥匙",
-      "tags": ["任务", "钥匙", "秘境"],
+      "tags": [
+        "任务",
+        "钥匙",
+        "秘境"
+      ],
       "quest_only": true
     },
     {
@@ -1208,12 +1484,14 @@
       "sellable": false,
       "sell_price_silver": 0,
       "droppable": false,
-      "icon": "/assets/items/quest/yao_shou_xin.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "任务物品，击杀妖兽掉落",
-      "tags": ["任务", "收集"],
+      "tags": [
+        "任务",
+        "收集"
+      ],
       "quest_only": true
     },
-
     {
       "id": "mat-gongfa-canye",
       "code": "gongfa_canye",
@@ -1232,8 +1510,16 @@
       "icon": "/assets/items/Props-canzhang.png",
       "description": "功法修炼通用材料",
       "long_desc": "残破的功法典籍碎片，蕴含微弱的道韵，是修炼功法的基础材料。",
-      "tags": ["材料", "功法", "通用"],
-      "source_hint": ["挂机掉落", "副本奖励", "宗门商店"]
+      "tags": [
+        "材料",
+        "功法",
+        "通用"
+      ],
+      "source_hint": [
+        "挂机掉落",
+        "副本奖励",
+        "宗门商店"
+      ]
     },
     {
       "id": "mat-lingmo",
@@ -1251,11 +1537,18 @@
       "sellable": true,
       "sell_price_silver": 20,
       "sell_price_spirit_stones": 1,
-      "icon": "/assets/items/material/ling_mo.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "功法修炼进阶材料",
       "long_desc": "以灵泉水与百年墨玉研磨而成，可用于功法进阶修炼。",
-      "tags": ["材料", "功法", "进阶"],
-      "source_hint": ["精英怪掉落", "秘境奖励"]
+      "tags": [
+        "材料",
+        "功法",
+        "进阶"
+      ],
+      "source_hint": [
+        "精英怪掉落",
+        "秘境奖励"
+      ]
     },
     {
       "id": "mat-huo-lingsha",
@@ -1273,11 +1566,18 @@
       "sellable": true,
       "sell_price_silver": 25,
       "sell_price_spirit_stones": 1,
-      "icon": "/assets/items/material/huo_ling_sha.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "火属性功法修炼材料",
       "long_desc": "蕴含火灵之力的赤色砂粒，修炼火属性功法的必备材料。",
-      "tags": ["材料", "功法", "火属性"],
-      "source_hint": ["火焰秘境", "火属性怪物掉落"]
+      "tags": [
+        "材料",
+        "功法",
+        "火属性"
+      ],
+      "source_hint": [
+        "火焰秘境",
+        "火属性怪物掉落"
+      ]
     },
     {
       "id": "mat-shui-lingsu",
@@ -1295,11 +1595,18 @@
       "sellable": true,
       "sell_price_silver": 25,
       "sell_price_spirit_stones": 1,
-      "icon": "/assets/items/material/shui_ling_su.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "水属性功法修炼材料",
       "long_desc": "凝聚水灵之力的晶莹液体，修炼水属性功法的必备材料。",
-      "tags": ["材料", "功法", "水属性"],
-      "source_hint": ["寒冰洞窟", "水属性怪物掉落"]
+      "tags": [
+        "材料",
+        "功法",
+        "水属性"
+      ],
+      "source_hint": [
+        "寒冰洞窟",
+        "水属性怪物掉落"
+      ]
     },
     {
       "id": "mat-wudao-yujian",
@@ -1317,11 +1624,20 @@
       "sellable": true,
       "sell_price_silver": 500,
       "sell_price_spirit_stones": 50,
-      "icon": "/assets/items/material/wudao_yujian.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "功法突破瓶颈材料",
       "long_desc": "上古修士留下的悟道心得，蕴含深厚道韵，可助修士突破功法瓶颈。",
-      "tags": ["材料", "功法", "瓶颈", "珍贵"],
-      "source_hint": ["Boss掉落", "周常任务", "宗门兑换"]
+      "tags": [
+        "材料",
+        "功法",
+        "瓶颈",
+        "珍贵"
+      ],
+      "source_hint": [
+        "Boss掉落",
+        "周常任务",
+        "宗门兑换"
+      ]
     },
     {
       "id": "mat-daoyun-jinghe",
@@ -1339,13 +1655,21 @@
       "sellable": true,
       "sell_price_silver": 2000,
       "sell_price_spirit_stones": 200,
-      "icon": "/assets/items/material/daoyun_jinghe.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "功法终极突破材料",
       "long_desc": "凝聚天地道韵的神秘晶核，是修炼天品功法至圆满境界的必备之物。",
-      "tags": ["材料", "功法", "终极", "稀有"],
-      "source_hint": ["世界Boss", "高级秘境", "拍卖行"]
+      "tags": [
+        "材料",
+        "功法",
+        "终极",
+        "稀有"
+      ],
+      "source_hint": [
+        "世界Boss",
+        "高级秘境",
+        "拍卖行"
+      ]
     },
-
     {
       "id": "book-jichu-quanfa",
       "code": "book_jichu_quanfa",
@@ -1361,20 +1685,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/Props-baijiantie.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习基础拳法",
       "long_desc": "记载基础拳法的秘籍，适合初学者入门修炼。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-jichu-quanfa" }
+          "params": {
+            "technique_id": "tech-jichu-quanfa"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-jichu-jianfa",
@@ -1391,20 +1723,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/Props-baijiantie.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习基础剑法",
       "long_desc": "记载基础剑法的秘籍，适合初学者入门修炼。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-jichu-jianfa" }
+          "params": {
+            "technique_id": "tech-jichu-jianfa"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-jichu-daofa",
@@ -1421,20 +1761,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/Props-baijiantie.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习基础刀法",
       "long_desc": "记载基础刀法的秘籍，适合初学者入门修炼。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-jichu-daofa" }
+          "params": {
+            "technique_id": "tech-jichu-daofa"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-yangqi-jue",
@@ -1451,20 +1799,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/book/yangqi_jue.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习养气诀",
       "long_desc": "记载养气诀的秘籍，入门心法，可提升灵气恢复。",
-      "tags": ["秘籍", "功法", "心法"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "心法"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-yangqi-jue" }
+          "params": {
+            "technique_id": "tech-yangqi-jue"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-jichu-fushu",
@@ -1481,20 +1837,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/book/jichu_fushu.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习基础符术",
       "long_desc": "记载基础符术的秘籍，以符纸为媒介释放法术。",
-      "tags": ["秘籍", "功法", "法诀"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "法诀"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-jichu-fushu" }
+          "params": {
+            "technique_id": "tech-jichu-fushu"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-qinggong-ru",
@@ -1511,20 +1875,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/book/qinggong_rumen.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习轻功入门",
       "long_desc": "记载轻功入门的秘籍，基础身法，略微提升闪避。",
-      "tags": ["秘籍", "功法", "身法"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "身法"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-qinggong-ru" }
+          "params": {
+            "technique_id": "tech-qinggong-ru"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-huifu-shu",
@@ -1541,20 +1913,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 50,
-      "icon": "/assets/items/book/huifu_shu.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习恢复术",
       "long_desc": "记载恢复术的秘籍，基础治疗术，可恢复少量气血。",
-      "tags": ["秘籍", "功法", "辅修"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "辅修"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-huifu-shu" }
+          "params": {
+            "technique_id": "tech-huifu-shu"
+          }
         }
       ],
-      "source_hint": ["新手任务"]
+      "source_hint": [
+        "新手任务"
+      ]
     },
     {
       "id": "book-tiebu-quan",
@@ -1571,20 +1951,28 @@
       "tradeable": false,
       "sellable": true,
       "sell_price_silver": 80,
-      "icon": "/assets/items/book/tiebu_quan.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习铁布拳",
       "long_desc": "记载铁布拳的秘籍，刚猛拳法，兼具攻防。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-tiebu-quan" }
+          "params": {
+            "technique_id": "tech-tiebu-quan"
+          }
         }
       ],
-      "source_hint": ["野外掉落"]
+      "source_hint": [
+        "野外掉落"
+      ]
     },
     {
       "id": "book-jingang-quan",
@@ -1602,10 +1990,14 @@
       "sellable": true,
       "sell_price_silver": 500,
       "sell_price_spirit_stones": 20,
-      "icon": "/assets/items/book/jingang_quan.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习金刚拳",
       "long_desc": "记载金刚拳的秘籍，刚猛拳法，附带金属性破甲效果。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·养气期",
       "effect_defs": [
@@ -1613,10 +2005,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-jingang-quan" }
+          "params": {
+            "technique_id": "tech-jingang-quan"
+          }
         }
       ],
-      "source_hint": ["矿洞", "金属性怪物掉落"]
+      "source_hint": [
+        "矿洞",
+        "金属性怪物掉落"
+      ]
     },
     {
       "id": "book-qingfeng-jian",
@@ -1634,10 +2031,14 @@
       "sellable": true,
       "sell_price_silver": 500,
       "sell_price_spirit_stones": 20,
-      "icon": "/assets/items/book/qingfeng_jian.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习清风剑法",
       "long_desc": "记载清风剑法的秘籍，轻灵剑法，出剑如风。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·养气期",
       "effect_defs": [
@@ -1645,10 +2046,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-qingfeng-jian" }
+          "params": {
+            "technique_id": "tech-qingfeng-jian"
+          }
         }
       ],
-      "source_hint": ["清风山", "剑修遗迹"]
+      "source_hint": [
+        "清风山",
+        "剑修遗迹"
+      ]
     },
     {
       "id": "book-qingmu-jue",
@@ -1666,10 +2072,14 @@
       "sellable": true,
       "sell_price_silver": 500,
       "sell_price_spirit_stones": 20,
-      "icon": "/assets/items/book/qingmu_jue.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习青木诀",
       "long_desc": "记载青木诀的秘籍，木属性法诀，擅长持续治疗。",
-      "tags": ["秘籍", "功法", "法诀"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "法诀"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·养气期",
       "effect_defs": [
@@ -1677,10 +2087,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-qingmu-jue" }
+          "params": {
+            "technique_id": "tech-qingmu-jue"
+          }
         }
       ],
-      "source_hint": ["青木林", "木属性怪物掉落"]
+      "source_hint": [
+        "青木林",
+        "木属性怪物掉落"
+      ]
     },
     {
       "id": "book-houtu-gong",
@@ -1698,10 +2113,14 @@
       "sellable": true,
       "sell_price_silver": 500,
       "sell_price_spirit_stones": 20,
-      "icon": "/assets/items/book/houtu_gong.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习厚土功",
       "long_desc": "记载厚土功的秘籍，土属性心法，大幅提升防御与护盾。",
-      "tags": ["秘籍", "功法", "心法"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "心法"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·养气期",
       "effect_defs": [
@@ -1709,10 +2128,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-houtu-gong" }
+          "params": {
+            "technique_id": "tech-houtu-gong"
+          }
         }
       ],
-      "source_hint": ["黄土高原", "土属性怪物掉落"]
+      "source_hint": [
+        "黄土高原",
+        "土属性怪物掉落"
+      ]
     },
     {
       "id": "book-tunajue",
@@ -1730,20 +2154,28 @@
       "sellable": true,
       "sell_price_silver": 300,
       "sell_price_spirit_stones": 10,
-      "icon": "/assets/items/book/tuna_jue.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习吐纳诀",
       "long_desc": "记载吐纳诀的秘籍，进阶心法，增强灵气循环与生存能力。",
-      "tags": ["秘籍", "功法", "心法"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "心法"
+      ],
       "use_type": "instant",
       "effect_defs": [
         {
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-tunajue" }
+          "params": {
+            "technique_id": "tech-tunajue"
+          }
         }
       ],
-      "source_hint": ["宗门传授"]
+      "source_hint": [
+        "宗门传授"
+      ]
     },
     {
       "id": "book-shuiyun-zhang",
@@ -1761,10 +2193,14 @@
       "sellable": true,
       "sell_price_silver": 500,
       "sell_price_spirit_stones": 20,
-      "icon": "/assets/items/book/shuiyun_zhang.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习水云掌",
       "long_desc": "记载水云掌的秘籍，水属性掌法，以柔克刚。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·养气期",
       "effect_defs": [
@@ -1772,10 +2208,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-shuiyun-zhang" }
+          "params": {
+            "technique_id": "tech-shuiyun-zhang"
+          }
         }
       ],
-      "source_hint": ["水域", "水属性怪物掉落"]
+      "source_hint": [
+        "水域",
+        "水属性怪物掉落"
+      ]
     },
     {
       "id": "book-lingbo-weibu",
@@ -1793,10 +2234,14 @@
       "sellable": true,
       "sell_price_silver": 2000,
       "sell_price_spirit_stones": 100,
-      "icon": "/assets/items/book/lingbo_weibu.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习凌波微步",
       "long_desc": "记载凌波微步的秘籍，轻灵身法，大幅提升闪避与速度。",
-      "tags": ["秘籍", "功法", "身法"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "身法"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·通脉期",
       "effect_defs": [
@@ -1804,10 +2249,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-lingbo-weibu" }
+          "params": {
+            "technique_id": "tech-lingbo-weibu"
+          }
         }
       ],
-      "source_hint": ["云梦泽", "逍遥派遗迹"]
+      "source_hint": [
+        "云梦泽",
+        "逍遥派遗迹"
+      ]
     },
     {
       "id": "book-chunyang-gong",
@@ -1825,10 +2275,14 @@
       "sellable": true,
       "sell_price_silver": 2000,
       "sell_price_spirit_stones": 100,
-      "icon": "/assets/items/book/chunyang_gong.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习纯阳功",
       "long_desc": "记载纯阳功的秘籍，纯阳正气，可治疗队友并提供护盾。",
-      "tags": ["秘籍", "功法", "辅修"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "辅修"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·通脉期",
       "effect_defs": [
@@ -1836,10 +2290,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-chunyang-gong" }
+          "params": {
+            "technique_id": "tech-chunyang-gong"
+          }
         }
       ],
-      "source_hint": ["宗门商店", "医仙谷"]
+      "source_hint": [
+        "宗门商店",
+        "医仙谷"
+      ]
     },
     {
       "id": "book-lieyang-jian",
@@ -1857,10 +2316,14 @@
       "sellable": true,
       "sell_price_silver": 10000,
       "sell_price_spirit_stones": 500,
-      "icon": "/assets/items/book/lieyang_jian.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习烈阳剑诀",
       "long_desc": "记载烈阳剑诀的秘籍，以烈阳之力灌注剑身，造成高额火属性伤害。",
-      "tags": ["秘籍", "功法", "武技"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·凝炁期",
       "effect_defs": [
@@ -1868,10 +2331,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-lieyang-jian" }
+          "params": {
+            "technique_id": "tech-lieyang-jian"
+          }
         }
       ],
-      "source_hint": ["火焰秘境", "烈阳宗遗迹"]
+      "source_hint": [
+        "火焰秘境",
+        "烈阳宗遗迹"
+      ]
     },
     {
       "id": "book-hanbing-jue",
@@ -1889,10 +2357,14 @@
       "sellable": true,
       "sell_price_silver": 10000,
       "sell_price_spirit_stones": 500,
-      "icon": "/assets/items/book/hanbing_jue.png",
+      "icon": "/assets/items/icon_bygj.png",
       "description": "使用后学习寒冰诀",
       "long_desc": "记载寒冰诀的秘籍，操控寒冰之力，冻结敌人并造成法术伤害。",
-      "tags": ["秘籍", "功法", "法诀"],
+      "tags": [
+        "秘籍",
+        "功法",
+        "法诀"
+      ],
       "use_type": "instant",
       "use_req_realm": "炼精化炁·凝炁期",
       "effect_defs": [
@@ -1900,10 +2372,15 @@
           "trigger": "use",
           "target": "self",
           "effect_type": "learn_technique",
-          "params": { "technique_id": "tech-hanbing-jue" }
+          "params": {
+            "technique_id": "tech-hanbing-jue"
+          }
         }
       ],
-      "source_hint": ["寒冰洞窟", "北冥宗秘境"]
+      "source_hint": [
+        "寒冰洞窟",
+        "北冥宗秘境"
+      ]
     },
     {
       "id": "item-hidden-chest",
@@ -1921,9 +2398,12 @@
       "sellable": false,
       "sell_price_silver": 0,
       "sell_price_spirit_stones": 0,
-      "icon": "/assets/items/box/hidden_chest.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "神秘的宝箱，打开可获得随机奖励",
-      "tags": ["宝箱", "神秘"]
+      "tags": [
+        "宝箱",
+        "神秘"
+      ]
     },
     {
       "id": "obj-warehouse",
@@ -1941,9 +2421,13 @@
       "sellable": false,
       "sell_price_silver": 0,
       "sell_price_spirit_stones": 0,
-      "icon": "/assets/items/box/hidden_chest.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "存放物品的仓库，可将背包物品存入或取出",
-      "tags": ["功能", "仓库", "新手村"]
+      "tags": [
+        "功能",
+        "仓库",
+        "新手村"
+      ]
     },
     {
       "id": "item-snake-egg",
@@ -1961,9 +2445,13 @@
       "sellable": true,
       "sell_price_silver": 3,
       "sell_price_spirit_stones": 0,
-      "icon": "/assets/items/material/snake_egg.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "蛇类妖兽的蛋，可用于烹饪或炼丹",
-      "tags": ["材料", "妖兽", "蛋"]
+      "tags": [
+        "材料",
+        "妖兽",
+        "蛋"
+      ]
     },
     {
       "id": "res-wild-herb",
@@ -1983,7 +2471,10 @@
       "sell_price_spirit_stones": 0,
       "icon": "/assets/yaocai/you_yao_cao.png",
       "description": "常见的草药，可用于炼丹",
-      "tags": ["材料", "草药"]
+      "tags": [
+        "材料",
+        "草药"
+      ]
     },
     {
       "id": "res-spirit-grass",
@@ -2003,7 +2494,11 @@
       "sell_price_spirit_stones": 0,
       "icon": "/assets/yaocai/long_wen_cao.png",
       "description": "灵草的叶片，可用于炼丹或制符",
-      "tags": ["材料", "草药", "灵草"]
+      "tags": [
+        "材料",
+        "草药",
+        "灵草"
+      ]
     },
     {
       "id": "res-spirit-herb",
@@ -2021,9 +2516,13 @@
       "sellable": true,
       "sell_price_silver": 15,
       "sell_price_spirit_stones": 0,
-      "icon": "/assets/items/material/spirit_herb.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "蕴含灵气的草药，炼丹常用",
-      "tags": ["材料", "草药", "灵草"]
+      "tags": [
+        "材料",
+        "草药",
+        "灵草"
+      ]
     },
     {
       "id": "res-spirit-stone-ore",
@@ -2041,9 +2540,13 @@
       "sellable": true,
       "sell_price_silver": 8,
       "sell_price_spirit_stones": 0,
-      "icon": "/assets/items/material/spirit_stone_ore.png",
+      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
       "description": "含有灵石成分的矿石，可用于锻造或提炼",
-      "tags": ["材料", "矿石", "灵石"]
+      "tags": [
+        "材料",
+        "矿石",
+        "灵石"
+      ]
     }
   ]
 }
