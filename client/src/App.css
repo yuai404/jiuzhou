@@ -133,6 +133,33 @@ body.theme-dark .ant-tabs .ant-tabs-ink-bar {
   background: var(--primary-color);
 }
 
+/* 深色主题下统一修复 Pagination 当前页与按钮文字可读性 */
+body.theme-dark .ant-pagination .ant-pagination-item a {
+  color: var(--text-secondary);
+}
+
+body.theme-dark .ant-pagination .ant-pagination-item-active {
+  border-color: var(--primary-color);
+  background: var(--primary-bg-soft);
+}
+
+body.theme-dark .ant-pagination .ant-pagination-item-active a {
+  color: var(--text-color) !important;
+  font-weight: 800;
+}
+
+body.theme-dark .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
+body.theme-dark .ant-pagination .ant-pagination-next .ant-pagination-item-link {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  background: var(--panel-bg-soft);
+}
+
+body.theme-dark .ant-pagination .ant-pagination-jump-prev .ant-pagination-item-ellipsis,
+body.theme-dark .ant-pagination .ant-pagination-jump-next .ant-pagination-item-ellipsis {
+  color: var(--text-secondary);
+}
+
 
 /* 全局统一修复 Select 文本与选中态颜色可读性 */
 body .ant-select .ant-select-selector .ant-select-selection-item {
@@ -185,4 +212,3 @@ body .ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
-

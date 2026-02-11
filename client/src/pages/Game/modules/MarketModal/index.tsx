@@ -1,4 +1,4 @@
-import { App, Button, Input, Modal, Pagination, Select, Table, Tag, Tooltip } from 'antd';
+import { App, Button, Input, Modal, Pagination, Segmented, Select, Table, Tag, Tooltip } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
@@ -645,6 +645,11 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
   }, []);
 
   const [panel, setPanel] = useState<MarketPanel>('market');
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [category, setCategory] = useState<MarketCategory>('all');
   const [query, setQuery] = useState('');
@@ -790,23 +795,95 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     setSelectedBagId(null);
     setListPrice('');
     setListQty('1');
+    setMobileFilterOpen(false);
   };
 
   const menuItems = useMemo(
     () => [
-      { key: 'market' as const, label: '坊市' },
-      { key: 'my' as const, label: '我的上架' },
-      { key: 'list' as const, label: '物品上架' },
-      { key: 'records' as const, label: '售卖记录' },
+      { key: 'market' as const, label: '坊市', shortLabel: '坊市' },
+      { key: 'my' as const, label: '我的上架', shortLabel: '上架' },
+      { key: 'list' as const, label: '物品上架', shortLabel: '上架物品' },
+      { key: 'records' as const, label: '售卖记录', shortLabel: '记录' },
     ],
     [],
   );
+  const menuKeys = useMemo(() => menuItems.map((it) => it.key), [menuItems]);
+  const menuOptions = useMemo(
+    () => menuItems.map((it) => ({ value: it.key, label: it.shortLabel })),
+    [menuItems],
+  );
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'all', label: '全部分类' },
+      { value: 'consumable', label: '丹药' },
+      { value: 'material', label: '材料' },
+      { value: 'equipment', label: '装备' },
+      { value: 'skill', label: '功法' },
+      { value: 'other', label: '其他' },
+    ],
+    [],
+  );
+  const sortOptions = useMemo(
+    () => [
+      { value: 'timeDesc', label: '最新上架' },
+      { value: 'priceAsc', label: '价格升序' },
+      { value: 'priceDesc', label: '价格降序' },
+      { value: 'qtyDesc', label: '数量降序' },
+    ],
+    [],
+  );
+  const qualityOptions = useMemo(
+    () => [
+      { value: 'all', label: '全部品质' },
+      { value: '黄', label: '黄' },
+      { value: '玄', label: '玄' },
+      { value: '地', label: '地' },
+      { value: '天', label: '天' },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    const updateMobileFlag = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    updateMobileFlag();
+    window.addEventListener('resize', updateMobileFlag);
+    return () => window.removeEventListener('resize', updateMobileFlag);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     setMarketPage(1);
     void refreshMarket(1);
   }, [category, maxPrice, minPrice, open, quality, query, refreshMarket, sort]);
+
+  useEffect(() => {
+    if (!isMobile) setMobileFilterOpen(false);
+  }, [isMobile]);
+
+  const handlePanelChange = useCallback(
+    (nextPanel: MarketPanel) => {
+      setPanel(nextPanel);
+      if (nextPanel === 'market') {
+        setMarketPage(1);
+        void refreshMarket(1);
+      }
+      if (nextPanel === 'my') {
+        setMyPage(1);
+        void refreshMy(1);
+      }
+      if (nextPanel === 'list') {
+        void refreshBag();
+      }
+      if (nextPanel === 'records') {
+        setRecordPage(1);
+        void refreshRecords(1);
+      }
+    },
+    [refreshBag, refreshMarket, refreshMy, refreshRecords],
+  );
 
   const buyListing = useCallback(
     async (row: ListingItem) => {
@@ -863,83 +940,144 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     }
   }, [listPrice, listQty, marketPage, myPage, refreshBag, refreshMarket, refreshMy, selectedBagItem]);
 
-  const renderMarketFilters = () => (
-    <div className="market-filters">
-      <Select
-        value={category}
-        onChange={(v) => {
-          setCategory(v);
-          setMarketPage(1);
-        }}
-        options={[
-          { value: 'all', label: '全部分类' },
-          { value: 'consumable', label: '丹药' },
-          { value: 'material', label: '材料' },
-          { value: 'equipment', label: '装备' },
-          { value: 'skill', label: '功法' },
-          { value: 'other', label: '其他' },
-        ]}
-      />
-      <Input
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setMarketPage(1);
-        }}
-        placeholder="搜索物品/卖家"
-        allowClear
-        suffix={<SearchOutlined />}
-      />
-      <Select
-        value={sort}
-        onChange={(v) => {
-          setSort(v);
-          setMarketPage(1);
-        }}
-        options={[
-          { value: 'timeDesc', label: '最新上架' },
-          { value: 'priceAsc', label: '价格升序' },
-          { value: 'priceDesc', label: '价格降序' },
-          { value: 'qtyDesc', label: '数量降序' },
-        ]}
-      />
-      <Select
-        value={quality}
-        onChange={(v) => {
-          setQuality(v);
-          setMarketPage(1);
-        }}
-        options={[
-          { value: 'all', label: '全部品质' },
-          { value: '黄', label: '黄' },
-          { value: '玄', label: '玄' },
-          { value: '地', label: '地' },
-          { value: '天', label: '天' },
-        ]}
-      />
-      <div className="market-price-range">
-        <Input
-          value={minPrice}
-          onChange={(e) => {
-            setMinPrice(e.target.value);
-            setMarketPage(1);
-          }}
-          placeholder="最低价"
-          inputMode="numeric"
-        />
-        <span className="market-price-split">~</span>
-        <Input
-          value={maxPrice}
-          onChange={(e) => {
-            setMaxPrice(e.target.value);
-            setMarketPage(1);
-          }}
-          placeholder="最高价"
-          inputMode="numeric"
-        />
-      </div>
-    </div>
-  );
+  const renderMarketFilters = () => {
+    const hasAdvancedFilters =
+      category !== 'all' || sort !== 'timeDesc' || quality !== 'all' || minPrice.trim().length > 0 || maxPrice.trim().length > 0;
+
+    return (
+      <>
+        <div className="market-filters">
+          <Select
+            value={category}
+            onChange={(v) => {
+              setCategory(v);
+              setMarketPage(1);
+            }}
+            options={categoryOptions}
+          />
+          <Input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setMarketPage(1);
+            }}
+            placeholder="搜索物品/卖家"
+            allowClear
+            suffix={<SearchOutlined />}
+          />
+          <Select
+            value={sort}
+            onChange={(v) => {
+              setSort(v);
+              setMarketPage(1);
+            }}
+            options={sortOptions}
+          />
+          <Select
+            value={quality}
+            onChange={(v) => {
+              setQuality(v);
+              setMarketPage(1);
+            }}
+            options={qualityOptions}
+          />
+          <div className="market-price-range">
+            <Input
+              value={minPrice}
+              onChange={(e) => {
+                setMinPrice(e.target.value);
+                setMarketPage(1);
+              }}
+              placeholder="最低价"
+              inputMode="numeric"
+            />
+            <span className="market-price-split">~</span>
+            <Input
+              value={maxPrice}
+              onChange={(e) => {
+                setMaxPrice(e.target.value);
+                setMarketPage(1);
+              }}
+              placeholder="最高价"
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+        <div className="market-filters-mobile">
+          <div className="market-filters-mobile-search">
+            <Input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setMarketPage(1);
+              }}
+              placeholder="搜索物品/卖家"
+              allowClear
+              suffix={<SearchOutlined />}
+            />
+            <Button
+              className="market-filter-toggle"
+              type={mobileFilterOpen || hasAdvancedFilters ? 'primary' : 'default'}
+              onClick={() => setMobileFilterOpen((prev) => !prev)}
+            >
+              筛选
+            </Button>
+          </div>
+          {mobileFilterOpen ? (
+            <div className="market-filters-mobile-panel">
+              <div className="market-filters-mobile-grid">
+                <Select
+                  value={category}
+                  onChange={(v) => {
+                    setCategory(v);
+                    setMarketPage(1);
+                  }}
+                  options={categoryOptions}
+                />
+                <Select
+                  value={sort}
+                  onChange={(v) => {
+                    setSort(v);
+                    setMarketPage(1);
+                  }}
+                  options={sortOptions}
+                />
+                <Select
+                  value={quality}
+                  onChange={(v) => {
+                    setQuality(v);
+                    setMarketPage(1);
+                  }}
+                  options={qualityOptions}
+                />
+              </div>
+              <div className="market-price-range market-price-range-mobile">
+                <Input
+                  value={minPrice}
+                  onChange={(e) => {
+                    setMinPrice(e.target.value);
+                    setMarketPage(1);
+                  }}
+                  placeholder="最低价"
+                  inputMode="numeric"
+                />
+                <span className="market-price-split">~</span>
+                <Input
+                  value={maxPrice}
+                  onChange={(e) => {
+                    setMaxPrice(e.target.value);
+                    setMarketPage(1);
+                  }}
+                  placeholder="最高价"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </>
+    );
+  };
 
   const renderMarket = () => (
     <div className="market-pane">
@@ -949,74 +1087,126 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
       </div>
       <div className="market-pane-body">
         <div className="market-pane-scroll">
-          <Table
-            size="small"
-            rowKey={(row) => row.id}
-            className="market-table"
-            pagination={false}
-            loading={marketLoading}
-            columns={[
-              {
-                title: '物品',
-                dataIndex: 'name',
-                key: 'name',
-                width: 220,
-                render: (_: string, row: ListingItem) => (
-                  <Tooltip
-                    overlayClassName="market-tooltip-overlay"
-                    classNames={{ root: 'market-tooltip-overlay' }}
-                    placement="right"
-                    mouseEnterDelay={0.15}
-                    title={<MarketItemTooltipContent row={row} />}
-                    getPopupContainer={(triggerNode) => triggerNode.closest('.market-modal') ?? document.body}
-                  >
-                    <div className="market-item">
-                      <img className="market-item-icon" src={row.icon} alt={row.name} />
-                      <div className="market-item-meta">
-                        <div className="market-item-name">{row.name}</div>
-                        <div className="market-item-tags">
-                          <Tag className={`market-tag market-tag-quality q-${row.quality}`}>{row.quality}</Tag>
-                          <Tag className="market-tag">{categoryText[row.category]}</Tag>
-                          {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
-                        </div>
+          {isMobile ? (
+            <div className="market-mobile-list">
+              {marketLoading && marketListings.length === 0 ? <div className="market-empty">加载中...</div> : null}
+              {marketListings.map((row) => (
+                <div key={row.id} className="market-mobile-card">
+                  <div className="market-mobile-card-head">
+                    <img className="market-item-icon" src={row.icon} alt={row.name} />
+                    <div className="market-mobile-head-main">
+                      <div className="market-item-name">{row.name}</div>
+                      <div className="market-item-tags">
+                        <Tag className={`market-tag market-tag-quality q-${row.quality}`}>{row.quality}</Tag>
+                        <Tag className="market-tag">{categoryText[row.category]}</Tag>
+                        {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
                       </div>
                     </div>
-                  </Tooltip>
-                ),
-              },
-              { title: '数量', dataIndex: 'qty', key: 'qty', width: 90 },
-              {
-                title: '单价',
-                dataIndex: 'unitPrice',
-                key: 'unitPrice',
-                width: 110,
-                render: (v: number) => `${v.toLocaleString()} 灵石`,
-              },
-              {
-                title: '总价',
-                key: 'total',
-                width: 120,
-                render: (_: unknown, row: ListingItem) => `${(row.unitPrice * row.qty).toLocaleString()} 灵石`,
-              },
-              { title: '卖家', dataIndex: 'seller', key: 'seller', width: 140 },
-              {
-                title: '操作',
-                key: 'action',
-                width: 110,
-                render: (_: unknown, row: ListingItem) => (
-                  <Button
-                    type="primary"
-                    size="small"
-                    disabled={characterId !== null && row.sellerCharacterId === characterId}
-                    onClick={() => buyListing(row)}
-                  >
-                    购买
-                  </Button>
-                ),
-              },
-            ]}
-            dataSource={marketListings}
-          />
+                    <div className="market-mobile-price">
+                      <div className="market-mobile-price-label">单价</div>
+                      <div className="market-mobile-price-value">{row.unitPrice.toLocaleString()} 灵石</div>
+                    </div>
+                  </div>
+                  <div className="market-mobile-card-foot">
+                    <div className="market-mobile-meta-line">
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">数量</span>
+                        <span className="market-mobile-meta-v">{row.qty}</span>
+                      </span>
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">总价</span>
+                        <span className="market-mobile-meta-v">{(row.unitPrice * row.qty).toLocaleString()} 灵石</span>
+                      </span>
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">卖家</span>
+                        <span className="market-mobile-meta-v">{row.seller}</span>
+                      </span>
+                    </div>
+                    <div className="market-mobile-actions">
+                      <Button
+                        type="primary"
+                        size="small"
+                        disabled={characterId !== null && row.sellerCharacterId === characterId}
+                        onClick={() => buyListing(row)}
+                      >
+                        购买
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!marketLoading && marketListings.length === 0 ? <div className="market-empty">暂无上架物品</div> : null}
+            </div>
+          ) : (
+            <Table
+              size="small"
+              rowKey={(row) => row.id}
+              className="market-table"
+              pagination={false}
+              loading={marketLoading}
+              columns={[
+                {
+                  title: '物品',
+                  dataIndex: 'name',
+                  key: 'name',
+                  width: 220,
+                  render: (_: string, row: ListingItem) => (
+                    <Tooltip
+                      overlayClassName="market-tooltip-overlay"
+                      classNames={{ root: 'market-tooltip-overlay' }}
+                      placement="right"
+                      mouseEnterDelay={0.15}
+                      title={<MarketItemTooltipContent row={row} />}
+                      getPopupContainer={(triggerNode) => triggerNode.closest('.market-modal') ?? document.body}
+                    >
+                      <div className="market-item">
+                        <img className="market-item-icon" src={row.icon} alt={row.name} />
+                        <div className="market-item-meta">
+                          <div className="market-item-name">{row.name}</div>
+                          <div className="market-item-tags">
+                            <Tag className={`market-tag market-tag-quality q-${row.quality}`}>{row.quality}</Tag>
+                            <Tag className="market-tag">{categoryText[row.category]}</Tag>
+                            {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
+                          </div>
+                        </div>
+                      </div>
+                    </Tooltip>
+                  ),
+                },
+                { title: '数量', dataIndex: 'qty', key: 'qty', width: 90 },
+                {
+                  title: '单价',
+                  dataIndex: 'unitPrice',
+                  key: 'unitPrice',
+                  width: 110,
+                  render: (v: number) => `${v.toLocaleString()} 灵石`,
+                },
+                {
+                  title: '总价',
+                  key: 'total',
+                  width: 120,
+                  render: (_: unknown, row: ListingItem) => `${(row.unitPrice * row.qty).toLocaleString()} 灵石`,
+                },
+                { title: '卖家', dataIndex: 'seller', key: 'seller', width: 140 },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 110,
+                  render: (_: unknown, row: ListingItem) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      disabled={characterId !== null && row.sellerCharacterId === characterId}
+                      onClick={() => buyListing(row)}
+                    >
+                      购买
+                    </Button>
+                  ),
+                },
+              ]}
+              dataSource={marketListings}
+            />
+          )}
         </div>
         <div className="market-pagination-bar">
           <Pagination
@@ -1043,62 +1233,110 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
       </div>
       <div className="market-pane-body">
         <div className="market-pane-scroll">
-          <Table
-            size="small"
-            rowKey={(row) => row.id}
-            className="market-table"
-            pagination={false}
-            loading={myLoading}
-            columns={[
-              {
-                title: '物品',
-                dataIndex: 'name',
-                key: 'name',
-                render: (_: string, row: ListingItem) => (
-                  <Tooltip
-                    overlayClassName="market-tooltip-overlay"
-                    classNames={{ root: 'market-tooltip-overlay' }}
-                    placement="right"
-                    mouseEnterDelay={0.15}
-                    title={<MarketItemTooltipContent row={row} />}
-                    getPopupContainer={(triggerNode) => triggerNode.closest('.market-modal') ?? document.body}
-                  >
-                    <div className="market-item">
-                      <img className="market-item-icon" src={row.icon} alt={row.name} />
-                      <div className="market-item-meta">
-                        <div className="market-item-name">{row.name}</div>
-                        <div className="market-item-tags">
-                          <Tag className={`market-tag market-tag-quality q-${row.quality}`}>{row.quality}</Tag>
-                          <Tag className="market-tag">{categoryText[row.category]}</Tag>
-                        </div>
+          {isMobile ? (
+            <div className="market-mobile-list">
+              {myLoading && myListings.length === 0 ? <div className="market-empty">加载中...</div> : null}
+              {myListings.map((row) => (
+                <div key={row.id} className="market-mobile-card">
+                  <div className="market-mobile-card-head">
+                    <img className="market-item-icon" src={row.icon} alt={row.name} />
+                    <div className="market-mobile-head-main">
+                      <div className="market-item-name">{row.name}</div>
+                      <div className="market-item-tags">
+                        <Tag className={`market-tag market-tag-quality q-${row.quality}`}>{row.quality}</Tag>
+                        <Tag className="market-tag">{categoryText[row.category]}</Tag>
                       </div>
                     </div>
-                  </Tooltip>
-                ),
-              },
-              { title: '数量', dataIndex: 'qty', key: 'qty', width: 90 },
-              {
-                title: '单价',
-                dataIndex: 'unitPrice',
-                key: 'unitPrice',
-                width: 120,
-                render: (v: number) => `${v.toLocaleString()} 灵石`,
-              },
-              {
-                title: '操作',
-                key: 'action',
-                width: 200,
-                render: (_: unknown, row: ListingItem) => (
-                  <div className="market-actions">
-                    <Button size="small" onClick={() => unlistMyItem(row)}>
-                      下架
-                    </Button>
+                    <div className="market-mobile-price">
+                      <div className="market-mobile-price-label">单价</div>
+                      <div className="market-mobile-price-value">{row.unitPrice.toLocaleString()} 灵石</div>
+                    </div>
                   </div>
-                ),
-              },
-            ]}
-            dataSource={myListings}
-          />
+                  <div className="market-mobile-card-foot">
+                    <div className="market-mobile-meta-line">
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">数量</span>
+                        <span className="market-mobile-meta-v">{row.qty}</span>
+                      </span>
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">总价</span>
+                        <span className="market-mobile-meta-v">{(row.unitPrice * row.qty).toLocaleString()} 灵石</span>
+                      </span>
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">时间</span>
+                        <span className="market-mobile-meta-v">
+                          {row.listedAt > 0 ? new Date(row.listedAt).toLocaleString('zh-CN', { hour12: false }) : '-'}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="market-mobile-actions">
+                      <Button size="small" onClick={() => unlistMyItem(row)}>
+                        下架
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!myLoading && myListings.length === 0 ? <div className="market-empty">暂无上架物品</div> : null}
+            </div>
+          ) : (
+            <Table
+              size="small"
+              rowKey={(row) => row.id}
+              className="market-table"
+              pagination={false}
+              loading={myLoading}
+              columns={[
+                {
+                  title: '物品',
+                  dataIndex: 'name',
+                  key: 'name',
+                  render: (_: string, row: ListingItem) => (
+                    <Tooltip
+                      overlayClassName="market-tooltip-overlay"
+                      classNames={{ root: 'market-tooltip-overlay' }}
+                      placement="right"
+                      mouseEnterDelay={0.15}
+                      title={<MarketItemTooltipContent row={row} />}
+                      getPopupContainer={(triggerNode) => triggerNode.closest('.market-modal') ?? document.body}
+                    >
+                      <div className="market-item">
+                        <img className="market-item-icon" src={row.icon} alt={row.name} />
+                        <div className="market-item-meta">
+                          <div className="market-item-name">{row.name}</div>
+                          <div className="market-item-tags">
+                            <Tag className={`market-tag market-tag-quality q-${row.quality}`}>{row.quality}</Tag>
+                            <Tag className="market-tag">{categoryText[row.category]}</Tag>
+                          </div>
+                        </div>
+                      </div>
+                    </Tooltip>
+                  ),
+                },
+                { title: '数量', dataIndex: 'qty', key: 'qty', width: 90 },
+                {
+                  title: '单价',
+                  dataIndex: 'unitPrice',
+                  key: 'unitPrice',
+                  width: 120,
+                  render: (v: number) => `${v.toLocaleString()} 灵石`,
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 200,
+                  render: (_: unknown, row: ListingItem) => (
+                    <div className="market-actions">
+                      <Button size="small" onClick={() => unlistMyItem(row)}>
+                        下架
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              dataSource={myListings}
+            />
+          )}
         </div>
         <div className="market-pagination-bar">
           <Pagination
@@ -1201,43 +1439,85 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
         <div className="market-title">售卖记录</div>
       </div>
       <div className="market-pane-body">
-        <Table
-          size="small"
-          rowKey={(row) => row.id}
-          className="market-table"
-          pagination={false}
-          loading={recordsLoading}
-          columns={[
-            {
-              title: '类型',
-              dataIndex: 'type',
-              key: 'type',
-              width: 90,
-              render: (v: TradeRecordType) => (
-                <Tag className={`market-tag market-tag-record ${v === '买入' ? 'buy' : 'sell'}`}>{v}</Tag>
-              ),
-            },
-            {
-              title: '物品',
-              dataIndex: 'name',
-              key: 'name',
-              render: (_: string, row: TradeRecord) => (
-                <div className="market-item">
-                  <img className="market-item-icon" src={row.icon} alt={row.name} />
-                  <div className="market-item-meta">
-                    <div className="market-item-name">{row.name}</div>
-                    <div className="market-item-tags">
-                      <Tag className="market-tag">数量 {row.qty}</Tag>
-                      <Tag className="market-tag">单价 {row.unitPrice.toLocaleString()}</Tag>
+        <div className="market-pane-scroll">
+          {isMobile ? (
+            <div className="market-mobile-list">
+              {recordsLoading && records.length === 0 ? <div className="market-empty">加载中...</div> : null}
+              {records.map((row) => (
+                <div key={row.id} className="market-mobile-card">
+                  <div className="market-mobile-card-head">
+                    <img className="market-item-icon" src={row.icon} alt={row.name} />
+                    <div className="market-mobile-head-main">
+                      <div className="market-item-name">{row.name}</div>
+                      <div className="market-item-tags">
+                        <Tag className={`market-tag market-tag-record ${row.type === '买入' ? 'buy' : 'sell'}`}>{row.type}</Tag>
+                        <Tag className="market-tag">数量 {row.qty}</Tag>
+                      </div>
+                    </div>
+                    <div className="market-mobile-price">
+                      <div className="market-mobile-price-label">单价</div>
+                      <div className="market-mobile-price-value">{row.unitPrice.toLocaleString()} 灵石</div>
                     </div>
                   </div>
+                  <div className="market-mobile-meta-line">
+                    <span className="market-mobile-meta-item">
+                      <span className="market-mobile-meta-k">总价</span>
+                      <span className="market-mobile-meta-v">{(row.unitPrice * row.qty).toLocaleString()} 灵石</span>
+                    </span>
+                    <span className="market-mobile-meta-item">
+                      <span className="market-mobile-meta-k">对方</span>
+                      <span className="market-mobile-meta-v">{row.counterparty}</span>
+                    </span>
+                    <span className="market-mobile-meta-item">
+                      <span className="market-mobile-meta-k">时间</span>
+                      <span className="market-mobile-meta-v">
+                        {row.time > 0 ? new Date(row.time).toLocaleString('zh-CN', { hour12: false }) : '-'}
+                      </span>
+                    </span>
+                  </div>
                 </div>
-              ),
-            },
-            { title: '对方', dataIndex: 'counterparty', key: 'counterparty', width: 160 },
-          ]}
-          dataSource={records}
-        />
+              ))}
+            </div>
+          ) : (
+            <Table
+              size="small"
+              rowKey={(row) => row.id}
+              className="market-table"
+              pagination={false}
+              loading={recordsLoading}
+              columns={[
+                {
+                  title: '类型',
+                  dataIndex: 'type',
+                  key: 'type',
+                  width: 90,
+                  render: (v: TradeRecordType) => (
+                    <Tag className={`market-tag market-tag-record ${v === '买入' ? 'buy' : 'sell'}`}>{v}</Tag>
+                  ),
+                },
+                {
+                  title: '物品',
+                  dataIndex: 'name',
+                  key: 'name',
+                  render: (_: string, row: TradeRecord) => (
+                    <div className="market-item">
+                      <img className="market-item-icon" src={row.icon} alt={row.name} />
+                      <div className="market-item-meta">
+                        <div className="market-item-name">{row.name}</div>
+                        <div className="market-item-tags">
+                          <Tag className="market-tag">数量 {row.qty}</Tag>
+                          <Tag className="market-tag">单价 {row.unitPrice.toLocaleString()}</Tag>
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                },
+                { title: '对方', dataIndex: 'counterparty', key: 'counterparty', width: 160 },
+              ]}
+              dataSource={records}
+            />
+          )}
+        </div>
         {records.length === 0 && !recordsLoading ? <div className="market-empty">暂无记录</div> : null}
         <div className="market-pagination-bar">
           <Pagination
@@ -1286,35 +1566,33 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
             <img className="market-left-icon" src={coin01} alt="坊市" />
             <div className="market-left-name">坊市</div>
           </div>
-          <div className="market-left-list">
-            {menuItems.map((it) => (
-              <Button
-                key={it.key}
-                type={panel === it.key ? 'primary' : 'default'}
-                className="market-left-item"
-                onClick={() => {
-                  setPanel(it.key);
-                  if (it.key === 'market') {
-                    setMarketPage(1);
-                    void refreshMarket(1);
-                  }
-                  if (it.key === 'my') {
-                    setMyPage(1);
-                    void refreshMy(1);
-                  }
-                  if (it.key === 'list') {
-                    void refreshBag();
-                  }
-                  if (it.key === 'records') {
-                    setRecordPage(1);
-                    void refreshRecords(1);
-                  }
+          {isMobile ? (
+            <div className="market-left-segmented-wrap">
+              <Segmented
+                className="market-left-segmented"
+                value={panel}
+                options={menuOptions}
+                onChange={(value) => {
+                  if (typeof value !== 'string') return;
+                  if (!menuKeys.includes(value as MarketPanel)) return;
+                  handlePanelChange(value as MarketPanel);
                 }}
-              >
-                {it.label}
-              </Button>
-            ))}
-          </div>
+              />
+            </div>
+          ) : (
+            <div className="market-left-list">
+              {menuItems.map((it) => (
+                <Button
+                  key={it.key}
+                  type={panel === it.key ? 'primary' : 'default'}
+                  className="market-left-item"
+                  onClick={() => handlePanelChange(it.key)}
+                >
+                  {it.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="market-right">{panelContent()}</div>
       </div>
