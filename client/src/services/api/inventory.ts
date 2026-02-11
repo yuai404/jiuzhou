@@ -45,6 +45,7 @@ export interface InventoryItemDto {
   id: number;
   item_def_id: string;
   qty: number;
+  quality?: string | null;
   quality_rank?: number | null;
   location: InventoryLocation;
   location_slot: number | null;

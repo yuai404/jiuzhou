@@ -807,7 +807,10 @@ const buildBagItem = (it: InventoryItemDto): BagItem | null => {
   const def = it.def;
   if (!def) return null;
 
-  const rawQuality = def.quality;
+  const rawQuality =
+    typeof it.quality === 'string' && it.quality.trim().length > 0
+      ? it.quality.trim()
+      : def.quality;
   const quality = qualityLabels.includes(rawQuality as BagQuality) ? (rawQuality as BagQuality) : '黄';
   const tags = coerceStringArray(def.tags);
 

@@ -502,7 +502,7 @@ export const generateEquipment = async (
       : resolvedQuality
         ? (QUALITIES.find((q) => QUALITY_RANK[q] === Math.min(maxRank, Math.max(minRank, QUALITY_RANK[resolvedQuality]))) ??
           boundMin)
-        : rollQuality(rng, boundMin, options.qualityWeights, options.fuyuan, boundMin, boundMax);
+        : rollQuality(rng, def.quality, options.qualityWeights, options.fuyuan, boundMin, boundMax);
   const qualityRank = QUALITY_RANK[quality];
 
   const baseQualityRank = Number(def.quality_rank) || QUALITY_RANK[def.quality];
