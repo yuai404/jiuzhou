@@ -368,8 +368,26 @@ class GameSocketService {
 
   updateCharacterLocal(patch: Partial<CharacterData>): void {
     if (!this.currentCharacter) return;
-    this.currentCharacter = { ...this.currentCharacter, ...patch };
-    this.notifyCharacterListeners(this.currentCharacter);
+    const entries = Object.entries(patch) as Array<[keyof CharacterData, CharacterData[keyof CharacterData] | undefined]>;
+    if (entries.length === 0) return;
+
+    const assignCharacterField = <K extends keyof CharacterData>(target: CharacterData, key: K, value: CharacterData[K]) => {
+      target[key] = value;
+    };
+
+    let changed = false;
+    const nextCharacter: CharacterData = { ...this.currentCharacter };
+    for (const [key, nextValue] of entries) {
+      if (nextValue === undefined) continue;
+      const prevValue = this.currentCharacter[key];
+      if (Object.is(prevValue, nextValue)) continue;
+      assignCharacterField(nextCharacter, key, nextValue as CharacterData[typeof key]);
+      changed = true;
+    }
+
+    if (!changed) return;
+    this.currentCharacter = nextCharacter;
+    this.notifyCharacterListeners(nextCharacter);
   }
 
   // 是否已连接

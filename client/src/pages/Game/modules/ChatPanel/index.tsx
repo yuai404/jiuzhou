@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, Drawer, Input, Popover, Select, Table, Tabs, Tooltip, type InputRef } from 'antd';
 import { BarChartOutlined, CloseOutlined, LineChartOutlined, SendOutlined } from '@ant-design/icons';
 import { gameSocket, type CharacterData, type OnlinePlayerDto } from '../../../../services/gameSocket';
@@ -417,7 +417,7 @@ const buildInitialPrivateTargets = (list: Message[]): PrivateTarget[] => {
 const initialMessageBuckets = buildInitialMessageBuckets(initialMessages);
 const initialPrivateTargets = buildInitialPrivateTargets(initialMessageBuckets.all);
 
-const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPlayer, isMobile }, ref) => {
+const ChatPanelBase = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPlayer, isMobile }, ref) => {
   const [activeChannel, setActiveChannel] = useState<ChatChannel>('all');
   const [inputValue, setInputValue] = useState('');
   const [messageBuckets, setMessageBuckets] = useState<MessageBuckets>(initialMessageBuckets);
@@ -529,6 +529,9 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPlayer,
       }
 
       if (!isPublicChatChannel(channel)) return;
+      if (channel === 'battle') {
+        parseBattleLineCached(msg.content);
+      }
 
       setMessageBuckets((prev) => {
         const nextMessage: Message = {
@@ -605,6 +608,9 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPlayer,
       if (channel !== 'system' && channel !== 'battle') return;
       const content = String(ce.detail?.content ?? '').trim();
       if (!content) return;
+      if (channel === 'battle') {
+        parseBattleLineCached(content);
+      }
 
       const senderName = String(ce.detail?.senderName ?? '').trim() || '系统';
       const senderTitle = String(ce.detail?.senderTitle ?? '').trim();
@@ -648,6 +654,9 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPlayer,
   const appendBattleLines = useCallback((lines: string[]) => {
     const list = (lines ?? []).map((x) => String(x ?? '').trim()).filter(Boolean);
     if (list.length === 0) return;
+    list.forEach((line) => {
+      parseBattleLineCached(line);
+    });
     const now = Date.now();
     const next: Message[] = list.map((content, idx) => ({
       id: `battle-${now}-${idx}-${Math.random().toString(16).slice(2)}`,
@@ -1642,5 +1651,9 @@ const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPlayer,
     </div>
   );
 });
+
+ChatPanelBase.displayName = 'ChatPanel';
+
+const ChatPanel = memo(ChatPanelBase);
 
 export default ChatPanel;

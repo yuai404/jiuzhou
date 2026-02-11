@@ -975,6 +975,33 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     return undefined;
   }, [arenaBattleId, dungeonBattleId, dungeonInstanceId, handleArenaNext, handleDungeonNext, inTeam, isTeamLeader]);
 
+  const bindBattleSkillCaster = useCallback((caster: (skillId: string, targetType?: string) => Promise<boolean>) => {
+    battleSkillCasterRef.current = caster;
+  }, []);
+
+  const handleBattleTurnChange = useCallback(
+    (turnCount: number, turnSide: 'enemy' | 'ally', actionKey: string, activeUnitId: string | null) => {
+      setBattleTurn((prev) => (prev === turnCount ? prev : turnCount));
+      setBattleTurnSide((prev) => (prev === turnSide ? prev : turnSide));
+      setBattleActionKey((prev) => (prev === actionKey ? prev : actionKey));
+      setBattleActiveUnitId((prev) => (prev === activeUnitId ? prev : activeUnitId));
+    },
+    [],
+  );
+
+  const handleBattleEscape = useCallback(() => {
+    setViewMode('map');
+    setBattleTurn(0);
+    setBattleActiveUnitId(null);
+    setArenaBattleId(null);
+    setDungeonBattleId(null);
+    setDungeonInstanceId(null);
+  }, []);
+
+  const handleBattleCastSkill = useCallback((skillId: string, targetType?: string) => {
+    return battleSkillCasterRef.current(skillId, targetType);
+  }, []);
+
   useEffect(() => {
     messageRef.current = message;
   }, [message]);
@@ -1536,7 +1563,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         actionKey={viewMode === 'battle' ? battleActionKey : undefined}
         autoMode={autoMode}
         onAutoModeChange={handleAutoModeChange}
-        onCastSkill={(skillId, targetType) => battleSkillCasterRef.current(skillId, targetType)}
+        onCastSkill={handleBattleCastSkill}
       />
       <header className="game-header">
         <div className="game-header-left">
@@ -1609,32 +1636,13 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                       onNext={battleOnNext}
                       nextLabel="继续"
                       onAppendBattleLines={appendBattleLinesToChat}
-                      onBindSkillCaster={(caster) => {
-                        battleSkillCasterRef.current = caster;
-                      }}
+                      onBindSkillCaster={bindBattleSkillCaster}
                       onEscape={
                         !inTeam || isTeamLeader
-                          ? () => {
-                              setViewMode('map');
-                              setBattleTurn(0);
-                              setBattleActiveUnitId(null);
-                              setArenaBattleId(null);
-                              setDungeonBattleId(null);
-                              setDungeonInstanceId(null);
-                            }
+                          ? handleBattleEscape
                           : undefined
                       }
-                      onTurnChange={(
-                        turnCount: number,
-                        turnSide: 'enemy' | 'ally',
-                        actionKey: string,
-                        activeUnitId: string | null,
-                      ) => {
-                        setBattleTurn(turnCount);
-                        setBattleTurnSide(turnSide);
-                        setBattleActionKey(actionKey);
-                        setBattleActiveUnitId(activeUnitId);
-                      }}
+                      onTurnChange={handleBattleTurnChange}
                     />
                   </div>
                 </div>
@@ -1659,32 +1667,13 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                                 onNext={battleOnNext}
                                 nextLabel="继续"
                                 onAppendBattleLines={appendBattleLinesToChat}
-                                onBindSkillCaster={(caster) => {
-                                  battleSkillCasterRef.current = caster;
-                                }}
+                                onBindSkillCaster={bindBattleSkillCaster}
                                 onEscape={
                                   !inTeam || isTeamLeader
-                                    ? () => {
-                                        setViewMode('map');
-                                        setBattleTurn(0);
-                                        setBattleActiveUnitId(null);
-                                        setArenaBattleId(null);
-                                        setDungeonBattleId(null);
-                                        setDungeonInstanceId(null);
-                                      }
+                                    ? handleBattleEscape
                                     : undefined
                                 }
-                                onTurnChange={(
-                                  turnCount: number,
-                                  turnSide: 'enemy' | 'ally',
-                                  actionKey: string,
-                                  activeUnitId: string | null,
-                                ) => {
-                                  setBattleTurn(turnCount);
-                                  setBattleTurnSide(turnSide);
-                                  setBattleActionKey(actionKey);
-                                  setBattleActiveUnitId(activeUnitId);
-                                }}
+                                onTurnChange={handleBattleTurnChange}
                               />
                             ) : (
                               <GameMap
@@ -1726,32 +1715,13 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                       onNext={battleOnNext}
                       nextLabel="继续"
                       onAppendBattleLines={appendBattleLinesToChat}
-                      onBindSkillCaster={(caster) => {
-                        battleSkillCasterRef.current = caster;
-                      }}
+                      onBindSkillCaster={bindBattleSkillCaster}
                       onEscape={
                         !inTeam || isTeamLeader
-                          ? () => {
-                              setViewMode('map');
-                              setBattleTurn(0);
-                              setBattleActiveUnitId(null);
-                              setArenaBattleId(null);
-                              setDungeonBattleId(null);
-                              setDungeonInstanceId(null);
-                            }
+                          ? handleBattleEscape
                           : undefined
                       }
-                      onTurnChange={(
-                        turnCount: number,
-                        turnSide: 'enemy' | 'ally',
-                        actionKey: string,
-                        activeUnitId: string | null,
-                      ) => {
-                        setBattleTurn(turnCount);
-                        setBattleTurnSide(turnSide);
-                        setBattleActionKey(actionKey);
-                        setBattleActiveUnitId(activeUnitId);
-                      }}
+                      onTurnChange={handleBattleTurnChange}
                     />
                   ) : (
                     <GameMap

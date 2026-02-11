@@ -1,5 +1,5 @@
 import { App, Tooltip } from 'antd';
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { SERVER_BASE, getCharacterTechniqueStatus, type CharacterSkillSlotDto } from '../../../../services/api';
 import { gameSocket } from '../../../../services/gameSocket';
 import { formatSkillEffectLines } from '../skillEffectFormatter';
@@ -252,6 +252,28 @@ const buildSkillItems = (
   return next;
 };
 
+const syncSkillCooldownsFromMap = (prev: SkillItem[], cdMap: SkillCooldownMapDto): SkillItem[] => {
+  let changed = false;
+  const next = prev.map((skill) => {
+    const serverSkillId = skill.id === 'basic_attack' ? 'skill-normal-attack' : skill.id;
+    const serverLeft = Math.max(0, Math.floor(Number(cdMap[serverSkillId]) || 0));
+    if (skill.cooldownLeft === serverLeft) return skill;
+    changed = true;
+    return { ...skill, cooldownLeft: serverLeft };
+  });
+  return changed ? next : prev;
+};
+
+const resetSkillCooldowns = (prev: SkillItem[]): SkillItem[] => {
+  let changed = false;
+  const next = prev.map((skill) => {
+    if (skill.cooldownLeft <= 0) return skill;
+    changed = true;
+    return { ...skill, cooldownLeft: 0 };
+  });
+  return changed ? next : prev;
+};
+
 type SkillFloatButtonProps = {
   turn?: number;
   turnSide?: 'enemy' | 'ally';
@@ -409,21 +431,22 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       const myUnit = attackerUnits.find((u) => String(u?.id ?? '') === myUnitId);
       if (!myUnit) return;
 
-      myLingqiRef.current = Number(myUnit?.lingqi) || 0;
-      myQixueRef.current = Number(myUnit?.qixue) || 0;
-      gameSocket.updateCharacterLocal({
-        lingqi: myLingqiRef.current,
-        qixue: myQixueRef.current,
-      });
+      const nextLingqi = Number(myUnit?.lingqi) || 0;
+      const nextQixue = Number(myUnit?.qixue) || 0;
+      const lingqiChanged = myLingqiRef.current !== nextLingqi;
+      const qixueChanged = myQixueRef.current !== nextQixue;
+      myLingqiRef.current = nextLingqi;
+      myQixueRef.current = nextQixue;
+
+      if (lingqiChanged || qixueChanged) {
+        gameSocket.updateCharacterLocal({
+          lingqi: nextLingqi,
+          qixue: nextQixue,
+        });
+      }
 
       const cdMap = (isRecord(myUnit?.skillCooldowns) ? (myUnit.skillCooldowns as SkillCooldownMapDto) : {}) as SkillCooldownMapDto;
-      setSkills((prev) =>
-        prev.map((s) => {
-          const serverSkillId = s.id === 'basic_attack' ? 'skill-normal-attack' : s.id;
-          const serverLeft = Math.max(0, Math.floor(Number((cdMap as SkillCooldownMapDto)?.[serverSkillId]) || 0));
-          return s.cooldownLeft === serverLeft ? s : { ...s, cooldownLeft: serverLeft };
-        }),
-      );
+      setSkills((prev) => syncSkillCooldownsFromMap(prev, cdMap));
     };
 
     gameSocket.connect();
@@ -459,7 +482,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
     lastAutoActionKeyRef.current = null;
     lastAutoAttemptKeyRef.current = null;
     autoRetryCountRef.current = 0;
-    setSkills((prev) => prev.map((s) => (s.cooldownLeft > 0 ? { ...s, cooldownLeft: 0 } : s)));
+    setSkills((prev) => resetSkillCooldowns(prev));
   }, [actionKey, isBattleRunning, turn]);
 
   const nextLocalTurn = useCallback(() => {
@@ -749,4 +772,4 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   );
 };
 
-export default SkillFloatButton;
+export default memo(SkillFloatButton);
