@@ -69,6 +69,15 @@ const getRealmRank = (realm: string): number => {
   return idx >= 0 ? idx : 0;
 };
 
+const formatDropProbPercent = (value: number | null | undefined): string => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
+  const normalized = Math.max(0, Math.min(1, value));
+  const percent = normalized * 100;
+  const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
+  const trimmed = fixed.replace(/\.?0+$/, '') || '0';
+  return `${trimmed}%`;
+};
+
 const categoryLabels: Record<MapCategory, string> = {
   world: '大世界',
   dungeon: '秘境',
@@ -527,9 +536,7 @@ const MapModal: React.FC<MapModalProps> = ({ open, onClose, initialCategory, onE
                     const qty = dp.qty_min === dp.qty_max ? `${dp.qty_min}` : `${dp.qty_min}-${dp.qty_max}`;
                     const rate =
                       dp.mode === 'prob'
-                        ? dp.chance !== null
-                          ? `${dp.chance}`
-                          : '-'
+                        ? formatDropProbPercent(dp.chance)
                         : dp.weight !== null
                           ? `${dp.weight}`
                           : '-';
