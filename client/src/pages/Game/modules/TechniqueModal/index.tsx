@@ -61,6 +61,12 @@ type TechniqueSkill = {
   effects?: unknown[];
 };
 
+type SkillDetailItem = {
+  label: string;
+  value: string;
+  isEffect?: boolean;
+};
+
 type TechniqueCostItem = { id: string; name: string; icon: string; amount: number };
 
 type TechniqueLayer = {
@@ -164,8 +170,8 @@ const targetTypeLabel: Record<string, string> = {
   lowest_hp_enemy: '血量最低敌人',
 };
 
-const getSkillDetailItems = (skill: TechniqueSkill): Array<{ label: string; value: string }> => {
-  const items: Array<{ label: string; value: string }> = [];
+const getSkillDetailItems = (skill: TechniqueSkill): SkillDetailItem[] => {
+  const items: SkillDetailItem[] = [];
 
   if (skill.description) {
     items.push({ label: '描述', value: skill.description });
@@ -190,7 +196,7 @@ const getSkillDetailItems = (skill: TechniqueSkill): Array<{ label: string; valu
     element: skill.element,
   });
   effectLines.forEach((line, idx) => {
-    items.push({ label: `效果${idx + 1}`, value: line });
+    items.push({ label: `效果${idx + 1}`, value: line, isEffect: true });
   });
 
   return items;
@@ -205,21 +211,21 @@ const INLINE_SKILL_DETAIL_ORDER = [
   '气血消耗',
 ] as const;
 
-const getSkillInlineDetailItems = (skill: TechniqueSkill): Array<{ label: string; value: string }> => {
+const getSkillInlineDetailItems = (skill: TechniqueSkill): SkillDetailItem[] => {
   const allItems = getSkillDetailItems(skill);
   if (allItems.length === 0) return [];
 
-  const byLabel = new Map(allItems.map((item) => [item.label, item.value]));
+  const byLabel = new Map(allItems.map((item) => [item.label, item]));
 
-  const inlineItems = INLINE_SKILL_DETAIL_ORDER.reduce<Array<{ label: string; value: string }>>((acc, label) => {
-    const value = byLabel.get(label);
-    if (value !== undefined) {
-      acc.push({ label, value });
+  const inlineItems = INLINE_SKILL_DETAIL_ORDER.reduce<SkillDetailItem[]>((acc, label) => {
+    const item = byLabel.get(label);
+    if (item !== undefined) {
+      acc.push(item);
     }
     return acc;
   }, []);
 
-  const effectItems = allItems.filter((item) => item.label.startsWith('效果'));
+  const effectItems = allItems.filter((item) => item.isEffect);
 
   // 控制卡片信息密度，避免列表卡片过高
   return [...inlineItems, ...effectItems].slice(0, 7);
@@ -230,7 +236,7 @@ const getSkillInlineSummary = (skill: TechniqueSkill): string => {
   if (detailItems.length === 0) return '暂无详细信息';
 
   return detailItems
-    .map((item) => (item.label === '描述' ? item.value : `${item.label}:${item.value}`))
+    .map((item) => (item.label === '描述' || item.isEffect ? item.value : `${item.label}:${item.value}`))
     .join(' · ');
 };
 
@@ -243,9 +249,10 @@ const renderSkillInlineDetails = (skill: TechniqueSkill): React.ReactNode => {
   return (
     <div className="skill-inline-lines">
       {detailItems.map((item, idx) => {
-        if (item.label === '描述') {
+        if (item.label === '描述' || item.isEffect) {
+          const rowClassName = item.isEffect ? 'skill-inline-row is-effect' : 'skill-inline-row is-description';
           return (
-            <div key={`${item.label}-${idx}`} className="skill-inline-row is-description">
+            <div key={`${item.label}-${idx}`} className={rowClassName}>
               <span className="skill-inline-value">{item.value}</span>
             </div>
           );
@@ -271,12 +278,18 @@ const renderSkillTooltip = (skill: TechniqueSkill): React.ReactNode => {
       <div className="skill-tooltip-title">{skill.name}</div>
       {items.length > 0 ? (
         <div className="skill-tooltip-content">
-          {items.map((item, idx) => (
-            <div key={idx} className="skill-tooltip-row">
-              <span className="skill-tooltip-label">{item.label}：</span>
-              <span className="skill-tooltip-value">{item.value}</span>
-            </div>
-          ))}
+          {items.map((item, idx) =>
+            item.isEffect ? (
+              <div key={idx} className="skill-tooltip-row is-effect">
+                <span className="skill-tooltip-value">{item.value}</span>
+              </div>
+            ) : (
+              <div key={idx} className="skill-tooltip-row">
+                <span className="skill-tooltip-label">{item.label}：</span>
+                <span className="skill-tooltip-value">{item.value}</span>
+              </div>
+            ),
+          )}
         </div>
       ) : (
         <div className="skill-tooltip-empty">暂无详细信息</div>

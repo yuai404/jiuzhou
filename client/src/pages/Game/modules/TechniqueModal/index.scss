@@ -528,17 +528,19 @@
   gap: 8px;
 }
 
-.skill-item-summary .skill-inline-row.is-description {
+.skill-item-summary .skill-inline-row.is-description,
+.skill-item-summary .skill-inline-row.is-effect {
   justify-content: flex-start;
 }
 
-.skill-item-summary .skill-inline-row:not(.is-description) .skill-inline-value {
+.skill-item-summary .skill-inline-row:not(.is-description):not(.is-effect) .skill-inline-value {
   text-align: right;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
-.skill-item-summary .skill-inline-row.is-description .skill-inline-value {
+.skill-item-summary .skill-inline-row.is-description .skill-inline-value,
+.skill-item-summary .skill-inline-row.is-effect .skill-inline-value {
   line-height: 1.45;
 }
 
@@ -560,7 +562,8 @@
   color: var(--text-tertiary);
 }
 
-.skill-inline-row.is-description {
+.skill-inline-row.is-description,
+.skill-inline-row.is-effect {
   grid-column: 1 / -1;
 }
 
@@ -1597,6 +1600,10 @@
   gap: 8px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.skill-tooltip-row.is-effect {
+  display: block;
 }
 
 .skill-tooltip-label {
