@@ -1,7 +1,8 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../../config/database.js';
 import { assertMember, generateSectId, getCharacterSectId, hasPermission, positionRank, toNumber } from './db.js';
-import type { CreateResult, Result, SectDefRow, SectInfo, SectListResult, SectPosition } from './types.js';
+import { withBuildingRequirement } from './buildings.js';
+import type { CreateResult, Result, SectBuildingRow, SectDefRow, SectInfo, SectListResult, SectPosition } from './types.js';
 import { updateAchievementProgress } from '../achievementService.js';
 
 const DEFAULT_BUILDINGS: string[] = [
@@ -153,13 +154,15 @@ export const getSectInfo = async (sectId: string): Promise<{ success: boolean; m
       joinedAt: String(r.joined_at),
     }));
 
+    const buildings = buildingsRes.rows.map((row) => withBuildingRequirement(row as SectBuildingRow));
+
     return {
       success: true,
       message: 'ok',
       data: {
         sect,
         members,
-        buildings: buildingsRes.rows as any,
+        buildings,
       },
     };
   } catch (error) {

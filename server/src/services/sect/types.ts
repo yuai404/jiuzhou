@@ -34,6 +34,19 @@ export interface SectBuildingRow {
   updated_at: string;
 }
 
+export interface SectBuildingRequirement {
+  upgradable: boolean;
+  maxLevel: number;
+  nextLevel: number | null;
+  funds: number | null;
+  buildPoints: number | null;
+  reason: string | null;
+}
+
+export interface SectBuildingView extends SectBuildingRow {
+  requirement: SectBuildingRequirement;
+}
+
 export interface SectApplicationRow {
   id: number;
   sect_id: string;
@@ -76,7 +89,7 @@ export interface SectInfo {
     weeklyContribution: number;
     joinedAt: string;
   }>;
-  buildings: SectBuildingRow[];
+  buildings: SectBuildingView[];
 }
 
 export interface SectBonuses {

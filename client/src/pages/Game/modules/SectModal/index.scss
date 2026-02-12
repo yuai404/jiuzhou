@@ -229,34 +229,110 @@
 .sect-buildings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .sect-building {
+  --building-accent: var(--primary-color);
+  position: relative;
   border: 1px solid var(--border-color);
-  background: var(--panel-bg-soft);
+  background: linear-gradient(160deg, var(--panel-bg-soft) 0%, var(--panel-bg) 100%);
   border-radius: 14px;
-  padding: 12px 12px;
+  padding: 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.sect-building::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.08) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+.sect-building:hover {
+  transform: translateY(-2px);
+  border-color: var(--building-accent);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.1);
+}
+
+.sect-building-tone-core {
+  --building-accent: #1677ff;
+}
+
+.sect-building-tone-scripture {
+  --building-accent: #13a8a8;
+}
+
+.sect-building-tone-martial {
+  --building-accent: #fa8c16;
+}
+
+.sect-building-tone-craft {
+  --building-accent: #722ed1;
+}
+
+.sect-building-tone-array {
+  --building-accent: #2f54eb;
 }
 
 .sect-building-disabled {
-  opacity: 0.92;
+  opacity: 0.96;
 }
 
 .sect-building-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.sect-building-name-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sect-building-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid var(--building-accent);
+  background: var(--panel-bg);
+  color: var(--building-accent);
+  font-size: 14px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sect-building-name-stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .sect-building-name {
   font-size: 14px;
   font-weight: 900;
   color: var(--text-color);
+  line-height: 1.2;
+}
+
+.sect-building-level-path {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  line-height: 1.3;
 }
 
 .sect-building-desc {
@@ -275,10 +351,87 @@
   font-weight: 900;
 }
 
+.sect-building-requirements {
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  border-radius: 12px;
+  padding: 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sect-building-requirements-title {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-building-requirements-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sect-building-requirement-item {
+  border: 1px solid var(--border-color-soft);
+  background: var(--panel-bg-soft);
+  border-radius: 10px;
+  padding: 8px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sect-building-requirement-item span {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.sect-building-requirement-item strong {
+  font-size: 13px;
+  color: var(--text-color);
+  font-weight: 900;
+}
+
+.sect-building-requirement-item.is-lack {
+  border-color: var(--danger-color);
+  background: rgba(255, 77, 79, 0.12);
+}
+
+.sect-building-requirement-item.is-lack strong {
+  color: var(--danger-color);
+}
+
+.sect-building-requirement-locked {
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 8px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  background: var(--panel-bg-soft);
+}
+
+.sect-building-requirements-note {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+}
+
+.sect-building-requirements-note.is-lack {
+  color: var(--danger-color);
+}
+
 .sect-building-actions {
   display: flex;
   gap: 10px;
   margin-top: auto;
+}
+
+.sect-building-upgrade-btn {
+  width: 100%;
+  font-weight: 900;
 }
 
 .sect-building-upgrade-btn.ant-btn[disabled],
@@ -507,6 +660,10 @@
   }
 
   .sect-buildings {
+    grid-template-columns: 1fr;
+  }
+
+  .sect-building-requirements-grid {
     grid-template-columns: 1fr;
   }
 

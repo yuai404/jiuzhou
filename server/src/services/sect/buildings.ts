@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../../config/database.js';
 import { assertMember, hasPermission, toNumber } from './db.js';
-import type { Result, SectBuildingRow } from './types.js';
+import type { Result, SectBuildingRequirement, SectBuildingRow, SectBuildingView } from './types.js';
 
 const addLogTx = async (
   client: PoolClient,
@@ -17,29 +17,78 @@ const addLogTx = async (
   );
 };
 
+const FULLY_UPGRADED_MESSAGE = '建筑已满级';
+const UPGRADE_CLOSED_MESSAGE = '暂未开放';
+const BUILDING_MAX_LEVEL = 10;
+
 const HALL_BUILDING_TYPE = 'hall';
 const ONLY_HALL_UPGRADE_MESSAGE = '当前仅开放宗门大殿升级';
 
 export const getBuildings = async (
   characterId: number
-): Promise<{ success: boolean; message: string; data?: SectBuildingRow[] }> => {
+): Promise<{ success: boolean; message: string; data?: SectBuildingView[] }> => {
   try {
     const member = await assertMember(characterId);
     const res = await pool.query('SELECT * FROM sect_building WHERE sect_id = $1 ORDER BY building_type', [member.sectId]);
-    return { success: true, message: 'ok', data: res.rows as any };
+    return {
+      success: true,
+      message: 'ok',
+      data: res.rows.map((row) => withBuildingRequirement(row as SectBuildingRow)),
+    };
   } catch (error) {
     console.error('获取建筑失败:', error);
     return { success: false, message: '获取建筑失败' };
   }
 };
 
-const buildingMaxLevel = 10;
-
 const calcHallUpgradeCost = (currentLevel: number): { funds: number; buildPoints: number } => {
   const nextLevel = currentLevel + 1;
   return {
     funds: Math.floor(1000 * 1.2 * nextLevel * nextLevel),
     buildPoints: Math.floor(10 * nextLevel),
+  };
+};
+
+export const getBuildingUpgradeRequirement = (buildingType: string, currentLevel: number): SectBuildingRequirement => {
+  if (buildingType !== HALL_BUILDING_TYPE) {
+    return {
+      upgradable: false,
+      maxLevel: BUILDING_MAX_LEVEL,
+      nextLevel: null,
+      funds: null,
+      buildPoints: null,
+      reason: UPGRADE_CLOSED_MESSAGE,
+    };
+  }
+
+  if (currentLevel >= BUILDING_MAX_LEVEL) {
+    return {
+      upgradable: false,
+      maxLevel: BUILDING_MAX_LEVEL,
+      nextLevel: null,
+      funds: null,
+      buildPoints: null,
+      reason: FULLY_UPGRADED_MESSAGE,
+    };
+  }
+
+  const cost = calcHallUpgradeCost(currentLevel);
+  return {
+    upgradable: true,
+    maxLevel: BUILDING_MAX_LEVEL,
+    nextLevel: currentLevel + 1,
+    funds: cost.funds,
+    buildPoints: cost.buildPoints,
+    reason: null,
+  };
+};
+
+export const withBuildingRequirement = (building: SectBuildingRow): SectBuildingView => {
+  const level = toNumber(building.level);
+  return {
+    ...building,
+    level,
+    requirement: getBuildingUpgradeRequirement(building.building_type, level),
   };
 };
 
@@ -77,12 +126,13 @@ export const upgradeBuilding = async (characterId: number, buildingType: string)
     }
 
     const building = buildingRes.rows[0] as SectBuildingRow;
-    if (building.level >= buildingMaxLevel) {
+    const currentLevel = toNumber(building.level);
+    if (currentLevel >= BUILDING_MAX_LEVEL) {
       await client.query('ROLLBACK');
-      return { success: false, message: '建筑已满级' };
+      return { success: false, message: FULLY_UPGRADED_MESSAGE };
     }
 
-    const cost = calcHallUpgradeCost(building.level);
+    const cost = calcHallUpgradeCost(currentLevel);
     const sectRes = await client.query(`SELECT funds, build_points FROM sect_def WHERE id = $1 FOR UPDATE`, [member.sectId]);
     if (sectRes.rows.length === 0) {
       await client.query('ROLLBACK');

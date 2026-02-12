@@ -95,6 +95,14 @@ export type SectBuildingDto = {
   upgrade_end_at: string | null;
   created_at: string;
   updated_at: string;
+  requirement: {
+    upgradable: boolean;
+    maxLevel: number;
+    nextLevel: number | null;
+    funds: number | null;
+    buildPoints: number | null;
+    reason: string | null;
+  };
 };
 
 export type SectInfoDto = {

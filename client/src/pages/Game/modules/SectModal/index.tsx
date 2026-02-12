@@ -47,6 +47,19 @@ type SectBuilding = {
   level: number;
   desc: string;
   effect: string;
+  icon: string;
+  tone: 'core' | 'scripture' | 'martial' | 'craft' | 'array';
+  requirement: {
+    upgradable: boolean;
+    maxLevel: number;
+    nextLevel: number | null;
+    funds: number | null;
+    buildPoints: number | null;
+    reason: string | null;
+  };
+  canAfford: boolean;
+  fundsGap: number;
+  buildPointsGap: number;
 };
 
 type SectTabKey = 'members' | 'buildings' | 'shop' | 'activity' | 'manage';
@@ -147,14 +160,14 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
   }, [myMember]);
 
   const buildings = useMemo((): SectBuilding[] => {
-    const metaByType: Record<string, { name: string; desc: string }> = {
-      hall: { name: '宗门大殿', desc: '宗门核心建筑，提升成员上限并解锁更多功能。' },
-      library: { name: '藏经阁', desc: '存放功法典籍，提高修炼效率。' },
-      training_hall: { name: '演武场', desc: '宗门弟子修炼之地，提升修炼收益。' },
-      alchemy_room: { name: '炼丹房', desc: '炼制丹药，提供日常补给。' },
-      forge_house: { name: '炼器房', desc: '打造灵器法宝，提升装备品质。' },
-      spirit_array: { name: '聚灵阵', desc: '汇聚天地灵气，提升修炼速度。' },
-      defense_array: { name: '护山大阵', desc: '守护宗门的阵法，提升宗门整体防御。' },
+    const metaByType: Record<string, { name: string; desc: string; icon: string; tone: SectBuilding['tone'] }> = {
+      hall: { name: '宗门大殿', desc: '宗门核心建筑，提升成员上限并解锁更多功能。', icon: '殿', tone: 'core' },
+      library: { name: '藏经阁', desc: '存放功法典籍，提高修炼效率。', icon: '阁', tone: 'scripture' },
+      training_hall: { name: '演武场', desc: '宗门弟子修炼之地，提升修炼收益。', icon: '武', tone: 'martial' },
+      alchemy_room: { name: '炼丹房', desc: '炼制丹药，提供日常补给。', icon: '丹', tone: 'craft' },
+      forge_house: { name: '炼器房', desc: '打造灵器法宝，提升装备品质。', icon: '器', tone: 'craft' },
+      spirit_array: { name: '聚灵阵', desc: '汇聚天地灵气，提升修炼速度。', icon: '灵', tone: 'array' },
+      defense_array: { name: '护山大阵', desc: '守护宗门的阵法，提升宗门整体防御。', icon: '阵', tone: 'array' },
     };
 
     const effectText = (buildingType: string, level: number): string => {
@@ -171,9 +184,30 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
       return '—';
     };
 
+    const sectFunds = Number(mySectInfo?.sect.funds) || 0;
+    const sectBuildPoints = Number(mySectInfo?.sect.build_points) || 0;
+
     return (mySectInfo?.buildings ?? []).map((b) => {
-      const meta = metaByType[b.building_type] ?? { name: b.building_type, desc: '—' };
+      const meta = metaByType[b.building_type] ?? {
+        name: b.building_type,
+        desc: '—',
+        icon: '建',
+        tone: 'core' as const,
+      };
       const level = Number(b.level) || 1;
+      const requirement = {
+        upgradable: Boolean(b.requirement.upgradable),
+        maxLevel: Number(b.requirement.maxLevel) || 10,
+        nextLevel: b.requirement.nextLevel === null ? null : Number(b.requirement.nextLevel),
+        funds: b.requirement.funds === null ? null : Number(b.requirement.funds),
+        buildPoints: b.requirement.buildPoints === null ? null : Number(b.requirement.buildPoints),
+        reason: b.requirement.reason ?? null,
+      };
+      const fundsNeed = requirement.funds ?? 0;
+      const buildPointsNeed = requirement.buildPoints ?? 0;
+      const canAfford = requirement.upgradable && sectFunds >= fundsNeed && sectBuildPoints >= buildPointsNeed;
+      const fundsGap = requirement.upgradable ? Math.max(0, fundsNeed - sectFunds) : 0;
+      const buildPointsGap = requirement.upgradable ? Math.max(0, buildPointsNeed - sectBuildPoints) : 0;
       return {
         id: String(b.id),
         buildingType: b.building_type,
@@ -181,6 +215,12 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
         level,
         desc: meta.desc,
         effect: effectText(b.building_type, level),
+        icon: meta.icon,
+        tone: meta.tone,
+        requirement,
+        canAfford,
+        fundsGap,
+        buildPointsGap,
       };
     });
   }, [mySectInfo]);
@@ -660,22 +700,67 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
       <div className="sect-panel-body">
         <div className="sect-buildings">
           {buildings.map((b) => {
-            const isHall = b.buildingType === 'hall';
             const loadingKey = `upgrade-${b.buildingType}`;
+            const canTriggerUpgrade = b.requirement.upgradable && canUpgradeBuilding && b.canAfford;
+            const missingParts: string[] = [];
+            if (b.fundsGap > 0) missingParts.push(`资金 ${b.fundsGap.toLocaleString()}`);
+            if (b.buildPointsGap > 0) missingParts.push(`建设点 ${b.buildPointsGap.toLocaleString()}`);
+            const requirementStatusText = b.requirement.upgradable
+              ? b.canAfford
+                ? '资源满足，可进行升级'
+                : `资源不足：${missingParts.join('，')}`
+              : b.requirement.reason || '暂不可升级';
+            const upgradeBtnText = !b.requirement.upgradable
+              ? b.requirement.reason || '暂不可升级'
+              : !canUpgradeBuilding
+                ? '无权限'
+                : !b.canAfford
+                  ? '资源不足'
+                  : '升级';
             return (
-              <div key={b.id} className={`sect-building${isHall ? '' : ' sect-building-disabled'}`}>
+              <div key={b.id} className={`sect-building sect-building-tone-${b.tone}${b.requirement.upgradable ? '' : ' sect-building-disabled'}`}>
                 <div className="sect-building-top">
-                  <div className="sect-building-name">{b.name}</div>
-                  <Tag color="blue">Lv.{b.level}</Tag>
+                  <div className="sect-building-name-wrap">
+                    <div className="sect-building-icon">{b.icon}</div>
+                    <div className="sect-building-name-stack">
+                      <div className="sect-building-name">{b.name}</div>
+                      <div className="sect-building-level-path">
+                        {b.requirement.nextLevel ? `Lv.${b.level} -> Lv.${b.requirement.nextLevel}` : `Lv.${b.level} / Lv.${b.requirement.maxLevel}`}
+                      </div>
+                    </div>
+                  </div>
+                  <Tag color={b.requirement.upgradable ? 'blue' : 'default'}>
+                    {b.requirement.upgradable ? '可升级' : b.requirement.reason || '暂不可升级'}
+                  </Tag>
                 </div>
                 <div className="sect-building-desc">{b.desc}</div>
                 <div className="sect-building-effect">{b.effect}</div>
+                <div className="sect-building-requirements">
+                  <div className="sect-building-requirements-title">升级需求</div>
+                  {b.requirement.upgradable ? (
+                    <div className="sect-building-requirements-grid">
+                      <div className={`sect-building-requirement-item${b.fundsGap > 0 ? ' is-lack' : ''}`}>
+                        <span>宗门资金</span>
+                        <strong>{(b.requirement.funds ?? 0).toLocaleString()}</strong>
+                      </div>
+                      <div className={`sect-building-requirement-item${b.buildPointsGap > 0 ? ' is-lack' : ''}`}>
+                        <span>建设点</span>
+                        <strong>{(b.requirement.buildPoints ?? 0).toLocaleString()}</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="sect-building-requirement-locked">{b.requirement.reason || '暂不可升级'}</div>
+                  )}
+                  <div className={`sect-building-requirements-note${b.requirement.upgradable && !b.canAfford ? ' is-lack' : ''}`}>
+                    {requirementStatusText}
+                  </div>
+                </div>
                 <div className="sect-building-actions">
                   <Button
                     className="sect-building-upgrade-btn"
                     size="small"
                     onClick={async () => {
-                      if (!isHall || !canUpgradeBuilding) return;
+                      if (!canTriggerUpgrade) return;
                       setActionLoadingKey(loadingKey);
                       try {
                         const res = await upgradeSectBuilding(b.buildingType);
@@ -690,9 +775,9 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
                       }
                     }}
                     loading={actionLoadingKey === loadingKey}
-                    disabled={!isHall || !canUpgradeBuilding}
+                    disabled={!canTriggerUpgrade}
                   >
-                    {isHall ? '升级' : '暂未开放'}
+                    {upgradeBtnText}
                   </Button>
                 </div>
               </div>
