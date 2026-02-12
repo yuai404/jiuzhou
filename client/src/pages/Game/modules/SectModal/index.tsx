@@ -3,11 +3,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import {
   applyToSect,
+  buyFromSectShop,
   createSect as createSectApi,
+  donateToSect,
+  getSectShop,
   getMySect,
   leaveSect as leaveSectApi,
   searchSects,
   type SectInfoDto,
+  type SectShopItemDto,
   upgradeSectBuilding,
   type SectApplicationDto,
   getSectApplications,
@@ -51,10 +55,20 @@ interface SectModalProps {
   open: boolean;
   onClose: () => void;
   spiritStones?: number;
+  silver?: number;
   playerName?: string;
 }
 
-const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, playerName = '我' }) => {
+const parseNonNegativeInteger = (raw: string): number | null => {
+  const value = raw.trim();
+  if (!value) return 0;
+  if (!/^\d+$/.test(value)) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || !Number.isSafeInteger(n) || n < 0) return null;
+  return n;
+};
+
+const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, silver = 0, playerName = '我' }) => {
   const { message } = App.useApp();
   const createCost = 1000;
   const canAffordCreate = spiritStones >= createCost;
@@ -65,6 +79,9 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createNotice, setCreateNotice] = useState('');
+  const [donateOpen, setDonateOpen] = useState(false);
+  const [donateSilverInput, setDonateSilverInput] = useState('');
+  const [donateSpiritStonesInput, setDonateSpiritStonesInput] = useState('');
 
   const [tab, setTab] = useState<SectTabKey>('members');
 
@@ -75,6 +92,14 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
   const [applications, setApplications] = useState<SectApplicationDto[]>([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
+  const [shopItems, setShopItems] = useState<SectShopItemDto[]>([]);
+  const [shopLoading, setShopLoading] = useState(false);
+
+  const closeDonateModal = useCallback(() => {
+    setDonateOpen(false);
+    setDonateSilverInput('');
+    setDonateSpiritStonesInput('');
+  }, []);
 
   const joinedSect = useMemo(() => {
     if (!mySectInfo?.sect) return null;
@@ -111,6 +136,11 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
       online: false,
     }));
   }, [mySectInfo]);
+
+  const myContribution = useMemo(() => {
+    const myMember = mySectInfo?.members.find((m) => m.nickname === playerName);
+    return Number(myMember?.contribution) || 0;
+  }, [mySectInfo, playerName]);
 
   const buildings = useMemo((): SectBuilding[] => {
     const metaByType: Record<string, { name: string; desc: string }> = {
@@ -151,6 +181,28 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
     });
   }, [mySectInfo]);
 
+  const donateSilverAmount = useMemo(() => parseNonNegativeInteger(donateSilverInput), [donateSilverInput]);
+  const donateSpiritStonesAmount = useMemo(
+    () => parseNonNegativeInteger(donateSpiritStonesInput),
+    [donateSpiritStonesInput]
+  );
+  const donateSummary = useMemo(() => {
+    if (donateSilverAmount === null || donateSpiritStonesAmount === null) {
+      return { canSubmit: false, reason: '请输入非负整数', added: 0 };
+    }
+    if (donateSilverAmount === 0 && donateSpiritStonesAmount === 0) {
+      return { canSubmit: false, reason: '至少输入一种捐献', added: 0 };
+    }
+    if (donateSilverAmount > silver) {
+      return { canSubmit: false, reason: '银两不足', added: 0 };
+    }
+    if (donateSpiritStonesAmount > spiritStones) {
+      return { canSubmit: false, reason: '灵石不足', added: 0 };
+    }
+    const added = donateSilverAmount + donateSpiritStonesAmount * 100;
+    return { canSubmit: true, reason: '', added };
+  }, [donateSilverAmount, donateSpiritStonesAmount, silver, spiritStones]);
+
   const isLeader = (joinedSect?.leader ?? '—') === playerName;
 
   const reset = () => {
@@ -159,11 +211,17 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
     setCreateOpen(false);
     setCreateName('');
     setCreateNotice('');
+    closeDonateModal();
     setTab('members');
     setActionLoadingKey(null);
     setListLoading(false);
     setSects([]);
     setMySectInfo(null);
+    setApplications([]);
+    setApplicationsLoading(false);
+    setHasPermission(false);
+    setShopItems([]);
+    setShopLoading(false);
   };
 
   const refreshList = useCallback(async () => {
@@ -289,6 +347,61 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
     }
   }, [canAffordCreate, createName, createNotice, message, refreshList, refreshMySect]);
 
+  const donateAction = useCallback(async () => {
+    if (!donateSummary.canSubmit) {
+      message.warning(donateSummary.reason || '捐献参数无效');
+      return;
+    }
+    setActionLoadingKey('donate');
+    try {
+      const res = await donateToSect(donateSilverAmount || undefined, donateSpiritStonesAmount || undefined);
+      if (!res.success) throw new Error(res.message || '捐献失败');
+      message.success(res.message || '捐献成功');
+      closeDonateModal();
+      await refreshMySect(false);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      message.error(err.message || '捐献失败');
+    } finally {
+      setActionLoadingKey(null);
+    }
+  }, [closeDonateModal, donateSilverAmount, donateSpiritStonesAmount, donateSummary, message, refreshMySect]);
+
+  const fetchShop = useCallback(async () => {
+    setShopLoading(true);
+    try {
+      const res = await getSectShop();
+      if (!res.success) throw new Error(res.message || '获取失败');
+      setShopItems(res.data ?? []);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      message.error(err.message || '获取宗门商店失败');
+      setShopItems([]);
+    } finally {
+      setShopLoading(false);
+    }
+  }, [message]);
+
+  const buyShopItem = useCallback(
+    async (item: SectShopItemDto) => {
+      const loadingKey = `shop-buy-${item.id}`;
+      setActionLoadingKey(loadingKey);
+      try {
+        const res = await buyFromSectShop(item.id, 1);
+        if (!res.success) throw new Error(res.message || '购买失败');
+        message.success(res.message || '购买成功');
+        await refreshMySect(false);
+        await fetchShop();
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        message.error(err.message || '购买失败');
+      } finally {
+        setActionLoadingKey(null);
+      }
+    },
+    [fetchShop, message, refreshMySect]
+  );
+
   // 检查是否有管理权限（宗主、副宗主、长老）
   const checkPermission = useCallback(() => {
     const myMember = mySectInfo?.members.find((m) => m.nickname === playerName);
@@ -348,6 +461,12 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
       void fetchApplications();
     }
   }, [tab, joinState, fetchApplications]);
+
+  useEffect(() => {
+    if (tab === 'shop' && joinState === 'joined') {
+      void fetchShop();
+    }
+  }, [tab, joinState, fetchShop]);
 
   // 格式化相对时间
   const formatRelativeTime = useCallback((dateString: string) => {
@@ -589,7 +708,45 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
     <div className="sect-panel">
       <div className="sect-panel-title">宗门商店</div>
       <div className="sect-panel-body">
-        <div className="sect-empty">敬请期待</div>
+        <div className="sect-shop-head">
+          <div className="sect-shop-head-label">当前贡献</div>
+          <div className="sect-shop-head-value">{myContribution.toLocaleString()}</div>
+        </div>
+        {shopLoading ? (
+          <div className="sect-empty">商店加载中...</div>
+        ) : shopItems.length === 0 ? (
+          <div className="sect-empty">暂无可兑换商品</div>
+        ) : (
+          <div className="sect-shop-grid">
+            {shopItems.map((item) => {
+              const affordable = myContribution >= item.costContribution;
+              const loadingKey = `shop-buy-${item.id}`;
+              return (
+                <div key={item.id} className="sect-shop-card">
+                  <div className="sect-shop-card-top">
+                    <div className="sect-shop-name">{item.name}</div>
+                    <Tag color={affordable ? 'blue' : 'default'}>贡献 {item.costContribution.toLocaleString()}</Tag>
+                  </div>
+                  <div className="sect-shop-meta">
+                    <Tag>数量 x{item.qty}</Tag>
+                    <Tag>编号 {item.itemDefId}</Tag>
+                  </div>
+                  <Button
+                    type="primary"
+                    size="small"
+                    loading={actionLoadingKey === loadingKey}
+                    disabled={!affordable}
+                    onClick={() => {
+                      void buyShopItem(item);
+                    }}
+                  >
+                    {affordable ? '兑换' : '贡献不足'}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -681,8 +838,15 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
             <div className="sect-manage-grid">
               <div className="sect-manage-card">
                 <div className="sect-manage-name">宗门捐献</div>
-                <div className="sect-manage-desc">捐献灵石，获得贡献与宗门资金。</div>
-                <Button type="primary">立即捐献</Button>
+                <div className="sect-manage-desc">捐献银两或灵石，获得贡献与宗门资金。</div>
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setDonateOpen(true);
+                  }}
+                >
+                  立即捐献
+                </Button>
               </div>
               <div className="sect-manage-card">
                 <div className="sect-manage-name">成员管理</div>
@@ -738,6 +902,63 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
       maskClosable
     >
       <div className="sect-modal-shell">{joinState === 'joined' ? renderJoined() : renderNoSect()}</div>
+
+      <Modal
+        open={donateOpen}
+        onCancel={closeDonateModal}
+        centered
+        width={560}
+        title="宗门捐献"
+        className="sect-submodal"
+        destroyOnHidden
+        okText="确认捐献"
+        cancelText="取消"
+        onOk={() => {
+          void donateAction();
+        }}
+        confirmLoading={actionLoadingKey === 'donate'}
+        okButtonProps={{ disabled: !donateSummary.canSubmit }}
+      >
+        <div className="sect-donate">
+          <div className="sect-donate-balance">
+            <div className="sect-donate-balance-item">
+              <div className="sect-donate-balance-k">当前银两</div>
+              <div className="sect-donate-balance-v">{silver.toLocaleString()}</div>
+            </div>
+            <div className="sect-donate-balance-item">
+              <div className="sect-donate-balance-k">当前灵石</div>
+              <div className="sect-donate-balance-v">{spiritStones.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="sect-create-field">
+            <div className="sect-create-label">捐献银两</div>
+            <Input
+              value={donateSilverInput}
+              onChange={(e) => setDonateSilverInput(e.target.value)}
+              inputMode="numeric"
+              placeholder="请输入银两数量"
+              maxLength={12}
+            />
+          </div>
+          <div className="sect-create-field">
+            <div className="sect-create-label">捐献灵石</div>
+            <Input
+              value={donateSpiritStonesInput}
+              onChange={(e) => setDonateSpiritStonesInput(e.target.value)}
+              inputMode="numeric"
+              placeholder="请输入灵石数量"
+              maxLength={12}
+            />
+          </div>
+          <div className="sect-donate-preview">
+            <div className="sect-donate-preview-k">预计获得</div>
+            <div className="sect-donate-preview-v">
+              贡献 +{donateSummary.added.toLocaleString()}，宗门资金 +{donateSummary.added.toLocaleString()}
+            </div>
+            {donateSummary.canSubmit ? <Tag color="green">可捐献</Tag> : <Tag color="red">{donateSummary.reason}</Tag>}
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={createOpen}

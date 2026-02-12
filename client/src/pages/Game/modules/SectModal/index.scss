@@ -277,6 +277,70 @@
   margin-top: auto;
 }
 
+.sect-shop-head {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sect-shop-head-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-shop-head-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sect-shop-card {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sect-shop-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sect-shop-name {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+.sect-shop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sect-shop-meta .ant-tag {
+  margin: 0;
+}
+
 .sect-manage-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -367,6 +431,60 @@
   color: var(--text-tertiary);
 }
 
+.sect-donate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sect-donate-balance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sect-donate-balance-item {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 10px 12px;
+}
+
+.sect-donate-balance-k {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-donate-balance-v {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.sect-donate-preview {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg-soft);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sect-donate-preview-k {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.sect-donate-preview-v {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
 @media screen and (max-width: 768px) {
   .sect-modal-shell {
     height: 82vh;
@@ -380,11 +498,19 @@
     grid-template-columns: 1fr;
   }
 
+  .sect-shop-grid {
+    grid-template-columns: 1fr;
+  }
+
   .sect-applications-grid {
     grid-template-columns: 1fr;
   }
 
   .sect-manage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sect-donate-balance {
     grid-template-columns: 1fr;
   }
 }

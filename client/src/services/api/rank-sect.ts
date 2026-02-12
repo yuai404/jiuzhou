@@ -190,3 +190,36 @@ export const handleSectApplication = (
 export const cancelSectApplication = (applicationId: number): Promise<{ success: boolean; message: string }> => {
   return api.post('/sect/applications/cancel', { applicationId });
 };
+
+export type SectShopItemDto = {
+  id: string;
+  name: string;
+  costContribution: number;
+  itemDefId: string;
+  qty: number;
+  limitDaily?: number;
+};
+
+export interface SectShopResponse {
+  success: boolean;
+  message: string;
+  data?: SectShopItemDto[];
+}
+
+export const getSectShop = (): Promise<SectShopResponse> => {
+  return api.get('/sect/shop');
+};
+
+export const buyFromSectShop = (
+  itemId: string,
+  quantity: number = 1
+): Promise<{ success: boolean; message: string; itemDefId?: string; qty?: number; itemIds?: number[] }> => {
+  return api.post('/sect/shop/buy', { itemId, quantity });
+};
+
+export const donateToSect = (
+  silver?: number,
+  spiritStones?: number
+): Promise<{ success: boolean; message: string; addedFunds?: number; addedContribution?: number }> => {
+  return api.post('/sect/donate', { silver, spiritStones });
+};

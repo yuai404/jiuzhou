@@ -2551,6 +2551,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
             }, 0);
           }}
           spiritStones={spiritStones}
+          silver={silver}
           playerName={playerName}
         />
       )}
