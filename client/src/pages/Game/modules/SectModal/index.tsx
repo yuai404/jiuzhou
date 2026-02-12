@@ -720,15 +720,12 @@ const SectModal: React.FC<SectModalProps> = ({ open, onClose, spiritStones = 0, 
               return (
                 <div key={item.id} className="sect-shop-card">
                   <div className="sect-shop-card-top">
-                    <div className="sect-shop-name-wrap">
-                      <div className="sect-shop-name">{item.name}</div>
-                      {dailyLimit > 0 ? <div className="sect-shop-limit-chip">每日限购 {dailyLimit}</div> : null}
-                    </div>
+                    <div className="sect-shop-name">{item.name}</div>
                     <Tag color={affordable ? 'blue' : 'default'}>贡献 {item.costContribution.toLocaleString()}</Tag>
                   </div>
                   <div className="sect-shop-meta">
                     <Tag>数量 x{item.qty}</Tag>
-                    <Tag>编号 {item.itemDefId}</Tag>
+                    {dailyLimit > 0 ? <Tag>每日限购 {dailyLimit}</Tag> : null}
                   </div>
                   <Button
                     type="primary"
