@@ -30,7 +30,7 @@ function calculateLifesteal(
   damage: number
 ): number {
   const lifestealRate = Math.min(attacker.currentAttrs.xixue, BATTLE_CONSTANTS.MAX_LIFESTEAL);
-  return Math.floor(damage * lifestealRate / 10000);
+  return Math.floor(damage * lifestealRate);
 }
 
 /**

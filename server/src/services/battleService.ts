@@ -258,7 +258,7 @@ async function applyTechniquePassivesToCharacterData<T extends Record<string, an
     if (keys.length === 0) return base;
 
     const merged: any = { ...base };
-    const permyriadAdditiveKeys = new Set([
+    const percentAdditiveKeys = new Set([
       'mingzhong',
       'shanbi',
       'zhaojia',
@@ -279,7 +279,6 @@ async function applyTechniquePassivesToCharacterData<T extends Record<string, an
       'shuxing_shuzhi',
     ]);
     const percentMultiplyKeys = new Set(['wugong', 'fagong', 'wufang', 'fafang', 'max_qixue']);
-    const scaledHundredAddKeys = new Set(['sudu', 'max_lingqi', 'qixue_huifu', 'lingqi_huifu']);
 
     for (const key of keys) {
       const value = passives[key];
@@ -287,16 +286,12 @@ async function applyTechniquePassivesToCharacterData<T extends Record<string, an
       if (!(key in merged)) continue;
       const baseValue = typeof merged[key] === 'number' ? (merged[key] as number) : undefined;
       if (baseValue == null) continue;
-      if (permyriadAdditiveKeys.has(key)) {
+      if (percentAdditiveKeys.has(key)) {
         merged[key] = baseValue + value;
         continue;
       }
       if (percentMultiplyKeys.has(key)) {
-        merged[key] = Math.floor((baseValue * (10000 + value)) / 10000);
-        continue;
-      }
-      if (scaledHundredAddKeys.has(key)) {
-        merged[key] = baseValue + value / 100;
+        merged[key] = Math.floor(baseValue * (1 + value));
         continue;
       }
       merged[key] = baseValue + value;

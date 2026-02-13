@@ -71,8 +71,7 @@ const PlayerInfo: React.FC = () => {
   const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
   const formatPercent = useCallback((value: number) => {
-    // 万分比转百分比
-    const percent = value / 100;
+    const percent = value * 100;
     const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
     const trimmed = fixed.replace(/\.?0+$/, '') || '0';
     return `${trimmed}%`;

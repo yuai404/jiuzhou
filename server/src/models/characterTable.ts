@@ -1,4 +1,5 @@
 import { query } from '../config/database.js';
+import { runDbMigrationOnce } from './migrationHistoryTable.js';
 
 // 角色表结构定义
 const characterTableSQL = `
@@ -43,27 +44,27 @@ CREATE TABLE IF NOT EXISTS characters (
   wufang INTEGER DEFAULT 2,                           -- 物防
   fafang INTEGER DEFAULT 0,                           -- 法防
   
-  -- 战斗属性（万分比，10000=100%）
-  mingzhong INTEGER DEFAULT 9000,                     -- 命中 90%
-  shanbi INTEGER DEFAULT 500,                         -- 闪避 5%
-  zhaojia INTEGER DEFAULT 500,                        -- 招架 5%
-  baoji INTEGER DEFAULT 1000,                         -- 暴击 10%
-  baoshang INTEGER DEFAULT 15000,                     -- 爆伤 150%
-  kangbao INTEGER DEFAULT 0,                          -- 抗暴 0%
-  zengshang INTEGER DEFAULT 0,                        -- 增伤 0%
-  zhiliao INTEGER DEFAULT 0,                          -- 治疗 0%
-  jianliao INTEGER DEFAULT 0,                         -- 减疗 0%
-  xixue INTEGER DEFAULT 0,                            -- 吸血 0%
-  lengque INTEGER DEFAULT 0,                          -- 技能冷却 0%
-  shuxing_shuzhi INTEGER DEFAULT 0,                   -- 属性数值 0%
-  kongzhi_kangxing INTEGER DEFAULT 0,                 -- 控制抗性 0%
+  -- 战斗属性（比例值，1 = 100%）
+  mingzhong DOUBLE PRECISION DEFAULT 0.9,            -- 命中 90%
+  shanbi DOUBLE PRECISION DEFAULT 0.05,              -- 闪避 5%
+  zhaojia DOUBLE PRECISION DEFAULT 0.05,             -- 招架 5%
+  baoji DOUBLE PRECISION DEFAULT 0.1,                -- 暴击 10%
+  baoshang DOUBLE PRECISION DEFAULT 1.5,             -- 爆伤 150%
+  kangbao DOUBLE PRECISION DEFAULT 0,                -- 抗暴 0%
+  zengshang DOUBLE PRECISION DEFAULT 0,              -- 增伤 0%
+  zhiliao DOUBLE PRECISION DEFAULT 0,                -- 治疗 0%
+  jianliao DOUBLE PRECISION DEFAULT 0,               -- 减疗 0%
+  xixue DOUBLE PRECISION DEFAULT 0,                  -- 吸血 0%
+  lengque DOUBLE PRECISION DEFAULT 0,                -- 技能冷却 0%
+  shuxing_shuzhi DOUBLE PRECISION DEFAULT 0,         -- 属性数值 0%
+  kongzhi_kangxing DOUBLE PRECISION DEFAULT 0,       -- 控制抗性 0%
   
-  -- 五行抗性（万分比）
-  jin_kangxing INTEGER DEFAULT 0,                     -- 金属性抗性 0%
-  mu_kangxing INTEGER DEFAULT 0,                      -- 木属性抗性 0%
-  shui_kangxing INTEGER DEFAULT 0,                    -- 水属性抗性 0%
-  huo_kangxing INTEGER DEFAULT 0,                     -- 火属性抗性 0%
-  tu_kangxing INTEGER DEFAULT 0,                      -- 土属性抗性 0%
+  -- 五行抗性（比例值）
+  jin_kangxing DOUBLE PRECISION DEFAULT 0,           -- 金属性抗性 0%
+  mu_kangxing DOUBLE PRECISION DEFAULT 0,            -- 木属性抗性 0%
+  shui_kangxing DOUBLE PRECISION DEFAULT 0,          -- 水属性抗性 0%
+  huo_kangxing DOUBLE PRECISION DEFAULT 0,           -- 火属性抗性 0%
+  tu_kangxing DOUBLE PRECISION DEFAULT 0,            -- 土属性抗性 0%
   
   -- 恢复与其他
   qixue_huifu INTEGER DEFAULT 0,                      -- 气血恢复
@@ -115,24 +116,24 @@ COMMENT ON COLUMN characters.wugong IS '物理攻击';
 COMMENT ON COLUMN characters.fagong IS '法术攻击';
 COMMENT ON COLUMN characters.wufang IS '物理防御';
 COMMENT ON COLUMN characters.fafang IS '法术防御';
-COMMENT ON COLUMN characters.mingzhong IS '命中率（万分比）';
-COMMENT ON COLUMN characters.shanbi IS '闪避率（万分比）';
-COMMENT ON COLUMN characters.zhaojia IS '招架率（万分比）';
-COMMENT ON COLUMN characters.baoji IS '暴击率（万分比）';
-COMMENT ON COLUMN characters.baoshang IS '爆伤（万分比）';
-COMMENT ON COLUMN characters.kangbao IS '抗暴（万分比）';
-COMMENT ON COLUMN characters.zengshang IS '增伤（万分比）';
-COMMENT ON COLUMN characters.zhiliao IS '治疗（万分比）';
-COMMENT ON COLUMN characters.jianliao IS '减疗（万分比）';
-COMMENT ON COLUMN characters.xixue IS '吸血（万分比）';
-COMMENT ON COLUMN characters.lengque IS '技能冷却（万分比）';
-COMMENT ON COLUMN characters.shuxing_shuzhi IS '属性数值（万分比）';
-COMMENT ON COLUMN characters.kongzhi_kangxing IS '控制抗性（万分比）';
-COMMENT ON COLUMN characters.jin_kangxing IS '金属性抗性（万分比）';
-COMMENT ON COLUMN characters.mu_kangxing IS '木属性抗性（万分比）';
-COMMENT ON COLUMN characters.shui_kangxing IS '水属性抗性（万分比）';
-COMMENT ON COLUMN characters.huo_kangxing IS '火属性抗性（万分比）';
-COMMENT ON COLUMN characters.tu_kangxing IS '土属性抗性（万分比）';
+COMMENT ON COLUMN characters.mingzhong IS '命中率（比例值，1=100%）';
+COMMENT ON COLUMN characters.shanbi IS '闪避率（比例值，1=100%）';
+COMMENT ON COLUMN characters.zhaojia IS '招架率（比例值，1=100%）';
+COMMENT ON COLUMN characters.baoji IS '暴击率（比例值，1=100%）';
+COMMENT ON COLUMN characters.baoshang IS '爆伤倍率（比例值，1=100%）';
+COMMENT ON COLUMN characters.kangbao IS '抗暴（比例值，1=100%）';
+COMMENT ON COLUMN characters.zengshang IS '增伤（比例值，1=100%）';
+COMMENT ON COLUMN characters.zhiliao IS '治疗（比例值，1=100%）';
+COMMENT ON COLUMN characters.jianliao IS '减疗（比例值，1=100%）';
+COMMENT ON COLUMN characters.xixue IS '吸血（比例值，1=100%）';
+COMMENT ON COLUMN characters.lengque IS '技能冷却（比例值，1=100%）';
+COMMENT ON COLUMN characters.shuxing_shuzhi IS '属性数值（比例值，1=100%）';
+COMMENT ON COLUMN characters.kongzhi_kangxing IS '控制抗性（比例值，1=100%）';
+COMMENT ON COLUMN characters.jin_kangxing IS '金属性抗性（比例值，1=100%）';
+COMMENT ON COLUMN characters.mu_kangxing IS '木属性抗性（比例值，1=100%）';
+COMMENT ON COLUMN characters.shui_kangxing IS '水属性抗性（比例值，1=100%）';
+COMMENT ON COLUMN characters.huo_kangxing IS '火属性抗性（比例值，1=100%）';
+COMMENT ON COLUMN characters.tu_kangxing IS '土属性抗性（比例值，1=100%）';
 COMMENT ON COLUMN characters.qixue_huifu IS '气血恢复';
 COMMENT ON COLUMN characters.lingqi_huifu IS '灵气恢复';
 COMMENT ON COLUMN characters.sudu IS '速度';
@@ -231,10 +232,10 @@ BEGIN
     NEW.fagong := NEW.fagong + (qi_diff * 2);
   END IF;
   
-  -- 神每点加成：命中+0.2%（20万分比）、暴击+0.1%（10万分比）
+  -- 神每点加成：命中+0.2%、暴击+0.1%（比例制分别为 0.002 / 0.001）
   IF shen_diff != 0 THEN
-    NEW.mingzhong := NEW.mingzhong + (shen_diff * 20);
-    NEW.baoji := NEW.baoji + (shen_diff * 10);
+    NEW.mingzhong := NEW.mingzhong + (shen_diff * 0.002);
+    NEW.baoji := NEW.baoji + (shen_diff * 0.001);
   END IF;
   
   -- 更新时间
@@ -262,14 +263,14 @@ const columnsToCheck = [
   { name: 'stamina_recover_at', type: 'TIMESTAMPTZ NOT NULL DEFAULT NOW()', comment: '体力恢复基准时间' },
   { name: 'attribute_type', type: "VARCHAR(20) DEFAULT 'physical'", comment: '属性类型' },
   { name: 'attribute_element', type: "VARCHAR(10) DEFAULT 'none'", comment: '五行属性' },
-  { name: 'lengque', type: 'INTEGER DEFAULT 0', comment: '技能冷却（万分比）' },
-  { name: 'shuxing_shuzhi', type: 'INTEGER DEFAULT 0', comment: '属性数值（万分比）' },
-  { name: 'kongzhi_kangxing', type: 'INTEGER DEFAULT 0', comment: '控制抗性（万分比）' },
-  { name: 'jin_kangxing', type: 'INTEGER DEFAULT 0', comment: '金属性抗性（万分比）' },
-  { name: 'mu_kangxing', type: 'INTEGER DEFAULT 0', comment: '木属性抗性（万分比）' },
-  { name: 'shui_kangxing', type: 'INTEGER DEFAULT 0', comment: '水属性抗性（万分比）' },
-  { name: 'huo_kangxing', type: 'INTEGER DEFAULT 0', comment: '火属性抗性（万分比）' },
-  { name: 'tu_kangxing', type: 'INTEGER DEFAULT 0', comment: '土属性抗性（万分比）' },
+  { name: 'lengque', type: 'DOUBLE PRECISION DEFAULT 0', comment: '技能冷却（比例值，1=100%）' },
+  { name: 'shuxing_shuzhi', type: 'DOUBLE PRECISION DEFAULT 0', comment: '属性数值（比例值，1=100%）' },
+  { name: 'kongzhi_kangxing', type: 'DOUBLE PRECISION DEFAULT 0', comment: '控制抗性（比例值，1=100%）' },
+  { name: 'jin_kangxing', type: 'DOUBLE PRECISION DEFAULT 0', comment: '金属性抗性（比例值，1=100%）' },
+  { name: 'mu_kangxing', type: 'DOUBLE PRECISION DEFAULT 0', comment: '木属性抗性（比例值，1=100%）' },
+  { name: 'shui_kangxing', type: 'DOUBLE PRECISION DEFAULT 0', comment: '水属性抗性（比例值，1=100%）' },
+  { name: 'huo_kangxing', type: 'DOUBLE PRECISION DEFAULT 0', comment: '火属性抗性（比例值，1=100%）' },
+  { name: 'tu_kangxing', type: 'DOUBLE PRECISION DEFAULT 0', comment: '土属性抗性（比例值，1=100%）' },
   { name: 'qixue_huifu', type: 'INTEGER DEFAULT 0', comment: '气血恢复' },
   { name: 'lingqi_huifu', type: 'INTEGER DEFAULT 0', comment: '灵气恢复' },
   { name: 'sudu', type: 'INTEGER DEFAULT 1', comment: '速度' },
@@ -281,6 +282,27 @@ const columnsToCheck = [
   { name: 'auto_disassemble_max_quality_rank', type: 'INTEGER DEFAULT 1', comment: '自动分解最高品质（1黄/2玄/3地/4天）' },
   { name: 'auto_disassemble_rules', type: "JSONB DEFAULT '[]'::jsonb", comment: '自动分解高级规则JSON数组（规则间 OR）' },
 ];
+
+const percentAttrColumns = [
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'shuxing_shuzhi',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+] as const;
 
 // 检查并添加缺失字段
 const checkAndAddColumns = async () => {
@@ -308,6 +330,88 @@ const checkAndAddColumns = async () => {
   if (addedFields.length > 0) {
     console.log(`  → 角色表已添加字段: ${addedFields.join(', ')}`);
   }
+};
+
+const ensurePercentAttrsAsActualValue = async () => {
+  for (const col of percentAttrColumns) {
+    await query(`ALTER TABLE characters ALTER COLUMN ${col} TYPE DOUBLE PRECISION USING ${col}::DOUBLE PRECISION`);
+  }
+
+  const percentDefaultValues: Record<(typeof percentAttrColumns)[number], number> = {
+    mingzhong: 0.9,
+    shanbi: 0.05,
+    zhaojia: 0.05,
+    baoji: 0.1,
+    baoshang: 1.5,
+    kangbao: 0,
+    zengshang: 0,
+    zhiliao: 0,
+    jianliao: 0,
+    xixue: 0,
+    lengque: 0,
+    shuxing_shuzhi: 0,
+    kongzhi_kangxing: 0,
+    jin_kangxing: 0,
+    mu_kangxing: 0,
+    shui_kangxing: 0,
+    huo_kangxing: 0,
+    tu_kangxing: 0,
+  };
+  for (const col of percentAttrColumns) {
+    const defVal = percentDefaultValues[col];
+    await query(`ALTER TABLE characters ALTER COLUMN ${col} SET DEFAULT ${defVal}`);
+  }
+
+  const legacyWhereClause = `
+    mingzhong > 10
+    OR shanbi > 10
+    OR zhaojia > 10
+    OR baoji > 10
+    OR baoshang > 10
+    OR kangbao > 10
+    OR zengshang > 10
+    OR zhiliao > 10
+    OR jianliao > 10
+    OR xixue > 10
+    OR lengque > 10
+    OR shuxing_shuzhi > 10
+    OR kongzhi_kangxing > 10
+    OR jin_kangxing > 10
+    OR mu_kangxing > 10
+    OR shui_kangxing > 10
+    OR huo_kangxing > 10
+    OR tu_kangxing > 10
+  `;
+
+  const legacyCheck = await query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM characters
+        WHERE ${legacyWhereClause}
+      ) AS has_legacy
+    `
+  );
+
+  const hasLegacy = Boolean(legacyCheck.rows[0]?.has_legacy);
+  if (!hasLegacy) return;
+
+  const updateParts = percentAttrColumns.map((col) => {
+    if (col === 'baoshang') {
+      return `${col} = CASE
+        WHEN ${col} > 1000 THEN ROUND(${col} / 10000.0, 6)
+        WHEN ${col} > 10 THEN ROUND(${col} / 100.0, 6)
+        ELSE ${col}
+      END`;
+    }
+    return `${col} = CASE
+      WHEN ${col} > 1000 THEN ROUND(${col} / 10000.0, 6)
+      WHEN ${col} > 1 THEN ROUND(${col} / 100.0, 6)
+      ELSE ${col}
+    END`;
+  });
+  updateParts.push('updated_at = CURRENT_TIMESTAMP');
+  await query(`UPDATE characters SET ${updateParts.join(', ')} WHERE ${legacyWhereClause}`);
 };
 
 // 初始化角色表
@@ -339,6 +443,13 @@ export const initCharacterTable = async (): Promise<void> => {
     
     // 检查并补齐缺失字段
     await checkAndAddColumns();
+
+    // 将旧万分比/百分点历史数据迁移为比例值（1=100%），并确保字段支持小数。
+    await runDbMigrationOnce({
+      migrationKey: 'characters_percent_attr_actual_value_v1',
+      description: '角色百分比属性统一为比例值（1=100%）',
+      execute: ensurePercentAttrsAsActualValue,
+    });
     
     // 创建触发器
     await query(createAttributeTriggerSQL);

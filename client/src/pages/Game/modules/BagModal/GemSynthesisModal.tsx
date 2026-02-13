@@ -27,6 +27,12 @@ const clampSynthesizeTimes = (value: number, maxValue: number): number => {
   return Math.min(safeMax, Math.max(1, Math.floor(value)));
 };
 
+const formatPercent = (ratio: number): string => {
+  const percent = Math.max(0, Number(ratio) || 0) * 100;
+  const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
+  return fixed.replace(/\.?0+$/, '') || '0';
+};
+
 const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, onSuccess }) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -275,7 +281,7 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
                       <div className="bag-gem-item-title">{recipe.name}</div>
                       <div className="bag-gem-item-meta">
                         <span>{recipe.fromLevel}级 → {recipe.toLevel}级</span>
-                        <span>成功率 {recipe.successRate}%</span>
+                        <span>成功率 {formatPercent(recipe.successRate)}%</span>
                       </div>
                       <div className="bag-gem-item-meta">
                         <span>可合成 {recipe.maxSynthesizeTimes} 次</span>
@@ -292,7 +298,9 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
                     <div className="bag-gem-detail-meta">
                       <Tag color="default">类型：{gemTypeLabel[selectedRecipe.gemType]}</Tag>
                       <Tag color="blue">产出：{selectedRecipe.output.name} ×{selectedRecipe.output.qty}</Tag>
-                      <Tag color={selectedRecipe.successRate >= 100 ? 'green' : 'orange'}>成功率：{selectedRecipe.successRate}%</Tag>
+                      <Tag color={selectedRecipe.successRate >= 1 ? 'green' : 'orange'}>
+                        成功率：{formatPercent(selectedRecipe.successRate)}%
+                      </Tag>
                     </div>
 
                     <div className="bag-gem-costs">

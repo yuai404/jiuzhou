@@ -42,8 +42,8 @@
       "rewards": {
         "attributePoints": 5,
         "pct": {
-          "max_qixue": 10,
-          "max_lingqi": 10
+          "max_qixue": 0.1,
+          "max_lingqi": 0.1
         }
       }
     },
@@ -83,10 +83,10 @@
       "rewards": {
         "attributePoints": 5,
         "pct": {
-          "max_qixue": 15,
-          "max_lingqi": 15,
-          "wugong": 5,
-          "fagong": 5
+          "max_qixue": 0.15,
+          "max_lingqi": 0.15,
+          "wugong": 0.05,
+          "fagong": 0.05
         }
       }
     },
@@ -127,12 +127,12 @@
       "rewards": {
         "attributePoints": 10,
         "pct": {
-          "max_qixue": 15,
-          "max_lingqi": 15,
-          "wugong": 6,
-          "fagong": 6,
-          "wufang": 6,
-          "fafang": 6
+          "max_qixue": 0.15,
+          "max_lingqi": 0.15,
+          "wugong": 0.06,
+          "fagong": 0.06,
+          "wufang": 0.06,
+          "fafang": 0.06
         }
       }
     },
@@ -180,15 +180,15 @@
       "rewards": {
         "attributePoints": 12,
         "pct": {
-          "max_qixue": 18,
-          "max_lingqi": 18,
-          "wugong": 8,
-          "fagong": 8,
-          "wufang": 8,
-          "fafang": 8
+          "max_qixue": 0.18,
+          "max_lingqi": 0.18,
+          "wugong": 0.08,
+          "fagong": 0.08,
+          "wufang": 0.08,
+          "fafang": 0.08
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 300
+        "addPercent": {
+          "kongzhi_kangxing": 0.03
         }
       }
     },
@@ -266,15 +266,15 @@
       "rewards": {
         "attributePoints": 14,
         "pct": {
-          "max_qixue": 20,
-          "max_lingqi": 20,
-          "wugong": 10,
-          "fagong": 10,
-          "wufang": 10,
-          "fafang": 10
+          "max_qixue": 0.2,
+          "max_lingqi": 0.2,
+          "wugong": 0.1,
+          "fagong": 0.1,
+          "wufang": 0.1,
+          "fafang": 0.1
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 400
+        "addPercent": {
+          "kongzhi_kangxing": 0.04
         }
       }
     },
@@ -328,15 +328,15 @@
       "rewards": {
         "attributePoints": 18,
         "pct": {
-          "max_qixue": 22,
-          "max_lingqi": 22,
-          "wugong": 12,
-          "fagong": 12,
-          "wufang": 12,
-          "fafang": 12
+          "max_qixue": 0.22,
+          "max_lingqi": 0.22,
+          "wugong": 0.12,
+          "fagong": 0.12,
+          "wufang": 0.12,
+          "fafang": 0.12
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 500
+        "addPercent": {
+          "kongzhi_kangxing": 0.05
         }
       }
     },
@@ -390,15 +390,15 @@
       "rewards": {
         "attributePoints": 22,
         "pct": {
-          "max_qixue": 24,
-          "max_lingqi": 24,
-          "wugong": 14,
-          "fagong": 14,
-          "wufang": 14,
-          "fafang": 14
+          "max_qixue": 0.24,
+          "max_lingqi": 0.24,
+          "wugong": 0.14,
+          "fagong": 0.14,
+          "wufang": 0.14,
+          "fafang": 0.14
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 650
+        "addPercent": {
+          "kongzhi_kangxing": 0.065
         }
       }
     },
@@ -452,15 +452,15 @@
       "rewards": {
         "attributePoints": 26,
         "pct": {
-          "max_qixue": 26,
-          "max_lingqi": 26,
-          "wugong": 16,
-          "fagong": 16,
-          "wufang": 16,
-          "fafang": 16
+          "max_qixue": 0.26,
+          "max_lingqi": 0.26,
+          "wugong": 0.16,
+          "fagong": 0.16,
+          "wufang": 0.16,
+          "fafang": 0.16
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 800
+        "addPercent": {
+          "kongzhi_kangxing": 0.08
         }
       }
     },
@@ -520,15 +520,15 @@
       "rewards": {
         "attributePoints": 30,
         "pct": {
-          "max_qixue": 28,
-          "max_lingqi": 28,
-          "wugong": 18,
-          "fagong": 18,
-          "wufang": 18,
-          "fafang": 18
+          "max_qixue": 0.28,
+          "max_lingqi": 0.28,
+          "wugong": 0.18,
+          "fagong": 0.18,
+          "wufang": 0.18,
+          "fafang": 0.18
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 950
+        "addPercent": {
+          "kongzhi_kangxing": 0.095
         }
       }
     },
@@ -582,15 +582,15 @@
       "rewards": {
         "attributePoints": 34,
         "pct": {
-          "max_qixue": 30,
-          "max_lingqi": 30,
-          "wugong": 20,
-          "fagong": 20,
-          "wufang": 20,
-          "fafang": 20
+          "max_qixue": 0.3,
+          "max_lingqi": 0.3,
+          "wugong": 0.2,
+          "fagong": 0.2,
+          "wufang": 0.2,
+          "fafang": 0.2
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 1100
+        "addPercent": {
+          "kongzhi_kangxing": 0.11
         }
       }
     },
@@ -644,15 +644,15 @@
       "rewards": {
         "attributePoints": 38,
         "pct": {
-          "max_qixue": 32,
-          "max_lingqi": 32,
-          "wugong": 22,
-          "fagong": 22,
-          "wufang": 22,
-          "fafang": 22
+          "max_qixue": 0.32,
+          "max_lingqi": 0.32,
+          "wugong": 0.22,
+          "fagong": 0.22,
+          "wufang": 0.22,
+          "fafang": 0.22
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 1300
+        "addPercent": {
+          "kongzhi_kangxing": 0.13
         }
       }
     },
@@ -706,15 +706,15 @@
       "rewards": {
         "attributePoints": 45,
         "pct": {
-          "max_qixue": 35,
-          "max_lingqi": 35,
-          "wugong": 25,
-          "fagong": 25,
-          "wufang": 25,
-          "fafang": 25
+          "max_qixue": 0.35,
+          "max_lingqi": 0.35,
+          "wugong": 0.25,
+          "fagong": 0.25,
+          "wufang": 0.25,
+          "fafang": 0.25
         },
-        "addPermyriad": {
-          "kongzhi_kangxing": 1600
+        "addPercent": {
+          "kongzhi_kangxing": 0.16
         }
       }
     }

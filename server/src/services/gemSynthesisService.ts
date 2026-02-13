@@ -260,8 +260,8 @@ const parseRecipeModel = (row: GemRecipeRow): GemRecipeModel | null => {
   if (outputQty <= 0) return null;
   const successRateRaw = typeof row.success_rate === 'number' ? row.success_rate : Number(row.success_rate);
   const successRate = Number.isFinite(successRateRaw)
-    ? Math.max(0, Math.min(100, Math.round(successRateRaw * 100) / 100))
-    : 100;
+    ? Math.max(0, Math.min(1, Math.round(successRateRaw * 10000) / 10000))
+    : 1;
 
   return {
     id: String(row.id || '').trim(),
@@ -643,11 +643,11 @@ export const synthesizeGem = async (
 
     await updateCharacterWalletTx(client, characterId, wallet);
 
-    const successPermyriad = Math.max(0, Math.min(10000, Math.round(recipe.successRate * 100)));
+    const successRate = Math.max(0, Math.min(1, Number(recipe.successRate) || 0));
     let successCount = 0;
     for (let i = 0; i < times; i += 1) {
-      const roll = randomInt(1, 10001);
-      if (roll <= successPermyriad) successCount += 1;
+      const roll = randomInt(0, 10_000) / 10_000;
+      if (roll < successRate) successCount += 1;
     }
     const failCount = times - successCount;
 
@@ -831,11 +831,11 @@ export const synthesizeGemBatch = async (
       spentSilver += totalSilverCost;
       spentSpiritStones += totalSpiritCost;
 
-      const successPermyriad = Math.max(0, Math.min(10000, Math.round(recipe.successRate * 100)));
+      const successRate = Math.max(0, Math.min(1, Number(recipe.successRate) || 0));
       let successCount = 0;
       for (let i = 0; i < maxTimes; i += 1) {
-        const roll = randomInt(1, 10001);
-        if (roll <= successPermyriad) successCount += 1;
+        const roll = randomInt(0, 10_000) / 10_000;
+        if (roll < successRate) successCount += 1;
       }
       const failCount = maxTimes - successCount;
 

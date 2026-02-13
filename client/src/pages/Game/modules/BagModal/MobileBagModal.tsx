@@ -39,14 +39,14 @@ import {
   categoryLabels,
   collectBatchDisassembleCandidates,
   formatEquipmentAffixLine,
-  formatPermyriadPercent,
+  formatPercent,
   formatSignedNumber,
-  formatSignedPermyriadPercent,
-  getEnhanceSuccessRatePermyriad,
-  getRefineSuccessRatePermyriad,
+  formatSignedPercent,
+  getEnhanceSuccessRatePercent,
+  getRefineSuccessRatePercent,
   isDisassemblableBagItem,
   normalizeAffixLockIndexes,
-  permyriadPercentKeys,
+  percentAttrKeys,
   pickNumber,
   qualityClass,
   qualityColor,
@@ -396,7 +396,7 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
       curLv, targetLv, materialName, owned,
       silverCost: costPlan.silverCost,
       spiritStoneCost: costPlan.spiritStoneCost,
-      successRate: getEnhanceSuccessRatePermyriad(targetLv),
+      successRate: getEnhanceSuccessRatePercent(targetLv),
       downgradeOnFail: targetLv >= 8,
       previewBaseAttrs,
     };
@@ -420,7 +420,7 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
       curLv, targetLv, materialName, materialQty: costPlan.materialQty, owned,
       silverCost: costPlan.silverCost,
       spiritStoneCost: costPlan.spiritStoneCost,
-      successRate: getRefineSuccessRatePermyriad(targetLv),
+      successRate: getRefineSuccessRatePercent(targetLv),
       previewBaseAttrs,
     };
   }, [item, materialCounts]);
@@ -588,7 +588,7 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
                 <span style={{ margin: '0 8px', color: 'var(--text-secondary)' }}>→</span>
                 <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--primary-color)' }}>+{st.targetLv}</span>
                 <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  成功率 {formatPermyriadPercent(st.successRate)}%
+                  成功率 {formatPercent(st.successRate)}%
                   {mode === 'enhance' && enhanceState?.downgradeOnFail && (
                     <span style={{ marginLeft: 8, color: 'var(--danger-color)' }}>失败掉级</span>
                   )}
@@ -619,9 +619,9 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
                 <div className="mbag-sheet-attr-list">
                   {sorted(st.previewBaseAttrs).map(([k, next]) => {
                     const cur = curAttrs[k] ?? 0;
-                    const isPct = permyriadPercentKeys.has(k);
-                    const fmtCur = isPct ? formatSignedPermyriadPercent(cur) : formatSignedNumber(cur);
-                    const fmtNext = isPct ? formatSignedPermyriadPercent(next) : formatSignedNumber(next);
+                    const isPct = percentAttrKeys.has(k);
+                    const fmtCur = isPct ? formatSignedPercent(cur) : formatSignedNumber(cur);
+                    const fmtNext = isPct ? formatSignedPercent(next) : formatSignedNumber(next);
                     return (
                       <div key={k} className="mbag-sheet-attr-row">
                         <span>{attrLabel[k] ?? k}</span>

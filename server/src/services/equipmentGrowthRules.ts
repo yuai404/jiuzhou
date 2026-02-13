@@ -29,35 +29,35 @@ const DEFAULT_SOCKET_MAX_BY_QUALITY_RANK: Record<number, number> = {
 export const ENHANCE_MAX_LEVEL = 15;
 export const REFINE_MAX_LEVEL = 10;
 
-const ENHANCE_SUCCESS_RATE_PERMYRIAD: Record<number, number> = {
-  1: 10000,
-  2: 10000,
-  3: 10000,
-  4: 10000,
-  5: 10000,
-  6: 8000,
-  7: 7000,
-  8: 6000,
-  9: 5000,
-  10: 4000,
-  11: 3500,
-  12: 3000,
-  13: 2500,
-  14: 2000,
-  15: 1500,
+const ENHANCE_SUCCESS_RATE_PERCENT: Record<number, number> = {
+  1: 1,
+  2: 1,
+  3: 1,
+  4: 1,
+  5: 1,
+  6: 0.8,
+  7: 0.7,
+  8: 0.6,
+  9: 0.5,
+  10: 0.4,
+  11: 0.35,
+  12: 0.3,
+  13: 0.25,
+  14: 0.2,
+  15: 0.15,
 };
 
-const REFINE_SUCCESS_RATE_PERMYRIAD: Record<number, number> = {
-  1: 10000,
-  2: 10000,
-  3: 10000,
-  4: 9000,
-  5: 8000,
-  6: 7000,
-  7: 6000,
-  8: 5000,
-  9: 4000,
-  10: 3000,
+const REFINE_SUCCESS_RATE_PERCENT: Record<number, number> = {
+  1: 1,
+  2: 1,
+  3: 1,
+  4: 0.9,
+  5: 0.8,
+  6: 0.7,
+  7: 0.6,
+  8: 0.5,
+  9: 0.4,
+  10: 0.3,
 };
 
 const GEM_TYPE_SYNONYMS: Record<string, string> = {
@@ -118,6 +118,27 @@ const SURVIVAL_ATTR_KEYS = new Set([
   'xixue',
   'qixue_huifu',
   'lingqi_huifu',
+]);
+
+const RATIO_ATTR_KEYS = new Set([
+  'shuxing_shuzhi',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
 ]);
 
 export const clampInt = (value: number, min: number, max: number): number => {
@@ -181,14 +202,16 @@ export const getRefineMultiplier = (refineLevel: number): number => {
   return 1 + level * 0.02;
 };
 
-export const getEnhanceSuccessRatePermyriad = (targetLevel: number): number => {
+export const getEnhanceSuccessRatePercent = (targetLevel: number): number => {
   const level = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
-  return clampInt(ENHANCE_SUCCESS_RATE_PERMYRIAD[level] ?? 0, 0, 10000);
+  const value = ENHANCE_SUCCESS_RATE_PERCENT[level] ?? 0;
+  return Math.max(0, Math.min(1, value));
 };
 
-export const getRefineSuccessRatePermyriad = (targetLevel: number): number => {
+export const getRefineSuccessRatePercent = (targetLevel: number): number => {
   const level = clampInt(targetLevel, 1, REFINE_MAX_LEVEL);
-  return clampInt(REFINE_SUCCESS_RATE_PERMYRIAD[level] ?? 0, 0, 10000);
+  const value = REFINE_SUCCESS_RATE_PERCENT[level] ?? 0;
+  return Math.max(0, Math.min(1, value));
 };
 
 export const getEnhanceFailResultLevel = (
@@ -245,7 +268,8 @@ export const scaleNumberRecord = (record: Record<string, unknown>, factor: numbe
   for (const [k, v] of Object.entries(record)) {
     const n = toNumber(v);
     if (!Number.isFinite(n)) continue;
-    out[k] = mul !== 1 ? Math.round(n * mul) : n;
+    const scaled = mul !== 1 ? n * mul : n;
+    out[k] = RATIO_ATTR_KEYS.has(k) ? Number(scaled.toFixed(6)) : Math.round(scaled);
   }
   return out;
 };

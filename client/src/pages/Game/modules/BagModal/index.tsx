@@ -32,17 +32,17 @@ import {
   collectBatchDisassembleCandidates,
   collectGemCandidates,
   formatEquipmentAffixLine,
-  formatPermyriadPercent,
+  formatPercent,
   formatSignedNumber,
-  formatSignedPermyriadPercent,
-  getEnhanceSuccessRatePermyriad,
+  formatSignedPercent,
+  getEnhanceSuccessRatePercent,
   getEquipSlotLabel,
-  getRefineSuccessRatePermyriad,
+  getRefineSuccessRatePercent,
   isDisassemblableBagItem,
   isGemTypeAllowedInSlot,
   normalizeGemType,
   normalizeAffixLockIndexes,
-  permyriadPercentKeys,
+  percentAttrKeys,
   pickNumber,
   qualityClass,
   qualityColor,
@@ -457,7 +457,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       owned,
       silverCost: costPlan.silverCost,
       spiritStoneCost: costPlan.spiritStoneCost,
-      successRatePermyriad: getEnhanceSuccessRatePermyriad(targetLv),
+      successRate: getEnhanceSuccessRatePercent(targetLv),
       downgradeOnFail: targetLv >= 8,
       previewBaseAttrs,
     };
@@ -490,7 +490,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       owned,
       silverCost: costPlan.silverCost,
       spiritStoneCost: costPlan.spiritStoneCost,
-      successRatePermyriad: getRefineSuccessRatePermyriad(targetLv),
+      successRate: getRefineSuccessRatePercent(targetLv),
       previewBaseAttrs,
     };
   }, [activeItem, materialCounts]);
@@ -1284,7 +1284,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                   <span className="bag-growth-level">+{enhanceState.curLv}</span>
                   <span className="bag-growth-arrow">→</span>
                   <span className="bag-growth-level bag-growth-level--target">+{enhanceState.targetLv}</span>
-                  <span className="bag-growth-rate">{formatPermyriadPercent(enhanceState.successRatePermyriad)}%</span>
+                  <span className="bag-growth-rate">{formatPercent(enhanceState.successRate)}%</span>
                 </div>
                 {enhanceState.downgradeOnFail && <div className="bag-growth-tip-warn">失败掉级</div>}
               </div>
@@ -1322,7 +1322,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                     .map(([k, v]) => (
                       <div className="bag-growth-attr-row" key={`cur-${k}`}>
                         <span>{attrLabel[k] ?? k}</span>
-                        <span>{permyriadPercentKeys.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v)}</span>
+                        <span>{percentAttrKeys.has(k) ? formatSignedPercent(v) : formatSignedNumber(v)}</span>
                       </div>
                     ))}
                 </div>
@@ -1333,7 +1333,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                     .map(([k, v]) => (
                       <div className="bag-growth-attr-row" key={`next-${k}`}>
                         <span>{attrLabel[k] ?? k}</span>
-                        <span>{permyriadPercentKeys.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v)}</span>
+                        <span>{percentAttrKeys.has(k) ? formatSignedPercent(v) : formatSignedNumber(v)}</span>
                       </div>
                     ))}
                 </div>
@@ -1367,7 +1367,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                   <span className="bag-growth-level">+{refineState.curLv}</span>
                   <span className="bag-growth-arrow">→</span>
                   <span className="bag-growth-level bag-growth-level--target">+{refineState.targetLv}</span>
-                  <span className="bag-growth-rate">{formatPermyriadPercent(refineState.successRatePermyriad)}%</span>
+                  <span className="bag-growth-rate">{formatPercent(refineState.successRate)}%</span>
                 </div>
               </div>
 
@@ -1404,7 +1404,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                     .map(([k, v]) => (
                       <div className="bag-growth-attr-row" key={`ref-cur-${k}`}>
                         <span>{attrLabel[k] ?? k}</span>
-                        <span>{permyriadPercentKeys.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v)}</span>
+                        <span>{percentAttrKeys.has(k) ? formatSignedPercent(v) : formatSignedNumber(v)}</span>
                       </div>
                     ))}
                 </div>
@@ -1415,7 +1415,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                     .map(([k, v]) => (
                       <div className="bag-growth-attr-row" key={`ref-next-${k}`}>
                         <span>{attrLabel[k] ?? k}</span>
-                        <span>{permyriadPercentKeys.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v)}</span>
+                        <span>{percentAttrKeys.has(k) ? formatSignedPercent(v) : formatSignedNumber(v)}</span>
                       </div>
                     ))}
                 </div>

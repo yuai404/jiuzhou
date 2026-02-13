@@ -18,7 +18,7 @@ const createAttrs = () => ({
   wufang: 120,
   fafang: 110,
   sudu: 100,
-  mingzhong: 9500,
+  mingzhong: 0.95,
   shanbi: 0,
   zhaojia: 0,
   baoji: 0,
@@ -114,7 +114,7 @@ test('触发词条命中后应产出独立action日志', () => {
     target: 'enemy',
     effectType: 'damage',
     params: {
-      chance: 10000,
+  chance: 1,
       value: 120,
       damage_type: 'true',
     },
@@ -143,7 +143,7 @@ test('灵气触发词条应在独立action日志中记录资源变化', () => {
     target: 'self',
     effectType: 'resource',
     params: {
-      chance: 10000,
+      chance: 1,
       resource_type: 'lingqi',
       value: 18,
     },
@@ -169,7 +169,7 @@ test('技能与词条触发日志应按时机排序（主动作在前，on_skill
     target: 'self',
     effectType: 'resource',
     params: {
-      chance: 10000,
+      chance: 1,
       resource_type: 'lingqi',
       value: 10,
     },

@@ -123,7 +123,7 @@ const attrLabelMap: Record<string, string> = {
   fuyuan: '福源',
 };
 
-const PERMYRIAD_ATTR_KEYS = new Set<string>([
+const PERCENT_ATTR_KEYS = new Set<string>([
   'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
@@ -144,8 +144,8 @@ const PERMYRIAD_ATTR_KEYS = new Set<string>([
   'tu_kangxing',
 ]);
 
-const formatPermyriadPercent = (value: number): string => {
-  const percent = value / 100;
+const formatPercent = (value: number): string => {
+  const percent = value * 100;
   const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
   const trimmed = fixed.replace(/\.?0+$/, '') || '0';
   return `${trimmed}%`;
@@ -168,10 +168,10 @@ const toStatsFromAttrs = (attrs: unknown, prefix: string): Array<{ label: string
     if (value === null || value === undefined) continue;
     if (typeof value !== 'number' && typeof value !== 'string') continue;
     const label = attrLabelMap[key] ?? key;
-    if (PERMYRIAD_ATTR_KEYS.has(key)) {
+    if (PERCENT_ATTR_KEYS.has(key)) {
       const n = typeof value === 'number' ? value : Number(value);
       if (Number.isFinite(n)) {
-        rows.push({ label: `${prefix}${label}`, value: formatPermyriadPercent(n) });
+        rows.push({ label: `${prefix}${label}`, value: formatPercent(n) });
         continue;
       }
     }
@@ -237,19 +237,16 @@ const buildMonsterStats = (
   return rows;
 };
 
-const formatPercent = (value: number): string => {
-  const percent = value * 100;
-  const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
-  const trimmed = fixed.replace(/\.?0+$/, '') || '0';
-  return `${trimmed}%`;
+const formatRatioPercent = (ratio: number): string => {
+  return formatPercent(ratio);
 };
 
 const formatChance = (mode: string, chance: number, weight: number, totalWeight: number): string => {
   if (mode === 'weight') {
     if (totalWeight <= 0) return '-';
-    return formatPercent(weight / totalWeight);
+    return formatRatioPercent(weight / totalWeight);
   }
-  return formatPercent(chance);
+  return formatRatioPercent(chance);
 };
 
 const buildFullRealm = (realmRaw: string | null, subRealmRaw: string | null): string => {
@@ -370,7 +367,7 @@ export const getInfoTargetDetail = async (type: InfoTargetType, id: string): Pro
     const multMin = asNumber(monster.attr_multiplier_min);
     const multMax = asNumber(monster.attr_multiplier_max);
 
-    if (typeof variance === 'number') stats.push({ label: '属性波动', value: `±${formatPercent(variance)}` });
+    if (typeof variance === 'number') stats.push({ label: '属性波动', value: `±${formatRatioPercent(variance)}` });
     if (typeof multMin === 'number' && typeof multMax === 'number') {
       stats.push({ label: '整体倍率', value: `${multMin.toFixed(2)} - ${multMax.toFixed(2)}` });
     }

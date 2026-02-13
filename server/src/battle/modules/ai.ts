@@ -156,7 +156,7 @@ function selectAggressiveSkill(
   });
   
   // 有一定概率选择次优技能增加随机性
-  if (damageSkills.length > 1 && rollChance(state, 3000)) {
+  if (damageSkills.length > 1 && rollChance(state, 0.3)) {
     return damageSkills[1];
   }
   
@@ -218,7 +218,7 @@ function selectSupportSkill(
     (s.targetType === 'single_ally' || s.targetType === 'all_ally' || s.targetType === 'self')
   );
   
-  if (buffSkills.length > 0 && rollChance(state, 5000)) {
+  if (buffSkills.length > 0 && rollChance(state, 0.5)) {
     return buffSkills[0];
   }
   

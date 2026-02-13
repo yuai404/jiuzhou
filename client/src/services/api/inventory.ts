@@ -153,7 +153,7 @@ export interface InventoryEnhanceResponse {
   data?: {
     strengthenLevel: number;
     targetLevel?: number;
-    successRatePermyriad?: number;
+    successRate?: number;
     roll?: number;
     usedMaterial?: { itemDefId: string; qty: number };
     costs?: { silver: number; spiritStones: number };
@@ -184,7 +184,7 @@ export interface InventoryRefineResponse {
   data?: {
     refineLevel: number;
     targetLevel?: number;
-    successRatePermyriad?: number;
+    successRate?: number;
     roll?: number;
     usedMaterial?: { itemDefId: string; qty: number };
     costs?: { silver: number; spiritStones: number };

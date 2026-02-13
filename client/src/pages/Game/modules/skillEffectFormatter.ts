@@ -51,7 +51,29 @@ const BUFF_ID_NAME: Record<string, string> = {
   'buff-dodge-next': '下一次闪避',
 };
 
-const PERCENT_BUFF_ATTR_SET = new Set(['wugong', 'fagong', 'wufang', 'fafang']);
+const PERCENT_BUFF_ATTR_SET = new Set([
+  'wugong',
+  'fagong',
+  'wufang',
+  'fafang',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+]);
 
 const normalizeAttrKey = (raw: string): string => {
   const lowered = raw.trim().toLowerCase();
@@ -78,8 +100,8 @@ const toPositiveInt = (value: unknown): number => {
   return Math.max(0, Math.floor(raw));
 };
 
-const formatPermyriadPercent = (value: number): string => {
-  const percent = value / 100;
+const formatPercent = (value: number): string => {
+  const percent = value * 100;
   return Number.isInteger(percent) ? `${percent}` : `${Number(percent.toFixed(2))}`;
 };
 
@@ -99,8 +121,8 @@ const formatScaledValue = (effect: Record<string, unknown>, kind: 'damage' | 'he
     const rate = scaleRate ?? value;
     if (rate === null || rate <= 0) return '';
     return scaleAttrText
-      ? `倍率 ${formatPermyriadPercent(rate)}%（${scaleAttrText}）`
-      : `倍率 ${formatPermyriadPercent(rate)}%`;
+      ? `倍率 ${formatPercent(rate)}%（${scaleAttrText}）`
+      : `倍率 ${formatPercent(rate)}%`;
   }
 
   if (valueType === 'flat') {
@@ -110,8 +132,8 @@ const formatScaledValue = (effect: Record<string, unknown>, kind: 'damage' | 'he
 
   if (valueType === 'percent') {
     if (value === null || value <= 0) return '';
-    if (kind === 'damage' || kind === 'heal') return `目标最大气血 ${formatPermyriadPercent(value)}%`;
-    return `比例 ${formatPermyriadPercent(value)}%`;
+    if (kind === 'damage' || kind === 'heal') return `目标最大气血 ${formatPercent(value)}%`;
+    return `比例 ${formatPercent(value)}%`;
   }
 
   if (value === null || value <= 0) return '';
@@ -163,7 +185,7 @@ const formatBuffName = (buffIdRaw: string, effectType: 'buff' | 'debuff'): { nam
 const formatBuffValue = (effect: Record<string, unknown>, attr: string): string => {
   const raw = toNumber(effect.value);
   if (raw === null || raw <= 0) return '';
-  if (attr && PERCENT_BUFF_ATTR_SET.has(attr)) return `幅度 ${formatPermyriadPercent(raw)}%`;
+  if (attr && PERCENT_BUFF_ATTR_SET.has(attr)) return `幅度 ${formatPercent(raw)}%`;
   return `数值 ${Math.floor(raw)}`;
 };
 
@@ -182,7 +204,7 @@ const formatBuffEffect = (effect: Record<string, unknown>, effectType: 'buff' | 
 const formatLifestealEffect = (effect: Record<string, unknown>): string => {
   const value = toNumber(effect.value);
   if (value === null || value <= 0) return '吸血';
-  return `吸血 ${formatPermyriadPercent(value)}%`;
+  return `吸血 ${formatPercent(value)}%`;
 };
 
 const formatRestoreLingqiEffect = (effect: Record<string, unknown>): string => {
@@ -210,7 +232,7 @@ const formatControlEffect = (effect: Record<string, unknown>): string => {
 
   const parts = [`附加控制：${controlType}`];
   if (duration > 0) parts.push(`持续${duration}回合`);
-  if (chance !== null && chance > 0) parts.push(`概率${formatPermyriadPercent(chance)}%`);
+  if (chance !== null && chance > 0) parts.push(`概率${formatPercent(chance)}%`);
   return parts.join('，');
 };
 

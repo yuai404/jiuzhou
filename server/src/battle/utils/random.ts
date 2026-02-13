@@ -33,14 +33,14 @@ export function getRandomInt(state: BattleState, max: number): number {
 }
 
 /**
- * 万分比概率判定
+ * 概率判定（1 = 100%）
  * @param state 战斗状态
- * @param rate 万分比概率 (0-10000)
+ * @param rate 概率 (0-1)
  * @returns 是否成功
  */
 export function rollChance(state: BattleState, rate: number): boolean {
-  const roll = getNextRandom(state) * 10000;
-  return roll < rate;
+  const clampedRate = Math.max(0, Math.min(1, rate));
+  return getNextRandom(state) < clampedRate;
 }
 
 /**

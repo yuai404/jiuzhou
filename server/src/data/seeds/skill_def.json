@@ -19,7 +19,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 10000
+          "scaleRate": 1
         }
       ],
       "trigger_type": "active",
@@ -43,7 +43,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 11000
+          "scaleRate": 1.1
         }
       ],
       "trigger_type": "active",
@@ -58,8 +58,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 13000,
-                "value": 13000
+                "scaleRate": 1.3,
+                "value": 130
               }
             ]
           }
@@ -84,7 +84,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 11000
+          "scaleRate": 1.1
         }
       ],
       "trigger_type": "active",
@@ -99,8 +99,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 13000,
-                "value": 13000
+                "scaleRate": 1.3,
+                "value": 130
               }
             ]
           }
@@ -125,7 +125,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 11500
+          "scaleRate": 1.15
         }
       ],
       "trigger_type": "active",
@@ -140,8 +140,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 14000,
-                "value": 14000
+                "scaleRate": 1.4,
+                "value": 140
               }
             ]
           }
@@ -204,7 +204,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 11000
+          "scaleRate": 1.1
         }
       ],
       "trigger_type": "active",
@@ -219,8 +219,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 13000,
-                "value": 13000
+                "scaleRate": 1.3,
+                "value": 130
               }
             ]
           }
@@ -245,7 +245,7 @@
           "type": "buff",
           "buffId": "buff-shanbi-up",
           "duration": 3,
-          "value": 1500
+          "value": 0.15
         }
       ],
       "trigger_type": "active",
@@ -260,7 +260,7 @@
                 "type": "buff",
                 "buffId": "buff-shanbi-up",
                 "duration": 3,
-                "value": 2500
+                "value": 0.25
               }
             ]
           }
@@ -283,10 +283,10 @@
       "effects": [
         {
           "type": "heal",
-          "value": 8000,
+          "value": 80,
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 8000
+          "scaleRate": 0.8
         }
       ],
       "trigger_type": "active",
@@ -299,10 +299,10 @@
             "effects": [
               {
                 "type": "heal",
-                "value": 10000,
+                "value": 100,
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 10000
+                "scaleRate": 1
               }
             ]
           }
@@ -327,13 +327,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 10000
+          "scaleRate": 1
         },
         {
           "type": "buff",
           "buffId": "buff-wufang-up",
           "duration": 2,
-          "value": 1000,
+          "value": 0.1,
           "target": "self"
         }
       ],
@@ -349,14 +349,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 12000,
-                "value": 12000
+                "scaleRate": 1.2,
+                "value": 120
               },
               {
                 "type": "buff",
                 "buffId": "buff-wufang-up",
                 "duration": 2,
-                "value": 1000,
+                "value": 0.1,
                 "target": "self"
               }
             ]
@@ -382,7 +382,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 13000
+          "scaleRate": 1.3
         }
       ],
       "trigger_type": "active",
@@ -397,8 +397,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 16000,
-                "value": 16000
+                "scaleRate": 1.6,
+                "value": 160
               }
             ]
           }
@@ -423,13 +423,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 11000
+          "scaleRate": 1.1
         },
         {
           "type": "debuff",
           "buffId": "debuff-wufang-down",
           "duration": 3,
-          "value": 2000
+          "value": 0.2
         }
       ],
       "trigger_type": "active",
@@ -444,7 +444,7 @@
                 "type": "debuff",
                 "buffId": "debuff-wufang-down",
                 "duration": 3,
-                "value": 3000
+                "value": 0.3
               }
             ]
           }
@@ -469,7 +469,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 12000
+          "scaleRate": 1.2
         }
       ],
       "trigger_type": "active",
@@ -484,8 +484,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 14500,
-                "value": 14500
+                "scaleRate": 1.45,
+                "value": 145
               }
             ]
           }
@@ -510,7 +510,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 6000,
+          "scaleRate": 0.6,
           "hit_count": 3
         }
       ],
@@ -526,9 +526,9 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 10000,
+                "scaleRate": 1,
                 "hit_count": 3,
-                "value": 10000
+                "value": 100
               }
             ]
           }
@@ -551,10 +551,10 @@
       "effects": [
         {
           "type": "heal",
-          "value": 12000,
+          "value": 120,
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 12000
+          "scaleRate": 1.2
         }
       ],
       "trigger_type": "active",
@@ -567,10 +567,10 @@
             "effects": [
               {
                 "type": "heal",
-                "value": 15000,
+                "value": 150,
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 15000
+                "scaleRate": 1.5
               }
             ]
           }
@@ -595,7 +595,7 @@
           "type": "buff",
           "buffId": "buff-hot",
           "duration": 4,
-          "value": 5000,
+          "value": 50,
           "scaleAttr": "fagong"
         }
       ],
@@ -611,7 +611,7 @@
                 "type": "buff",
                 "buffId": "buff-hot",
                 "duration": 5,
-                "value": 6000,
+                "value": 60,
                 "scaleAttr": "fagong"
               }
             ]
@@ -637,13 +637,13 @@
           "type": "buff",
           "buffId": "buff-wufang-up",
           "duration": 3,
-          "value": 2500
+          "value": 0.25
         },
         {
           "type": "buff",
           "buffId": "buff-fafang-up",
           "duration": 3,
-          "value": 2500
+          "value": 0.25
         }
       ],
       "trigger_type": "active",
@@ -658,13 +658,13 @@
                 "type": "buff",
                 "buffId": "buff-wufang-up",
                 "duration": 3,
-                "value": 3500
+                "value": 0.35
               },
               {
                 "type": "buff",
                 "buffId": "buff-fafang-up",
                 "duration": 3,
-                "value": 3500
+                "value": 0.35
               }
             ]
           }
@@ -687,10 +687,10 @@
       "effects": [
         {
           "type": "shield",
-          "value": 15000,
+          "value": 150,
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 15000,
+          "scaleRate": 1.5,
           "duration": 3
         }
       ],
@@ -704,10 +704,10 @@
             "effects": [
               {
                 "type": "shield",
-                "value": 20000,
+                "value": 200,
                 "valueType": "scale",
                 "scaleAttr": "max_qixue",
-                "scaleRate": 20000,
+                "scaleRate": 2,
                 "duration": 3
               }
             ]
@@ -781,10 +781,10 @@
       "effects": [
         {
           "type": "heal",
-          "value": 8000,
+          "value": 80,
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 8000
+          "scaleRate": 0.8
         }
       ],
       "trigger_type": "active",
@@ -797,10 +797,10 @@
             "effects": [
               {
                 "type": "heal",
-                "value": 11000,
+                "value": 110,
                 "valueType": "scale",
                 "scaleAttr": "max_qixue",
-                "scaleRate": 11000
+                "scaleRate": 1.1
               }
             ]
           }
@@ -827,10 +827,10 @@
         },
         {
           "type": "heal",
-          "value": 5000,
+          "value": 50,
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 5000
+          "scaleRate": 0.5
         }
       ],
       "trigger_type": "active",
@@ -847,10 +847,10 @@
               },
               {
                 "type": "heal",
-                "value": 8000,
+                "value": 80,
                 "valueType": "scale",
                 "scaleAttr": "max_qixue",
-                "scaleRate": 8000
+                "scaleRate": 0.8
               }
             ]
           }
@@ -875,7 +875,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 11000
+          "scaleRate": 1.1
         }
       ],
       "trigger_type": "active",
@@ -890,8 +890,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 13500,
-                "value": 13500
+                "scaleRate": 1.35,
+                "value": 135
               }
             ]
           }
@@ -916,11 +916,11 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 13000
+          "scaleRate": 1.3
         },
         {
           "type": "lifesteal",
-          "value": 2000
+          "value": 0.2
         }
       ],
       "trigger_type": "active",
@@ -935,12 +935,12 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 16000,
-                "value": 16000
+                "scaleRate": 1.6,
+                "value": 160
               },
               {
                 "type": "lifesteal",
-                "value": 3000
+                "value": 0.3
               }
             ]
           }
@@ -965,13 +965,13 @@
           "type": "buff",
           "buffId": "buff-shanbi-up",
           "duration": 3,
-          "value": 3000
+          "value": 0.3
         },
         {
           "type": "buff",
           "buffId": "buff-sudu-up",
           "duration": 3,
-          "value": 200
+          "value": 2
         }
       ],
       "trigger_type": "active",
@@ -986,13 +986,13 @@
                 "type": "buff",
                 "buffId": "buff-shanbi-up",
                 "duration": 3,
-                "value": 4000
+                "value": 0.4
               },
               {
                 "type": "buff",
                 "buffId": "buff-sudu-up",
                 "duration": 3,
-                "value": 300
+                "value": 3
               }
             ]
           }
@@ -1021,7 +1021,7 @@
           "type": "buff",
           "buffId": "buff-kongzhi-kangxing-up",
           "duration": 2,
-          "value": 5000
+          "value": 0.5
         }
       ],
       "trigger_type": "active",
@@ -1040,7 +1040,7 @@
                 "type": "buff",
                 "buffId": "buff-kongzhi-kangxing-up",
                 "duration": 3,
-                "value": 6000
+                "value": 0.6
               }
             ]
           }
@@ -1103,10 +1103,10 @@
       "effects": [
         {
           "type": "heal",
-          "value": 15000,
+          "value": 150,
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 15000
+          "scaleRate": 1.5
         }
       ],
       "trigger_type": "active",
@@ -1119,10 +1119,10 @@
             "effects": [
               {
                 "type": "heal",
-                "value": 19000,
+                "value": 190,
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 19000
+                "scaleRate": 1.9
               }
             ]
           }
@@ -1145,10 +1145,10 @@
       "effects": [
         {
           "type": "shield",
-          "value": 12000,
+          "value": 120,
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 12000,
+          "scaleRate": 1.2,
           "duration": 3
         }
       ],
@@ -1162,10 +1162,10 @@
             "effects": [
               {
                 "type": "shield",
-                "value": 16000,
+                "value": 160,
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 16000,
+                "scaleRate": 1.6,
                 "duration": 3
               }
             ]
@@ -1191,13 +1191,13 @@
           "type": "buff",
           "buffId": "buff-wugong-up",
           "duration": 3,
-          "value": 2000
+          "value": 0.2
         },
         {
           "type": "buff",
           "buffId": "buff-fagong-up",
           "duration": 3,
-          "value": 2000
+          "value": 0.2
         }
       ],
       "trigger_type": "active",
@@ -1212,13 +1212,13 @@
                 "type": "buff",
                 "buffId": "buff-wugong-up",
                 "duration": 4,
-                "value": 3000
+                "value": 0.3
               },
               {
                 "type": "buff",
                 "buffId": "buff-fagong-up",
                 "duration": 4,
-                "value": 3000
+                "value": 0.3
               }
             ]
           }
@@ -1243,7 +1243,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 15000
+          "scaleRate": 1.5
         }
       ],
       "trigger_type": "active",
@@ -1258,8 +1258,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 18000,
-                "value": 18000
+                "scaleRate": 1.8,
+                "value": 180
               }
             ]
           }
@@ -1284,7 +1284,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 10000
+          "scaleRate": 1
         }
       ],
       "trigger_type": "active",
@@ -1299,8 +1299,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 12500,
-                "value": 12500
+                "scaleRate": 1.25,
+                "value": 125
               }
             ]
           }
@@ -1325,13 +1325,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 20000
+          "scaleRate": 2
         },
         {
           "type": "debuff",
           "buffId": "debuff-burn",
           "duration": 3,
-          "value": 3000
+          "value": 30
         }
       ],
       "trigger_type": "active",
@@ -1346,14 +1346,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 25000,
-                "value": 25000
+                "scaleRate": 2.5,
+                "value": 250
               },
               {
                 "type": "debuff",
                 "buffId": "debuff-burn",
                 "duration": 3,
-                "value": 3000
+                "value": 30
               }
             ]
           }
@@ -1378,13 +1378,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 25000
+          "scaleRate": 2.5
         },
         {
           "type": "debuff",
           "buffId": "debuff-burn",
           "duration": 3,
-          "value": 5000
+          "value": 50
         }
       ],
       "trigger_type": "active",
@@ -1408,7 +1408,7 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 15000
+          "scaleRate": 1.5
         }
       ],
       "trigger_type": "active",
@@ -1423,8 +1423,8 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 18000,
-                "value": 18000
+                "scaleRate": 1.8,
+                "value": 180
               }
             ]
           }
@@ -1449,13 +1449,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 10000
+          "scaleRate": 1
         },
         {
           "type": "debuff",
           "buffId": "debuff-sudu-down",
           "duration": 2,
-          "value": 200
+          "value": 2
         }
       ],
       "trigger_type": "active",
@@ -1470,14 +1470,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 12500,
-                "value": 12500
+                "scaleRate": 1.25,
+                "value": 125
               },
               {
                 "type": "debuff",
                 "buffId": "debuff-sudu-down",
                 "duration": 2,
-                "value": 200
+                "value": 2
               }
             ]
           }
@@ -1502,13 +1502,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 18000
+          "scaleRate": 1.8
         },
         {
           "type": "control",
           "controlType": "freeze",
           "duration": 1,
-          "chance": 7000
+          "chance": 0.7
         }
       ],
       "trigger_type": "active",
@@ -1523,14 +1523,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "fagong",
-                "scaleRate": 22000,
-                "value": 22000
+                "scaleRate": 2.2,
+                "value": 220
               },
               {
                 "type": "control",
                 "controlType": "freeze",
                 "duration": 2,
-                "chance": 8000
+                "chance": 0.8
               }
             ]
           }
@@ -1555,19 +1555,19 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "fagong",
-          "scaleRate": 22000
+          "scaleRate": 2.2
         },
         {
           "type": "control",
           "controlType": "freeze",
           "duration": 1,
-          "chance": 5000
+          "chance": 0.5
         },
         {
           "type": "debuff",
           "buffId": "debuff-sudu-down",
           "duration": 3,
-          "value": 300
+          "value": 3
         }
       ],
       "trigger_type": "active",
@@ -1591,13 +1591,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 16500
+          "scaleRate": 1.65
         },
         {
           "type": "debuff",
           "buffId": "debuff-sudu-down",
           "duration": 2,
-          "value": 260
+          "value": 2.6
         }
       ],
       "trigger_type": "active",
@@ -1612,14 +1612,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 19000,
-                "value": 19000
+                "scaleRate": 1.9,
+                "value": 190
               },
               {
                 "type": "debuff",
                 "buffId": "debuff-sudu-down",
                 "duration": 2,
-                "value": 320
+                "value": 3.2
               }
             ]
           }
@@ -1646,13 +1646,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 11800
+          "scaleRate": 1.18
         },
         {
           "type": "debuff",
           "buffId": "debuff-wufang-down",
           "duration": 2,
-          "value": 1800
+          "value": 0.18
         }
       ],
       "trigger_type": "active",
@@ -1667,14 +1667,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 14200,
-                "value": 14200
+                "scaleRate": 1.42,
+                "value": 142
               },
               {
                 "type": "debuff",
                 "buffId": "debuff-wufang-down",
                 "duration": 2,
-                "value": 2300
+                "value": 0.23
               }
             ]
           }
@@ -1701,13 +1701,13 @@
           "type": "damage",
           "valueType": "scale",
           "scaleAttr": "wugong",
-          "scaleRate": 18200
+          "scaleRate": 1.82
         },
         {
           "type": "control",
           "controlType": "freeze",
           "duration": 1,
-          "chance": 6800
+          "chance": 0.68
         }
       ],
       "trigger_type": "active",
@@ -1722,14 +1722,14 @@
                 "type": "damage",
                 "valueType": "scale",
                 "scaleAttr": "wugong",
-                "scaleRate": 21500,
-                "value": 21500
+                "scaleRate": 2.15,
+                "value": 215
               },
               {
                 "type": "control",
                 "controlType": "freeze",
                 "duration": 2,
-                "chance": 7600
+                "chance": 0.76
               }
             ]
           }
@@ -1756,7 +1756,7 @@
           "type": "shield",
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 17000,
+          "scaleRate": 1.7,
           "duration": 3
         }
       ],
@@ -1772,8 +1772,8 @@
                 "type": "shield",
                 "valueType": "scale",
                 "scaleAttr": "max_qixue",
-                "scaleRate": 21000,
-                "value": 21000,
+                "scaleRate": 2.1,
+                "value": 210,
                 "duration": 3
               }
             ]
@@ -1801,19 +1801,19 @@
           "type": "buff",
           "buffId": "buff-wufang-up",
           "duration": 3,
-          "value": 2800
+          "value": 0.28
         },
         {
           "type": "buff",
           "buffId": "buff-fafang-up",
           "duration": 3,
-          "value": 2800
+          "value": 0.28
         },
         {
           "type": "buff",
           "buffId": "buff-kongzhi-kangxing-up",
           "duration": 3,
-          "value": 2200
+          "value": 0.22
         }
       ],
       "trigger_type": "active",
@@ -1828,19 +1828,19 @@
                 "type": "buff",
                 "buffId": "buff-wufang-up",
                 "duration": 3,
-                "value": 3600
+                "value": 0.36
               },
               {
                 "type": "buff",
                 "buffId": "buff-fafang-up",
                 "duration": 3,
-                "value": 3600
+                "value": 0.36
               },
               {
                 "type": "buff",
                 "buffId": "buff-kongzhi-kangxing-up",
                 "duration": 3,
-                "value": 3200
+                "value": 0.32
               }
             ]
           }
@@ -1867,7 +1867,7 @@
           "type": "heal",
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 12000
+          "scaleRate": 1.2
         },
         {
           "type": "restore_lingqi",
@@ -1886,8 +1886,8 @@
                 "type": "heal",
                 "valueType": "scale",
                 "scaleAttr": "max_qixue",
-                "scaleRate": 15000,
-                "value": 15000
+                "scaleRate": 1.5,
+                "value": 150
               },
               {
                 "type": "restore_lingqi",

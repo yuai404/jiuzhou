@@ -215,7 +215,7 @@ const EQUIP_ATTR_KEYS = new Set<string>([
   'shuxing_shuzhi',
 ]);
 
-const PERMYRIAD_PERCENT_KEYS = new Set<string>([
+const PERCENT_ATTR_KEYS = new Set<string>([
   'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
@@ -241,8 +241,8 @@ const formatSignedNumber = (value: number): string => {
   return `${sign}${value}`;
 };
 
-const formatSignedPermyriadPercent = (value: number): string => {
-  const percent = value / 100;
+const formatSignedPercent = (value: number): string => {
+  const percent = value * 100;
   const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
   const trimmed = fixed.replace(/\.?0+$/, '') || '0';
   const sign = value > 0 ? '+' : '';
@@ -320,7 +320,7 @@ const formatLines = (value: unknown, depth: number = 0): string[] => {
       const kk = translateKey(k) ?? '';
       if (!kk) continue;
       if (EQUIP_ATTR_KEYS.has(k) && typeof v === 'number' && Number.isFinite(v)) {
-        const text = PERMYRIAD_PERCENT_KEYS.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v);
+        const text = PERCENT_ATTR_KEYS.has(k) ? formatSignedPercent(v) : formatSignedNumber(v);
         out.push(`${kk}：${text}`);
         continue;
       }
@@ -474,9 +474,9 @@ const WarehouseItemTooltip: React.FC<{ it: InventoryItemDto }> = ({ it }) => {
         legendaryPrefix: '传奇词条',
         keyTranslator: translateKey,
         rejectLatinLabel: true,
-        percentKeys: PERMYRIAD_PERCENT_KEYS,
+        percentKeys: PERCENT_ATTR_KEYS,
         formatSignedNumber,
-        formatSignedPermyriadPercent,
+        formatSignedPercent,
       });
       if (!displayText) continue;
       out.push(displayText.fullText);

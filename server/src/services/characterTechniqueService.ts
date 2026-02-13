@@ -810,6 +810,11 @@ export const unequipSkill = async (
 // ============================================
 // 12. 计算功法被动加成（用于战斗和属性面板）
 // ============================================
+const calcTechniquePassiveEffectiveValue = (value: number, ratio: number): number => {
+  // 百分比统一为比例值后，需要保留更高精度，避免 30% 副功法把小数加成截断成 0。
+  return Math.round(value * ratio * 10000) / 10000;
+};
+
 export const calculateTechniquePassives = async (
   characterId: number
 ): Promise<ServiceResult<Record<string, number>>> => {
@@ -833,13 +838,13 @@ export const calculateTechniquePassives = async (
       const slotType = row.slot_type === 'main' ? 'main' : row.slot_type === 'sub' ? 'sub' : null;
       if (!slotType) continue;
 
-      const multiplier = slotType === 'main' ? 10000 : 3000;
+      const ratio = slotType === 'main' ? 1 : 0.3;
       const layerPassives = Array.isArray(row.passives) ? (row.passives as TechniquePassive[]) : [];
       for (const p of layerPassives) {
         if (!p || typeof p !== 'object') continue;
         if (typeof p.key !== 'string' || p.key.length === 0) continue;
         if (typeof p.value !== 'number' || !Number.isFinite(p.value)) continue;
-        const effectiveValue = Math.floor((p.value * multiplier) / 10000);
+        const effectiveValue = calcTechniquePassiveEffectiveValue(p.value, ratio);
         passives[p.key] = (passives[p.key] || 0) + effectiveValue;
       }
     }

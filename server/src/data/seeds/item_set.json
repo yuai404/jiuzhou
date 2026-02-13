@@ -70,7 +70,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoji",
-                "value": 150,
+                "value": 0.015,
                 "apply_type": "flat"
               }
             }
@@ -86,7 +86,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoshang",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             },
@@ -96,7 +96,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "mingzhong",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             }
@@ -112,7 +112,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoji",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             },
@@ -125,7 +125,7 @@
                 "attr_key": "sudu",
                 "value": 2,
                 "apply_type": "flat",
-                "chance": 5000
+                "chance": 0.5
               }
             }
           ],
@@ -140,7 +140,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoshang",
-                "value": 500,
+                "value": 0.05,
                 "apply_type": "flat"
               }
             },
@@ -151,8 +151,8 @@
               "duration_round": 2,
               "params": {
                 "debuff_type": "bleed",
-                "value": 100,
-                "chance": 3000,
+                "value": 1,
+                "chance": 0.3,
                 "description": "暴击时30%几率使敌人流血"
               }
             }
@@ -255,7 +255,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zhaojia",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             }
@@ -271,7 +271,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "kangbao",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             },
@@ -284,7 +284,7 @@
                 "attr_key": "wugong",
                 "value": 5,
                 "apply_type": "flat",
-                "chance": 3000,
+                "chance": 0.3,
                 "description": "受击时30%几率提升物攻"
               }
             }
@@ -300,7 +300,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zengshang",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             },
@@ -310,8 +310,8 @@
               "effect_type": "damage",
               "params": {
                 "damage_type": "reflect",
-                "value": 500,
-                "chance": 2500,
+                "value": 0.05,
+                "chance": 0.25,
                 "description": "受击时25%几率反弹5%伤害"
               }
             }
@@ -404,7 +404,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoji",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             },
@@ -414,7 +414,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "lengque",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             }
@@ -430,7 +430,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoshang",
-                "value": 400,
+                "value": 0.04,
                 "apply_type": "flat"
               }
             },
@@ -444,7 +444,7 @@
                 "value": 30,
                 "scale_key": "fagong",
                 "scale_rate": 0.15,
-                "chance": 2500,
+                "chance": 0.25,
                 "description": "攻击时25%几率触发雷击"
               }
             }
@@ -460,7 +460,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zengshang",
-                "value": 400,
+                "value": 0.04,
                 "apply_type": "flat"
               }
             },
@@ -471,7 +471,7 @@
               "params": {
                 "resource_type": "lingqi",
                 "value": 10,
-                "chance": 3000,
+                "chance": 0.3,
                 "description": "施法时30%几率恢复灵气"
               }
             }
@@ -548,7 +548,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zhiliao",
-                "value": 150,
+                "value": 0.015,
                 "apply_type": "flat"
               }
             }
@@ -603,7 +603,7 @@
                 "attr_key": "fafang",
                 "value": 10,
                 "apply_type": "flat",
-                "chance": 4000,
+                "chance": 0.4,
                 "description": "治疗时40%几率提升法防"
               }
             }
@@ -619,7 +619,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "xixue",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             },
@@ -708,7 +708,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoji",
-                "value": 100,
+                "value": 0.01,
                 "apply_type": "flat"
               }
             }
@@ -734,7 +734,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zengshang",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             }
@@ -750,7 +750,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoshang",
-                "value": 500,
+                "value": 0.05,
                 "apply_type": "flat"
               }
             },
@@ -760,7 +760,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "huo_kangxing",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             }
@@ -779,8 +779,8 @@
                 "value": 60,
                 "damage_type": "physical",
                 "scale_key": "wugong",
-                "scale_rate": 4500,
-                "chance": 500
+                "scale_rate": 0.45,
+                "chance": 0.05
               }
             }
           ],
@@ -882,7 +882,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zhaojia",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             }
@@ -898,7 +898,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "kongzhi_kangxing",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             },
@@ -908,7 +908,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "kangbao",
-                "value": 300,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             }
@@ -925,7 +925,7 @@
               "params": {
                 "value": 0,
                 "scale_key": "max_qixue",
-                "scale_rate": 300
+                "scale_rate": 0.03
               }
             },
             {
@@ -935,9 +935,9 @@
               "duration_round": 1,
               "params": {
                 "attr_key": "wufang",
-                "value": 2000,
+                "value": 0.2,
                 "apply_type": "percent",
-                "chance": 800
+                "chance": 0.08
               }
             }
           ],
@@ -1029,7 +1029,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "baoji",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             },
@@ -1039,7 +1039,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "lengque",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             }
@@ -1055,7 +1055,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zengshang",
-                "value": 400,
+                "value": 0.04,
                 "apply_type": "flat"
               }
             },
@@ -1084,8 +1084,8 @@
                 "value": 90,
                 "damage_type": "magic",
                 "scale_key": "fagong",
-                "scale_rate": 3500,
-                "chance": 1000
+                "scale_rate": 0.35,
+                "chance": 0.1
               }
             },
             {
@@ -1095,7 +1095,7 @@
               "params": {
                 "resource_type": "lingqi",
                 "value": 18,
-                "chance": 1000
+                "chance": 0.1
               }
             }
           ],
@@ -1161,7 +1161,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zhiliao",
-                "value": 10,
+                "value": 0.1,
                 "apply_type": "flat"
               }
             },
@@ -1197,7 +1197,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "xixue",
-                "value": 100,
+                "value": 0.01,
                 "apply_type": "flat"
               }
             }
@@ -1223,7 +1223,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "kongzhi_kangxing",
-                "value": 200,
+                "value": 0.02,
                 "apply_type": "flat"
               }
             }
@@ -1240,7 +1240,7 @@
               "params": {
                 "value": 0,
                 "scale_key": "max_qixue",
-                "scale_rate": 200
+                "scale_rate": 0.02
               }
             },
             {
@@ -1250,9 +1250,9 @@
               "duration_round": 2,
               "params": {
                 "attr_key": "fafang",
-                "value": 1200,
+                "value": 0.12,
                 "apply_type": "percent",
-                "chance": 1500
+                "chance": 0.15
               }
             }
           ],

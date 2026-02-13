@@ -234,17 +234,19 @@ function validateSkillConditions(
   unit: BattleUnit,
   conditions: NonNullable<BattleSkill['conditions']>
 ): ValidationResult {
-  const qixuePercent = (unit.qixue / unit.currentAttrs.max_qixue) * 100;
+  const qixueRatio = unit.qixue / unit.currentAttrs.max_qixue;
   
   if (conditions.minQixuePercent !== undefined) {
-    if (qixuePercent < conditions.minQixuePercent) {
-      return { valid: false, error: `气血百分比不足: 需要${conditions.minQixuePercent}%` };
+    if (qixueRatio < conditions.minQixuePercent) {
+      const need = (conditions.minQixuePercent * 100).toFixed(2).replace(/\.?0+$/, '');
+      return { valid: false, error: `气血百分比不足: 需要${need}%` };
     }
   }
   
   if (conditions.maxQixuePercent !== undefined) {
-    if (qixuePercent > conditions.maxQixuePercent) {
-      return { valid: false, error: `气血百分比过高: 需要低于${conditions.maxQixuePercent}%` };
+    if (qixueRatio > conditions.maxQixuePercent) {
+      const limit = (conditions.maxQixuePercent * 100).toFixed(2).replace(/\.?0+$/, '');
+      return { valid: false, error: `气血百分比过高: 需要低于${limit}%` };
     }
   }
   

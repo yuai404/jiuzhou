@@ -18,9 +18,9 @@ import {
   buildRefineCostPlan,
   clampInt as clampGrowthInt,
   getEnhanceFailResultLevel,
-  getEnhanceSuccessRatePermyriad,
+  getEnhanceSuccessRatePercent,
   getRefineFailResultLevel,
-  getRefineSuccessRatePermyriad,
+  getRefineSuccessRatePercent,
   inferGemTypeFromEffects,
   isGemTypeAllowedInSlot,
   parseSocketEffectsFromItemEffectDefs,
@@ -707,13 +707,13 @@ const getRerollItemStateTx = async (
   };
 };
 
-const getEnhanceToolBonusPermyriad = async (
+const getEnhanceToolBonusPercent = async (
   client: PoolClient,
   characterId: number,
   toolItemInstanceId?: number
-): Promise<{ success: boolean; message: string; bonusPermyriad: number; consumedToolItemDefId?: string }> => {
+): Promise<{ success: boolean; message: string; bonusPercent: number; consumedToolItemDefId?: string }> => {
   if (!toolItemInstanceId) {
-    return { success: true, message: '未使用强化符', bonusPermyriad: 0 };
+    return { success: true, message: '未使用强化符', bonusPercent: 0 };
   }
 
   const itemResult = await client.query(
@@ -727,7 +727,7 @@ const getEnhanceToolBonusPermyriad = async (
     [toolItemInstanceId, characterId]
   );
   if (itemResult.rows.length === 0) {
-    return { success: false, message: '强化符不存在', bonusPermyriad: 0 };
+    return { success: false, message: '强化符不存在', bonusPercent: 0 };
   }
 
   const item = itemResult.rows[0] as {
@@ -737,22 +737,22 @@ const getEnhanceToolBonusPermyriad = async (
     locked: boolean;
     location: string;
   };
-  if (item.locked) return { success: false, message: '强化符已锁定', bonusPermyriad: 0 };
+  if (item.locked) return { success: false, message: '强化符已锁定', bonusPercent: 0 };
   if (!['bag', 'warehouse'].includes(String(item.location))) {
-    return { success: false, message: '强化符当前位置不可消耗', bonusPermyriad: 0 };
+    return { success: false, message: '强化符当前位置不可消耗', bonusPercent: 0 };
   }
   if ((Number(item.qty) || 0) < 1) {
-    return { success: false, message: '强化符数量不足', bonusPermyriad: 0 };
+    return { success: false, message: '强化符数量不足', bonusPercent: 0 };
   }
 
   const toolDefId = String(item.item_def_id || '');
-  if (!toolDefId) return { success: false, message: '强化符数据异常', bonusPermyriad: 0 };
+  if (!toolDefId) return { success: false, message: '强化符数据异常', bonusPercent: 0 };
 
   const defResult = await client.query(
     'SELECT effect_defs FROM item_def WHERE id = $1 AND enabled = true LIMIT 1',
     [toolDefId]
   );
-  if (defResult.rows.length === 0) return { success: false, message: '强化符不存在', bonusPermyriad: 0 };
+  if (defResult.rows.length === 0) return { success: false, message: '强化符不存在', bonusPercent: 0 };
 
   const defs: unknown[] = Array.isArray(defResult.rows[0].effect_defs) ? defResult.rows[0].effect_defs : [];
   let bonus = 0;
@@ -767,11 +767,11 @@ const getEnhanceToolBonusPermyriad = async (
     if (String(effect.effect_type || '') !== 'buff') continue;
     const params = effect.params && typeof effect.params === 'object' ? (effect.params as Record<string, unknown>) : {};
     const v = Number(params.success_rate_bonus);
-    if (Number.isFinite(v)) bonus += Math.floor(v);
+    if (Number.isFinite(v)) bonus += v;
   }
 
   if (bonus <= 0) {
-    return { success: false, message: '该道具不是强化符', bonusPermyriad: 0 };
+    return { success: false, message: '该道具不是强化符', bonusPercent: 0 };
   }
 
   if ((Number(item.qty) || 0) === 1) {
@@ -783,7 +783,7 @@ const getEnhanceToolBonusPermyriad = async (
   return {
     success: true,
     message: 'ok',
-    bonusPermyriad: Math.max(0, bonus),
+    bonusPercent: Math.max(0, Math.min(1, bonus)),
     consumedToolItemDefId: toolDefId,
   };
 };
@@ -2058,7 +2058,7 @@ export const enhanceEquipment = async (
   data?: {
     strengthenLevel: number;
     targetLevel?: number;
-    successRatePermyriad?: number;
+    successRate?: number;
     roll?: number;
     usedMaterial?: { itemDefId: string; qty: number };
     costs?: { silver: number; spiritStones: number };
@@ -2120,7 +2120,7 @@ export const enhanceEquipment = async (
       return { success: false, message: currencyRes.message };
     }
 
-    const enhanceToolRes = await getEnhanceToolBonusPermyriad(
+    const enhanceToolRes = await getEnhanceToolBonusPercent(
       client,
       characterId,
       options.enhanceToolItemId
@@ -2140,10 +2140,10 @@ export const enhanceEquipment = async (
       return { success: false, message: protectToolRes.message };
     }
 
-    const baseRate = getEnhanceSuccessRatePermyriad(targetLv);
-    const finalRate = clampInt(baseRate + enhanceToolRes.bonusPermyriad, 0, 10000);
-    const roll = randomInt(1, 10001);
-    const success = roll <= finalRate;
+    const baseRate = getEnhanceSuccessRatePercent(targetLv);
+    const finalRate = Math.max(0, Math.min(1, baseRate + enhanceToolRes.bonusPercent));
+    const roll = randomInt(0, 10_000) / 10_000;
+    const success = roll < finalRate;
 
     const resultLevel = success
       ? targetLv
@@ -2177,7 +2177,7 @@ export const enhanceEquipment = async (
       data: {
         strengthenLevel: resultLevel,
         targetLevel: targetLv,
-        successRatePermyriad: finalRate,
+        successRate: finalRate,
         roll,
         usedMaterial: { itemDefId: costPlan.materialItemDefId, qty: costPlan.materialQty },
         costs: {
@@ -2209,7 +2209,7 @@ export const refineEquipment = async (
   data?: {
     refineLevel: number;
     targetLevel?: number;
-    successRatePermyriad?: number;
+    successRate?: number;
     roll?: number;
     usedMaterial?: { itemDefId: string; qty: number };
     costs?: { silver: number; spiritStones: number };
@@ -2268,9 +2268,9 @@ export const refineEquipment = async (
       return { success: false, message: currencyRes.message };
     }
 
-    const finalRate = getRefineSuccessRatePermyriad(targetLv);
-    const roll = randomInt(1, 10001);
-    const success = roll <= finalRate;
+    const finalRate = getRefineSuccessRatePercent(targetLv);
+    const roll = randomInt(0, 10_000) / 10_000;
+    const success = roll < finalRate;
     const resultLevel = success ? targetLv : getRefineFailResultLevel(curLv, targetLv);
 
     if (resultLevel !== curLv) {
@@ -2301,7 +2301,7 @@ export const refineEquipment = async (
       data: {
         refineLevel: resultLevel,
         targetLevel: targetLv,
-        successRatePermyriad: finalRate,
+        successRate: finalRate,
         roll,
         usedMaterial: { itemDefId: costPlan.materialItemDefId, qty: costPlan.materialQty },
         costs: {

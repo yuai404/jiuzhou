@@ -237,7 +237,7 @@ export const attrOrder: Record<string, number> = Object.fromEntries(
   ].map((k, idx) => [k, idx]),
 );
 
-export const permyriadPercentKeys = new Set<string>([
+export const percentAttrKeys = new Set<string>([
   "shuxing_shuzhi",
   "mingzhong",
   "shanbi",
@@ -393,8 +393,8 @@ export const formatSignedNumber = (value: number): string => {
   return `${sign}${value}`;
 };
 
-export const formatSignedPermyriadPercent = (value: number): string => {
-  const percent = value / 100;
+export const formatSignedPercent = (value: number): string => {
+  const percent = value * 100;
   const fixed =
     Math.abs(percent - Math.round(percent)) < 1e-9
       ? percent.toFixed(0)
@@ -404,8 +404,13 @@ export const formatSignedPermyriadPercent = (value: number): string => {
   return `${sign}${trimmed}%`;
 };
 
-export const formatPermyriadPercent = (value: number): string => {
-  return (value / 100).toFixed(2).replace(/\.00$/, "");
+export const formatPercent = (value: number): string => {
+  const percent = value * 100;
+  const fixed =
+    Math.abs(percent - Math.round(percent)) < 1e-9
+      ? percent.toFixed(0)
+      : percent.toFixed(2);
+  return fixed.replace(/\.?0+$/, "") || "0";
 };
 
 /* ───────── 词条洗炼 ───────── */
@@ -474,9 +479,9 @@ export const formatEquipmentAffixLine = (affix: EquipmentAffix): string => {
     legendaryPrefix: "传奇词条",
     keyLabelMap: attrLabel,
     fallbackLabel: "未知",
-    percentKeys: permyriadPercentKeys,
+    percentKeys: percentAttrKeys,
     formatSignedNumber,
-    formatSignedPermyriadPercent,
+    formatSignedPercent,
   });
   return displayText ? displayText.fullText : "词条 T-：未知";
 };
@@ -563,46 +568,47 @@ export const buildGrowthPreviewAttrs = (
   for (const [k, v] of Object.entries(baseAttrs)) {
     const n = Number(v);
     if (!Number.isFinite(n)) continue;
-    out[k] = Math.round(n * factor);
+    const scaled = n * factor;
+    out[k] = percentAttrKeys.has(k) ? Number(scaled.toFixed(6)) : Math.round(scaled);
   }
   return out;
 };
 
-export const getEnhanceSuccessRatePermyriad = (targetLevel: number): number => {
+export const getEnhanceSuccessRatePercent = (targetLevel: number): number => {
   const table: Record<number, number> = {
-    1: 10000,
-    2: 10000,
-    3: 10000,
-    4: 10000,
-    5: 10000,
-    6: 8000,
-    7: 7000,
-    8: 6000,
-    9: 5000,
-    10: 4000,
-    11: 3500,
-    12: 3000,
-    13: 2500,
-    14: 2000,
-    15: 1500,
+    1: 1,
+    2: 1,
+    3: 1,
+    4: 1,
+    5: 1,
+    6: 0.8,
+    7: 0.7,
+    8: 0.6,
+    9: 0.5,
+    10: 0.4,
+    11: 0.35,
+    12: 0.3,
+    13: 0.25,
+    14: 0.2,
+    15: 0.15,
   };
   return (
     table[Math.max(1, Math.min(15, Math.floor(Number(targetLevel) || 1)))] ?? 0
   );
 };
 
-export const getRefineSuccessRatePermyriad = (targetLevel: number): number => {
+export const getRefineSuccessRatePercent = (targetLevel: number): number => {
   const table: Record<number, number> = {
-    1: 10000,
-    2: 10000,
-    3: 10000,
-    4: 9000,
-    5: 8000,
-    6: 7000,
-    7: 6000,
-    8: 5000,
-    9: 4000,
-    10: 3000,
+    1: 1,
+    2: 1,
+    3: 1,
+    4: 0.9,
+    5: 0.8,
+    6: 0.7,
+    7: 0.6,
+    8: 0.5,
+    9: 0.4,
+    10: 0.3,
   };
   return (
     table[Math.max(1, Math.min(10, Math.floor(Number(targetLevel) || 1)))] ?? 0
@@ -850,8 +856,8 @@ export const buildEquipmentLines = (item: BagItem | null): string[] => {
 
   for (const [k, v] of toSortedEntries(baseAttrs)) {
     const label = attrLabel[k] ?? k;
-    const valText = permyriadPercentKeys.has(k)
-      ? formatSignedPermyriadPercent(v)
+    const valText = percentAttrKeys.has(k)
+      ? formatSignedPercent(v)
       : formatSignedNumber(v);
     lines.push(`基础：${label} ${valText}`);
   }
@@ -865,7 +871,7 @@ export const buildEquipmentLines = (item: BagItem | null): string[] => {
       const label = attrLabel[effect.attrKey] ?? effect.attrKey;
       const valText =
         effect.applyType === "percent"
-          ? formatSignedPermyriadPercent(effect.value)
+          ? formatSignedPercent(effect.value)
           : formatSignedNumber(effect.value);
       lines.push(`  - ${label} ${valText}`);
     }
@@ -1066,9 +1072,9 @@ const formatSetEffectLine = (raw: unknown): string | null => {
       typeof params.apply_type === "string" ? params.apply_type : "flat";
     if (attrKey && value !== null) {
       const label = attrLabel[attrKey] ?? attrKey;
-      const isPercent = applyType === "percent" || permyriadPercentKeys.has(attrKey);
+      const isPercent = applyType === "percent" || percentAttrKeys.has(attrKey);
       const valText = isPercent
-        ? formatSignedPermyriadPercent(value)
+        ? formatSignedPercent(value)
         : formatSignedNumber(value);
       main = `${label} ${valText}`;
     } else {
@@ -1109,7 +1115,7 @@ const formatSetEffectLine = (raw: unknown): string | null => {
   const parts: string[] = [];
   if (trigger !== "equip") parts.push(`触发：${triggerLabel[trigger] ?? trigger}`);
   parts.push(main);
-  if (chance !== null) parts.push(`概率 ${formatPermyriadPercent(chance)}%`);
+  if (chance !== null) parts.push(`概率 ${formatPercent(chance)}%`);
   if (durationRound !== null && durationRound > 0) {
     parts.push(`持续 ${Math.floor(durationRound)} 回合`);
   }

@@ -356,7 +356,7 @@ class GameServer {
         return character;
       }
       const merged: CharacterAttributes = { ...character };
-      const permyriadAdditiveKeys = new Set([
+      const percentAdditiveKeys = new Set([
         'mingzhong',
         'shanbi',
         'zhaojia',
@@ -377,7 +377,6 @@ class GameServer {
         'tu_kangxing',
       ]);
       const percentMultiplyKeys = new Set(['wugong', 'fagong', 'wufang', 'fafang', 'max_qixue']);
-      const scaledHundredAddKeys = new Set(['sudu', 'max_lingqi', 'qixue_huifu', 'lingqi_huifu']);
       const toCamel = (k: string) => k.replace(/_([a-z])/g, (_, c) => String(c).toUpperCase());
       const mergedAny = merged as any;
       for (const key of keys) {
@@ -387,18 +386,13 @@ class GameServer {
         const baseValue = typeof mergedAny[camelKey] === 'number' ? (mergedAny[camelKey] as number) : undefined;
         if (baseValue == null) continue;
 
-        if (permyriadAdditiveKeys.has(key)) {
+        if (percentAdditiveKeys.has(key)) {
           mergedAny[camelKey] = baseValue + value;
           continue;
         }
 
         if (percentMultiplyKeys.has(key)) {
-          mergedAny[camelKey] = Math.floor((baseValue * (10000 + value)) / 10000);
-          continue;
-        }
-
-        if (scaledHundredAddKeys.has(key)) {
-          mergedAny[camelKey] = baseValue + value / 100;
+          mergedAny[camelKey] = Math.floor(baseValue * (1 + value));
           continue;
         }
 

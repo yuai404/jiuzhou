@@ -40,7 +40,7 @@ export function tryApplyControl(
   source: BattleUnit,
   target: BattleUnit,
   controlType: string,
-  baseRate: number,  // 万分比
+  baseRate: number,  // 概率（0~1）
   baseDuration: number
 ): ControlResult {
   const result: ControlResult = {
@@ -60,7 +60,7 @@ export function tryApplyControl(
     target.currentAttrs.kongzhi_kangxing,
     BATTLE_CONSTANTS.MAX_CONTROL_RESIST
   );
-  const actualRate = Math.floor(baseRate * (1 - resistance / 10000));
+  const actualRate = baseRate * (1 - resistance);
 
   // 概率判定
   if (!rollChance(state, actualRate)) {

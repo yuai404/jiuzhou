@@ -190,7 +190,7 @@ function calculateDotDamage(dot: DotEffect, target: BattleUnit): number {
   
   if (dot.element && dot.element !== 'none') {
     const resistance = getElementResistanceForDot(target, dot.element);
-    damage *= (1 - resistance / 10000);
+    damage *= (1 - resistance);
   }
   
   return Math.floor(Math.max(1, damage));
@@ -204,7 +204,7 @@ function calculateHotHeal(hot: HotEffect, target: BattleUnit): number {
   
   // 受减疗影响
   const healReduction = Math.min(target.currentAttrs.jianliao, BATTLE_CONSTANTS.MAX_HEAL_REDUCTION);
-  heal *= (1 - healReduction / 10000);
+  heal *= (1 - healReduction);
   
   return Math.floor(Math.max(1, heal));
 }
@@ -245,7 +245,7 @@ function recalculateUnitAttrs(unit: BattleUnit): void {
   for (const [attr, value] of Object.entries(percentMods)) {
     if (attr in unit.currentAttrs) {
       (unit.currentAttrs as any)[attr] = Math.floor(
-        (unit.currentAttrs as any)[attr] * (1 + value / 10000)
+        (unit.currentAttrs as any)[attr] * (1 + value)
       );
     }
   }

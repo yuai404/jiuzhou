@@ -187,7 +187,7 @@ const attrOrder: Record<string, number> = Object.fromEntries(
   ].map((k, idx) => [k, idx]),
 );
 
-const permyriadPercentKeys = new Set<string>([
+const percentAttrKeys = new Set<string>([
   'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
@@ -213,8 +213,8 @@ const formatSignedNumber = (value: number): string => {
   return `${sign}${value}`;
 };
 
-const formatSignedPermyriadPercent = (value: number): string => {
-  const percent = value / 100;
+const formatSignedPercent = (value: number): string => {
+  const percent = value * 100;
   const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
   const trimmed = fixed.replace(/\.?0+$/, '') || '0';
   const sign = value > 0 ? '+' : '';
@@ -314,7 +314,7 @@ const renderEquipTooltip = (uiSlot: string, it: InventoryItemDto) => {
               <div key={`attr-${k}`} className="equip-tooltip-line">
                 <span className="equip-tooltip-line-k">{attrLabel[k] ?? k}</span>
                 <span className="equip-tooltip-line-v">
-                  {permyriadPercentKeys.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v)}
+                  {percentAttrKeys.has(k) ? formatSignedPercent(v) : formatSignedNumber(v)}
                 </span>
               </div>
             ))
@@ -335,9 +335,9 @@ const renderEquipTooltip = (uiSlot: string, it: InventoryItemDto) => {
                   legendaryPrefix: '传奇',
                   keyLabelMap: attrLabel,
                   fallbackLabel: '未知',
-                  percentKeys: permyriadPercentKeys,
+                  percentKeys: percentAttrKeys,
                   formatSignedNumber,
-                  formatSignedPermyriadPercent,
+                  formatSignedPercent,
                 });
                 if (!displayText) return null;
                 return (

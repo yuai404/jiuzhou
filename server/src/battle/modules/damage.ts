@@ -73,24 +73,24 @@ export function calculateDamage(
   
   if (rollChance(state, critRate)) {
     result.isCrit = true;
-    const critDamageBonus = clamp(attacker.currentAttrs.baoshang, 0, BATTLE_CONSTANTS.MAX_CRIT_DAMAGE);
-    damage *= (10000 + critDamageBonus) / 10000;
+    const critDamageMultiplier = clamp(attacker.currentAttrs.baoshang, 1, BATTLE_CONSTANTS.MAX_CRIT_DAMAGE);
+    damage *= critDamageMultiplier;
   }
 
   // 6. 增伤加成
   const damageBonus = Math.min(attacker.currentAttrs.zengshang, BATTLE_CONSTANTS.MAX_DAMAGE_BONUS);
-  damage *= (1 + damageBonus / 10000);
+  damage *= (1 + damageBonus);
 
   // 7. 五行克制
   if (isElementCounter(profile.element, defender.currentAttrs.element)) {
     result.isElementBonus = true;
-    damage *= (1 + BATTLE_CONSTANTS.ELEMENT_COUNTER_BONUS / 10000);
+    damage *= (1 + BATTLE_CONSTANTS.ELEMENT_COUNTER_BONUS);
   }
 
   // 8. 五行抗性
   const resistance = getElementResistance(defender, profile.element);
   const cappedResistance = Math.min(resistance, BATTLE_CONSTANTS.MAX_ELEMENT_RESIST);
-  damage *= (1 - cappedResistance / 10000);
+  damage *= (1 - cappedResistance);
 
   // 最终伤害取整，最低1点
   result.damage = Math.floor(Math.max(1, damage));

@@ -11,7 +11,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 200
+          "value": 0.02
         }
       ],
       "unlock_skill_ids": [
@@ -33,7 +33,7 @@
       "passives": [
         {
           "key": "mingzhong",
-          "value": 200
+          "value": 0.02
         }
       ],
       "layer_desc": "拳法小成，命中+2%"
@@ -52,11 +52,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 300
+          "value": 0.03
         },
         {
           "key": "baoji",
-          "value": 100
+          "value": 0.01
         }
       ],
       "upgrade_skill_ids": [
@@ -73,7 +73,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 200
+          "value": 0.02
         }
       ],
       "unlock_skill_ids": [
@@ -95,7 +95,7 @@
       "passives": [
         {
           "key": "baoji",
-          "value": 150
+          "value": 0.015
         }
       ],
       "layer_desc": "剑法小成，暴击+1.5%"
@@ -114,11 +114,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 300
+          "value": 0.03
         },
         {
           "key": "baoshang",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -135,7 +135,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 250
+          "value": 0.025
         }
       ],
       "unlock_skill_ids": [
@@ -157,7 +157,7 @@
       "passives": [
         {
           "key": "zengshang",
-          "value": 200
+          "value": 0.02
         }
       ],
       "layer_desc": "刀法小成，增伤+2%"
@@ -176,7 +176,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -193,7 +193,7 @@
       "passives": [
         {
           "key": "lingqi_huifu",
-          "value": 50
+          "value": 0.5
         }
       ],
       "unlock_skill_ids": [
@@ -215,7 +215,7 @@
       "passives": [
         {
           "key": "max_lingqi",
-          "value": 500
+          "value": 5
         }
       ],
       "layer_desc": "养气小成，灵气上限+5"
@@ -234,7 +234,7 @@
       "passives": [
         {
           "key": "lingqi_huifu",
-          "value": 100
+          "value": 1
         }
       ],
       "upgrade_skill_ids": [
@@ -251,7 +251,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 200
+          "value": 0.02
         }
       ],
       "unlock_skill_ids": [
@@ -273,7 +273,7 @@
       "passives": [
         {
           "key": "mingzhong",
-          "value": 200
+          "value": 0.02
         }
       ],
       "layer_desc": "符术小成，命中+2%"
@@ -292,7 +292,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -309,7 +309,7 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 200
+          "value": 0.02
         }
       ],
       "unlock_skill_ids": [
@@ -331,7 +331,7 @@
       "passives": [
         {
           "key": "sudu",
-          "value": 100
+          "value": 1
         }
       ],
       "layer_desc": "轻功小成，速度+1"
@@ -350,7 +350,7 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -367,7 +367,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 200
+          "value": 0.02
         }
       ],
       "unlock_skill_ids": [
@@ -389,10 +389,10 @@
       "passives": [
         {
           "key": "qixue_huifu",
-          "value": 50
+          "value": 0.5
         }
       ],
-      "layer_desc": "恢复术小成，气血恢复+0.5%"
+      "layer_desc": "恢复术小成，气血恢复+0.5/回合"
     },
     {
       "technique_id": "tech-huifu-shu",
@@ -408,7 +408,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -425,11 +425,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 150
+          "value": 0.015
         },
         {
           "key": "wufang",
-          "value": 150
+          "value": 0.015
         }
       ],
       "unlock_skill_ids": [
@@ -451,7 +451,7 @@
       "passives": [
         {
           "key": "wufang",
-          "value": 200
+          "value": 0.02
         }
       ],
       "layer_desc": "铁布拳小成，物防+2%"
@@ -470,11 +470,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 200
+          "value": 0.02
         },
         {
           "key": "wufang",
-          "value": 200
+          "value": 0.02
         }
       ],
       "upgrade_skill_ids": [
@@ -491,7 +491,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -513,7 +513,7 @@
       "passives": [
         {
           "key": "zengshang",
-          "value": 200
+          "value": 0.02
         }
       ],
       "layer_desc": "金刚拳小成，增伤+2%"
@@ -532,7 +532,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 400
+          "value": 0.04
         }
       ],
       "unlock_skill_ids": [
@@ -559,7 +559,7 @@
       "passives": [
         {
           "key": "baoji",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -585,11 +585,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 500
+          "value": 0.05
         },
         {
           "key": "zengshang",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -607,11 +607,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 250
+          "value": 0.025
         },
         {
           "key": "sudu",
-          "value": 50
+          "value": 0.5
         }
       ],
       "unlock_skill_ids": [
@@ -633,7 +633,7 @@
       "passives": [
         {
           "key": "baoji",
-          "value": 200
+          "value": 0.02
         }
       ],
       "layer_desc": "清风剑小成，暴击+2%"
@@ -652,7 +652,7 @@
       "passives": [
         {
           "key": "sudu",
-          "value": 100
+          "value": 1
         }
       ],
       "unlock_skill_ids": [
@@ -679,7 +679,7 @@
       "passives": [
         {
           "key": "baoshang",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -705,11 +705,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 400
+          "value": 0.04
         },
         {
           "key": "sudu",
-          "value": 150
+          "value": 1.5
         }
       ],
       "upgrade_skill_ids": [
@@ -727,7 +727,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -749,10 +749,10 @@
       "passives": [
         {
           "key": "qixue_huifu",
-          "value": 100
+          "value": 1
         }
       ],
-      "layer_desc": "青木诀小成，气血恢复+1%"
+      "layer_desc": "青木诀小成，气血恢复+1/回合"
     },
     {
       "technique_id": "tech-qingmu-jue",
@@ -768,7 +768,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -795,7 +795,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 400
+          "value": 0.04
         }
       ],
       "upgrade_skill_ids": [
@@ -821,11 +821,11 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 500
+          "value": 0.05
         },
         {
           "key": "max_qixue",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -843,11 +843,11 @@
       "passives": [
         {
           "key": "wufang",
-          "value": 300
+          "value": 0.03
         },
         {
           "key": "fafang",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -869,7 +869,7 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 300
+          "value": 0.03
         }
       ],
       "layer_desc": "厚土功小成，气血上限+3%"
@@ -888,7 +888,7 @@
       "passives": [
         {
           "key": "wufang",
-          "value": 400
+          "value": 0.04
         }
       ],
       "unlock_skill_ids": [
@@ -915,7 +915,7 @@
       "passives": [
         {
           "key": "kongzhi_kangxing",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -941,11 +941,11 @@
       "passives": [
         {
           "key": "wufang",
-          "value": 500
+          "value": 0.05
         },
         {
           "key": "fafang",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -963,7 +963,7 @@
       "passives": [
         {
           "key": "max_lingqi",
-          "value": 500
+          "value": 5
         }
       ],
       "unlock_skill_ids": [
@@ -985,7 +985,7 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -1007,7 +1007,7 @@
       "passives": [
         {
           "key": "lingqi_huifu",
-          "value": 100
+          "value": 1
         }
       ],
       "upgrade_skill_ids": [
@@ -1034,7 +1034,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -1060,11 +1060,11 @@
       "passives": [
         {
           "key": "max_lingqi",
-          "value": 1000
+          "value": 10
         },
         {
           "key": "kongzhi_kangxing",
-          "value": 300
+          "value": 0.03
         }
       ],
       "upgrade_skill_ids": [
@@ -1083,11 +1083,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 200
+          "value": 0.02
         },
         {
           "key": "shanbi",
-          "value": 200
+          "value": 0.02
         }
       ],
       "unlock_skill_ids": [
@@ -1109,7 +1109,7 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 300
+          "value": 0.03
         }
       ],
       "layer_desc": "水云掌小成，闪避+3%"
@@ -1128,7 +1128,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -1155,7 +1155,7 @@
       "passives": [
         {
           "key": "xixue",
-          "value": 200
+          "value": 0.02
         }
       ],
       "upgrade_skill_ids": [
@@ -1181,11 +1181,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 400
+          "value": 0.04
         },
         {
           "key": "shanbi",
-          "value": 400
+          "value": 0.04
         }
       ],
       "upgrade_skill_ids": [
@@ -1203,11 +1203,11 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 400
+          "value": 0.04
         },
         {
           "key": "sudu",
-          "value": 100
+          "value": 1
         }
       ],
       "unlock_skill_ids": [
@@ -1229,7 +1229,7 @@
       "passives": [
         {
           "key": "sudu",
-          "value": 150
+          "value": 1.5
         }
       ],
       "layer_desc": "凌波微步小成，速度+1.5"
@@ -1248,7 +1248,7 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 500
+          "value": 0.05
         }
       ],
       "unlock_skill_ids": [
@@ -1275,7 +1275,7 @@
       "passives": [
         {
           "key": "kongzhi_kangxing",
-          "value": 400
+          "value": 0.04
         }
       ],
       "upgrade_skill_ids": [
@@ -1301,11 +1301,11 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 600
+          "value": 0.06
         },
         {
           "key": "sudu",
-          "value": 200
+          "value": 2
         }
       ],
       "unlock_skill_ids": [
@@ -1332,7 +1332,7 @@
       "passives": [
         {
           "key": "kongzhi_kangxing",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -1363,15 +1363,15 @@
       "passives": [
         {
           "key": "shanbi",
-          "value": 800
+          "value": 0.08
         },
         {
           "key": "sudu",
-          "value": 300
+          "value": 3
         },
         {
           "key": "kongzhi_kangxing",
-          "value": 600
+          "value": 0.06
         }
       ],
       "upgrade_skill_ids": [
@@ -1389,7 +1389,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 400
+          "value": 0.04
         }
       ],
       "unlock_skill_ids": [
@@ -1411,7 +1411,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 300
+          "value": 0.03
         }
       ],
       "layer_desc": "纯阳功小成，法攻+3%"
@@ -1430,7 +1430,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 500
+          "value": 0.05
         }
       ],
       "unlock_skill_ids": [
@@ -1457,7 +1457,7 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 400
+          "value": 0.04
         }
       ],
       "upgrade_skill_ids": [
@@ -1483,7 +1483,7 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 600
+          "value": 0.06
         }
       ],
       "unlock_skill_ids": [
@@ -1510,7 +1510,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -1541,11 +1541,11 @@
       "passives": [
         {
           "key": "zhiliao",
-          "value": 800
+          "value": 0.08
         },
         {
           "key": "fagong",
-          "value": 600
+          "value": 0.06
         }
       ],
       "upgrade_skill_ids": [
@@ -1563,7 +1563,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 500
+          "value": 0.05
         }
       ],
       "unlock_skill_ids": [
@@ -1589,7 +1589,7 @@
       "passives": [
         {
           "key": "baoji",
-          "value": 300
+          "value": 0.03
         }
       ],
       "layer_desc": "烈阳剑小成，暴击+3%"
@@ -1612,7 +1612,7 @@
       "passives": [
         {
           "key": "zengshang",
-          "value": 500
+          "value": 0.05
         }
       ],
       "unlock_skill_ids": [
@@ -1642,7 +1642,7 @@
       "passives": [
         {
           "key": "baoshang",
-          "value": 800
+          "value": 0.08
         }
       ],
       "layer_desc": "烈阳剑大成，爆伤+8%"
@@ -1669,7 +1669,7 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 600
+          "value": 0.06
         }
       ],
       "upgrade_skill_ids": [
@@ -1700,11 +1700,11 @@
       "passives": [
         {
           "key": "huo_kangxing",
-          "value": 500
+          "value": 0.05
         },
         {
           "key": "zengshang",
-          "value": 600
+          "value": 0.06
         }
       ],
       "unlock_skill_ids": [
@@ -1735,7 +1735,7 @@
       "passives": [
         {
           "key": "baoji",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -1770,11 +1770,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 800
+          "value": 0.08
         },
         {
           "key": "baoshang",
-          "value": 1000
+          "value": 0.1
         }
       ],
       "layer_desc": "烈阳剑大成，物攻+8%，爆伤+10%"
@@ -1805,15 +1805,15 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 1000
+          "value": 0.1
         },
         {
           "key": "zengshang",
-          "value": 800
+          "value": 0.08
         },
         {
           "key": "baoji",
-          "value": 600
+          "value": 0.06
         }
       ],
       "unlock_skill_ids": [
@@ -1831,7 +1831,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 500
+          "value": 0.05
         }
       ],
       "unlock_skill_ids": [
@@ -1857,7 +1857,7 @@
       "passives": [
         {
           "key": "kongzhi_kangxing",
-          "value": 300
+          "value": 0.03
         }
       ],
       "layer_desc": "寒冰诀小成，控制抗性+3%"
@@ -1880,7 +1880,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 400
+          "value": 0.04
         }
       ],
       "unlock_skill_ids": [
@@ -1910,7 +1910,7 @@
       "passives": [
         {
           "key": "zengshang",
-          "value": 500
+          "value": 0.05
         }
       ],
       "layer_desc": "寒冰诀大成，增伤+5%"
@@ -1937,7 +1937,7 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 500
+          "value": 0.05
         }
       ],
       "upgrade_skill_ids": [
@@ -1968,11 +1968,11 @@
       "passives": [
         {
           "key": "shui_kangxing",
-          "value": 500
+          "value": 0.05
         },
         {
           "key": "kongzhi_kangxing",
-          "value": 400
+          "value": 0.04
         }
       ],
       "unlock_skill_ids": [
@@ -2003,7 +2003,7 @@
       "passives": [
         {
           "key": "zengshang",
-          "value": 600
+          "value": 0.06
         }
       ],
       "upgrade_skill_ids": [
@@ -2038,11 +2038,11 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 700
+          "value": 0.07
         },
         {
           "key": "kongzhi_kangxing",
-          "value": 500
+          "value": 0.05
         }
       ],
       "layer_desc": "寒冰诀大成，法攻+7%，控制抗性+5%"
@@ -2073,11 +2073,11 @@
       "passives": [
         {
           "key": "fagong",
-          "value": 1000
+          "value": 0.1
         },
         {
           "key": "zengshang",
-          "value": 800
+          "value": 0.08
         }
       ],
       "unlock_skill_ids": [
@@ -2095,11 +2095,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 550
+          "value": 0.055
         },
         {
           "key": "shanbi",
-          "value": 180
+          "value": 0.018
         }
       ],
       "unlock_skill_ids": [
@@ -2125,7 +2125,7 @@
       "passives": [
         {
           "key": "mingzhong",
-          "value": 360
+          "value": 0.036
         }
       ],
       "layer_desc": "玄冥掌小成，命中+3.6%"
@@ -2148,7 +2148,7 @@
       "passives": [
         {
           "key": "baoji",
-          "value": 260
+          "value": 0.026
         }
       ],
       "unlock_skill_ids": [
@@ -2179,11 +2179,11 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 700
+          "value": 0.07
         },
         {
           "key": "zengshang",
-          "value": 220
+          "value": 0.022
         }
       ],
       "layer_desc": "玄冥掌大成，物攻+7%，增伤+2.2%"
@@ -2210,7 +2210,7 @@
       "passives": [
         {
           "key": "baoshang",
-          "value": 420
+          "value": 0.042
         }
       ],
       "unlock_skill_ids": [
@@ -2241,11 +2241,11 @@
       "passives": [
         {
           "key": "zengshang",
-          "value": 380
+          "value": 0.038
         },
         {
           "key": "kongzhi_kangxing",
-          "value": 260
+          "value": 0.026
         }
       ],
       "upgrade_skill_ids": [
@@ -2276,15 +2276,15 @@
       "passives": [
         {
           "key": "wugong",
-          "value": 980
+          "value": 0.098
         },
         {
           "key": "baoji",
-          "value": 420
+          "value": 0.042
         },
         {
           "key": "baoshang",
-          "value": 520
+          "value": 0.052
         }
       ],
       "required_realm": "炼炁化神·采药期",
@@ -2299,11 +2299,11 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 700
+          "value": 0.07
         },
         {
           "key": "wufang",
-          "value": 300
+          "value": 0.03
         }
       ],
       "unlock_skill_ids": [
@@ -2329,11 +2329,11 @@
       "passives": [
         {
           "key": "fafang",
-          "value": 300
+          "value": 0.03
         },
         {
           "key": "kangbao",
-          "value": 240
+          "value": 0.024
         }
       ],
       "layer_desc": "厚土心经小成，法防+3%，抗暴+2.4%"
@@ -2360,7 +2360,7 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 900
+          "value": 0.09
         }
       ],
       "unlock_skill_ids": [
@@ -2391,11 +2391,11 @@
       "passives": [
         {
           "key": "wufang",
-          "value": 420
+          "value": 0.042
         },
         {
           "key": "fafang",
-          "value": 420
+          "value": 0.042
         }
       ],
       "layer_desc": "厚土心经大成，双防显著提升"
@@ -2422,11 +2422,11 @@
       "passives": [
         {
           "key": "kongzhi_kangxing",
-          "value": 420
+          "value": 0.042
         },
         {
           "key": "qixue_huifu",
-          "value": 180
+          "value": 1.8
         }
       ],
       "unlock_skill_ids": [
@@ -2457,11 +2457,11 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 1100
+          "value": 0.11
         },
         {
           "key": "kangbao",
-          "value": 320
+          "value": 0.032
         }
       ],
       "upgrade_skill_ids": [
@@ -2492,19 +2492,19 @@
       "passives": [
         {
           "key": "max_qixue",
-          "value": 1400
+          "value": 0.14
         },
         {
           "key": "wufang",
-          "value": 520
+          "value": 0.052
         },
         {
           "key": "fafang",
-          "value": 520
+          "value": 0.052
         },
         {
           "key": "kongzhi_kangxing",
-          "value": 520
+          "value": 0.052
         }
       ],
       "required_realm": "炼炁化神·采药期",

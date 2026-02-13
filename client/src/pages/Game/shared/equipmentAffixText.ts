@@ -29,7 +29,7 @@ export type BuildEquipmentAffixDisplayTextOptions =
     legendaryPrefix: string;
     percentKeys: ReadonlySet<string>;
     formatSignedNumber: (value: number) => string;
-    formatSignedPermyriadPercent: (value: number) => string;
+    formatSignedPercent: (value: number) => string;
   };
 
 export type EquipmentAffixDisplayText = {
@@ -107,7 +107,7 @@ export const buildEquipmentAffixDisplayText = (
       affix.apply_type === 'percent' ||
       (attrKey ? options.percentKeys.has(attrKey) : false);
     valueText = isPercent
-      ? options.formatSignedPermyriadPercent(affix.value)
+      ? options.formatSignedPercent(affix.value)
       : options.formatSignedNumber(affix.value);
   }
 

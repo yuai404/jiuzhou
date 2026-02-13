@@ -47,8 +47,8 @@ test('special词条应转换为战斗触发效果并注入params.value', () => {
           params: {
             damage_type: 'true',
             scale_key: 'wugong',
-            scale_rate: 600,
-            chance: 2200,
+            scale_rate: 0.06,
+            chance: 0.22,
           },
         },
       ],

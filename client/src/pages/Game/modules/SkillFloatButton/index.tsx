@@ -133,11 +133,11 @@ const resolveSkillIcon = (icon: string | null | undefined): string => {
   return FALLBACK_SKILL_ICON;
 };
 
-const computeActualCooldown = (baseCooldownTurns: number, cooldownReductionPermyriad: number): number => {
+const computeActualCooldown = (baseCooldownTurns: number, cooldownReductionPercent: number): number => {
   const base = Math.max(0, Math.floor(Number(baseCooldownTurns) || 0));
   if (base <= 0) return 0;
-  const cdReduction = Math.min(Math.max(0, Math.floor(Number(cooldownReductionPermyriad) || 0)), 5000);
-  return Math.max(1, Math.floor(base * (1 - cdReduction / 10000)));
+  const cdReduction = Math.min(Math.max(0, Number(cooldownReductionPercent) || 0), 0.5);
+  return Math.max(1, Math.floor(base * (1 - cdReduction)));
 };
 
 const buildSkillItems = (
@@ -208,7 +208,7 @@ const buildSkillItems = (
         type: 'damage',
         valueType: 'scale',
         scaleAttr: 'wugong',
-        scaleRate: 10000,
+        scaleRate: 1,
       },
     ],
     cooldownTurns: 0,

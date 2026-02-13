@@ -121,7 +121,7 @@ type RewardConfig = {
     wufang: number;
     fafang: number;
   }>;
-  addPermyriad?: Partial<{
+  addPercent?: Partial<{
     kongzhi_kangxing: number;
   }>;
 };
@@ -147,7 +147,7 @@ const applyPct = (base: number, pct: number): number => {
   const b = Number.isFinite(base) ? Math.floor(base) : 0;
   const p = Number.isFinite(pct) ? pct : 0;
   if (b <= 0 || p === 0) return b;
-  return Math.max(0, Math.floor(b * (1 + p / 100)));
+  return Math.max(0, Math.floor(b * (1 + p)));
 };
 
 const pickFirstExistingPath = async (candidates: string[]): Promise<string | null> => {
@@ -706,11 +706,14 @@ const buildRewardsView = (rewards?: RewardConfig): RealmRewardView[] => {
   if (ap > 0) out.push({ id: 'ap', title: '属性点', detail: `+${ap}` });
 
   const pct = r.pct || {};
-  const addPermyriad = r.addPermyriad || {};
+  const addPercent = r.addPercent || {};
 
   const addPctRow = (key: string, title: string) => {
     const v = Number((pct as any)[key] ?? 0) || 0;
-    if (v !== 0) out.push({ id: `pct-${key}`, title, detail: `${v > 0 ? '+' : ''}${v}%` });
+    if (v !== 0) {
+      const pctText = (v * 100).toFixed(2).replace(/\.?0+$/, '');
+      out.push({ id: `pct-${key}`, title, detail: `${v > 0 ? '+' : ''}${pctText}%` });
+    }
   };
 
   addPctRow('max_qixue', '最大气血');
@@ -720,8 +723,11 @@ const buildRewardsView = (rewards?: RewardConfig): RealmRewardView[] => {
   addPctRow('wufang', '物防');
   addPctRow('fafang', '法防');
 
-  const kk = Number((addPermyriad as any).kongzhi_kangxing ?? 0) || 0;
-  if (kk !== 0) out.push({ id: 'add-kongzhi', title: '控制抗性', detail: `${kk > 0 ? '+' : ''}${(kk / 100).toFixed(2)}%` });
+  const kk = Number((addPercent as any).kongzhi_kangxing ?? 0) || 0;
+  if (kk !== 0) {
+    const kkText = (kk * 100).toFixed(2).replace(/\.?0+$/, '');
+    out.push({ id: 'add-kongzhi', title: '控制抗性', detail: `${kk > 0 ? '+' : ''}${kkText}%` });
+  }
 
   return out;
 };
@@ -939,7 +945,7 @@ export const breakthroughToNextRealm = async (userId: number): Promise<RealmBrea
 
       const rewards = bt.rewards || {};
       const pct = rewards.pct || {};
-      const addPermyriad = rewards.addPermyriad || {};
+      const addPercent = rewards.addPercent || {};
       const apAdd = Math.max(0, Number(rewards.attributePoints ?? 0) || 0);
 
       const newExp = exp - costsBuilt.exp;
@@ -952,7 +958,7 @@ export const breakthroughToNextRealm = async (userId: number): Promise<RealmBrea
       const newFagong = applyPct(fagong, Number((pct as any).fagong ?? 0) || 0);
       const newWufang = applyPct(wufang, Number((pct as any).wufang ?? 0) || 0);
       const newFafang = applyPct(fafang, Number((pct as any).fafang ?? 0) || 0);
-      const kkAdd = Number((addPermyriad as any).kongzhi_kangxing ?? 0) || 0;
+      const kkAdd = Number((addPercent as any).kongzhi_kangxing ?? 0) || 0;
       const newKongzhiKangxing = Math.max(0, kongzhiKangxing + kkAdd);
 
       await client.query(

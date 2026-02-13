@@ -993,7 +993,7 @@
           "trigger": "enhance",
           "effect_type": "buff",
           "params": {
-            "success_rate_bonus": 1000
+            "success_rate_bonus": 0.1
           }
         }
       ]
@@ -1024,7 +1024,7 @@
           "trigger": "enhance",
           "effect_type": "buff",
           "params": {
-            "success_rate_bonus": 2000
+            "success_rate_bonus": 0.2
           }
         }
       ]

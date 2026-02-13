@@ -205,7 +205,7 @@ export interface SkillEffect {
   dispelType?: 'buff' | 'debuff' | 'all';
   count?: number;
   controlType?: string;
-  chance?: number;  // 万分比
+  chance?: number;  // 概率（0~1，1=100%）
   resourceType?: 'lingqi' | 'qixue';  // 资源类型
   target?: 'self' | 'enemy' | 'ally';
   damageType?: 'physical' | 'magic' | 'true';
@@ -401,27 +401,27 @@ export const BATTLE_CONSTANTS = {
   MAX_ROUNDS_PVE: 100,
   MAX_ROUNDS_PVP: 100,
   
-  MIN_HIT_RATE: 2000,
-  MAX_HIT_RATE: 10000,
-  MAX_DODGE_RATE: 8000,
-  MAX_PARRY_RATE: 6000,
+  MIN_HIT_RATE: 0.2,
+  MAX_HIT_RATE: 1,
+  MAX_DODGE_RATE: 0.8,
+  MAX_PARRY_RATE: 0.6,
   PARRY_REDUCTION: 0.7,
   
-  MAX_CRIT_RATE: 10000,
-  MAX_CRIT_DAMAGE: 30000,
-  MAX_CRIT_RESIST: 8000,
+  MAX_CRIT_RATE: 1,
+  MAX_CRIT_DAMAGE: 3,
+  MAX_CRIT_RESIST: 0.8,
   
-  MAX_DAMAGE_BONUS: 10000,
-  MAX_HEAL_BONUS: 10000,
-  MAX_HEAL_REDUCTION: 8000,
+  MAX_DAMAGE_BONUS: 1,
+  MAX_HEAL_BONUS: 1,
+  MAX_HEAL_REDUCTION: 0.8,
   HEAL_CAP_PERCENT: 0.5,
   
-  MAX_LIFESTEAL: 5000,
-  MAX_CONTROL_RESIST: 8000,
+  MAX_LIFESTEAL: 0.5,
+  MAX_CONTROL_RESIST: 0.8,
   CONTROL_DIMINISHING_RESET: 5,
   
-  ELEMENT_COUNTER_BONUS: 1500,
-  MAX_ELEMENT_RESIST: 8000,
+  ELEMENT_COUNTER_BONUS: 0.15,
+  MAX_ELEMENT_RESIST: 0.8,
   
   BASE_LINGQI_REGEN: 10,
   

@@ -20,6 +20,7 @@ import { initGameTimeTable } from './gameTimeTable.js';
 import { initMainQuestTables } from './mainQuestTable.js';
 import { initArenaTables } from './arenaTable.js';
 import { initAchievementTables } from './achievementTable.js';
+import { ensureMigrationHistoryTable } from './migrationHistoryTable.js';
 import { loadAllSeeds } from '../services/seedService.js';
 
 // 用户表结构定义
@@ -91,6 +92,9 @@ export const initTables = async (): Promise<void> => {
     
     // 检查并补齐缺失字段
     await checkAndAddColumns();
+
+    // 初始化迁移历史表（供一次性数据迁移登记）
+    await ensureMigrationHistoryTable();
     
     // 初始化角色表
     await initCharacterTable();
@@ -164,4 +168,3 @@ export const initTables = async (): Promise<void> => {
     throw error;
   }
 };
-

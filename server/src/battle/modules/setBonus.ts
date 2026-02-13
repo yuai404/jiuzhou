@@ -299,15 +299,13 @@ function applySetResource(
 function passChance(state: BattleState, params: Record<string, unknown>): boolean {
   const chanceRaw = asFiniteNumber(params.chance);
   if (chanceRaw === null) return true;
-  const chance = Math.max(0, Math.min(10000, Math.floor(chanceRaw)));
-  if (chance >= 10000) return true;
+  const chance = Math.max(0, Math.min(1, chanceRaw));
+  if (chance >= 1) return true;
   return rollChance(state, chance);
 }
 
 function normalizeRate(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  if (Math.abs(value) <= 1) return value;
-  return value / 10000;
+  return Number.isFinite(value) ? value : 0;
 }
 
 function normalizeDamageType(value: string): 'physical' | 'magic' | 'true' {

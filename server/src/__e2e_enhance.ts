@@ -275,7 +275,7 @@ const main = async () => {
       msg: String(r?.message ?? ''),
       refineLevel: pickNum(r?.data?.refineLevel),
       targetLevel: pickNum(r?.data?.targetLevel),
-      successRatePermyriad: pickNum(r?.data?.successRatePermyriad),
+      successRate: pickNum(r?.data?.successRate),
       roll: pickNum(r?.data?.roll),
     };
     refineLogs.push(row);

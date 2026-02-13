@@ -167,6 +167,32 @@ const passiveLabel: Record<string, string> = {
   shuxing_shuzhi: '属性数值',
 };
 
+const PERCENT_PASSIVE_KEYS = new Set<string>([
+  'max_qixue',
+  'wugong',
+  'fagong',
+  'wufang',
+  'fafang',
+  'shuxing_shuzhi',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+]);
+
 const normalizePassiveKey = (raw: string): string =>
   raw
     .trim()
@@ -401,16 +427,15 @@ const renderTechniqueTooltip = (t: Technique): React.ReactNode => {
 };
 
 const formatPassiveValue = (key: string, value: number): string => {
-  const sign = value >= 0 ? '+' : '';
+  const sign = value > 0 ? '+' : value < 0 ? '-' : '';
   const abs = Math.abs(value);
-  if (key.endsWith('_huifu')) {
-    const v = abs / 100;
-    const fixed = Number.isInteger(v) ? String(v) : String(Number(v.toFixed(2)));
+  const absPercent = abs * 100;
+  const formatSigned = (n: number) => {
+    const fixed = Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
     return `${sign}${fixed}`;
-  }
-  const percent = abs / 100;
-  const fixed = Number.isInteger(percent) ? String(percent) : String(Number(percent.toFixed(2)));
-  return `${sign}${fixed}%`;
+  };
+  if (PERCENT_PASSIVE_KEYS.has(key)) return `${formatSigned(absPercent)}%`;
+  return formatSigned(abs);
 };
 
 const coercePassiveEntries = (raw: unknown): PassiveEntry[] => {

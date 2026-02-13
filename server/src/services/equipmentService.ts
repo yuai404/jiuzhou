@@ -96,13 +96,73 @@ const getStrengthenMultiplier = (strengthenLevel: number): number => {
   return 1 + lv * 0.03;
 };
 
+const RATIO_ATTR_KEYS = new Set([
+  'shuxing_shuzhi',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+]);
+
+const isRatioAttrKey = (attrKeyRaw: unknown): boolean => {
+  return typeof attrKeyRaw === 'string' && RATIO_ATTR_KEYS.has(attrKeyRaw);
+};
+
+const isRatioSpecialAffixValue = (affix: AffixDef): boolean => {
+  if (affix.apply_type !== 'special' || !affix.params) return false;
+  const params = affix.params;
+  const effectType = affix.effect_type;
+  const paramApplyType = typeof params.apply_type === 'string' ? params.apply_type : '';
+  const paramAttrKey = typeof params.attr_key === 'string' ? params.attr_key : '';
+  const damageType = typeof params.damage_type === 'string' ? params.damage_type : '';
+  const debuffType = typeof params.debuff_type === 'string' ? params.debuff_type : '';
+
+  if ((effectType === 'buff' || effectType === 'debuff') && (paramApplyType === 'percent' || isRatioAttrKey(paramAttrKey))) {
+    return true;
+  }
+  if (effectType === 'damage' && damageType === 'reflect') return true;
+  if (effectType === 'debuff' && debuffType === 'bleed') return true;
+  return false;
+};
+
+const shouldKeepRatioPrecision = (affix: AffixDef): boolean => {
+  if (affix.apply_type === 'percent') return true;
+  if (isRatioAttrKey(affix.attr_key)) return true;
+  if (affix.apply_type !== 'special') return false;
+  return isRatioSpecialAffixValue(affix);
+};
+
+const normalizeAffixValuePrecision = (affix: AffixDef, value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  if (shouldKeepRatioPrecision(affix)) return Number(value.toFixed(6));
+  return Math.round(value);
+};
+
+const normalizeScaledAttrValue = (attrKey: string, value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return isRatioAttrKey(attrKey) ? Number(value.toFixed(6)) : Math.round(value);
+};
+
 const scaleAttrs = (attrs: Record<string, number>, factor: number): Record<string, number> => {
   if (!Number.isFinite(factor) || factor === 1) return attrs;
   const out: Record<string, number> = {};
   for (const [k, v] of Object.entries(attrs)) {
     const n = Number(v);
     if (!Number.isFinite(n)) continue;
-    out[k] = Math.round(n * factor);
+    out[k] = normalizeScaledAttrValue(k, n * factor);
   }
   return out;
 };
@@ -228,7 +288,16 @@ class SeededRandom {
   
   // 生成 min-max 之间的整数
   nextInt(min: number, max: number): number {
-    return Math.floor(this.next() * (max - min + 1)) + min;
+    const safeMin = Math.min(min, max);
+    const safeMax = Math.max(min, max);
+    return Math.floor(this.next() * (safeMax - safeMin + 1)) + safeMin;
+  }
+
+  // 生成 min-max 之间的小数
+  nextRange(min: number, max: number): number {
+    const safeMin = Math.min(min, max);
+    const safeMax = Math.max(min, max);
+    return safeMin + this.next() * (safeMax - safeMin);
   }
   
   // 根据权重随机选择
@@ -505,9 +574,17 @@ const rollAffixValue = (
   const tierWeights = validTiers.map((_, i) => Math.pow(0.6, i));
   const selectedTier = rng.weightedChoice(validTiers, tierWeights);
   
-  // 在tier范围内随机数值
-  const value = rng.nextInt(selectedTier.min, selectedTier.max);
-  const scaledValue = Number.isFinite(attrFactor) && attrFactor !== 1 ? Math.round(value * attrFactor) : value;
+  // 在 tier 范围内随机数值（支持小数词条）
+  const min = Number(selectedTier.min);
+  const max = Number(selectedTier.max);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  const sampledValue = Number.isInteger(min) && Number.isInteger(max)
+    ? rng.nextInt(min, max)
+    : rng.nextRange(min, max);
+  const rawScaledValue = Number.isFinite(attrFactor) && attrFactor !== 1
+    ? sampledValue * attrFactor
+    : sampledValue;
+  const scaledValue = normalizeAffixValuePrecision(affix, rawScaledValue);
 
   const out: GeneratedAffix = {
     key: affix.key,

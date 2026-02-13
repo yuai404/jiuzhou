@@ -69,8 +69,8 @@ CREATE TABLE IF NOT EXISTS technique_layer (
   cost_exp INTEGER NOT NULL DEFAULT 0,                -- 经验消耗
   cost_materials JSONB DEFAULT '[]',                  -- 材料消耗 [{itemId, qty}]
   
-  -- 被动加成（万分比）
-  passives JSONB DEFAULT '[]',                        -- [{key, value}] value为万分比
+  -- 被动加成（实际数值）
+  passives JSONB DEFAULT '[]',                        -- [{key, value}] value为实际数值（比例字段使用1=100%）
   
   -- 技能解锁/强化
   unlock_skill_ids TEXT[] DEFAULT '{}',               -- 本层解锁的技能ID
@@ -95,7 +95,7 @@ COMMENT ON COLUMN technique_layer.layer IS '层数 1-9';
 COMMENT ON COLUMN technique_layer.cost_spirit_stones IS '升级灵石消耗';
 COMMENT ON COLUMN technique_layer.cost_exp IS '升级经验消耗';
 COMMENT ON COLUMN technique_layer.cost_materials IS '升级材料消耗 [{itemId, qty}]';
-COMMENT ON COLUMN technique_layer.passives IS '被动加成 [{key, value}] 万分比';
+COMMENT ON COLUMN technique_layer.passives IS '被动加成 [{key, value}] 实际数值（比例字段1=100%）';
 COMMENT ON COLUMN technique_layer.unlock_skill_ids IS '本层解锁的技能ID列表';
 COMMENT ON COLUMN technique_layer.upgrade_skill_ids IS '本层强化的技能ID列表';
 
@@ -273,4 +273,3 @@ export const initTechniqueTables = async (): Promise<void> => {
     throw error;
   }
 };
-

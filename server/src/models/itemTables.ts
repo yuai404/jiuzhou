@@ -3,6 +3,7 @@
  * 包含：物品定义表、物品实例表、词条池表、套装表等
  */
 import { query } from '../config/database.js';
+import { runItemAffixPercentMigrations } from './itemAffixPercentMigration.js';
 
 // ============================================
 // 1. 物品定义表 (item_def) - 静态配置
@@ -665,6 +666,9 @@ export const initItemTables = async (): Promise<void> => {
     // 检查并补齐缺失字段
     await checkAndAddItemDefColumns();
     await checkAndAddItemInstanceColumns();
+
+    // 将历史词条池/装备词条中的旧百分比单位迁移为比例值（1=100%）
+    await runItemAffixPercentMigrations();
 
     await query("COMMENT ON COLUMN item_def.quality_min IS '品质下限（为空则按 quality）';");
     await query("COMMENT ON COLUMN item_def.quality_max IS '品质上限（为空则按 quality）';");

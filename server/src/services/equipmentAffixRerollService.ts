@@ -37,6 +37,69 @@ const clampInt = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, Math.floor(num)));
 };
 
+const RATIO_ATTR_KEYS = new Set([
+  'shuxing_shuzhi',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+]);
+
+const isRatioAttrKey = (attrKeyRaw: unknown): boolean => {
+  return typeof attrKeyRaw === 'string' && RATIO_ATTR_KEYS.has(attrKeyRaw);
+};
+
+type RatioAffixContext = {
+  applyType: GeneratedAffix['apply_type'];
+  attrKey: string;
+  effectType?: GeneratedAffix['effect_type'];
+  params?: Record<string, string | number | boolean>;
+};
+
+const isRatioSpecialAffixValue = (
+  effectType: GeneratedAffix['effect_type'] | undefined,
+  params?: Record<string, string | number | boolean>
+): boolean => {
+  if (!params) return false;
+  const paramApplyType = typeof params.apply_type === 'string' ? params.apply_type : '';
+  const paramAttrKey = typeof params.attr_key === 'string' ? params.attr_key : '';
+  const damageType = typeof params.damage_type === 'string' ? params.damage_type : '';
+  const debuffType = typeof params.debuff_type === 'string' ? params.debuff_type : '';
+
+  if ((effectType === 'buff' || effectType === 'debuff') && (paramApplyType === 'percent' || isRatioAttrKey(paramAttrKey))) {
+    return true;
+  }
+  if (effectType === 'damage' && damageType === 'reflect') return true;
+  if (effectType === 'debuff' && debuffType === 'bleed') return true;
+  return false;
+};
+
+const shouldKeepRatioPrecision = (context: RatioAffixContext): boolean => {
+  if (context.applyType === 'percent') return true;
+  if (isRatioAttrKey(context.attrKey)) return true;
+  if (context.applyType !== 'special') return false;
+  return isRatioSpecialAffixValue(context.effectType, context.params);
+};
+
+const normalizeAffixValueByContext = (context: RatioAffixContext, value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  if (shouldKeepRatioPrecision(context)) return Number(value.toFixed(6));
+  return Math.round(value);
+};
+
 const normalizeQualityByRank = (qualityRankRaw: unknown): Quality => {
   const rank = clampInt(toNumber(qualityRankRaw, 1), 1, 4);
   return QUALITY_BY_RANK[rank] ?? '黄';
@@ -120,7 +183,33 @@ export const parseGeneratedAffixesForReroll = (raw: unknown): GeneratedAffix[] =
     if (!key || !name || !attrKey) continue;
 
     const tier = Math.max(1, clampInt(toNumber(row.tier, 1), 1, 99));
-    const value = Math.floor(toNumber(row.value, 0));
+    const effectType = typeof row.effect_type === 'string' ? row.effect_type : undefined;
+    const paramsRaw =
+      row.params && typeof row.params === 'object' && !Array.isArray(row.params)
+        ? (row.params as Record<string, unknown>)
+        : null;
+    const params: Record<string, string | number | boolean> = {};
+    if (paramsRaw) {
+      for (const [paramKey, paramValue] of Object.entries(paramsRaw)) {
+        if (typeof paramValue === 'string' || typeof paramValue === 'boolean') {
+          params[paramKey] = paramValue;
+          continue;
+        }
+        if (typeof paramValue === 'number' && Number.isFinite(paramValue)) {
+          params[paramKey] = paramValue;
+        }
+      }
+    }
+    const normalizedParams = Object.keys(params).length > 0 ? params : undefined;
+    const value = normalizeAffixValueByContext(
+      {
+        applyType,
+        attrKey,
+        effectType: effectType as GeneratedAffix['effect_type'] | undefined,
+        params: normalizedParams,
+      },
+      toNumber(row.value, 0)
+    );
 
     const parsed: GeneratedAffix = {
       key,
@@ -136,32 +225,15 @@ export const parseGeneratedAffixesForReroll = (raw: unknown): GeneratedAffix[] =
     if (applyType === 'special') {
       const trigger = typeof row.trigger === 'string' ? row.trigger : undefined;
       const target = typeof row.target === 'string' ? row.target : undefined;
-      const effectType = typeof row.effect_type === 'string' ? row.effect_type : undefined;
       const durationRoundRaw = toNumber(row.duration_round, NaN);
       const durationRound = Number.isFinite(durationRoundRaw)
         ? Math.max(1, Math.floor(durationRoundRaw))
         : undefined;
-      const paramsRaw =
-        row.params && typeof row.params === 'object' && !Array.isArray(row.params)
-          ? (row.params as Record<string, unknown>)
-          : null;
       if (trigger) parsed.trigger = trigger as GeneratedAffix['trigger'];
       if (target) parsed.target = target as GeneratedAffix['target'];
       if (effectType) parsed.effect_type = effectType as GeneratedAffix['effect_type'];
       if (durationRound !== undefined) parsed.duration_round = durationRound;
-      if (paramsRaw) {
-        const params: Record<string, string | number | boolean> = {};
-        for (const [paramKey, paramValue] of Object.entries(paramsRaw)) {
-          if (typeof paramValue === 'string' || typeof paramValue === 'boolean') {
-            params[paramKey] = paramValue;
-            continue;
-          }
-          if (typeof paramValue === 'number' && Number.isFinite(paramValue)) {
-            params[paramKey] = paramValue;
-          }
-        }
-        if (Object.keys(params).length > 0) parsed.params = params;
-      }
+      if (normalizedParams) parsed.params = normalizedParams;
     }
     out.push(parsed);
   }
@@ -203,6 +275,12 @@ class SeededRandom {
     return Math.floor(this.next() * (safeMax - safeMin + 1)) + safeMin;
   }
 
+  nextRange(min: number, max: number): number {
+    const safeMin = Math.min(min, max);
+    const safeMax = Math.max(min, max);
+    return safeMin + this.next() * (safeMax - safeMin);
+  }
+
   weightedChoice<T>(items: T[], weights: number[]): T {
     const sanitized = weights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0));
     const totalWeight = sanitized.reduce((sum, weight) => sum + weight, 0);
@@ -226,11 +304,24 @@ const rollAffixValue = (rng: SeededRandom, affix: AffixDef, realmRank: number, a
 
   const tierWeights = validTiers.map((_, idx) => Math.pow(0.6, idx));
   const selectedTier = rng.weightedChoice(validTiers, tierWeights);
-  const min = Math.floor(toNumber(selectedTier.min, 0));
-  const max = Math.floor(toNumber(selectedTier.max, 0));
-  const value = rng.nextInt(min, max);
-  const scaledValue =
-    Number.isFinite(attrFactor) && attrFactor !== 1 ? Math.round(value * attrFactor) : value;
+  const min = toNumber(selectedTier.min, NaN);
+  const max = toNumber(selectedTier.max, NaN);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  const value = Number.isInteger(min) && Number.isInteger(max)
+    ? rng.nextInt(min, max)
+    : rng.nextRange(min, max);
+  const rawScaledValue = Number.isFinite(attrFactor) && attrFactor !== 1
+    ? value * attrFactor
+    : value;
+  const scaledValue = normalizeAffixValueByContext(
+    {
+      applyType: affix.apply_type,
+      attrKey: affix.attr_key,
+      effectType: affix.effect_type,
+      params: affix.params,
+    },
+    rawScaledValue
+  );
 
   const result: GeneratedAffix = {
     key: affix.key,

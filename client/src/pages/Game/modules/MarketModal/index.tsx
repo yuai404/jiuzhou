@@ -174,7 +174,7 @@ const translateKey = (key: string): string | null => {
   return null;
 };
 
-const PERMYRIAD_PERCENT_KEYS = new Set<string>([
+const PERCENT_ATTR_KEYS = new Set<string>([
   'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
@@ -200,8 +200,8 @@ const formatSignedNumber = (value: number): string => {
   return `${sign}${value}`;
 };
 
-const formatSignedPermyriadPercent = (value: number): string => {
-  const percent = value / 100;
+const formatSignedPercent = (value: number): string => {
+  const percent = value * 100;
   const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
   const trimmed = fixed.replace(/\.?0+$/, '') || '0';
   const sign = value > 0 ? '+' : '';
@@ -291,8 +291,8 @@ const formatLines = (value: unknown, depth: number = 0): string[] => {
       const kk = translateKey(k) ?? '';
       if (!kk) continue;
 
-      if (typeof v === 'number' && Number.isFinite(v) && PERMYRIAD_PERCENT_KEYS.has(k)) {
-        out.push(`${kk}：${formatSignedPermyriadPercent(v)}`);
+      if (typeof v === 'number' && Number.isFinite(v) && PERCENT_ATTR_KEYS.has(k)) {
+        out.push(`${kk}：${formatSignedPercent(v)}`);
         continue;
       }
       if (typeof v === 'number' && Number.isFinite(v)) {
@@ -405,7 +405,7 @@ const MarketItemTooltipContent: React.FC<{ row: ListingItem }> = ({ row }) => {
     const lines = entries.map(([k, v]) => {
       const label = translateKey(k) ?? (hasLatin(k) ? '' : k);
       if (!label) return '';
-      const text = PERMYRIAD_PERCENT_KEYS.has(k) ? formatSignedPermyriadPercent(v) : formatSignedNumber(v);
+      const text = PERCENT_ATTR_KEYS.has(k) ? formatSignedPercent(v) : formatSignedNumber(v);
       return `${label}：${text}`;
     });
     return limitLines(lines.filter(Boolean), 10);
@@ -424,9 +424,9 @@ const MarketItemTooltipContent: React.FC<{ row: ListingItem }> = ({ row }) => {
         legendaryPrefix: '传奇词条',
         keyTranslator: translateKey,
         rejectLatinLabel: true,
-        percentKeys: PERMYRIAD_PERCENT_KEYS,
+        percentKeys: PERCENT_ATTR_KEYS,
         formatSignedNumber,
-        formatSignedPermyriadPercent,
+        formatSignedPercent,
       });
       if (!displayText) continue;
       out.push(displayText.fullText);

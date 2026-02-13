@@ -76,15 +76,15 @@ function resolveEffectValue(
 
   if (effect.valueType === 'scale') {
     const rate = toFiniteNumber(effect.scaleRate, value);
-    return Math.floor(getAttrValue(caster, scaleAttr) * rate / 10000);
+    return Math.floor(getAttrValue(caster, scaleAttr) * rate);
   }
 
   if (scaleAttrRaw) {
-    return Math.floor(getAttrValue(caster, scaleAttr) * value / 10000);
+    return Math.floor(getAttrValue(caster, scaleAttr) * value);
   }
 
   if (effect.valueType === 'percent') {
-    return Math.floor(getAttrValue(caster, scaleAttr) * value / 10000);
+    return Math.floor(getAttrValue(caster, scaleAttr) * value);
   }
 
   if (effect.valueType === 'flat') {
@@ -92,8 +92,8 @@ function resolveEffectValue(
   }
 
   const defaultScaleAttr = skill.damageType === 'magic' ? 'fagong' : 'wugong';
-  if (scaleAttr === defaultScaleAttr && value > 0 && value <= 10000) {
-    return Math.floor(getAttrValue(caster, scaleAttr) * value / 10000);
+  if (scaleAttr === defaultScaleAttr && value > 0 && value <= 1) {
+    return Math.floor(getAttrValue(caster, scaleAttr) * value);
   }
 
   return Math.floor(value);
@@ -128,7 +128,7 @@ function buildBuffRuntimeData(
   if (buffId === 'buff-dodge-next') {
     const stacks = Math.max(1, Math.floor(toFiniteNumber(effect.stacks, 1)));
     return {
-      attrModifiers: [{ attr: 'shanbi', value: 10000 * stacks, mode: 'flat' }],
+      attrModifiers: [{ attr: 'shanbi', value: 1 * stacks, mode: 'flat' }],
     };
   }
 
@@ -187,14 +187,14 @@ function resolveDamageBaseValue(
   }
 
   if (valueType === 'percent') {
-    return Math.max(0, Math.floor(target.currentAttrs.max_qixue * value / 10000));
+    return Math.max(0, Math.floor(target.currentAttrs.max_qixue * value));
   }
 
   const fallbackScaleAttr = damageType === 'magic' ? 'fagong' : 'wugong';
   const scaleAttrRaw = typeof effect.scaleAttr === 'string' ? effect.scaleAttr.trim() : '';
   const scaleAttr = scaleAttrRaw || fallbackScaleAttr;
   const scaleRate = toFiniteNumber(effect.scaleRate, value);
-  return Math.max(0, Math.floor(getAttrValue(caster, scaleAttr) * scaleRate / 10000));
+  return Math.max(0, Math.floor(getAttrValue(caster, scaleAttr) * scaleRate));
 }
 
 type DamageExecutionSummary = {
@@ -351,8 +351,8 @@ export function executeSkill(
   
   // 设置冷却
   if (skill.cooldown > 0) {
-    const cdReduction = Math.min(caster.currentAttrs.lengque, 5000);
-    const actualCd = Math.max(1, Math.floor(skill.cooldown * (1 - cdReduction / 10000)));
+    const cdReduction = Math.min(caster.currentAttrs.lengque, 0.5);
+    const actualCd = Math.max(1, Math.floor(skill.cooldown * (1 - cdReduction)));
     caster.skillCooldowns[skill.id] = actualCd;
   }
   
@@ -408,7 +408,7 @@ function executeSkillOnTarget(
   let landedDamage = false;
   for (const effect of skill.effects) {
     if (effect.type !== 'damage') continue;
-    if (effect.chance && !rollChance(state, effect.chance)) {
+    if (typeof effect.chance === 'number' && !rollChance(state, effect.chance)) {
       continue;
     }
 
@@ -424,7 +424,7 @@ function executeSkillOnTarget(
   for (const effect of skill.effects) {
     if (effect.type === 'damage') continue;
     // 控制效果走独立命中流程，避免重复概率判定
-    if (effect.type !== 'control' && effect.chance && !rollChance(state, effect.chance)) {
+    if (effect.type !== 'control' && typeof effect.chance === 'number' && !rollChance(state, effect.chance)) {
       continue;
     }
     
@@ -506,19 +506,19 @@ function executeHealEffect(
   let healValue = effect.value || 0;
   
   if (effect.valueType === 'percent') {
-    healValue = Math.floor(target.currentAttrs.max_qixue * healValue / 10000);
+    healValue = Math.floor(target.currentAttrs.max_qixue * healValue);
   } else if (effect.valueType === 'scale' && effect.scaleAttr && effect.scaleRate) {
     const attrValue = (caster.currentAttrs as any)[effect.scaleAttr] || 0;
-    healValue = Math.floor(attrValue * effect.scaleRate / 10000);
+    healValue = Math.floor(attrValue * effect.scaleRate);
   }
   
   // 治疗加成
   const healBonus = Math.min(caster.currentAttrs.zhiliao, BATTLE_CONSTANTS.MAX_HEAL_BONUS);
-  healValue = Math.floor(healValue * (1 + healBonus / 10000));
+  healValue = Math.floor(healValue * (1 + healBonus));
   
   // 减疗
   const healReduction = Math.min(target.currentAttrs.jianliao, BATTLE_CONSTANTS.MAX_HEAL_REDUCTION);
-  healValue = Math.floor(healValue * (1 - healReduction / 10000));
+  healValue = Math.floor(healValue * (1 - healReduction));
   
   const actualHeal = applyHealing(target, healValue);
   result.heal = actualHeal;
@@ -662,9 +662,9 @@ function executeLifestealEffect(
 ): void {
   const damage = Math.max(0, Math.floor(toFiniteNumber(result.damage, 0)));
   if (damage <= 0) return;
-  const rate = Math.max(0, Math.floor(toFiniteNumber(effect.value, 0)));
+  const rate = Math.max(0, toFiniteNumber(effect.value, 0));
   if (rate <= 0) return;
-  const healAmount = Math.floor(damage * rate / 10000);
+  const healAmount = Math.floor(damage * rate);
   if (healAmount <= 0) return;
 
   const actualHeal = applyHealing(caster, healAmount);
@@ -685,7 +685,7 @@ function executeControlEffect(
 ): void {
   const controlType = typeof effect.controlType === 'string' ? effect.controlType.trim() : '';
   if (!controlType) return;
-  const controlRate = Math.max(0, Math.floor(toFiniteNumber(effect.chance, 10000)));
+  const controlRate = Math.max(0, toFiniteNumber(effect.chance, 1));
   const controlDuration = Math.max(1, Math.floor(toFiniteNumber(effect.duration, 1)));
 
   const controlResult = tryApplyControl(
@@ -760,7 +760,7 @@ export function getNormalAttack(unit: BattleUnit): BattleSkill {
       type: 'damage',
       valueType: 'scale',
       scaleAttr: damageType === 'magic' ? 'fagong' : 'wugong',
-      scaleRate: 10000,
+      scaleRate: 1,
     }],
     triggerType: 'active',
     aiPriority: 0,
