@@ -126,11 +126,6 @@ const buildActionLogLine = (log: Extract<BattleLogEntryDto, { type: 'action' }>)
   return `${actionHead}，目标：${targets.join('；')}`;
 };
 
-const buildRoundLogLine = (log: Extract<BattleLogEntryDto, { type: 'round_start' | 'round_end' }>): string => {
-  const roundText = buildRoundLabel(log.round);
-  return `${roundText}${log.type === 'round_start' ? ' 开始' : ' 结束'}`;
-};
-
 const buildDotLogLine = (log: Extract<BattleLogEntryDto, { type: 'dot' }>): string => {
   const roundText = buildRoundLabel(log.round);
   const unitName = normalizeName(log.unitName, '未知单位');
@@ -181,7 +176,7 @@ export const FAST_BATTLE_LOG_SYSTEM_LINES = {
 export const formatBattleLogLineFast = (log: BattleLogEntryDto): string | null => {
   if (!log) return null;
   if (log.type === 'action') return buildActionLogLine(log);
-  if (log.type === 'round_start' || log.type === 'round_end') return buildRoundLogLine(log);
+  if (log.type === 'round_start' || log.type === 'round_end') return null;
   if (log.type === 'dot') return buildDotLogLine(log);
   if (log.type === 'hot') return buildHotLogLine(log);
   if (log.type === 'buff_expire') return buildBuffExpireLogLine(log);
