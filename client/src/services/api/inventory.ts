@@ -287,25 +287,40 @@ export const socketInventoryGem = (body: InventorySocketRequest): Promise<Invent
   return api.post('/inventory/socket', body);
 };
 
+export interface InventoryDisassembleItemReward {
+  itemDefId: string;
+  qty: number;
+  itemIds?: number[];
+}
+
+export interface InventoryDisassembleRewards {
+  silver: number;
+  items: InventoryDisassembleItemReward[];
+}
+
 export interface InventoryDisassembleResponse {
   success: boolean;
   message: string;
-  rewards?: { itemDefId: string; qty: number; itemIds?: number[] };
+  rewards?: InventoryDisassembleRewards;
 }
 
-export const disassembleInventoryEquipment = (itemId: number): Promise<InventoryDisassembleResponse> => {
-  return api.post('/inventory/disassemble', { itemId });
+export const disassembleInventoryEquipment = (body: {
+  itemId: number;
+  qty: number;
+}): Promise<InventoryDisassembleResponse> => {
+  return api.post('/inventory/disassemble', body);
 };
 
 export interface InventoryDisassembleBatchResponse {
   success: boolean;
   message: string;
   disassembledCount?: number;
-  rewards?: Array<{ itemDefId: string; qty: number; itemIds?: number[] }>;
+  disassembledQtyTotal?: number;
+  rewards?: InventoryDisassembleRewards;
 }
 
-export const disassembleInventoryEquipmentBatch = (itemIds: number[]): Promise<InventoryDisassembleBatchResponse> => {
-  return api.post('/inventory/disassemble/batch', { itemIds });
+export const disassembleInventoryEquipmentBatch = (items: Array<{ itemId: number; qty: number }>): Promise<InventoryDisassembleBatchResponse> => {
+  return api.post('/inventory/disassemble/batch', { items });
 };
 
 export interface InventoryRemoveBatchResponse {

@@ -48,9 +48,6 @@ interface ItemDefSeed {
   stack_max: number;
   bind_type: string;
   tradeable: boolean;
-  sellable: boolean;
-  sell_price_silver: number;
-  sell_price_spirit_stones?: number;
   icon?: string;
   model?: string;
   description?: string;
@@ -206,7 +203,7 @@ export const loadItemDefSeeds = async (): Promise<number> => {
       const sql = `
         INSERT INTO item_def (
           id, code, name, category, sub_category, quality, quality_rank, rarity, level,
-          stack_max, bind_type, tradeable, sellable, sell_price_silver, sell_price_spirit_stones,
+          stack_max, bind_type, tradeable,
           icon, model, description, long_desc, tags, use_type, use_cd_round, use_cd_sec,
           use_limit_daily, use_limit_total, use_req_realm, use_req_level, use_req_attrs,
           equip_slot, equip_req_realm, equip_req_attrs, battle_skill_ids, effect_defs,
@@ -217,15 +214,15 @@ export const loadItemDefSeeds = async (): Promise<number> => {
           quality_min, quality_max, sort_weight, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9,
-          $10, $11, $12, $13, $14, $15,
-          $16, $17, $18, $19, $20, $21, $22, $23,
-          $24, $25, $26, $27, $28,
-          $29, $30, $31, $32, $33,
-          $34, $35, $36, $37, $38,
-          $39, $40, $41, $42, $43,
-          $44, $45, $46, $47,
-          $48, $49, $50, $51, $52, $53, $54,
-          $55, $56, $57, NOW()
+          $10, $11, $12,
+          $13, $14, $15, $16, $17, $18, $19, $20,
+          $21, $22, $23, $24, $25,
+          $26, $27, $28, $29, $30,
+          $31, $32, $33, $34, $35,
+          $36, $37, $38, $39, $40,
+          $41, $42, $43, $44,
+          $45, $46, $47, $48, $49, $50, $51,
+          $52, $53, $54, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
           code = EXCLUDED.code,
@@ -241,9 +238,6 @@ export const loadItemDefSeeds = async (): Promise<number> => {
           stack_max = EXCLUDED.stack_max,
           bind_type = EXCLUDED.bind_type,
           tradeable = EXCLUDED.tradeable,
-          sellable = EXCLUDED.sellable,
-          sell_price_silver = EXCLUDED.sell_price_silver,
-          sell_price_spirit_stones = EXCLUDED.sell_price_spirit_stones,
           icon = EXCLUDED.icon,
           description = EXCLUDED.description,
           tags = EXCLUDED.tags,
@@ -259,8 +253,7 @@ export const loadItemDefSeeds = async (): Promise<number> => {
       await query(sql, [
         item.id, item.code || null, item.name, item.category, item.sub_category || null,
         item.quality, item.quality_rank, item.rarity || null, item.level,
-        item.stack_max, item.bind_type, item.tradeable, item.sellable,
-        item.sell_price_silver, item.sell_price_spirit_stones || 0,
+        item.stack_max, item.bind_type, item.tradeable,
         item.icon || null, item.model || null, item.description || null, item.long_desc || null,
         item.tags ? JSON.stringify(item.tags) : null,
         item.use_type || null, item.use_cd_round || 0, item.use_cd_sec || 0,
@@ -309,16 +302,16 @@ export const loadEquipmentDefSeeds = async (): Promise<number> => {
       const sql = `
         INSERT INTO item_def (
           id, code, name, category, sub_category, quality, quality_rank, rarity, level,
-          stack_max, bind_type, tradeable, sellable, sell_price_silver, sell_price_spirit_stones,
+          stack_max, bind_type, tradeable,
           icon, description, equip_slot, equip_req_realm, equip_req_attrs,
           base_attrs, affix_pool_id, affix_count_min, affix_count_max,
           set_id, tags, quality_min, quality_max, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9,
-          $10, $11, $12, $13, $14, $15,
-          $16, $17, $18, $19, $20,
-          $21, $22, $23, $24,
-          $25, $26, $27, $28, NOW()
+          $10, $11, $12,
+          $13, $14, $15, $16, $17,
+          $18, $19, $20, $21,
+          $22, $23, $24, $25, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
           code = EXCLUDED.code,
@@ -334,9 +327,6 @@ export const loadEquipmentDefSeeds = async (): Promise<number> => {
           stack_max = EXCLUDED.stack_max,
           bind_type = EXCLUDED.bind_type,
           tradeable = EXCLUDED.tradeable,
-          sellable = EXCLUDED.sellable,
-          sell_price_silver = EXCLUDED.sell_price_silver,
-          sell_price_spirit_stones = EXCLUDED.sell_price_spirit_stones,
           icon = EXCLUDED.icon,
           description = EXCLUDED.description,
           equip_slot = EXCLUDED.equip_slot,
@@ -354,8 +344,7 @@ export const loadEquipmentDefSeeds = async (): Promise<number> => {
       await query(sql, [
         item.id, item.code || null, item.name, item.category, item.sub_category || null,
         item.quality, item.quality_rank, item.rarity || null, item.level,
-        item.stack_max, item.bind_type, item.tradeable, item.sellable,
-        item.sell_price_silver, item.sell_price_spirit_stones || 0,
+        item.stack_max, item.bind_type, item.tradeable,
         item.icon || null, item.description || null,
         item.equip_slot || null, item.equip_req_realm || null,
         item.equip_req_attrs ? JSON.stringify(item.equip_req_attrs) : null,

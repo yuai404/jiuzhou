@@ -29,7 +29,7 @@ import {
   buildRefineCostPlan,
   calcUseEffectDelta,
   categoryLabels,
-  collectBatchDisassembleEquipmentCandidates,
+  collectBatchDisassembleCandidates,
   collectGemCandidates,
   formatEquipmentAffixLine,
   formatPermyriadPercent,
@@ -90,7 +90,6 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
   const [batchQualities, setBatchQualities] = useState<BagQuality[]>(qualityLabels);
   const [batchCategory, setBatchCategory] = useState<BagCategory>('all');
   const [batchSubCategory, setBatchSubCategory] = useState<string>('all');
-  const [batchEquipSlot, setBatchEquipSlot] = useState<string>('all');
   const [batchKeyword, setBatchKeyword] = useState('');
   const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -287,12 +286,11 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       setBatchSubmitting(false);
       setBatchKeyword('');
       setBatchSubCategory('all');
-      setBatchEquipSlot('all');
       setBatchQualities(quality === 'all' ? qualityLabels : [quality]);
       if (mode === 'remove') {
         setBatchCategory(category === 'all' ? 'all' : category);
       } else {
-        setBatchCategory('equipment');
+        setBatchCategory('all');
       }
     },
     [category, quality]
@@ -700,24 +698,17 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [bagOnlyItems]);
 
-  const batchEquipSlotOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const it of bagOnlyItems) {
-      if (it.category !== 'equipment') continue;
-      const slot = it.equip?.equipSlot;
-      if (slot) set.add(slot);
-    }
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [bagOnlyItems]);
-
   const batchCandidates = useMemo(() => {
     const kw = batchKeyword.trim().toLowerCase();
 
     let list = bagOnlyItems.filter((i) => !i.locked);
     if (batchMode === 'disassemble') {
-      list = collectBatchDisassembleEquipmentCandidates(list);
-      if (batchEquipSlot !== 'all') {
-        list = list.filter((i) => (i.equip?.equipSlot ?? '') === batchEquipSlot);
+      list = collectBatchDisassembleCandidates(list);
+      if (batchCategory !== 'all') {
+        list = list.filter((i) => i.category === batchCategory);
+      }
+      if (batchSubCategory !== 'all') {
+        list = list.filter((i) => (i.subCategory ?? '') === batchSubCategory);
       }
     } else {
       if (batchCategory !== 'all') {
@@ -738,25 +729,12 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     }
 
     return list;
-  }, [bagOnlyItems, batchCategory, batchEquipSlot, batchKeyword, batchMode, batchQualities, batchSubCategory]);
+  }, [bagOnlyItems, batchCategory, batchKeyword, batchMode, batchQualities, batchSubCategory]);
 
   const batchSummary = useMemo(() => {
-    if (batchMode === 'disassemble') {
-      let cui = 0;
-      let yun = 0;
-      for (const it of batchCandidates) {
-        if (it.quality === '黄' || it.quality === '玄') cui += 1;
-        else yun += 1;
-      }
-      const parts: string[] = [];
-      if (cui > 0) parts.push(`淬灵石×${cui}`);
-      if (yun > 0) parts.push(`蕴灵石×${yun}`);
-      return parts.join('，');
-    }
-
     const qty = batchCandidates.reduce((sum, it) => sum + Math.max(0, it.qty || 0), 0);
     return `共${qty}件`;
-  }, [batchCandidates, batchMode]);
+  }, [batchCandidates]);
   const useActionDisabled = loading || actionDisabled('use');
 
   return (
@@ -1199,6 +1177,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 id: activeItem.id,
                 name: activeItem.name,
                 quality: activeItem.quality,
+                qty: activeItem.qty,
                 location: activeItem.location,
                 locked: activeItem.locked,
                 category: activeItem.category,
@@ -1597,42 +1576,25 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
               options={qualityLabels.map((q) => ({ value: q, label: qualityLabelText[q] }))}
             />
             <Input value={batchKeyword} onChange={(e) => setBatchKeyword(e.target.value)} placeholder="搜索名称/标签" allowClear />
-            {batchMode === 'remove' ? (
-              <>
-                <Select
-                  value={batchCategory}
-                  onChange={(v) => setBatchCategory(v as BagCategory)}
-                  placeholder="类型"
-                  options={[
-                    { value: 'all', label: '全部类型' },
-                    { value: 'consumable', label: categoryLabels.consumable },
-                    { value: 'material', label: categoryLabels.material },
-                    { value: 'equipment', label: categoryLabels.equipment },
-                    { value: 'skill', label: categoryLabels.skill },
-                    { value: 'quest', label: categoryLabels.quest },
-                  ]}
-                />
-                <Select
-                  value={batchSubCategory}
-                  onChange={(v) => setBatchSubCategory(String(v))}
-                  placeholder="子类型"
-                  options={[{ value: 'all', label: '全部子类型' }, ...batchSubCategoryOptions.map((s) => ({ value: s, label: s }))]}
-                />
-              </>
-            ) : (
-              <>
-                <Select
-                  value={batchEquipSlot}
-                  onChange={(v) => setBatchEquipSlot(String(v))}
-                  placeholder="装备部位"
-                  options={[
-                    { value: 'all', label: '全部部位' },
-                    ...batchEquipSlotOptions.map((s) => ({ value: s, label: getEquipSlotLabel(s) })),
-                  ]}
-                />
-                <Select value="bag" disabled options={[{ value: 'bag', label: '仅背包' }]} />
-              </>
-            )}
+            <Select
+              value={batchCategory}
+              onChange={(v) => setBatchCategory(v as BagCategory)}
+              placeholder="类型"
+              options={[
+                { value: 'all', label: '全部类型' },
+                { value: 'consumable', label: categoryLabels.consumable },
+                { value: 'material', label: categoryLabels.material },
+                { value: 'equipment', label: categoryLabels.equipment },
+                { value: 'skill', label: categoryLabels.skill },
+                { value: 'quest', label: categoryLabels.quest },
+              ]}
+            />
+            <Select
+              value={batchSubCategory}
+              onChange={(v) => setBatchSubCategory(String(v))}
+              placeholder="子类型"
+              options={[{ value: 'all', label: '全部子类型' }, ...batchSubCategoryOptions.map((s) => ({ value: s, label: s }))]}
+            />
           </div>
 
           <div style={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -1659,12 +1621,17 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 if (batchCandidates.length === 0) return;
                 setBatchSubmitting(true);
                 try {
-                  const ids = batchCandidates.map((x) => x.id);
                   if (batchMode === 'disassemble') {
-                    const res = await disassembleInventoryEquipmentBatch(ids);
+                    const res = await disassembleInventoryEquipmentBatch(
+                      batchCandidates.map((x) => ({
+                        itemId: x.id,
+                        qty: Math.max(1, Math.floor(x.qty || 1)),
+                      }))
+                    );
                     if (!res.success) throw new Error(res.message || '分解失败');
                     message.success(res.message || '分解成功');
                   } else {
+                    const ids = batchCandidates.map((x) => x.id);
                     const res = await removeInventoryItemsBatch(ids);
                     if (!res.success) throw new Error(res.message || '丢弃失败');
                     message.success(res.message || '丢弃成功');

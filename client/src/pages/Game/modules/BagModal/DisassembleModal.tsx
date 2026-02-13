@@ -1,5 +1,5 @@
-import { App, Button, Modal, Tag } from 'antd';
-import { useMemo, useState } from 'react';
+import { App, Button, InputNumber, Modal, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { disassembleInventoryEquipment } from '../../../../services/api';
 import { isDisassemblableBagItem, qualityLabelText } from './bagShared';
 import type { BagCategory, BagQuality } from './bagShared';
@@ -10,6 +10,7 @@ export type DisassembleTarget = {
   id: number;
   name: string;
   quality: BagQuality;
+  qty: number;
   location: 'bag' | 'warehouse' | 'equipped';
   locked?: boolean;
   category: DisassembleCategory;
@@ -33,19 +34,30 @@ const techniqueBookRewardQtyByQuality: Record<BagQuality, number> = {
 const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose, onSuccess }) => {
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
+  const [disassembleQty, setDisassembleQty] = useState(1);
+
+  useEffect(() => {
+    if (!open) return;
+    setDisassembleQty(1);
+  }, [open, item?.id]);
+
+  const maxQty = useMemo(() => {
+    if (!item) return 1;
+    return Math.max(1, Math.floor(Number(item.qty) || 1));
+  }, [item]);
 
   const rewardPreview = useMemo(() => {
     if (!item) return '';
     if (item.category === 'equipment') {
-      if (item.quality === '黄' || item.quality === '玄') return '淬灵石×1';
-      return '蕴灵石×1';
+      const rewardName = item.quality === '黄' || item.quality === '玄' ? '淬灵石' : '蕴灵石';
+      return `${rewardName}×${disassembleQty}`;
     }
     if (item.subCategory === 'technique_book') {
       const qty = techniqueBookRewardQtyByQuality[item.quality] || 2;
-      return `功法残页×${qty}`;
+      return `功法残页×${qty * disassembleQty}`;
     }
-    return '';
-  }, [item]);
+    return '银两（按公式结算）';
+  }, [disassembleQty, item]);
 
   const disabledReason = useMemo(() => {
     if (!item) return '请选择可分解物品';
@@ -53,8 +65,10 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
     if (item.locked) return '物品已锁定';
     if (item.location === 'equipped') return item.category === 'equipment' ? '穿戴中的装备不可分解' : '该物品当前位置不可分解';
     if (item.location !== 'bag' && item.location !== 'warehouse') return '该物品当前位置不可分解';
+    if (!Number.isInteger(disassembleQty) || disassembleQty <= 0) return '分解数量不合法';
+    if (disassembleQty > maxQty) return '分解数量超过当前持有数量';
     return '';
-  }, [item]);
+  }, [disassembleQty, item, maxQty]);
 
   return (
     <Modal
@@ -64,7 +78,7 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
         onClose();
       }}
       footer={null}
-      title={item ? (item.category === 'equipment' ? '分解装备' : '分解功法') : '分解物品'}
+      title="分解物品"
       centered
       destroyOnHidden
       maskClosable={!submitting}
@@ -73,6 +87,22 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.name ?? '未选择'}</div>
           {item?.quality ? <Tag>{qualityLabelText[item.quality]}</Tag> : null}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>分解数量</div>
+          <InputNumber
+            min={1}
+            max={maxQty}
+            value={disassembleQty}
+            disabled={!item || submitting}
+            onChange={(value) => {
+              const next = Number(value);
+              if (!Number.isFinite(next)) return;
+              const safe = Math.max(1, Math.min(maxQty, Math.floor(next)));
+              setDisassembleQty(safe);
+            }}
+            style={{ width: 120 }}
+          />
         </div>
         <div>分解后获得：{rewardPreview || '-'}</div>
         {disabledReason ? <div style={{ color: 'rgba(255,255,255,0.6)' }}>{disabledReason}</div> : null}
@@ -97,7 +127,7 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
 
               setSubmitting(true);
               try {
-                const res = await disassembleInventoryEquipment(item.id);
+                const res = await disassembleInventoryEquipment({ itemId: item.id, qty: disassembleQty });
                 if (!res.success) throw new Error(res.message || '分解失败');
                 message.success(res.message || '分解成功');
                 await onSuccess();

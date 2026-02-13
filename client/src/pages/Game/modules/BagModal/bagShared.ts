@@ -925,18 +925,18 @@ export const isDisassemblableBagItem = (item: {
   category: Exclude<BagCategory, "all">;
   subCategory: string | null;
 }): boolean => {
-  if (item.category === "equipment") return true;
-  return isTechniqueBookSubCategory(item.subCategory);
+  // 当前版本规则：除锁定/位置限制外，所有类型物品均可分解。
+  void item;
+  return true;
 };
 
-export const collectBatchDisassembleEquipmentCandidates = (
+export const collectBatchDisassembleCandidates = (
   items: BagItem[],
 ): BagItem[] => {
   const out: BagItem[] = [];
   for (const item of items) {
     if (item.location !== "bag") continue;
     if (item.locked) continue;
-    if (item.category !== "equipment") continue;
     if (!isDisassemblableBagItem(item)) continue;
     out.push(item);
   }
@@ -970,16 +970,14 @@ const mapActions = (
   _effectDefs: unknown,
 ): BagAction[] => {
   if (category === "consumable" || category === "skill") {
-    if (isTechniqueBookSubCategory(subCategoryValue)) {
-      return ["use", "disassemble", "show"];
-    }
-    return ["use", "show"];
+    void subCategoryValue;
+    return ["use", "disassemble", "show"];
   }
   if (category === "equipment")
     return ["equip", "enhance", "disassemble", "show"];
-  if (category === "material") return ["compose", "show"];
-  if (category === "quest") return ["show"];
-  return ["show"];
+  if (category === "material") return ["compose", "disassemble", "show"];
+  if (category === "quest") return ["disassemble", "show"];
+  return ["disassemble", "show"];
 };
 
 const normalizeDisplayTags = (

@@ -884,9 +884,9 @@ router.post('/socket', async (req: Request, res: Response) => {
 });
 
 // ============================================
-// 分解装备
+// 分解物品
 // POST /api/inventory/disassemble
-// Body: { itemId: number }
+// Body: { itemId: number, qty: number }
 // ============================================
 router.post('/disassemble', async (req: Request, res: Response) => {
   try {
@@ -897,8 +897,8 @@ router.post('/disassemble', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: '角色不存在' });
     }
 
-    const { itemId } = req.body;
-    if (itemId === undefined || itemId === null) {
+    const { itemId, qty } = req.body as { itemId?: unknown; qty?: unknown };
+    if (itemId === undefined || itemId === null || qty === undefined || qty === null) {
       return res.status(400).json({ success: false, message: '参数不完整' });
     }
 
@@ -907,18 +907,30 @@ router.post('/disassemble', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'itemId参数错误' });
     }
 
-    const result = await inventoryService.disassembleEquipment(characterId, userId, parsedItemId);
+    const parsedQty = Number(qty);
+    if (!Number.isInteger(parsedQty) || parsedQty <= 0) {
+      return res.status(400).json({ success: false, message: 'qty参数错误' });
+    }
+
+    const result = await inventoryService.disassembleEquipment(characterId, userId, parsedItemId, parsedQty);
+    if (result.success) {
+      try {
+        const gameServer = getGameServer();
+        await gameServer.pushCharacterUpdate(userId);
+      } catch {
+      }
+    }
     return res.json(result);
   } catch (error) {
-    console.error('分解装备失败:', error);
+    console.error('分解物品失败:', error);
     return res.status(500).json({ success: false, message: '服务器错误' });
   }
 });
 
 // ============================================
-// 批量分解装备
+// 批量分解物品
 // POST /api/inventory/disassemble/batch
-// Body: { itemIds: number[] }
+// Body: { items: Array<{ itemId: number; qty: number }> }
 // ============================================
 router.post('/disassemble/batch', async (req: Request, res: Response) => {
   try {
@@ -929,20 +941,35 @@ router.post('/disassemble/batch', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: '角色不存在' });
     }
 
-    const { itemIds } = req.body as { itemIds?: unknown };
-    if (!Array.isArray(itemIds) || itemIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'itemIds参数错误' });
+    const { items } = req.body as { items?: unknown };
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'items参数错误' });
     }
 
-    const parsedIds = itemIds.map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0);
-    if (parsedIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'itemIds参数错误' });
+    const parsedItems: Array<{ itemId: number; qty: number }> = [];
+    for (const row of items) {
+      if (!row || typeof row !== 'object') {
+        return res.status(400).json({ success: false, message: 'items参数错误' });
+      }
+      const itemId = Number((row as { itemId?: unknown }).itemId);
+      const qty = Number((row as { qty?: unknown }).qty);
+      if (!Number.isInteger(itemId) || itemId <= 0 || !Number.isInteger(qty) || qty <= 0) {
+        return res.status(400).json({ success: false, message: 'items参数错误' });
+      }
+      parsedItems.push({ itemId, qty });
     }
 
-    const result = await inventoryService.disassembleEquipmentBatch(characterId, userId, parsedIds);
+    const result = await inventoryService.disassembleEquipmentBatch(characterId, userId, parsedItems);
+    if (result.success) {
+      try {
+        const gameServer = getGameServer();
+        await gameServer.pushCharacterUpdate(userId);
+      } catch {
+      }
+    }
     return res.json(result);
   } catch (error) {
-    console.error('批量分解装备失败:', error);
+    console.error('批量分解物品失败:', error);
     return res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

@@ -23,9 +23,6 @@ CREATE TABLE IF NOT EXISTS item_def (
   stack_max INTEGER NOT NULL DEFAULT 1,               -- 最大堆叠数量
   bind_type VARCHAR(16) NOT NULL DEFAULT 'none',      -- 绑定类型（none/pickup/equip/use）
   tradeable BOOLEAN NOT NULL DEFAULT true,            -- 是否可交易
-  sellable BOOLEAN NOT NULL DEFAULT true,             -- 是否可出售给NPC
-  sell_price_silver INTEGER NOT NULL DEFAULT 0,       -- NPC回收价（银两）
-  sell_price_spirit_stones INTEGER NOT NULL DEFAULT 0,-- NPC回收价（灵石）
   icon VARCHAR(256),                                  -- 图标资源路径
   model VARCHAR(256),                                 -- 模型/外观ID
   description TEXT,                                   -- 简短描述
@@ -564,6 +561,13 @@ const itemInstanceColumnsToCheck = [
   { name: 'quality_rank', type: 'INTEGER', comment: '实例品质排序值（为空则按定义表）' },
 ];
 
+const dropLegacyItemDefColumns = async () => {
+  const legacyColumns = ['sellable', 'sell_price_silver', 'sell_price_spirit_stones'];
+  for (const col of legacyColumns) {
+    await query(`ALTER TABLE item_def DROP COLUMN IF EXISTS ${col}`);
+  }
+};
+
 // 检查并添加缺失字段
 const checkAndAddItemDefColumns = async () => {
   for (const col of itemDefColumnsToCheck) {
@@ -620,6 +624,7 @@ export const initItemTables = async (): Promise<void> => {
   try {
     // 1. 创建物品定义表
     await query(itemDefTableSQL);
+    await dropLegacyItemDefColumns();
     
     // 2. 创建物品实例表
     await query(itemInstanceTableSQL);
@@ -673,4 +678,3 @@ export const initItemTables = async (): Promise<void> => {
     throw error;
   }
 };
-

@@ -37,7 +37,7 @@ import {
   buildRefineCostPlan,
   calcUseEffectDelta,
   categoryLabels,
-  collectBatchDisassembleEquipmentCandidates,
+  collectBatchDisassembleCandidates,
   formatEquipmentAffixLine,
   formatPermyriadPercent,
   formatSignedNumber,
@@ -949,13 +949,15 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
   }, [activeItem, clampUseQty, refresh, useQty]);
 
   const handleBatchDisassemble = useCallback(async () => {
-    const candidates = collectBatchDisassembleEquipmentCandidates(items);
-    if (candidates.length === 0) { message.info('没有可分解的装备'); return; }
+    const candidates = collectBatchDisassembleCandidates(items);
+    if (candidates.length === 0) { message.info('没有可分解的物品'); return; }
     setLoading(true);
     try {
-      const res = await disassembleInventoryEquipmentBatch(candidates.map((x) => x.id));
+      const res = await disassembleInventoryEquipmentBatch(
+        candidates.map((x) => ({ itemId: x.id, qty: Math.max(1, Math.floor(x.qty || 1)) }))
+      );
       if (!res.success) throw new Error(res.message || '分解失败');
-      message.success(res.message || `分解了${candidates.length}件装备`);
+      message.success(res.message || `分解了${candidates.length}个物品`);
       await refresh();
     } catch (e) {
       message.error((e as { message?: string }).message || '分解失败');
@@ -1115,6 +1117,7 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
           id: activeItem.id,
           name: activeItem.name,
           quality: activeItem.quality,
+          qty: activeItem.qty,
           location: activeItem.location,
           locked: activeItem.locked,
           category: activeItem.category,
