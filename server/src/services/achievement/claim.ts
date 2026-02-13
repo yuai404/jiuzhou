@@ -20,6 +20,7 @@ import type {
 import {
   getAchievementDefinitions,
   getAchievementPointsRewardDefinitions,
+  getItemDefinitionsByIds,
   getTitleDefinitions,
 } from '../staticConfigLoader.js';
 
@@ -37,15 +38,15 @@ const loadItemMetaMap = async (
   itemIds: string[],
   client?: PoolClient,
 ): Promise<Map<string, { name: string; icon: string | null }>> => {
+  void client;
   const dedup = Array.from(new Set(itemIds.map((id) => id.trim()).filter(Boolean)));
   const out = new Map<string, { name: string; icon: string | null }>();
   if (dedup.length === 0) return out;
-  const runner = client ?? { query };
-  const res = await runner.query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::varchar[])`, [dedup]);
-  for (const row of res.rows as Array<Record<string, unknown>>) {
-    const id = asNonEmptyString(row.id);
-    if (!id) continue;
-    out.set(id, { name: asNonEmptyString(row.name) ?? id, icon: asNonEmptyString(row.icon) });
+  const defs = getItemDefinitionsByIds(dedup);
+  for (const id of dedup) {
+    const def = defs.get(id);
+    if (!def) continue;
+    out.set(id, { name: asNonEmptyString(def.name) ?? id, icon: asNonEmptyString(def.icon) });
   }
   return out;
 };

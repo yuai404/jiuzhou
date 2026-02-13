@@ -26,7 +26,7 @@ import {
   isRealmName,
   type RealmName,
 } from './shared/realmOrder.js';
-import { getAffixPoolDefinitions } from './staticConfigLoader.js';
+import { getAffixPoolDefinitions, getItemDefinitionById } from './staticConfigLoader.js';
 
 // ============================================
 // 类型定义
@@ -334,25 +334,33 @@ class SeededRandom {
  * 获取装备模板
  */
 export const getEquipmentDef = async (itemDefId: string): Promise<EquipmentDef | null> => {
-  const result = await query(`
-    SELECT id, code, name, category, sub_category, quality, quality_rank, quality_min, quality_max, level,
-           equip_slot, equip_req_realm, base_attrs,
-           affix_pool_id, affix_count_min, affix_count_max, set_id, bind_type
-    FROM item_def
-    WHERE id = $1 AND category = 'equipment' AND enabled = true
-  `, [itemDefId]);
-  
-  if (result.rows.length === 0) return null;
-  
-  const row = result.rows[0];
+  const row = getItemDefinitionById(itemDefId);
+  if (!row || row.category !== 'equipment' || row.enabled === false) return null;
+
   const quality = coerceQuality(row.quality) ?? '黄';
+  const baseAttrs = row.base_attrs && typeof row.base_attrs === 'object'
+    ? (row.base_attrs as Record<string, number>)
+    : {};
+
   return {
-    ...row,
+    id: row.id,
+    code: String(row.code || ''),
+    name: String(row.name || row.id),
+    category: String(row.category || 'equipment'),
+    sub_category: String(row.sub_category || ''),
     quality,
-    quality_rank: Number(row.quality_rank) || QUALITY_RANK[quality],
+    quality_rank: Number(row.quality_rank) || QUALITY_RANK[quality] || 1,
     quality_min: coerceQuality(row.quality_min),
     quality_max: coerceQuality(row.quality_max),
-    base_attrs: row.base_attrs || {},
+    level: Number(row.level) || 1,
+    equip_slot: String(row.equip_slot || ''),
+    equip_req_realm: String(row.equip_req_realm || ''),
+    base_attrs: baseAttrs,
+    affix_pool_id: String(row.affix_pool_id || ''),
+    affix_count_min: Number(row.affix_count_min) || 0,
+    affix_count_max: Number(row.affix_count_max) || 0,
+    set_id: typeof row.set_id === 'string' ? row.set_id : null,
+    bind_type: String(row.bind_type || 'none'),
   };
 };
 
@@ -850,41 +858,47 @@ export const generateAndCreateEquipment = async (
  * 获取装备实例详情（包含模板信息和词条）
  */
 export const getEquipmentInstance = async (instanceId: number): Promise<any | null> => {
-  const result = await query(`
-    SELECT 
-      ii.*,
-      COALESCE(ii.quality, id.quality) as resolved_quality,
-      COALESCE(ii.quality_rank, id.quality_rank) as resolved_quality_rank,
-      id.name, id.icon, id.quality as def_quality, id.quality_rank as def_quality_rank,
-      id.equip_slot, id.equip_req_realm, id.base_attrs,
-      id.set_id, id.description
-    FROM item_instance ii
-    JOIN item_def id ON ii.item_def_id = id.id
-    WHERE ii.id = $1
-  `, [instanceId]);
+  const result = await query(
+    `
+    SELECT *
+    FROM item_instance
+    WHERE id = $1
+  `,
+    [instanceId],
+  );
   
   if (result.rows.length === 0) return null;
   
   const row = result.rows[0];
-  const resolvedQualityRank = Number(row.resolved_quality_rank) || 1;
-  const baseRank = Number(row.def_quality_rank) || 1;
+  const itemDefId = String(row.item_def_id || '').trim();
+  if (!itemDefId) return null;
+  const itemDef = getItemDefinitionById(itemDefId);
+  if (!itemDef || itemDef.category !== 'equipment') return null;
+
+  const fallbackQuality = coerceQuality(itemDef.quality) ?? '黄';
+  const resolvedQuality = coerceQuality(row.quality) ?? fallbackQuality;
+  const resolvedQualityRank = Number(row.quality_rank) || Number(itemDef.quality_rank) || QUALITY_RANK[resolvedQuality] || 1;
+  const baseRank = Number(itemDef.quality_rank) || QUALITY_RANK[fallbackQuality] || 1;
   const attrFactor = getQualityMultiplier(resolvedQualityRank) / getQualityMultiplier(baseRank);
   const strengthenFactor = getStrengthenMultiplier(Number(row.strengthen_level) || 0);
+  const baseAttrs = itemDef.base_attrs && typeof itemDef.base_attrs === 'object'
+    ? (itemDef.base_attrs as Record<string, number>)
+    : {};
   return {
     id: row.id,
     itemDefId: row.item_def_id,
-    name: row.name,
-    icon: row.icon,
-    quality: row.resolved_quality,
-    qualityRank: row.resolved_quality_rank,
-    equipSlot: row.equip_slot,
-    equipReqRealm: row.equip_req_realm,
+    name: itemDef.name,
+    icon: itemDef.icon,
+    quality: resolvedQuality,
+    qualityRank: resolvedQualityRank,
+    equipSlot: itemDef.equip_slot,
+    equipReqRealm: itemDef.equip_req_realm,
     baseAttrs: scaleAttrs(
-      (row.base_attrs && typeof row.base_attrs === 'object' ? row.base_attrs : {}) as Record<string, number>,
+      baseAttrs,
       attrFactor * strengthenFactor
     ),
     affixes: row.affixes || [],
-    setId: row.set_id,
+    setId: itemDef.set_id,
     strengthenLevel: row.strengthen_level,
     refineLevel: row.refine_level,
     socketedGems: row.socketed_gems,
@@ -894,7 +908,7 @@ export const getEquipmentInstance = async (instanceId: number): Promise<any | nu
     location: row.location,
     locationSlot: row.location_slot,
     equippedSlot: row.equipped_slot,
-    description: row.description,
+    description: itemDef.description,
     createdAt: row.created_at
   };
 };

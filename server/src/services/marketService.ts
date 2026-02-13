@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { findEmptySlotsWithClient } from './inventoryService.js';
 import { lockCharacterInventoryMutexTx, lockCharacterInventoryMutexesTx } from './inventoryMutex.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
+import { getItemDefinitionById, getItemDefinitions } from './staticConfigLoader.js';
 
 export type MarketSort = 'timeDesc' | 'priceAsc' | 'priceDesc' | 'qtyDesc';
 
@@ -74,6 +75,64 @@ const requireBuyerBagSlot = async (client: PoolClient, buyerCharacterId: number)
   return slots[0];
 };
 
+const toListingDto = (row: Record<string, unknown>): MarketListingDto | null => {
+  const itemDefId = String(row.item_def_id || '').trim();
+  if (!itemDefId) return null;
+  const itemDef = getItemDefinitionById(itemDefId);
+  if (!itemDef) return null;
+
+  const category = itemDef.category === null || itemDef.category === undefined ? null : String(itemDef.category);
+  const defQualityRank = Number(itemDef.quality_rank) || 1;
+  const resolvedQualityRank = Number(row.instance_quality_rank) || defQualityRank;
+  const baseAttrsRaw =
+    itemDef.base_attrs && typeof itemDef.base_attrs === 'object'
+      ? (itemDef.base_attrs as Record<string, number>)
+      : {};
+  const baseAttrs =
+    category === 'equipment'
+      ? buildEquipmentDisplayBaseAttrs({
+          baseAttrsRaw,
+          defQualityRankRaw: defQualityRank,
+          resolvedQualityRankRaw: resolvedQualityRank,
+          strengthenLevelRaw: row.strengthen_level,
+          refineLevelRaw: row.refine_level,
+          socketedGemsRaw: row.socketed_gems,
+        })
+      : baseAttrsRaw;
+
+  return {
+    id: Number(row.id),
+    itemInstanceId: Number(row.item_instance_id),
+    itemDefId,
+    name: String(itemDef.name ?? ''),
+    icon: itemDef.icon === null || itemDef.icon === undefined ? null : String(itemDef.icon),
+    quality:
+      row.instance_quality === null || row.instance_quality === undefined
+        ? (itemDef.quality === null || itemDef.quality === undefined ? null : String(itemDef.quality))
+        : String(row.instance_quality),
+    category,
+    subCategory: itemDef.sub_category === null || itemDef.sub_category === undefined ? null : String(itemDef.sub_category),
+    description: itemDef.description === null || itemDef.description === undefined ? null : String(itemDef.description),
+    longDesc: itemDef.long_desc === null || itemDef.long_desc === undefined ? null : String(itemDef.long_desc),
+    tags: itemDef.tags ?? null,
+    effectDefs: itemDef.effect_defs ?? null,
+    baseAttrs,
+    equipSlot: itemDef.equip_slot === null || itemDef.equip_slot === undefined ? null : String(itemDef.equip_slot),
+    equipReqRealm:
+      itemDef.equip_req_realm === null || itemDef.equip_req_realm === undefined ? null : String(itemDef.equip_req_realm),
+    useType: itemDef.use_type === null || itemDef.use_type === undefined ? null : String(itemDef.use_type),
+    strengthenLevel: Math.max(0, Math.floor(Number(row.strengthen_level) || 0)),
+    refineLevel: Math.max(0, Math.floor(Number(row.refine_level) || 0)),
+    identified: Boolean(row.identified),
+    affixes: row.affixes ?? [],
+    qty: Number(row.qty),
+    unitPriceSpiritStones: Number(row.unit_price_spirit_stones),
+    sellerCharacterId: Number(row.seller_character_id),
+    sellerName: String(row.seller_name ?? ''),
+    listedAt: new Date(String(row.listed_at ?? '')).getTime(),
+  };
+};
+
 export const getMarketListings = async (params: {
   category?: string;
   quality?: string;
@@ -95,21 +154,51 @@ export const getMarketListings = async (params: {
   const maxPrice = parseNonNegativeInt(params.maxPrice);
   const sort: MarketSort = (params.sort ?? 'timeDesc') as MarketSort;
 
+  const allItemDefs = getItemDefinitions();
+  const allItemDefIds = allItemDefs.map((entry) => String(entry.id || '').trim()).filter((id) => id.length > 0);
+  if (allItemDefIds.length === 0) {
+    return { success: true, message: 'ok', data: { listings: [], total: 0 } };
+  }
+
   const where: string[] = [`ml.status = 'active'`];
-  const values: Array<string | number> = [];
+  const values: Array<string | number | string[]> = [];
+
+  values.push(allItemDefIds);
+  where.push(`ml.item_def_id = ANY($${values.length}::varchar[])`);
 
   if (category && category !== 'all') {
-    values.push(category);
-    where.push(`id.category = $${values.length}`);
+    const categoryDefIds = allItemDefs
+      .filter((entry) => String(entry.category || '') === category)
+      .map((entry) => String(entry.id || '').trim())
+      .filter((id) => id.length > 0);
+    if (categoryDefIds.length === 0) {
+      return { success: true, message: 'ok', data: { listings: [], total: 0 } };
+    }
+    values.push(categoryDefIds);
+    where.push(`ml.item_def_id = ANY($${values.length}::varchar[])`);
   }
   if (quality && quality !== 'all') {
+    const qualityDefIds = allItemDefs
+      .filter((entry) => String(entry.quality || '') === quality)
+      .map((entry) => String(entry.id || '').trim())
+      .filter((id) => id.length > 0);
     values.push(quality);
-    where.push(`COALESCE(ii.quality, id.quality) = $${values.length}`);
+    const qualityParam = `$${values.length}`;
+    values.push(qualityDefIds);
+    const qualityDefParam = `$${values.length}`;
+    where.push(`(ii.quality = ${qualityParam} OR (ii.quality IS NULL AND ml.item_def_id = ANY(${qualityDefParam}::varchar[])))`);
   }
   if (q) {
+    const queryLower = q.toLowerCase();
+    const nameMatchedDefIds = allItemDefs
+      .filter((entry) => String(entry.name || '').toLowerCase().includes(queryLower))
+      .map((entry) => String(entry.id || '').trim())
+      .filter((id) => id.length > 0);
+    values.push(nameMatchedDefIds);
+    const itemNameParam = `$${values.length}`;
     values.push(`%${q}%`);
-    const p = `$${values.length}`;
-    where.push(`(id.name ILIKE ${p} OR c.nickname ILIKE ${p})`);
+    const sellerNameParam = `$${values.length}`;
+    where.push(`(ml.item_def_id = ANY(${itemNameParam}::varchar[]) OR c.nickname ILIKE ${sellerNameParam})`);
   }
   if (minPrice !== null) {
     values.push(minPrice);
@@ -145,23 +234,8 @@ export const getMarketListings = async (params: {
       ml.unit_price_spirit_stones,
       ml.seller_character_id,
       ml.listed_at,
-      id.name,
-      id.icon,
-      COALESCE(ii.quality, id.quality) AS resolved_quality,
-      id.category,
-      id.sub_category,
-      id.description,
-      id.long_desc,
-      id.tags,
-      id.effect_defs,
-      id.base_attrs,
-      id.equip_slot,
-      id.equip_req_realm,
-      id.use_type,
-      id.socket_max,
-      id.gem_slot_types,
-      id.quality_rank AS def_quality_rank,
-      COALESCE(ii.quality_rank, id.quality_rank) AS resolved_quality_rank,
+      ii.quality AS instance_quality,
+      ii.quality_rank AS instance_quality_rank,
       ii.strengthen_level,
       ii.refine_level,
       ii.socketed_gems,
@@ -170,7 +244,6 @@ export const getMarketListings = async (params: {
       c.nickname AS seller_name
     FROM market_listing ml
     JOIN item_instance ii ON ii.id = ml.item_instance_id
-    JOIN item_def id ON id.id = ml.item_def_id
     JOIN characters c ON c.id = ml.seller_character_id
     ${whereSql}
     ORDER BY ${orderBy}
@@ -181,7 +254,6 @@ export const getMarketListings = async (params: {
     SELECT COUNT(*)::int AS cnt
     FROM market_listing ml
     JOIN item_instance ii ON ii.id = ml.item_instance_id
-    JOIN item_def id ON id.id = ml.item_def_id
     JOIN characters c ON c.id = ml.seller_character_id
     ${whereSql}
   `;
@@ -189,48 +261,9 @@ export const getMarketListings = async (params: {
   try {
     const [listResult, countResult] = await Promise.all([query(listSql, values), query(countSql, values.slice(0, values.length - 2))]);
     const total = Number(countResult.rows[0]?.cnt ?? 0);
-    const listings: MarketListingDto[] = listResult.rows.map((r) => {
-      const category = r.category === null || r.category === undefined ? null : String(r.category);
-      const baseAttrs =
-        category === 'equipment'
-          ? buildEquipmentDisplayBaseAttrs({
-              baseAttrsRaw: r.base_attrs,
-              defQualityRankRaw: r.def_quality_rank,
-              resolvedQualityRankRaw: r.resolved_quality_rank,
-              strengthenLevelRaw: r.strengthen_level,
-              refineLevelRaw: r.refine_level,
-              socketedGemsRaw: r.socketed_gems,
-            })
-          : (r.base_attrs && typeof r.base_attrs === 'object' ? (r.base_attrs as Record<string, number>) : {});
-
-      return {
-        id: Number(r.id),
-        itemInstanceId: Number(r.item_instance_id),
-        itemDefId: String(r.item_def_id),
-        name: String(r.name ?? ''),
-        icon: r.icon === null || r.icon === undefined ? null : String(r.icon),
-        quality: r.resolved_quality === null || r.resolved_quality === undefined ? null : String(r.resolved_quality),
-        category,
-        subCategory: r.sub_category === null || r.sub_category === undefined ? null : String(r.sub_category),
-        description: r.description === null || r.description === undefined ? null : String(r.description),
-        longDesc: r.long_desc === null || r.long_desc === undefined ? null : String(r.long_desc),
-        tags: r.tags ?? null,
-        effectDefs: r.effect_defs ?? null,
-        baseAttrs,
-        equipSlot: r.equip_slot === null || r.equip_slot === undefined ? null : String(r.equip_slot),
-        equipReqRealm: r.equip_req_realm === null || r.equip_req_realm === undefined ? null : String(r.equip_req_realm),
-        useType: r.use_type === null || r.use_type === undefined ? null : String(r.use_type),
-        strengthenLevel: Math.max(0, Math.floor(Number(r.strengthen_level) || 0)),
-        refineLevel: Math.max(0, Math.floor(Number(r.refine_level) || 0)),
-        identified: Boolean(r.identified),
-        affixes: r.affixes ?? [],
-        qty: Number(r.qty),
-        unitPriceSpiritStones: Number(r.unit_price_spirit_stones),
-        sellerCharacterId: Number(r.seller_character_id),
-        sellerName: String(r.seller_name ?? ''),
-        listedAt: new Date(r.listed_at).getTime(),
-      };
-    });
+    const listings: MarketListingDto[] = listResult.rows
+      .map((row) => toListingDto(row as Record<string, unknown>))
+      .filter((entry): entry is MarketListingDto => entry !== null);
     return { success: true, message: 'ok', data: { listings, total } };
   } catch (error) {
     console.error('获取坊市列表失败:', error);
@@ -260,23 +293,8 @@ export const getMyMarketListings = async (params: {
           ml.unit_price_spirit_stones,
           ml.seller_character_id,
           ml.listed_at,
-          id.name,
-          id.icon,
-          COALESCE(ii.quality, id.quality) AS resolved_quality,
-          id.category,
-          id.sub_category,
-          id.description,
-          id.long_desc,
-          id.tags,
-          id.effect_defs,
-          id.base_attrs,
-          id.equip_slot,
-          id.equip_req_realm,
-          id.use_type,
-          id.socket_max,
-          id.gem_slot_types,
-          id.quality_rank AS def_quality_rank,
-          COALESCE(ii.quality_rank, id.quality_rank) AS resolved_quality_rank,
+          ii.quality AS instance_quality,
+          ii.quality_rank AS instance_quality_rank,
           ii.strengthen_level,
           ii.refine_level,
           ii.socketed_gems,
@@ -285,7 +303,6 @@ export const getMyMarketListings = async (params: {
           c.nickname AS seller_name
         FROM market_listing ml
         LEFT JOIN item_instance ii ON ii.id = ml.item_instance_id
-        JOIN item_def id ON id.id = ml.item_def_id
         JOIN characters c ON c.id = ml.seller_character_id
         WHERE ml.seller_character_id = $1 AND ml.status = $2
         ORDER BY ml.listed_at DESC
@@ -304,48 +321,9 @@ export const getMyMarketListings = async (params: {
     );
 
     const total = Number(countResult.rows[0]?.cnt ?? 0);
-    const listings: MarketListingDto[] = listResult.rows.map((r) => {
-      const category = r.category === null || r.category === undefined ? null : String(r.category);
-      const baseAttrs =
-        category === 'equipment'
-          ? buildEquipmentDisplayBaseAttrs({
-              baseAttrsRaw: r.base_attrs,
-              defQualityRankRaw: r.def_quality_rank,
-              resolvedQualityRankRaw: r.resolved_quality_rank,
-              strengthenLevelRaw: r.strengthen_level,
-              refineLevelRaw: r.refine_level,
-              socketedGemsRaw: r.socketed_gems,
-            })
-          : (r.base_attrs && typeof r.base_attrs === 'object' ? (r.base_attrs as Record<string, number>) : {});
-
-      return {
-        id: Number(r.id),
-        itemInstanceId: Number(r.item_instance_id),
-        itemDefId: String(r.item_def_id),
-        name: String(r.name ?? ''),
-        icon: r.icon === null || r.icon === undefined ? null : String(r.icon),
-        quality: r.resolved_quality === null || r.resolved_quality === undefined ? null : String(r.resolved_quality),
-        category,
-        subCategory: r.sub_category === null || r.sub_category === undefined ? null : String(r.sub_category),
-        description: r.description === null || r.description === undefined ? null : String(r.description),
-        longDesc: r.long_desc === null || r.long_desc === undefined ? null : String(r.long_desc),
-        tags: r.tags ?? null,
-        effectDefs: r.effect_defs ?? null,
-        baseAttrs,
-        equipSlot: r.equip_slot === null || r.equip_slot === undefined ? null : String(r.equip_slot),
-        equipReqRealm: r.equip_req_realm === null || r.equip_req_realm === undefined ? null : String(r.equip_req_realm),
-        useType: r.use_type === null || r.use_type === undefined ? null : String(r.use_type),
-        strengthenLevel: Math.max(0, Math.floor(Number(r.strengthen_level) || 0)),
-        refineLevel: Math.max(0, Math.floor(Number(r.refine_level) || 0)),
-        identified: Boolean(r.identified),
-        affixes: r.affixes ?? [],
-        qty: Number(r.qty),
-        unitPriceSpiritStones: Number(r.unit_price_spirit_stones),
-        sellerCharacterId: Number(r.seller_character_id),
-        sellerName: String(r.seller_name ?? ''),
-        listedAt: new Date(r.listed_at).getTime(),
-      };
-    });
+    const listings: MarketListingDto[] = listResult.rows
+      .map((row) => toListingDto(row as Record<string, unknown>))
+      .filter((entry): entry is MarketListingDto => entry !== null);
 
     return { success: true, message: 'ok', data: { listings, total } };
   } catch (error) {
@@ -397,10 +375,8 @@ export const createMarketListing = async (params: {
           ii.obtained_from,
           ii.obtained_ref_id,
           ii.metadata,
-          ii.bind_type,
-          id.tradeable
+          ii.bind_type
         FROM item_instance ii
-        JOIN item_def id ON id.id = ii.item_def_id
         WHERE ii.id = $1 AND ii.owner_character_id = $2
         FOR UPDATE
       `,
@@ -413,7 +389,13 @@ export const createMarketListing = async (params: {
     }
 
     const row = itemResult.rows[0];
-    if (!row.tradeable) {
+    const itemDefId = String(row.item_def_id || '').trim();
+    const itemDef = itemDefId ? getItemDefinitionById(itemDefId) : null;
+    if (!itemDef) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品不存在' };
+    }
+    if (itemDef.tradeable !== true) {
       await client.query('ROLLBACK');
       return { success: false, message: '该物品不可交易' };
     }
@@ -440,7 +422,6 @@ export const createMarketListing = async (params: {
       return { success: false, message: '数量不足' };
     }
 
-    const itemDefId = String(row.item_def_id);
     let listingItemInstanceId = itemInstanceId;
 
     if (qty < curQty) {
@@ -711,8 +692,12 @@ export const buyMarketListing = async (params: {
       return { success: false, message: '物品归属异常，请刷新后重试' };
     }
 
-    const taxRateResult = await client.query(`SELECT COALESCE(tax_rate, 0)::numeric AS tax_rate FROM item_def WHERE id = $1`, [itemDefId]);
-    const taxRate = Number(taxRateResult.rows[0]?.tax_rate ?? 0);
+    const itemDef = getItemDefinitionById(itemDefId);
+    if (!itemDef) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品配置不存在，请稍后重试' };
+    }
+    const taxRate = Number(itemDef.tax_rate) || 0;
     const taxAmount = getTaxAmount(totalPrice, taxRate);
     const sellerGain = totalPrice - taxAmount;
 
@@ -839,12 +824,9 @@ export const getMarketTradeRecords = async (params: {
           tr.buyer_character_id,
           tr.seller_character_id,
           tr.created_at,
-          id.name,
-          id.icon,
           cb.nickname AS buyer_name,
           cs.nickname AS seller_name
         FROM market_trade_record tr
-        JOIN item_def id ON id.id = tr.item_def_id
         JOIN characters cb ON cb.id = tr.buyer_character_id
         JOIN characters cs ON cs.id = tr.seller_character_id
         WHERE tr.buyer_character_id = $1 OR tr.seller_character_id = $1
@@ -868,12 +850,14 @@ export const getMarketTradeRecords = async (params: {
       const buyerId = Number(r.buyer_character_id);
       const type: '买入' | '卖出' = params.characterId === buyerId ? '买入' : '卖出';
       const counterparty = type === '买入' ? String(r.seller_name ?? '') : String(r.buyer_name ?? '');
+      const itemDefId = String(r.item_def_id || '').trim();
+      const itemDef = itemDefId ? getItemDefinitionById(itemDefId) : null;
       return {
         id: Number(r.id),
         type,
-        itemDefId: String(r.item_def_id),
-        name: String(r.name ?? ''),
-        icon: r.icon === null || r.icon === undefined ? null : String(r.icon),
+        itemDefId,
+        name: String(itemDef?.name || itemDefId),
+        icon: itemDef?.icon ? String(itemDef.icon) : null,
         qty: Number(r.qty),
         unitPriceSpiritStones: Number(r.unit_price_spirit_stones),
         counterparty,

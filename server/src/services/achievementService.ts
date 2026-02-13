@@ -31,7 +31,7 @@ import type {
 import { updateAchievementProgress } from './achievement/progress.js';
 import { equipTitle, getTitleList } from './achievement/title.js';
 import { getRealmOrderIndex } from './shared/realmOrder.js';
-import { getAchievementDefinitions } from './staticConfigLoader.js';
+import { getAchievementDefinitions, getItemDefinitionsByIds } from './staticConfigLoader.js';
 
 const getRealmRank = (realmRaw: unknown, subRealmRaw?: unknown): number => {
   return getRealmOrderIndex(realmRaw, subRealmRaw);
@@ -159,17 +159,17 @@ const loadRewardItemMeta = async (
   itemIds: string[],
   client?: PoolClient,
 ): Promise<Map<string, { name: string; icon: string | null }>> => {
+  void client;
   const ids = Array.from(new Set(itemIds.map((id) => id.trim()).filter(Boolean)));
   const out = new Map<string, { name: string; icon: string | null }>();
   if (ids.length === 0) return out;
-  const runner = client ?? { query };
-  const res = await runner.query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::varchar[])`, [ids]);
-  for (const row of res.rows as Array<Record<string, unknown>>) {
-    const id = asNonEmptyString(row.id);
-    if (!id) continue;
+  const defs = getItemDefinitionsByIds(ids);
+  for (const id of ids) {
+    const def = defs.get(id);
+    if (!def) continue;
     out.set(id, {
-      name: asNonEmptyString(row.name) ?? id,
-      icon: asNonEmptyString(row.icon),
+      name: asNonEmptyString(def.name) ?? id,
+      icon: asNonEmptyString(def.icon),
     });
   }
   return out;

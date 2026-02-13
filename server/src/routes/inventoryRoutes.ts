@@ -13,7 +13,7 @@ import {
   buildEquipmentDisplayBaseAttrs,
 } from '../services/equipmentGrowthRules.js';
 import { getCharacterComputedByCharacterId } from '../services/characterComputedService.js';
-import { getItemSetDefinitions } from '../services/staticConfigLoader.js';
+import { getItemDefinitionById, getItemDefinitionsByIds, getItemSetDefinitions } from '../services/staticConfigLoader.js';
 
 const router = Router();
 
@@ -135,22 +135,13 @@ router.get('/items', async (req: Request, res: Response) => {
     
     // 获取物品定义信息
     if (result.items.length > 0) {
-      const itemDefIds = [...new Set(result.items.map(i => i.item_def_id))];
-      const defResult = await query(
-        `SELECT 
-           d.id, d.name, d.icon, d.quality, d.quality_rank, d.category, d.sub_category, d.stack_max,
-           d.description, d.long_desc, d.tags, d.effect_defs, d.base_attrs, d.equip_slot, d.use_type,
-           d.use_req_realm, d.equip_req_realm, d.use_req_level, d.use_limit_daily, d.use_limit_total,
-           d.socket_max, d.gem_slot_types, d.level,
-           d.set_id
-         FROM item_def d
-         WHERE d.id = ANY($1)`,
-        [itemDefIds]
-      );
+      const itemDefIds = [...new Set(result.items.map((item) => String(item.item_def_id || '').trim()))]
+        .filter((id) => id.length > 0);
+      const staticDefMap = getItemDefinitionsByIds(itemDefIds);
 
       const setIds = [...new Set(
-        defResult.rows
-          .map((d: any) => (typeof d.set_id === 'string' ? d.set_id.trim() : ''))
+        Array.from(staticDefMap.values())
+          .map((d) => (typeof d.set_id === 'string' ? d.set_id.trim() : ''))
           .filter((x) => x.length > 0)
       )];
 
@@ -159,6 +150,7 @@ router.get('/items', async (req: Request, res: Response) => {
       const setNameMap = new Map<string, string>();
 
       if (setIds.length > 0) {
+        const setIdSet = new Set(setIds);
         const staticSetMap = new Map(
           getItemSetDefinitions()
             .filter((entry) => entry.enabled !== false)
@@ -184,24 +176,24 @@ router.get('/items', async (req: Request, res: Response) => {
 
         const equippedResult = await query(
           `
-            SELECT id.set_id, COUNT(*)::int AS equipped_count
+            SELECT item_def_id
             FROM item_instance ii
-            JOIN item_def id ON id.id = ii.item_def_id
             WHERE ii.owner_character_id = $1
               AND ii.location = 'equipped'
-              AND id.set_id = ANY($2)
-            GROUP BY id.set_id
           `,
-          [characterId, setIds]
+          [characterId]
         );
-        for (const row of equippedResult.rows as Array<{ set_id: string; equipped_count: number }>) {
-          const setId = String(row.set_id || '').trim();
-          if (!setId) continue;
-          equippedSetCountMap.set(setId, Number(row.equipped_count) || 0);
+        for (const row of equippedResult.rows as Array<{ item_def_id?: unknown }>) {
+          const equippedItemDefId = String(row.item_def_id || '').trim();
+          if (!equippedItemDefId) continue;
+          const equippedDef = getItemDefinitionById(equippedItemDefId);
+          const setId = String(equippedDef?.set_id || '').trim();
+          if (!setId || !setIdSet.has(setId)) continue;
+          equippedSetCountMap.set(setId, (equippedSetCountMap.get(setId) || 0) + 1);
         }
       }
       
-      const defMap = new Map(defResult.rows.map(d => [d.id, d]));
+      const defMap = staticDefMap;
       const itemsWithDef = result.items.map((item: any) => {
         const def = defMap.get(item.item_def_id) as any;
         if (!def) return { ...item, def: undefined };

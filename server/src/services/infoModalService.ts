@@ -1,6 +1,13 @@
 import { query } from '../config/database.js';
 import type { MapObjectDto } from './roomObjectService.js';
-import { getDropPoolDefinitions, getMonsterDefinitions, getNpcDefinitions, getTechniqueDefinitions } from './staticConfigLoader.js';
+import {
+  getDropPoolDefinitions,
+  getItemDefinitionById,
+  getItemDefinitionsByIds,
+  getMonsterDefinitions,
+  getNpcDefinitions,
+  getTechniqueDefinitions,
+} from './staticConfigLoader.js';
 
 type InfoTargetType = 'npc' | 'monster' | 'item' | 'player';
 
@@ -66,8 +73,8 @@ type CharacterRow = {
 
 type EquippedRow = {
   equipped_slot: string | null;
-  item_name: string | null;
-  resolved_quality: string | null;
+  item_def_id: string | null;
+  item_quality: string | null;
 };
 
 type EquippedTechniqueRow = {
@@ -304,18 +311,17 @@ const getDropsByPoolId = async (dropPoolId: string): Promise<Array<{ name: strin
   if (rows.length === 0) return [];
 
   const itemDefIds = Array.from(new Set(rows.map((entry) => entry.item_def_id)));
-  const itemDefRes =
-    itemDefIds.length === 0
-      ? { rows: [] as Array<{ id: string; name: string; quality: string | null }> }
-      : await query(
-          `
-            SELECT id, name, quality
-            FROM item_def
-            WHERE id = ANY($1::varchar[])
-          `,
-          [itemDefIds]
-        );
-  const itemDefMap = new Map((itemDefRes.rows as Array<{ id: string; name: string; quality: string | null }>).map((row) => [row.id, row]));
+  const itemDefs = getItemDefinitionsByIds(itemDefIds);
+  const itemDefMap = new Map<string, { id: string; name: string; quality: string | null }>();
+  for (const itemId of itemDefIds) {
+    const def = itemDefs.get(itemId);
+    if (!def) continue;
+    itemDefMap.set(itemId, {
+      id: itemId,
+      name: String(def.name || itemId),
+      quality: typeof def.quality === 'string' ? def.quality : null,
+    });
+  }
 
   const totalWeight = mode === 'weight' ? rows.reduce((sum, r) => sum + Number(r.weight ?? 0), 0) : 0;
 
@@ -388,18 +394,22 @@ export const getInfoTargetDetail = async (type: InfoTargetType, id: string): Pro
   }
 
   if (type === 'item') {
-    const itemRes = await query(
-      `
-        SELECT
-          id, name, category, quality, level, icon, description, long_desc,
-          equip_req_realm, use_req_realm, base_attrs
-        FROM item_def
-        WHERE enabled = true AND id = $1
-        LIMIT 1
-      `,
-      [id]
-    );
-    const item = (itemRes.rows[0] ?? null) as ItemRow | null;
+    const def = getItemDefinitionById(id);
+    const item = def && def.enabled !== false
+      ? ({
+          id: def.id,
+          name: def.name,
+          category: def.category ?? null,
+          quality: def.quality ?? null,
+          level: Number.isFinite(Number(def.level)) ? Number(def.level) : null,
+          icon: def.icon ?? null,
+          description: def.description ?? null,
+          long_desc: def.long_desc ?? null,
+          equip_req_realm: def.equip_req_realm ?? null,
+          use_req_realm: def.use_req_realm ?? null,
+          base_attrs: def.base_attrs ?? null,
+        } satisfies ItemRow)
+      : null;
     if (!item) return null;
 
     const desc = item.long_desc || item.description || null;
@@ -441,10 +451,9 @@ export const getInfoTargetDetail = async (type: InfoTargetType, id: string): Pro
         `
           SELECT
             ii.equipped_slot,
-            id.name AS item_name,
-            COALESCE(NULLIF(ii.quality, ''), id.quality) AS resolved_quality
+            ii.item_def_id,
+            NULLIF(ii.quality, '') AS item_quality
           FROM item_instance ii
-          JOIN item_def id ON id.id = ii.item_def_id
           WHERE ii.owner_character_id = $1 AND ii.location = 'equipped'
           ORDER BY ii.equipped_slot ASC, ii.id ASC
         `,
@@ -464,12 +473,24 @@ export const getInfoTargetDetail = async (type: InfoTargetType, id: string): Pro
     ]);
 
     const equipRows = equipRes.rows as EquippedRow[];
+    const equipItemDefIds = Array.from(
+      new Set(
+        equipRows
+          .map((row) => (typeof row.item_def_id === 'string' ? row.item_def_id.trim() : ''))
+          .filter((itemDefId) => itemDefId.length > 0),
+      ),
+    );
+    const equipDefs = getItemDefinitionsByIds(equipItemDefIds);
     const equipment = equipRows
       .map((r, idx) => {
         const slotCode = typeof r.equipped_slot === 'string' ? r.equipped_slot.trim() : '';
         const slot = slotCode ? (EQUIPPED_SLOT_TO_UI_LABEL[slotCode] ?? slotCode) : `槽位${idx + 1}`;
-        const name = typeof r.item_name === 'string' ? r.item_name.trim() : '';
-        const quality = typeof r.resolved_quality === 'string' ? r.resolved_quality.trim() : '';
+        const itemDefId = typeof r.item_def_id === 'string' ? r.item_def_id.trim() : '';
+        const def = itemDefId ? equipDefs.get(itemDefId) : null;
+        const name = typeof def?.name === 'string' ? def.name.trim() : '';
+        const qualityFromInstance = typeof r.item_quality === 'string' ? r.item_quality.trim() : '';
+        const qualityFromDef = typeof def?.quality === 'string' ? def.quality.trim() : '';
+        const quality = qualityFromInstance || qualityFromDef;
         if (!slot || !name) return null;
         return { slot, name, quality: quality || '-' };
       })

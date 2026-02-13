@@ -5,7 +5,13 @@ import { getGameServer } from '../game/GameServer.js';
 import { addItemToInventoryTx } from './inventoryService.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { recordGatherResourceEvent } from './taskService.js';
-import { getNpcDefinitions, getMonsterDefinitions, getSpawnRuleDefinitions } from './staticConfigLoader.js';
+import {
+  getItemDefinitionsByIds,
+  getMainQuestSectionById,
+  getNpcDefinitions,
+  getMonsterDefinitions,
+  getSpawnRuleDefinitions,
+} from './staticConfigLoader.js';
 import { getTaskDefinitionsByIds, getTaskDefinitionsByNpcIds } from './taskDefinitionService.js';
 
 export type MapObjectDto =
@@ -192,15 +198,22 @@ const getMonsterLiteByIds = async (ids: string[]): Promise<Map<string, MonsterLi
 
 const getItemLiteByIds = async (ids: string[]): Promise<Map<string, ItemLiteRow>> => {
   if (ids.length === 0) return new Map();
-  const result = await query(
-    `
-      SELECT id, name, quality, icon, description
-      FROM item_def
-      WHERE enabled = true AND id = ANY($1)
-    `,
-    [ids]
-  );
-  return new Map(result.rows.map((r: ItemLiteRow) => [r.id, r]));
+  const defs = getItemDefinitionsByIds(ids);
+  const rows = ids
+    .map((id) => {
+      const def = defs.get(id);
+      if (!def || def.enabled === false) return null;
+      const quality = typeof def.quality === 'string' ? def.quality : null;
+      return {
+        id,
+        name: String(def.name || id),
+        quality,
+        icon: typeof def.icon === 'string' ? def.icon : null,
+        description: typeof def.description === 'string' ? def.description : null,
+      } satisfies ItemLiteRow;
+    })
+    .filter((row): row is ItemLiteRow => !!row);
+  return new Map(rows.map((row) => [row.id, row]));
 };
 
 const normalizeRoomNpcIds = (room: MapRoom | null): string[] => {
@@ -542,73 +555,73 @@ export const getRoomObjects = async (mapId: string, roomId: string, excludeUserI
 
     try {
       const mqRes = await query(
-        `
-          SELECT p.section_status, p.tracked, p.objectives_progress, s.objectives, s.npc_id
-          FROM character_main_quest_progress p
-          JOIN main_quest_section s ON s.id = p.current_section_id
-          WHERE p.character_id = $1 AND s.enabled = true
-          LIMIT 1
-        `,
+        `SELECT section_status, tracked, objectives_progress, current_section_id FROM character_main_quest_progress WHERE character_id = $1 LIMIT 1`,
         [characterId],
       );
 
-      const row = mqRes.rows?.[0] as
-        | { section_status?: unknown; tracked?: unknown; objectives_progress?: unknown; objectives?: unknown; npc_id?: unknown }
+      const progressRow = mqRes.rows?.[0] as
+        | { section_status?: unknown; tracked?: unknown; objectives_progress?: unknown; current_section_id?: unknown }
         | undefined;
-      const tracked = row?.tracked !== false;
-      const status = typeof row?.section_status === 'string' ? row.section_status.trim() : String(row?.section_status ?? '').trim();
-      const mainQuestNpcId = asNonEmptyString(row?.npc_id);
-      if (tracked && mainQuestNpcId) {
-        if (status === 'turnin') {
-          setMarker(taskMarkerByNpcId, mainQuestNpcId, '?');
-        } else if (status === 'not_started' || status === 'dialogue') {
-          setMarker(taskMarkerByNpcId, mainQuestNpcId, '!');
+      const sectionId = asNonEmptyString(progressRow?.current_section_id);
+      const section = sectionId ? getMainQuestSectionById(sectionId) : null;
+      if (section && section.enabled !== false) {
+        const tracked = progressRow?.tracked !== false;
+        const status = typeof progressRow?.section_status === 'string'
+          ? progressRow.section_status.trim()
+          : String(progressRow?.section_status ?? '').trim();
+        const mainQuestNpcId = asNonEmptyString(section.npc_id);
+        if (tracked && mainQuestNpcId) {
+          if (status === 'turnin') {
+            setMarker(taskMarkerByNpcId, mainQuestNpcId, '?');
+          } else if (status === 'not_started' || status === 'dialogue') {
+            setMarker(taskMarkerByNpcId, mainQuestNpcId, '!');
+          }
+          if (status === 'not_started' || status === 'dialogue' || status === 'turnin' || status === 'objectives') {
+            trackedNpcIds.add(mainQuestNpcId);
+          }
         }
-        if (status === 'not_started' || status === 'dialogue' || status === 'turnin' || status === 'objectives') {
-          trackedNpcIds.add(mainQuestNpcId);
-        }
-      }
-      if (tracked && status === 'objectives') {
-        const objectives = parseObjectives(row?.objectives);
-        const progressRecord = parseProgressRecord(row?.objectives_progress);
-        for (const o of objectives) {
-          const oid = asNonEmptyString(o?.id);
-          if (!oid) continue;
-          const type = asNonEmptyString(o?.type) ?? '';
-          const target = Math.max(1, asFiniteNonNegativeInt(o?.target, 1));
-          const done = Math.min(target, asFiniteNonNegativeInt(progressRecord[oid], 0));
-          if (done >= target) continue;
-          const params = o?.params && typeof o.params === 'object' ? (o.params as Record<string, unknown>) : null;
-          if (!params) continue;
+        if (tracked && status === 'objectives') {
+          const objectives = parseObjectives(section.objectives);
+          const progressRecord = parseProgressRecord(progressRow?.objectives_progress);
+          for (const o of objectives) {
+            const oid = asNonEmptyString(o?.id);
+            if (!oid) continue;
+            const type = asNonEmptyString(o?.type) ?? '';
+            const target = Math.max(1, asFiniteNonNegativeInt(o?.target, 1));
+            const done = Math.min(target, asFiniteNonNegativeInt(progressRecord[oid], 0));
+            if (done >= target) continue;
+            const params = o?.params && typeof o.params === 'object' ? (o.params as Record<string, unknown>) : null;
+            if (!params) continue;
 
-          if (type === 'talk_npc') {
-            const npcId = asNonEmptyString(params.npc_id);
-            if (npcId) trackedNpcIds.add(npcId);
-          }
-          if (type === 'kill_monster') {
-            const monsterId = asNonEmptyString(params.monster_id);
-            if (monsterId) trackedMonsterIds.add(monsterId);
-          }
-          if (type === 'gather_resource') {
-            const resourceId = asNonEmptyString(params.resource_id);
-            if (resourceId) trackedResourceIds.add(resourceId);
-          }
-          if (type === 'collect') {
-            const itemId = asNonEmptyString(params.item_id);
-            if (itemId) trackedResourceIds.add(itemId);
-          }
+            if (type === 'talk_npc') {
+              const npcId = asNonEmptyString(params.npc_id);
+              if (npcId) trackedNpcIds.add(npcId);
+            }
+            if (type === 'kill_monster') {
+              const monsterId = asNonEmptyString(params.monster_id);
+              if (monsterId) trackedMonsterIds.add(monsterId);
+            }
+            if (type === 'gather_resource') {
+              const resourceId = asNonEmptyString(params.resource_id);
+              if (resourceId) trackedResourceIds.add(resourceId);
+            }
+            if (type === 'collect') {
+              const itemId = asNonEmptyString(params.item_id);
+              if (itemId) trackedResourceIds.add(itemId);
+            }
 
-          if (type === 'kill_monster') {
-            const monsterId = asNonEmptyString(params.monster_id);
-            if (monsterId) setMarker(taskMarkerByMonsterId, monsterId, '!');
-          }
-          if (type === 'gather_resource') {
-            const resourceId = asNonEmptyString(params.resource_id);
-            if (resourceId) setMarker(taskMarkerByResourceId, resourceId, '!');
-          }
-          if (type === 'collect') {
-            const itemId = asNonEmptyString(params.item_id);
-            if (itemId) setMarker(taskMarkerByResourceId, itemId, '!');
+            if (type === 'kill_monster') {
+              const monsterId = asNonEmptyString(params.monster_id);
+              if (monsterId) setMarker(taskMarkerByMonsterId, monsterId, '!');
+            }
+            if (type === 'gather_resource') {
+              const resourceId = asNonEmptyString(params.resource_id);
+              if (resourceId) setMarker(taskMarkerByResourceId, resourceId, '!');
+            }
+            if (type === 'collect') {
+              const itemId = asNonEmptyString(params.item_id);
+              if (itemId) setMarker(taskMarkerByResourceId, itemId, '!');
+            }
           }
         }
       }

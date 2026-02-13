@@ -14,7 +14,7 @@ import {
   getCharacterComputedByCharacterId,
   invalidateCharacterComputedCache,
 } from './characterComputedService.js';
-import { getItemSetDefinitions } from './staticConfigLoader.js';
+import { getItemDefinitionById, getItemDefinitionsByIds, getItemSetDefinitions } from './staticConfigLoader.js';
 import {
   ENHANCE_MAX_LEVEL,
   REFINE_MAX_LEVEL,
@@ -163,6 +163,18 @@ const safeNumber = (value: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const getStaticItemDef = (itemDefIdRaw: unknown) => {
+  const itemDefId = String(itemDefIdRaw || '').trim();
+  if (!itemDefId) return null;
+  return getItemDefinitionById(itemDefId);
+};
+
+const getEnabledStaticItemDef = (itemDefIdRaw: unknown) => {
+  const itemDef = getStaticItemDef(itemDefIdRaw);
+  if (!itemDef || itemDef.enabled === false) return null;
+  return itemDef;
+};
+
 const addToDelta = (delta: Map<CharacterAttrKey, number>, key: string, value: unknown) => {
   if (!allowedCharacterAttrKeys.has(key as CharacterAttrKey)) return;
   const v = safeNumber(value);
@@ -206,16 +218,13 @@ const getEquipmentAttrDeltaByInstanceIdTx = async (
       SELECT
         ii.id,
         ii.owner_character_id,
+        ii.item_def_id,
         ii.affixes,
         ii.strengthen_level,
         ii.refine_level,
         ii.socketed_gems,
-        id.category,
-        id.base_attrs,
-        id.quality_rank as def_quality_rank,
-        COALESCE(ii.quality_rank, id.quality_rank) as resolved_quality_rank
+        ii.quality_rank
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.id = $1 AND ii.owner_character_id = $2
       LIMIT 1
     `,
@@ -223,15 +232,25 @@ const getEquipmentAttrDeltaByInstanceIdTx = async (
   );
 
   if (result.rows.length === 0) return null;
-  const row = result.rows[0];
-  if (row.category !== 'equipment') return null;
+  const row = result.rows[0] as {
+    item_def_id: string;
+    affixes: unknown;
+    strengthen_level: unknown;
+    refine_level: unknown;
+    socketed_gems: unknown;
+    quality_rank: unknown;
+  };
+  const itemDef = getStaticItemDef(row.item_def_id);
+  if (!itemDef || itemDef.category !== 'equipment') return null;
 
   const delta = new Map<CharacterAttrKey, number>();
 
+  const defQualityRank = Number(itemDef.quality_rank) || 1;
+  const resolvedQualityRank = Number(row.quality_rank) || defQualityRank;
   const baseAttrs = buildEquipmentDisplayBaseAttrs({
-    baseAttrsRaw: row.base_attrs,
-    defQualityRankRaw: row.def_quality_rank,
-    resolvedQualityRankRaw: row.resolved_quality_rank,
+    baseAttrsRaw: itemDef.base_attrs,
+    defQualityRankRaw: defQualityRank,
+    resolvedQualityRankRaw: resolvedQualityRank,
     strengthenLevelRaw: row.strengthen_level,
     refineLevelRaw: row.refine_level,
     socketedGemsRaw: row.socketed_gems,
@@ -470,10 +489,8 @@ const getEnhanceItemStateTx = async (
         ii.location,
         ii.locked,
         ii.strengthen_level,
-        id.category,
-        id.level
+        ii.item_def_id
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.id = $1 AND ii.owner_character_id = $2
       FOR UPDATE
       LIMIT 1
@@ -489,11 +506,11 @@ const getEnhanceItemStateTx = async (
     location: InventoryLocation | string;
     locked: boolean;
     strengthen_level: number;
-    category: string;
-    level: number | null;
+    item_def_id: string;
   };
 
-  if (row.category !== 'equipment') return { success: false, message: '该物品不可强化' };
+  const itemDef = getStaticItemDef(row.item_def_id);
+  if (!itemDef || itemDef.category !== 'equipment') return { success: false, message: '该物品不可强化' };
   if (row.locked) return { success: false, message: '物品已锁定' };
   if (String(row.location) === 'auction') return { success: false, message: '交易中的装备不可强化' };
   if (!['bag', 'warehouse', 'equipped'].includes(String(row.location))) {
@@ -510,7 +527,7 @@ const getEnhanceItemStateTx = async (
       location: row.location,
       locked: Boolean(row.locked),
       strengthenLevel: clampInt(Number(row.strengthen_level) || 0, 0, ENHANCE_MAX_LEVEL),
-      itemLevel: Math.max(0, Math.floor(Number(row.level) || 0)),
+      itemLevel: Math.max(0, Math.floor(Number(itemDef.level) || 0)),
     },
   };
 };
@@ -539,10 +556,8 @@ const getRefineItemStateTx = async (
         ii.location,
         ii.locked,
         ii.refine_level,
-        id.category,
-        id.level
+        ii.item_def_id
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.id = $1 AND ii.owner_character_id = $2
       FOR UPDATE
       LIMIT 1
@@ -558,11 +573,11 @@ const getRefineItemStateTx = async (
     location: InventoryLocation | string;
     locked: boolean;
     refine_level: number;
-    category: string;
-    level: number | null;
+    item_def_id: string;
   };
 
-  if (row.category !== 'equipment') return { success: false, message: '该物品不可精炼' };
+  const itemDef = getStaticItemDef(row.item_def_id);
+  if (!itemDef || itemDef.category !== 'equipment') return { success: false, message: '该物品不可精炼' };
   if (row.locked) return { success: false, message: '物品已锁定' };
   if (String(row.location) === 'auction') return { success: false, message: '交易中的装备不可精炼' };
   if (!['bag', 'warehouse', 'equipped'].includes(String(row.location))) {
@@ -579,7 +594,7 @@ const getRefineItemStateTx = async (
       location: row.location,
       locked: Boolean(row.locked),
       refineLevel: clampInt(Number(row.refine_level) || 0, 0, REFINE_MAX_LEVEL),
-      itemLevel: Math.max(0, Math.floor(Number(row.level) || 0)),
+      itemLevel: Math.max(0, Math.floor(Number(itemDef.level) || 0)),
     },
   };
 };
@@ -613,15 +628,10 @@ const getRerollItemStateTx = async (
         ii.location,
         ii.locked,
         ii.affixes,
-        id.category,
-        id.affix_pool_id,
-        id.quality AS def_quality,
-        id.quality_rank AS def_quality_rank,
-        COALESCE(ii.quality, id.quality) AS resolved_quality,
-        COALESCE(ii.quality_rank, id.quality_rank) AS resolved_quality_rank,
-        id.equip_req_realm
+        ii.item_def_id,
+        ii.quality,
+        ii.quality_rank
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.id = $1 AND ii.owner_character_id = $2
       FOR UPDATE
       LIMIT 1
@@ -637,16 +647,13 @@ const getRerollItemStateTx = async (
     location: InventoryLocation | string;
     locked: boolean;
     affixes: unknown;
-    category: string;
-    affix_pool_id: string | null;
-    def_quality: string | null;
-    def_quality_rank: number | null;
-    resolved_quality: string | null;
-    resolved_quality_rank: number | null;
-    equip_req_realm: string | null;
+    item_def_id: string;
+    quality: string | null;
+    quality_rank: number | null;
   };
 
-  if (row.category !== 'equipment') return { success: false, message: '该物品不可洗炼' };
+  const itemDef = getStaticItemDef(row.item_def_id);
+  if (!itemDef || itemDef.category !== 'equipment') return { success: false, message: '该物品不可洗炼' };
   if (row.locked) return { success: false, message: '物品已锁定' };
   if (String(row.location) === 'auction') return { success: false, message: '交易中的装备不可洗炼' };
   if (!['bag', 'warehouse', 'equipped'].includes(String(row.location))) {
@@ -654,7 +661,7 @@ const getRerollItemStateTx = async (
   }
   if ((Number(row.qty) || 0) !== 1) return { success: false, message: '装备数量异常' };
 
-  const affixPoolId = String(row.affix_pool_id || '').trim();
+  const affixPoolId = String(itemDef.affix_pool_id || '').trim();
   if (!affixPoolId) return { success: false, message: '该装备没有可用词条池' };
 
   const affixes = parseGeneratedAffixesForReroll(row.affixes);
@@ -670,11 +677,11 @@ const getRerollItemStateTx = async (
       locked: Boolean(row.locked),
       affixPoolId,
       affixes,
-      resolvedQuality: typeof row.resolved_quality === 'string' ? row.resolved_quality : null,
-      resolvedQualityRank: Math.max(1, Math.floor(Number(row.resolved_quality_rank) || 1)),
-      defQuality: typeof row.def_quality === 'string' ? row.def_quality : null,
-      defQualityRank: Math.max(1, Math.floor(Number(row.def_quality_rank) || 1)),
-      equipReqRealm: typeof row.equip_req_realm === 'string' ? row.equip_req_realm : null,
+      resolvedQuality: typeof row.quality === 'string' ? row.quality : (typeof itemDef.quality === 'string' ? itemDef.quality : null),
+      resolvedQualityRank: Math.max(1, Math.floor(Number(row.quality_rank) || Number(itemDef.quality_rank) || 1)),
+      defQuality: typeof itemDef.quality === 'string' ? itemDef.quality : null,
+      defQualityRank: Math.max(1, Math.floor(Number(itemDef.quality_rank) || 1)),
+      equipReqRealm: typeof itemDef.equip_req_realm === 'string' ? itemDef.equip_req_realm : null,
     },
   };
 };
@@ -720,13 +727,9 @@ const getEnhanceToolBonusPercent = async (
   const toolDefId = String(item.item_def_id || '');
   if (!toolDefId) return { success: false, message: '强化符数据异常', bonusPercent: 0 };
 
-  const defResult = await client.query(
-    'SELECT effect_defs FROM item_def WHERE id = $1 AND enabled = true LIMIT 1',
-    [toolDefId]
-  );
-  if (defResult.rows.length === 0) return { success: false, message: '强化符不存在', bonusPercent: 0 };
-
-  const defs: unknown[] = Array.isArray(defResult.rows[0].effect_defs) ? defResult.rows[0].effect_defs : [];
+  const toolDef = getEnabledStaticItemDef(toolDefId);
+  if (!toolDef) return { success: false, message: '强化符不存在', bonusPercent: 0 };
+  const defs: unknown[] = Array.isArray(toolDef.effect_defs) ? toolDef.effect_defs : [];
   let bonus = 0;
   for (const raw of defs) {
     if (!raw || typeof raw !== 'object') continue;
@@ -801,13 +804,9 @@ const consumeEnhanceProtectToolTx = async (
   const toolDefId = String(item.item_def_id || '');
   if (!toolDefId) return { success: false, message: '保护符数据异常', protectDowngrade: false };
 
-  const defResult = await client.query(
-    'SELECT effect_defs FROM item_def WHERE id = $1 AND enabled = true LIMIT 1',
-    [toolDefId]
-  );
-  if (defResult.rows.length === 0) return { success: false, message: '保护符不存在', protectDowngrade: false };
-
-  const defs: unknown[] = Array.isArray(defResult.rows[0].effect_defs) ? defResult.rows[0].effect_defs : [];
+  const toolDef = getEnabledStaticItemDef(toolDefId);
+  if (!toolDef) return { success: false, message: '保护符不存在', protectDowngrade: false };
+  const defs: unknown[] = Array.isArray(toolDef.effect_defs) ? toolDef.effect_defs : [];
   let protect = false;
   for (const raw of defs) {
     if (!raw || typeof raw !== 'object') continue;
@@ -889,24 +888,8 @@ const loadGemItemForSocketTx = async (
   const gemDefId = String(item.item_def_id || '');
   if (!gemDefId) return { success: false, message: '宝石数据异常' };
 
-  const gemDefResult = await client.query(
-    `
-      SELECT id, name, icon, category, sub_category, effect_defs
-      FROM item_def
-      WHERE id = $1 AND enabled = true
-      LIMIT 1
-    `,
-    [gemDefId]
-  );
-  if (gemDefResult.rows.length === 0) return { success: false, message: '宝石不存在' };
-  const row = gemDefResult.rows[0] as {
-    id: string;
-    name: string;
-    icon: string | null;
-    category: string;
-    sub_category: string | null;
-    effect_defs: unknown;
-  };
+  const row = getEnabledStaticItemDef(gemDefId);
+  if (!row) return { success: false, message: '宝石不存在' };
 
   const isGemSubCategory = (subCategoryRaw: unknown): boolean => {
     const subCategory = String(subCategoryRaw || '').trim().toLowerCase();
@@ -935,9 +918,9 @@ const loadGemItemForSocketTx = async (
     message: 'ok',
     gem: {
       itemInstanceId: Number(item.id),
-      itemDefId: row.id,
-      name: row.name,
-      icon: row.icon,
+      itemDefId: String(row.id),
+      name: String(row.name || row.id),
+      icon: row.icon ? String(row.icon) : null,
       gemType: resolveGemTypeBySubCategory(row.sub_category, effects),
       effects,
     },
@@ -1039,12 +1022,9 @@ const readEquipmentSocketStateTx = async (
         ii.location,
         ii.locked,
         ii.socketed_gems,
-        id.category,
-        id.socket_max,
-        id.gem_slot_types,
-        COALESCE(ii.quality_rank, id.quality_rank) AS resolved_quality_rank
+        ii.item_def_id,
+        ii.quality_rank
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.id = $1 AND ii.owner_character_id = $2
       FOR UPDATE
       LIMIT 1
@@ -1058,13 +1038,12 @@ const readEquipmentSocketStateTx = async (
     location: string;
     locked: boolean;
     socketed_gems: unknown;
-    category: string;
-    socket_max: unknown;
-    gem_slot_types: unknown;
-    resolved_quality_rank: unknown;
+    item_def_id: string;
+    quality_rank: unknown;
   };
 
-  if (row.category !== 'equipment') return { success: false, message: '该物品不可镶嵌' };
+  const itemDef = getStaticItemDef(row.item_def_id);
+  if (!itemDef || itemDef.category !== 'equipment') return { success: false, message: '该物品不可镶嵌' };
   if (row.locked) return { success: false, message: '物品已锁定' };
   if ((Number(row.qty) || 0) !== 1) return { success: false, message: '装备数量异常' };
   if (String(row.location) === 'auction') return { success: false, message: '交易中的装备不可镶嵌' };
@@ -1072,7 +1051,8 @@ const readEquipmentSocketStateTx = async (
     return { success: false, message: '该物品当前位置不可镶嵌' };
   }
 
-  const socketMax = resolveSocketMax(row.socket_max, row.resolved_quality_rank);
+  const resolvedQualityRank = Number(row.quality_rank) || Number(itemDef.quality_rank) || 1;
+  const socketMax = resolveSocketMax(itemDef.socket_max, resolvedQualityRank);
   if (socketMax <= 0) return { success: false, message: '该装备无可用镶嵌孔' };
 
   return {
@@ -1084,7 +1064,7 @@ const readEquipmentSocketStateTx = async (
       qty: Number(row.qty) || 1,
       locked: Boolean(row.locked),
       socketMax,
-      gemSlotTypes: normalizeGemSlotTypes(row.gem_slot_types),
+      gemSlotTypes: normalizeGemSlotTypes(itemDef.gem_slot_types),
       socketedEntries: normalizeSocketedGemEntries(row.socketed_gems),
     },
   };
@@ -1096,17 +1076,17 @@ const getEquippedSetBonusDeltaTx = async (
 ): Promise<Map<CharacterAttrKey, number>> => {
   const equippedResult = await client.query(
     `
-      SELECT id.set_id
+      SELECT ii.item_def_id
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
-      WHERE ii.owner_character_id = $1 AND ii.location = 'equipped' AND id.set_id IS NOT NULL
+      WHERE ii.owner_character_id = $1 AND ii.location = 'equipped'
     `,
     [characterId]
   );
 
   const counts = new Map<string, number>();
-  for (const row of equippedResult.rows) {
-    const setId = String(row.set_id || '');
+  for (const row of equippedResult.rows as Array<{ item_def_id?: unknown }>) {
+    const itemDef = getStaticItemDef(row.item_def_id);
+    const setId = String(itemDef?.set_id || '');
     if (!setId) continue;
     counts.set(setId, (counts.get(setId) || 0) + 1);
   }
@@ -1322,16 +1302,13 @@ export const addItemToInventoryTx = async (
   const location = options.location || 'bag';
   const bindType = options.bindType || 'none';
 
-  const defResult = await client.query(
-    'SELECT stack_max, bind_type as def_bind_type FROM item_def WHERE id = $1',
-    [itemDefId]
-  );
-
-  if (defResult.rows.length === 0) {
+  const itemDef = getStaticItemDef(itemDefId);
+  if (!itemDef) {
     return { success: false, message: '物品不存在' };
   }
 
-  const { stack_max, def_bind_type } = defResult.rows[0];
+  const stack_max = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
+  const def_bind_type = String(itemDef.bind_type || 'none');
   const actualBindType = bindType !== 'none' ? bindType : def_bind_type;
 
   const info = await getInventoryInfoWithClient(characterId, client);
@@ -1586,7 +1563,6 @@ export const moveItem = async (
     location: string;
     location_slot: number | null;
     bind_type: string;
-    stack_max: number;
   };
   type StackTargetRow = { id: number; qty: number };
   const client = await pool.connect();
@@ -1603,10 +1579,8 @@ export const moveItem = async (
         ii.qty,
         ii.location,
         ii.location_slot,
-        ii.bind_type,
-        id.stack_max
+        ii.bind_type
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.id = $1 AND ii.owner_character_id = $2
       FOR UPDATE
     `, [itemInstanceId, characterId]);
@@ -1617,6 +1591,11 @@ export const moveItem = async (
     }
 
     const item = itemResult.rows[0] as MoveItemRow;
+    const itemDef = getStaticItemDef(item.item_def_id);
+    if (!itemDef) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品不存在' };
+    }
     const currentLocationText = String(item.location);
     if (currentLocationText !== 'bag' && currentLocationText !== 'warehouse') {
       await client.query('ROLLBACK');
@@ -1633,7 +1612,7 @@ export const moveItem = async (
       await client.query('ROLLBACK');
       return { success: false, message: '物品格子状态异常' };
     }
-    const stackMax = Math.max(1, Number(item.stack_max) || 1);
+    const stackMax = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
     const originalQty = Math.max(0, Number(item.qty) || 0);
     if (originalQty <= 0) {
       await client.query('ROLLBACK');
@@ -1787,9 +1766,8 @@ export const equipItem = async (
 
     const itemResult = await client.query(
       `
-        SELECT ii.id, ii.qty, ii.location, ii.location_slot, ii.locked, id.category, id.equip_slot, id.bind_type
+        SELECT ii.id, ii.qty, ii.location, ii.location_slot, ii.locked, ii.item_def_id
         FROM item_instance ii
-        JOIN item_def id ON id.id = ii.item_def_id
         WHERE ii.id = $1 AND ii.owner_character_id = $2
         FOR UPDATE
       `,
@@ -1807,22 +1785,27 @@ export const equipItem = async (
       location: InventoryLocation;
       location_slot: number | null;
       locked: boolean;
-      category: string;
-      equip_slot: string | null;
-      bind_type: string;
+      item_def_id: string;
     };
+
+    const itemDef = getStaticItemDef(item.item_def_id);
+    if (!itemDef) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品不存在' };
+    }
 
     if (item.locked) {
       await client.query('ROLLBACK');
       return { success: false, message: '物品已锁定' };
     }
 
-    if (item.category !== 'equipment') {
+    if (itemDef.category !== 'equipment') {
       await client.query('ROLLBACK');
       return { success: false, message: '该物品不可装备' };
     }
 
-    if (!item.equip_slot) {
+    const equipSlot = String(itemDef.equip_slot || '').trim();
+    if (!equipSlot) {
       await client.query('ROLLBACK');
       return { success: false, message: '装备槽位配置错误' };
     }
@@ -1855,7 +1838,7 @@ export const equipItem = async (
         WHERE ii.owner_character_id = $1 AND ii.location = 'equipped' AND ii.equipped_slot = $2
         FOR UPDATE
       `,
-      [characterId, item.equip_slot]
+      [characterId, equipSlot]
     );
 
     let swappedOutItemId: number | undefined;
@@ -1911,7 +1894,7 @@ export const equipItem = async (
             updated_at = NOW()
         WHERE id = $5 AND owner_character_id = $4
       `,
-      [item.equip_slot, item.bind_type, userId, characterId, itemInstanceId]
+      [equipSlot, String(itemDef.bind_type || 'none'), userId, characterId, itemInstanceId]
     );
 
     await applyCharacterAttrDeltaTx(client, characterId, newItemDelta);
@@ -1924,7 +1907,7 @@ export const equipItem = async (
 
     await client.query('COMMIT');
     await invalidateCharacterComputedCache(characterId);
-    return { success: true, message: '穿戴成功', equippedSlot: item.equip_slot, swappedOutItemId };
+    return { success: true, message: '穿戴成功', equippedSlot: equipSlot, swappedOutItemId };
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('穿戴装备失败:', error);
@@ -2732,21 +2715,15 @@ export const disassembleEquipment = async (
       `
         SELECT
           ii.id,
+          ii.item_def_id,
           ii.qty,
           ii.location,
           ii.locked,
           ii.quality_rank AS instance_quality_rank,
           ii.strengthen_level,
           ii.refine_level,
-          ii.affixes,
-          id.category,
-          id.sub_category,
-          id.effect_defs,
-          id.level AS item_level,
-          id.quality_rank AS def_quality_rank,
-          COALESCE(ii.quality_rank, id.quality_rank, 1) AS resolved_quality_rank
+          ii.affixes
         FROM item_instance ii
-        JOIN item_def id ON id.id = ii.item_def_id
         WHERE ii.id = $1 AND ii.owner_character_id = $2
         FOR UPDATE
       `,
@@ -2760,20 +2737,27 @@ export const disassembleEquipment = async (
 
     const item = itemResult.rows[0] as {
       id: number;
+      item_def_id: string;
       qty: number;
       location: InventoryLocation;
       locked: boolean;
-      category: string;
-      sub_category: string | null;
-      effect_defs: unknown;
-      item_level: number;
       instance_quality_rank: number | null;
-      def_quality_rank: number;
-      resolved_quality_rank: number;
       strengthen_level: number;
       refine_level: number;
       affixes: unknown;
     };
+
+    const itemDef = getStaticItemDef(item.item_def_id);
+    if (!itemDef) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品不存在' };
+    }
+    const itemCategory = String(itemDef.category || '');
+    const itemSubCategory = itemDef.sub_category ?? null;
+    const itemEffectDefs = itemDef.effect_defs ?? null;
+    const itemLevel = Math.max(0, Math.floor(Number(itemDef.level) || 0));
+    const defQualityRank = Math.max(1, Math.floor(Number(itemDef.quality_rank) || 1));
+    const resolvedQualityRank = item.instance_quality_rank ?? defQualityRank;
 
     if (item.locked) {
       await client.query('ROLLBACK');
@@ -2781,7 +2765,7 @@ export const disassembleEquipment = async (
     }
 
     if (item.location === 'equipped') {
-      if (item.category !== 'equipment') {
+      if (itemCategory !== 'equipment') {
         await client.query('ROLLBACK');
         return { success: false, message: '该物品当前位置不可分解' };
       }
@@ -2807,11 +2791,11 @@ export const disassembleEquipment = async (
     }
 
     const rewardPlan = buildDisassembleRewardPlan({
-      category: item.category,
-      subCategory: item.sub_category,
-      effectDefs: item.effect_defs,
-      qualityRankRaw: item.resolved_quality_rank ?? item.instance_quality_rank ?? item.def_quality_rank,
-      itemLevelRaw: item.item_level,
+      category: itemCategory,
+      subCategory: itemSubCategory,
+      effectDefs: itemEffectDefs,
+      qualityRankRaw: resolvedQualityRank,
+      itemLevelRaw: itemLevel,
       strengthenLevelRaw: item.strengthen_level,
       refineLevelRaw: item.refine_level,
       affixesRaw: item.affixes,
@@ -2917,21 +2901,15 @@ export const disassembleEquipmentBatch = async (
       `
         SELECT
           ii.id,
+          ii.item_def_id,
           ii.qty,
           ii.location,
           ii.locked,
           ii.quality_rank AS instance_quality_rank,
           ii.strengthen_level,
           ii.refine_level,
-          ii.affixes,
-          id.category,
-          id.sub_category,
-          id.effect_defs,
-          id.level AS item_level,
-          id.quality_rank AS def_quality_rank,
-          COALESCE(ii.quality_rank, id.quality_rank, 1) AS resolved_quality_rank
+          ii.affixes
         FROM item_instance ii
-        JOIN item_def id ON id.id = ii.item_def_id
         WHERE ii.owner_character_id = $1 AND ii.id = ANY($2)
         FOR UPDATE
       `,
@@ -2948,9 +2926,13 @@ export const disassembleEquipmentBatch = async (
     let disassembledQtyTotal = 0;
     let totalSilver = 0;
     const rewardItemQtyByDefId = new Map<string, number>();
+    const staticDefMap = getItemDefinitionsByIds(
+      itemResult.rows.map((row) => String((row as { item_def_id?: unknown }).item_def_id || '').trim())
+    );
 
     for (const row of itemResult.rows as Array<{
       id: number | string;
+      item_def_id: string;
       qty: number;
       location: InventoryLocation;
       locked: boolean;
@@ -2958,13 +2940,13 @@ export const disassembleEquipmentBatch = async (
       strengthen_level: number;
       refine_level: number;
       affixes: unknown;
-      category: string;
-      sub_category: string | null;
-      effect_defs: unknown;
-      item_level: number;
-      def_quality_rank: number;
-      resolved_quality_rank: number;
     }>) {
+      const itemDefId = String(row.item_def_id || '').trim();
+      const itemDef = staticDefMap.get(itemDefId);
+      if (!itemDef) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '包含不存在的物品' };
+      }
       if (row.locked) {
         await client.query('ROLLBACK');
         return { success: false, message: '包含已锁定的物品' };
@@ -2998,11 +2980,11 @@ export const disassembleEquipmentBatch = async (
       }
 
       const rewardPlan = buildDisassembleRewardPlan({
-        category: row.category,
-        subCategory: row.sub_category,
-        effectDefs: row.effect_defs,
-        qualityRankRaw: row.resolved_quality_rank ?? row.instance_quality_rank ?? row.def_quality_rank,
-        itemLevelRaw: row.item_level,
+        category: String(itemDef.category || ''),
+        subCategory: itemDef.sub_category ?? null,
+        effectDefs: itemDef.effect_defs ?? null,
+        qualityRankRaw: row.instance_quality_rank ?? Math.max(1, Math.floor(Number(itemDef.quality_rank) || 1)),
+        itemLevelRaw: Math.max(0, Math.floor(Number(itemDef.level) || 0)),
         strengthenLevelRaw: row.strengthen_level,
         refineLevelRaw: row.refine_level,
         affixesRaw: row.affixes,
@@ -3113,9 +3095,8 @@ export const removeItemsBatch = async (
           ii.qty,
           ii.location,
           ii.locked,
-          id.destroyable
+          ii.item_def_id
         FROM item_instance ii
-        JOIN item_def id ON id.id = ii.item_def_id
         WHERE ii.owner_character_id = $1 AND ii.id = ANY($2)
         FOR UPDATE
       `,
@@ -3127,14 +3108,23 @@ export const removeItemsBatch = async (
       return { success: false, message: '包含不存在的物品' };
     }
 
+    const staticDefMap = getItemDefinitionsByIds(
+      itemResult.rows.map((row) => String((row as { item_def_id?: unknown }).item_def_id || '').trim())
+    );
+
     let removedQtyTotal = 0;
     for (const row of itemResult.rows as Array<{
       id: number;
       qty: number;
       location: InventoryLocation;
       locked: boolean;
-      destroyable: boolean;
+      item_def_id: string;
     }>) {
+      const itemDef = staticDefMap.get(String(row.item_def_id || '').trim());
+      if (!itemDef) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '包含不存在的物品' };
+      }
       if (row.locked) {
         await client.query('ROLLBACK');
         return { success: false, message: '包含已锁定的物品' };
@@ -3147,7 +3137,7 @@ export const removeItemsBatch = async (
         await client.query('ROLLBACK');
         return { success: false, message: '包含不可丢弃位置的物品' };
       }
-      if (!row.destroyable) {
+      if (itemDef.destroyable !== true) {
         await client.query('ROLLBACK');
         return { success: false, message: '包含不可丢弃的物品' };
       }
@@ -3184,69 +3174,87 @@ export const sortInventory = async (
 
     const info = await getInventoryInfoWithClient(characterId, client);
     const capacity = getSlottedCapacity(info, location);
+    const itemResult = await client.query(
+      `
+        SELECT id, item_def_id, qty, quality_rank
+        FROM item_instance
+        WHERE owner_character_id = $1 AND location = $2
+        FOR UPDATE
+      `,
+      [characterId, location]
+    );
+
+    const rows = itemResult.rows as Array<{
+      id: number;
+      item_def_id: string;
+      qty: number;
+      quality_rank: number | null;
+    }>;
+    const defMap = getItemDefinitionsByIds(rows.map((row) => String(row.item_def_id || '').trim()));
+    const sortableRows = rows.map((row) => {
+      const itemDef = defMap.get(String(row.item_def_id || '').trim()) ?? null;
+      const category = itemDef?.category ? String(itemDef.category) : null;
+      const subCategory = itemDef?.sub_category ? String(itemDef.sub_category) : null;
+      const resolvedQualityRank = Number(row.quality_rank) || Number(itemDef?.quality_rank) || 0;
+      return { ...row, category, subCategory, resolvedQualityRank };
+    });
+
+    sortableRows.sort((left, right) => {
+      const leftCategory = left.category;
+      const rightCategory = right.category;
+      if (leftCategory === null && rightCategory !== null) return 1;
+      if (leftCategory !== null && rightCategory === null) return -1;
+      if (leftCategory !== rightCategory) return String(leftCategory).localeCompare(String(rightCategory));
+
+      if (left.resolvedQualityRank !== right.resolvedQualityRank) {
+        return right.resolvedQualityRank - left.resolvedQualityRank;
+      }
+
+      const leftSubCategory = left.subCategory;
+      const rightSubCategory = right.subCategory;
+      if (leftSubCategory === null && rightSubCategory !== null) return 1;
+      if (leftSubCategory !== null && rightSubCategory === null) return -1;
+      if (leftSubCategory !== rightSubCategory) {
+        return String(leftSubCategory).localeCompare(String(rightSubCategory));
+      }
+
+      const itemDefCompare = String(left.item_def_id).localeCompare(String(right.item_def_id));
+      if (itemDefCompare !== 0) return itemDefCompare;
+
+      const qtyCompare = (Number(right.qty) || 0) - (Number(left.qty) || 0);
+      if (qtyCompare !== 0) return qtyCompare;
+
+      return Number(left.id) - Number(right.id);
+    });
 
     // 分两步更新：先写入不冲突的临时槽位，再写回最终槽位，避免唯一索引冲突
-    await client.query(
-      `
-        WITH ordered AS (
-          SELECT
-            ii.id,
-            ROW_NUMBER() OVER (
-              ORDER BY
-                id.category NULLS LAST,
-                COALESCE(ii.quality_rank, id.quality_rank, 0) DESC,
-                id.sub_category NULLS LAST,
-                ii.item_def_id,
-                ii.qty DESC,
-                ii.id
-            ) - 1 AS new_slot
-          FROM item_instance ii
-          LEFT JOIN item_def id ON ii.item_def_id = id.id
-          WHERE ii.owner_character_id = $1 AND ii.location = $2
-        )
-        UPDATE item_instance ii
-        SET location_slot = CASE
-              WHEN ordered.new_slot < $3 THEN -1 - ordered.new_slot
-              ELSE NULL
-            END,
-            updated_at = NOW()
-        FROM ordered
-        WHERE ii.id = ordered.id
-        RETURNING ii.id
-      `,
-      [characterId, location, capacity]
-    );
+    for (let index = 0; index < sortableRows.length; index += 1) {
+      const row = sortableRows[index];
+      const tempSlot = index < capacity ? -1 - index : null;
+      await client.query(
+        `
+          UPDATE item_instance
+          SET location_slot = $1,
+              updated_at = NOW()
+          WHERE id = $2 AND owner_character_id = $3
+        `,
+        [tempSlot, row.id, characterId]
+      );
+    }
 
-    await client.query(
-      `
-        WITH ordered AS (
-          SELECT
-            ii.id,
-            ROW_NUMBER() OVER (
-              ORDER BY
-                id.category NULLS LAST,
-                COALESCE(ii.quality_rank, id.quality_rank, 0) DESC,
-                id.sub_category NULLS LAST,
-                ii.item_def_id,
-                ii.qty DESC,
-                ii.id
-            ) - 1 AS new_slot
-          FROM item_instance ii
-          LEFT JOIN item_def id ON ii.item_def_id = id.id
-          WHERE ii.owner_character_id = $1 AND ii.location = $2
-        )
-        UPDATE item_instance ii
-        SET location_slot = CASE
-              WHEN ordered.new_slot < $3 THEN ordered.new_slot
-              ELSE NULL
-            END,
-            updated_at = NOW()
-        FROM ordered
-        WHERE ii.id = ordered.id
-        RETURNING ii.id
-      `,
-      [characterId, location, capacity]
-    );
+    for (let index = 0; index < sortableRows.length; index += 1) {
+      const row = sortableRows[index];
+      const finalSlot = index < capacity ? index : null;
+      await client.query(
+        `
+          UPDATE item_instance
+          SET location_slot = $1,
+              updated_at = NOW()
+          WHERE id = $2 AND owner_character_id = $3
+        `,
+        [finalSlot, row.id, characterId]
+      );
+    }
 
     await client.query('COMMIT');
     return { success: true, message: '整理完成' };

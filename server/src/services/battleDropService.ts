@@ -17,7 +17,7 @@ import {
 } from './autoDisassembleRewardService.js';
 import { normalizeAutoDisassembleSetting } from './autoDisassembleRules.js';
 import type { MonsterData } from '../battle/BattleFactory.js';
-import { getDropPoolDefinitions, getMonsterDefinitions } from './staticConfigLoader.js';
+import { getDropPoolDefinitions, getItemDefinitionById, getMonsterDefinitions } from './staticConfigLoader.js';
 
 // ============================================
 // 类型定义
@@ -458,17 +458,14 @@ export const distributeBattleRewards = async (
     }> => {
       const cached = itemMetaCache.get(itemDefId);
       if (cached) return cached;
-      const result = await client.query(
-        'SELECT name, category, sub_category, effect_defs, level, quality_rank FROM item_def WHERE id = $1',
-        [itemDefId]
-      );
+      const def = getItemDefinitionById(itemDefId);
       const meta = {
-        name: result.rows[0]?.name || itemDefId,
-        category: result.rows[0]?.category || 'misc',
-        subCategory: result.rows[0]?.sub_category || null,
-        effectDefs: result.rows[0]?.effect_defs ?? null,
-        level: Math.max(0, Math.floor(Number(result.rows[0]?.level) || 0)),
-        qualityRank: Math.max(1, Math.floor(Number(result.rows[0]?.quality_rank) || 1)),
+        name: def?.name || itemDefId,
+        category: def?.category || 'misc',
+        subCategory: def?.sub_category ?? null,
+        effectDefs: def?.effect_defs ?? null,
+        level: Math.max(0, Math.floor(Number(def?.level) || 0)),
+        qualityRank: Math.max(1, Math.floor(Number(def?.quality_rank) || 1)),
       };
       itemMetaCache.set(itemDefId, meta);
       return meta;
@@ -675,9 +672,12 @@ export const getItemDefInfo = async (itemDefId: string): Promise<{
   quality: string;
   icon: string;
 } | null> => {
-  const result = await query(
-    'SELECT name, category, quality, icon FROM item_def WHERE id = $1',
-    [itemDefId]
-  );
-  return result.rows[0] || null;
+  const def = getItemDefinitionById(itemDefId);
+  if (!def) return null;
+  return {
+    name: String(def.name || itemDefId),
+    category: String(def.category || ''),
+    quality: String(def.quality || ''),
+    icon: String(def.icon || ''),
+  };
 };

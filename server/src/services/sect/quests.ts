@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import { pool } from '../../config/database.js';
 import { assertMember, toNumber } from './db.js';
 import type { ClaimSectQuestResult, Result, SectQuest, SubmitSectQuestResult } from './types.js';
+import { getItemDefinitions } from '../staticConfigLoader.js';
 
 type QuestProgressEvent = 'donate_spirit_stones' | 'shop_buy_count';
 type SubmitQuestPool = 'item' | 'material' | 'consumable';
@@ -157,16 +158,18 @@ const getQuestPeriodKeysTx = async (client: PoolClient): Promise<QuestPeriodKeys
 const loadSubmitItemCandidatesTx = async (
   client: PoolClient
 ): Promise<Record<SubmitQuestPool, SubmitItemCandidate[]>> => {
-  const res = await client.query<{ id: string; name: string; category: string; sub_category: string | null }>(
-    `
-      SELECT id, name, category, sub_category
-      FROM item_def
-      WHERE enabled = true
-        AND quest_only = false
-        AND category IN ('material', 'consumable')
-      ORDER BY id ASC
-    `
-  );
+  void client;
+  const rows = getItemDefinitions()
+    .filter((entry) => entry.enabled !== false)
+    .filter((entry) => entry.quest_only !== true)
+    .filter((entry) => entry.category === 'material' || entry.category === 'consumable')
+    .sort((left, right) => String(left.id || '').localeCompare(String(right.id || '')))
+    .map((entry) => ({
+      id: String(entry.id || ''),
+      name: String(entry.name || entry.id || ''),
+      category: String(entry.category || ''),
+      sub_category: typeof entry.sub_category === 'string' ? entry.sub_category : null,
+    }));
 
   const pools: Record<SubmitQuestPool, SubmitItemCandidate[]> = {
     item: [],
@@ -174,7 +177,7 @@ const loadSubmitItemCandidatesTx = async (
     consumable: [],
   };
 
-  for (const row of res.rows) {
+  for (const row of rows) {
     const categoryRaw = String(row.category);
     const subCategory = typeof row.sub_category === 'string' && row.sub_category.trim() ? row.sub_category.trim() : null;
     const candidate: SubmitItemCandidate = {

@@ -5,7 +5,7 @@ import path from 'path';
 import { updateSectionProgress } from './mainQuestService.js';
 import { updateAchievementProgress } from './achievementService.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
-import { getDungeonDefinitions, getTechniqueDefinitions } from './staticConfigLoader.js';
+import { getDungeonDefinitions, getItemDefinitionsByIds, getTechniqueDefinitions } from './staticConfigLoader.js';
 
 export type RealmRequirementStatus = 'done' | 'todo' | 'unknown';
 
@@ -215,13 +215,18 @@ const getItemDefMap = async (
   client: PoolClient,
   itemDefIds: string[]
 ): Promise<Record<string, { name: string; icon: string | null }>> => {
+  void client;
   const ids = Array.from(new Set(itemDefIds.map((s) => String(s || '').trim()).filter((s) => !!s)));
   if (ids.length === 0) return {};
-  const res = await client.query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::text[])`, [ids]);
+  const defs = getItemDefinitionsByIds(ids);
   const out: Record<string, { name: string; icon: string | null }> = {};
-  for (const r of res.rows as any[]) {
-    if (!r?.id) continue;
-    out[String(r.id)] = { name: String(r.name || r.id), icon: r.icon ? String(r.icon) : null };
+  for (const id of ids) {
+    const def = defs.get(id);
+    if (!def) continue;
+    out[id] = {
+      name: String(def.name || id),
+      icon: typeof def.icon === 'string' && def.icon.trim().length > 0 ? def.icon : null,
+    };
   }
   return out;
 };

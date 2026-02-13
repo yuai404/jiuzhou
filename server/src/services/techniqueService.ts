@@ -1,5 +1,4 @@
-import { query } from '../config/database.js';
-import { getSkillDefinitions, getTechniqueDefinitions, getTechniqueLayerDefinitions } from './staticConfigLoader.js';
+import { getItemDefinitionsByIds, getSkillDefinitions, getTechniqueDefinitions, getTechniqueLayerDefinitions } from './staticConfigLoader.js';
 
 export type TechniqueDefRow = {
   id: string;
@@ -80,8 +79,17 @@ const coerceCostMaterials = (raw: unknown): Array<{ itemId: string; qty: number 
 const getItemMetaMap = async (itemIds: string[]): Promise<Map<string, { name: string; icon: string | null }>> => {
   const uniq = Array.from(new Set(itemIds.filter((x) => typeof x === 'string' && x.trim().length > 0)));
   if (uniq.length === 0) return new Map();
-  const result = await query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::text[]) AND enabled = true`, [uniq]);
-  return new Map(result.rows.map((r) => [r.id, { name: r.name, icon: r.icon ?? null }]));
+  const defs = getItemDefinitionsByIds(uniq);
+  const out = new Map<string, { name: string; icon: string | null }>();
+  for (const id of uniq) {
+    const def = defs.get(id);
+    if (!def || def.enabled === false) continue;
+    out.set(id, {
+      name: String(def.name || id),
+      icon: typeof def.icon === 'string' ? def.icon : null,
+    });
+  }
+  return out;
 };
 
 export const getEnabledTechniqueDefs = async (): Promise<TechniqueDefRow[]> => {

@@ -1,4 +1,10 @@
-import { getDropPoolDefinitions, getDungeonDefinitions, getMonsterDefinitions } from './staticConfigLoader.js';
+import {
+  getDropPoolDefinitions,
+  getDungeonDefinitions,
+  getItemDefinitionById,
+  getItemDefinitionsByIds,
+  getMonsterDefinitions,
+} from './staticConfigLoader.js';
 import { pool, query } from '../config/database.js';
 import crypto from 'crypto';
 import { getBattleState, startDungeonPVEBattle } from './battleService.js';
@@ -635,24 +641,18 @@ export const getDungeonPreview = async (
   );
 
   const dropPreviewItemIds = Array.from(new Set(dropPreviewRows.map((row) => row.item_def_id)));
-  const dropPreviewItemRes =
-    dropPreviewItemIds.length === 0
-      ? { rows: [] as Array<{ id: string; name: string; quality: string | null; icon: string | null }> }
-      : await query(
-          `
-            SELECT id, name, quality, icon
-            FROM item_def
-            WHERE enabled = true
-              AND id = ANY($1::varchar[])
-          `,
-          [dropPreviewItemIds],
-        );
-  const dropPreviewItemMap = new Map(
-    (dropPreviewItemRes.rows as Array<{ id: string; name: string; quality: string | null; icon: string | null }>).map((row) => [
-      row.id,
-      row,
-    ]),
-  );
+  const dropPreviewItemDefs = getItemDefinitionsByIds(dropPreviewItemIds);
+  const dropPreviewItemMap = new Map<string, { id: string; name: string; quality: string | null; icon: string | null }>();
+  for (const itemId of dropPreviewItemIds) {
+    const def = dropPreviewItemDefs.get(itemId);
+    if (!def || def.enabled === false) continue;
+    dropPreviewItemMap.set(itemId, {
+      id: itemId,
+      name: String(def.name || itemId),
+      quality: typeof def.quality === 'string' ? def.quality : null,
+      icon: typeof def.icon === 'string' ? def.icon : null,
+    });
+  }
 
   const dropPreviewByPoolId = new Map<
     string,
@@ -795,19 +795,18 @@ export const getDungeonPreview = async (
     itemIds.push(d.item_def_id);
   }
 
-  const itemRes =
-    itemIds.length === 0
-      ? { rows: [] as ItemLiteRow[] }
-      : await query(
-          `
-            SELECT id, name, quality, icon
-            FROM item_def
-            WHERE enabled = true AND id = ANY($1)
-            ORDER BY id ASC
-          `,
-          [itemIds]
-        );
-  const itemMap = new Map((itemRes.rows as ItemLiteRow[]).map((r) => [r.id, r]));
+  const itemDefs = getItemDefinitionsByIds(itemIds);
+  const itemMap = new Map<string, ItemLiteRow>();
+  for (const itemId of itemIds) {
+    const def = itemDefs.get(itemId);
+    if (!def || def.enabled === false) continue;
+    itemMap.set(itemId, {
+      id: itemId,
+      name: String(def.name || itemId),
+      quality: typeof def.quality === 'string' ? def.quality : null,
+      icon: typeof def.icon === 'string' ? def.icon : null,
+    });
+  }
 
   const drops = dropItems
     .map((d) => {
@@ -1637,20 +1636,7 @@ export const nextDungeonInstance = async (
         }> => {
           const cached = itemMetaCache.get(itemDefId);
           if (cached) return cached;
-          const itemDefRes = await client.query(
-            'SELECT name, category, sub_category, effect_defs, level, quality_rank FROM item_def WHERE id = $1 LIMIT 1',
-            [itemDefId]
-          );
-          const row = itemDefRes.rows?.[0] as
-            | {
-                name?: unknown;
-                category?: unknown;
-                sub_category?: unknown;
-                effect_defs?: unknown;
-                level?: unknown;
-                quality_rank?: unknown;
-              }
-            | undefined;
+          const row = getItemDefinitionById(itemDefId);
           const meta = {
             name: typeof row?.name === 'string' && row.name.length > 0 ? row.name : itemDefId,
             category: typeof row?.category === 'string' && row.category.length > 0 ? row.category : 'misc',

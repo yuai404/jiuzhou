@@ -4,6 +4,7 @@ import { randomInt } from 'crypto';
 import { addItemToInventoryTx } from './inventoryService.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { getCharacterComputedByCharacterId } from './characterComputedService.js';
+import { getItemDefinitionsByIds, getItemRecipeDefinitionsByType } from './staticConfigLoader.js';
 
 export type GemType = 'attack' | 'defense' | 'survival' | 'all';
 type GemTypeToken = 'atk' | 'def' | 'sur' | 'all';
@@ -306,12 +307,12 @@ const getGemRecipeRows = async (
   client: PoolClient,
   options: { recipeId?: string; gemType?: GemType } = {},
 ): Promise<GemRecipeRow[]> => {
-  const where: string[] = ["recipe_type = 'gem_synthesis'", 'enabled = true'];
-  const params: unknown[] = [];
+  void client;
+  let recipes = getItemRecipeDefinitionsByType('gem_synthesis');
 
   if (options.recipeId) {
-    params.push(options.recipeId.trim());
-    where.push(`id = $${params.length}`);
+    const targetId = options.recipeId.trim();
+    recipes = recipes.filter((entry) => String(entry.id || '').trim() === targetId);
   }
 
   if (options.gemType) {
@@ -319,50 +320,46 @@ const getGemRecipeRows = async (
       options.gemType === 'attack'
         ? 'atk'
         : options.gemType === 'defense'
-        ? 'def'
-        : options.gemType === 'survival'
-        ? 'sur'
-        : 'all';
-    params.push(`gem-${token}-%`);
-    where.push(`id LIKE $${params.length}`);
+          ? 'def'
+          : options.gemType === 'survival'
+            ? 'sur'
+            : 'all';
+    const idPrefix = `gem-${token}-`;
+    recipes = recipes.filter((entry) => String(entry.id || '').trim().startsWith(idPrefix));
   }
 
-  const result = await client.query(
-    `
-      SELECT id, name, product_item_def_id, product_qty, cost_silver, cost_spirit_stones, cost_items
-      , success_rate
-      FROM item_recipe
-      WHERE ${where.join(' AND ')}
-      ORDER BY id ASC
-    `,
-    params,
-  );
-
-  return (result.rows ?? []) as GemRecipeRow[];
+  return recipes
+    .map((recipe) => ({
+      id: String(recipe.id || '').trim(),
+      name: String(recipe.name || '').trim(),
+      product_item_def_id: String(recipe.product_item_def_id || '').trim(),
+      product_qty: recipe.product_qty ?? 1,
+      cost_silver: recipe.cost_silver ?? 0,
+      cost_spirit_stones: recipe.cost_spirit_stones ?? 0,
+      cost_items: Array.isArray(recipe.cost_items) ? recipe.cost_items : [],
+      success_rate: recipe.success_rate ?? 100,
+    } satisfies GemRecipeRow))
+    .filter((entry) => entry.id.length > 0)
+    .sort((left, right) => left.id.localeCompare(right.id));
 };
 
 const getItemDefMap = async (
   client: PoolClient,
   itemDefIds: string[],
 ): Promise<Map<string, ItemDefLite>> => {
+  void client;
   const ids = [...new Set(itemDefIds.map((x) => x.trim()).filter((x) => x.length > 0))];
   if (ids.length === 0) return new Map();
 
-  const result = await client.query(
-    `
-      SELECT id, name, icon
-      FROM item_def
-      WHERE id = ANY($1::text[])
-    `,
-    [ids],
-  );
-
+  const defs = getItemDefinitionsByIds(ids);
   const map = new Map<string, ItemDefLite>();
-  for (const row of result.rows as Array<{ id: string; name: string; icon: string | null }>) {
-    map.set(String(row.id || '').trim(), {
-      id: String(row.id || '').trim(),
-      name: String(row.name || '').trim(),
-      icon: row.icon,
+  for (const id of ids) {
+    const def = defs.get(id);
+    if (!def) continue;
+    map.set(id, {
+      id,
+      name: String(def.name || '').trim(),
+      icon: typeof def.icon === 'string' && def.icon.trim().length > 0 ? def.icon.trim() : null,
     });
   }
   return map;

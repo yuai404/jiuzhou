@@ -20,7 +20,7 @@ import {
   applyCharacterResourceDeltaByCharacterId,
   getCharacterComputedByCharacterId,
 } from './characterComputedService.js';
-import { getTechniqueDefinitions } from './staticConfigLoader.js';
+import { getItemDefinitionById, getItemDefinitions, getTechniqueDefinitions } from './staticConfigLoader.js';
 
 // 物品定义接口
 export interface ItemDef {
@@ -112,14 +112,24 @@ export const createItem = async (
 };
 
 export const getItemDefWithClient = async (itemDefId: string, client?: PoolClient): Promise<ItemDef | null> => {
-  const executor = client ? client : { query };
-  const result = await executor.query(
-    `SELECT id, code, name, category, sub_category, quality, quality_rank, 
-            stack_max, bind_type, icon
-     FROM item_def WHERE id = $1 AND enabled = true`,
-    [itemDefId]
-  );
-  return result.rows.length > 0 ? result.rows[0] : null;
+  // 兼容旧签名，调用方可继续传入事务 client
+  void client;
+
+  const def = getItemDefinitionById(itemDefId);
+  if (!def || def.enabled === false) return null;
+
+  return {
+    id: def.id,
+    code: String(def.code || ''),
+    name: String(def.name || def.id),
+    category: String(def.category || ''),
+    sub_category: String(def.sub_category || ''),
+    quality: String(def.quality || ''),
+    quality_rank: Number(def.quality_rank) || 0,
+    stack_max: Math.max(1, Number(def.stack_max) || 1),
+    bind_type: String(def.bind_type || 'none'),
+    icon: String(def.icon || ''),
+  };
 };
 
 /**
@@ -258,28 +268,44 @@ export const useItem = async (
     }
 
     // 获取物品实例
-    const instanceResult = await client.query(`
-      SELECT ii.*, id.id as def_id, id.category, id.use_type, id.effect_defs, id.use_cd_round, id.use_cd_sec, id.use_limit_daily, id.use_limit_total
-      FROM item_instance ii
-      JOIN item_def id ON ii.item_def_id = id.id
-      WHERE ii.id = $1 AND ii.owner_character_id = $2
+    const instanceResult = await client.query(
+      `
+      SELECT *
+      FROM item_instance
+      WHERE id = $1 AND owner_character_id = $2
       FOR UPDATE
-    `, [instanceId, characterId]);
+    `,
+      [instanceId, characterId],
+    );
 
     if (instanceResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return { success: false, message: '物品不存在' };
     }
 
-    const item = instanceResult.rows[0];
+    const item = instanceResult.rows[0] as Record<string, unknown>;
+    const itemDefId = typeof item.item_def_id === 'string' ? item.item_def_id : String(item.item_def_id || '');
+    if (!itemDefId) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品数据异常' };
+    }
+
+    const itemDef = getItemDefinitionById(itemDefId);
+    if (!itemDef) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '物品不存在' };
+    }
+    const category = String(itemDef.category || '');
+    const useType = String(itemDef.use_type || '');
+    const effectDefs = Array.isArray(itemDef.effect_defs) ? itemDef.effect_defs : [];
 
     // 检查是否可使用
-    if (item.category === 'equipment' || item.category === 'material') {
+    if (category === 'equipment' || category === 'material') {
       await client.query('ROLLBACK');
       return { success: false, message: '该物品不可使用' };
     }
 
-    if (!item.use_type) {
+    if (!useType) {
       await client.query('ROLLBACK');
       return { success: false, message: '该物品不可使用' };
     }
@@ -289,19 +315,13 @@ export const useItem = async (
       return { success: false, message: '物品已锁定' };
     }
 
-    if (item.qty < qty) {
+    if ((Number(item.qty) || 0) < qty) {
       await client.query('ROLLBACK');
       return { success: false, message: '数量不足' };
     }
 
-    const itemDefId = typeof item.item_def_id === 'string' ? item.item_def_id : String(item.item_def_id || '');
-    if (!itemDefId) {
-      await client.query('ROLLBACK');
-      return { success: false, message: '物品数据异常' };
-    }
-
-    const cdRound = Number(item.use_cd_round) || 0;
-    const cdSec = Number(item.use_cd_sec) || 0;
+    const cdRound = Number(itemDef.use_cd_round) || 0;
+    const cdSec = Number(itemDef.use_cd_sec) || 0;
     const effectiveCdSec = Math.max(0, cdSec, cdRound);
 
     if (effectiveCdSec > 0) {
@@ -320,8 +340,8 @@ export const useItem = async (
       }
     }
 
-    const dailyLimit = Number(item.use_limit_daily) || 0;
-    const totalLimit = Number(item.use_limit_total) || 0;
+    const dailyLimit = Number(itemDef.use_limit_daily) || 0;
+    const totalLimit = Number(itemDef.use_limit_total) || 0;
 
     if (dailyLimit > 0 || totalLimit > 0) {
       const cntResult = await client.query(
@@ -352,7 +372,6 @@ export const useItem = async (
       }
     }
 
-    const effectDefs = Array.isArray(item.effect_defs) ? item.effect_defs : [];
     let deltaQixue = 0;
     let deltaLingqi = 0;
     let deltaExp = 0;
@@ -435,20 +454,17 @@ export const useItem = async (
           const gemsPerUse = toPositiveInt(params?.gems_per_use, 1);
           const rollCount = qty * gemsPerUse;
 
-          const gemRes = await client.query(
-            `
-              SELECT id
-              FROM item_def
-              WHERE enabled = true
-                AND category = 'material'
-                AND sub_category = ANY($1::varchar[])
-                AND level BETWEEN $2 AND $3
-            `,
-            [subCategories, minLevel, maxLevel]
-          );
-
-          const gemIds = (gemRes.rows as Array<{ id?: unknown }>)
-            .map((row) => String(row.id || '').trim())
+          const subCategorySet = new Set(subCategories);
+          const gemIds = getItemDefinitions()
+            .filter((entry) => {
+              if (entry.enabled === false) return false;
+              if (entry.category !== 'material') return false;
+              const subCategory = String(entry.sub_category || '');
+              if (!subCategorySet.has(subCategory)) return false;
+              const level = Number(entry.level);
+              return Number.isFinite(level) && level >= minLevel && level <= maxLevel;
+            })
+            .map((entry) => String(entry.id || '').trim())
             .filter((id): id is string => id.length > 0);
 
           if (gemIds.length === 0) {
@@ -615,11 +631,10 @@ export const useItem = async (
     for (const lootItem of lootItemsToAdd) {
       const addRes = await addItemToInventoryTx(client, characterId, userId, lootItem.itemDefId, lootItem.qty, {
         location: 'bag',
-        obtainedFrom: `use_item:${item.def_id}`
+        obtainedFrom: `use_item:${itemDef.id}`
       });
       if (addRes.success) {
-        const nameResult = await client.query('SELECT name FROM item_def WHERE id = $1', [lootItem.itemDefId]);
-        const itemName = nameResult.rows[0]?.name || lootItem.itemDefId;
+        const itemName = getItemDefinitionById(lootItem.itemDefId)?.name || lootItem.itemDefId;
         lootResults.push({ type: 'item', name: itemName, amount: lootItem.qty });
       }
     }
@@ -656,7 +671,7 @@ export const useItem = async (
     }
 
     // 扣除物品
-    if (item.qty === qty) {
+    if ((Number(item.qty) || 0) === qty) {
       await client.query('DELETE FROM item_instance WHERE id = $1', [instanceId]);
     } else {
       await client.query(
@@ -679,7 +694,7 @@ export const useItem = async (
     return {
       success: true,
       message: '使用成功',
-      effects: item.effect_defs || [],
+      effects: effectDefs,
       character: updatedChar,
       lootResults: lootResults.length > 0 ? lootResults : undefined
     };
@@ -697,28 +712,30 @@ export const useItem = async (
  * 获取物品实例详情（通用）
  */
 export const getItemInstance = async (instanceId: number): Promise<any | null> => {
-  const result = await query(`
-    SELECT 
-      ii.*,
-      id.name, id.code, id.icon, id.category, id.sub_category,
-      COALESCE(ii.quality, id.quality) as resolved_quality,
-      COALESCE(ii.quality_rank, id.quality_rank) as resolved_quality_rank,
-      id.quality_rank as def_quality_rank,
-      id.stack_max, id.description,
-      id.use_type, id.effect_defs, id.equip_slot, id.equip_req_realm,
-      id.base_attrs, id.set_id
-    FROM item_instance ii
-    JOIN item_def id ON ii.item_def_id = id.id
-    WHERE ii.id = $1
-  `, [instanceId]);
+  const result = await query(
+    `
+    SELECT *
+    FROM item_instance
+    WHERE id = $1
+  `,
+    [instanceId],
+  );
 
   if (result.rows.length === 0) return null;
 
   const row = result.rows[0];
+  const itemDefId = String(row.item_def_id || '').trim();
+  if (!itemDefId) return null;
+  const itemDef = getItemDefinitionById(itemDefId);
+  if (!itemDef) return null;
+
+  const resolvedQuality = row.quality ?? itemDef.quality ?? null;
+  const resolvedQualityRank = row.quality_rank ?? itemDef.quality_rank ?? null;
+  const defQualityRank = itemDef.quality_rank ?? null;
   const displayBaseAttrs = buildEquipmentDisplayBaseAttrs({
-    baseAttrsRaw: row.base_attrs,
-    defQualityRankRaw: row.def_quality_rank,
-    resolvedQualityRankRaw: row.resolved_quality_rank,
+    baseAttrsRaw: itemDef.base_attrs,
+    defQualityRankRaw: defQualityRank,
+    resolvedQualityRankRaw: resolvedQualityRank,
     strengthenLevelRaw: row.strengthen_level,
     refineLevelRaw: row.refine_level,
     socketedGemsRaw: row.socketed_gems,
@@ -726,22 +743,22 @@ export const getItemInstance = async (instanceId: number): Promise<any | null> =
   return {
     id: row.id,
     itemDefId: row.item_def_id,
-    name: row.name,
-    code: row.code,
-    icon: row.icon,
-    category: row.category,
-    subCategory: row.sub_category,
-    quality: row.resolved_quality,
-    qualityRank: row.resolved_quality_rank,
+    name: itemDef.name,
+    code: itemDef.code,
+    icon: itemDef.icon,
+    category: itemDef.category,
+    subCategory: itemDef.sub_category,
+    quality: resolvedQuality,
+    qualityRank: resolvedQualityRank,
     qty: row.qty,
-    stackMax: row.stack_max,
-    description: row.description,
+    stackMax: itemDef.stack_max,
+    description: itemDef.description,
     // 装备专用
-    equipSlot: row.equip_slot,
-    equipReqRealm: row.equip_req_realm,
-    baseAttrs: row.category === 'equipment' ? displayBaseAttrs : (row.base_attrs ?? {}),
+    equipSlot: itemDef.equip_slot,
+    equipReqRealm: itemDef.equip_req_realm,
+    baseAttrs: itemDef.category === 'equipment' ? displayBaseAttrs : (itemDef.base_attrs ?? {}),
     affixes: row.affixes || [],
-    setId: row.set_id,
+    setId: itemDef.set_id,
     strengthenLevel: row.strengthen_level,
     refineLevel: row.refine_level,
     socketedGems: row.socketed_gems,

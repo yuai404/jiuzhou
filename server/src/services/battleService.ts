@@ -35,7 +35,7 @@ import {
   recoverBattleStartResourcesByUserIds,
   setCharacterResourcesByCharacterId,
 } from './characterComputedService.js';
-import { getItemSetDefinitions, getMonsterDefinitions, getSkillDefinitions } from './staticConfigLoader.js';
+import { getItemDefinitionsByIds, getItemSetDefinitions, getMonsterDefinitions, getSkillDefinitions } from './staticConfigLoader.js';
 
 // 活跃战斗缓存
 const activeBattles = new Map<string, BattleEngine>();
@@ -356,24 +356,29 @@ async function getCharacterBattleSetBonusEffects(characterId: number): Promise<B
 
   const result = await query(
     `
-      SELECT id.set_id, COUNT(*)::int AS equipped_count
-      FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
-      WHERE ii.owner_character_id = $1
-        AND ii.location = 'equipped'
-        AND id.set_id IS NOT NULL
-      GROUP BY id.set_id
+      SELECT item_def_id
+      FROM item_instance
+      WHERE owner_character_id = $1
+        AND location = 'equipped'
     `,
     [characterId]
   );
 
+  const itemDefIds = Array.from(
+    new Set(
+      (result.rows as Array<Record<string, unknown>>)
+        .map((row) => toText(row.item_def_id))
+        .filter((itemDefId): itemDefId is string => !!itemDefId),
+    ),
+  );
+  const defs = getItemDefinitionsByIds(itemDefIds);
   const setCountMap = new Map<string, number>();
   for (const row of result.rows as Array<Record<string, unknown>>) {
-    const setId = toText(row.set_id);
+    const itemDefId = toText(row.item_def_id);
+    if (!itemDefId) continue;
+    const setId = toText(defs.get(itemDefId)?.set_id);
     if (!setId) continue;
-    const equippedCount = Math.max(0, Math.floor(toNumber(row.equipped_count) ?? 0));
-    if (equippedCount <= 0) continue;
-    setCountMap.set(setId, equippedCount);
+    setCountMap.set(setId, (setCountMap.get(setId) ?? 0) + 1);
   }
 
   const staticSetMap = new Map(
@@ -434,26 +439,36 @@ async function getCharacterBattleAffixEffects(characterId: number): Promise<Batt
 
   const result = await query(
     `
-      SELECT ii.id AS item_instance_id, id.name AS item_name, ii.affixes
-      FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
-      WHERE ii.owner_character_id = $1
-        AND ii.location = 'equipped'
-        AND id.category = 'equipment'
-      ORDER BY ii.id ASC
+      SELECT id AS item_instance_id, item_def_id, affixes
+      FROM item_instance
+      WHERE owner_character_id = $1
+        AND location = 'equipped'
+      ORDER BY id ASC
     `,
     [characterId]
   );
 
+  const itemDefIds = Array.from(
+    new Set(
+      (result.rows as Array<Record<string, unknown>>)
+        .map((row) => toText(row.item_def_id))
+        .filter((itemDefId): itemDefId is string => !!itemDefId),
+    ),
+  );
+  const defs = getItemDefinitionsByIds(itemDefIds);
   const sources: BattleAffixEffectSource[] = [];
   for (const row of result.rows) {
     const record = row as Record<string, unknown>;
     const itemInstanceId = Math.floor(toNumber(record.item_instance_id) ?? 0);
     if (itemInstanceId <= 0) continue;
+    const itemDefId = toText(record.item_def_id);
+    if (!itemDefId) continue;
+    const itemDef = defs.get(itemDefId);
+    if (!itemDef || itemDef.category !== 'equipment') continue;
 
     sources.push({
       itemInstanceId,
-      itemName: toText(record.item_name),
+      itemName: toText(itemDef.name),
       affixesRaw: record.affixes,
     });
   }

@@ -4,6 +4,7 @@ import { addItemToInventoryTx } from './inventoryService.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { recordCraftItemEvent } from './taskService.js';
 import { REALM_ORDER } from './shared/realmOrder.js';
+import { getItemDefinitionById, getItemDefinitionsByIds, getItemRecipeById, getItemRecipeDefinitionsByType } from './staticConfigLoader.js';
 
 type CraftRecipeType = 'craft' | 'refine' | 'decompose' | 'upgrade' | string;
 
@@ -204,42 +205,32 @@ const getCharacterByUserId = async (
 };
 
 const getRecipeRows = async (recipeType?: string): Promise<RecipeRow[]> => {
-  const type = asString(recipeType);
-  const params: unknown[] = [];
-  const where: string[] = ['r.enabled = true'];
-  if (type) {
-    params.push(type);
-    where.push(`r.recipe_type = $${params.length}`);
-  }
-  const res = await query(
-    `
-      SELECT
-        r.id,
-        r.name,
-        r.recipe_type,
-        r.product_item_def_id,
-        r.product_qty,
-        r.cost_silver,
-        r.cost_spirit_stones,
-        r.cost_exp,
-        r.cost_items,
-        r.req_realm,
-        r.req_level,
-        r.req_building,
-        r.success_rate,
-        r.fail_return_rate,
-        i.name AS product_name,
-        i.icon AS product_icon,
-        i.category AS product_category,
-        i.sub_category AS product_sub_category
-      FROM item_recipe r
-      LEFT JOIN item_def i ON i.id = r.product_item_def_id
-      WHERE ${where.join(' AND ')}
-      ORDER BY r.recipe_type ASC, r.id ASC
-    `,
-    params,
-  );
-  return (res.rows ?? []) as RecipeRow[];
+  return getItemRecipeDefinitionsByType(recipeType)
+    .map((recipe) => {
+      const product = getItemDefinitionById(recipe.product_item_def_id);
+      return {
+        id: String(recipe.id || '').trim(),
+        name: String(recipe.name || '').trim(),
+        recipe_type: String(recipe.recipe_type || 'craft').trim(),
+        product_item_def_id: String(recipe.product_item_def_id || '').trim(),
+        product_qty: recipe.product_qty ?? 1,
+        cost_silver: recipe.cost_silver ?? 0,
+        cost_spirit_stones: recipe.cost_spirit_stones ?? 0,
+        cost_exp: recipe.cost_exp ?? 0,
+        cost_items: Array.isArray(recipe.cost_items) ? recipe.cost_items : [],
+        req_realm: recipe.req_realm ?? null,
+        req_level: recipe.req_level ?? 0,
+        req_building: recipe.req_building ?? null,
+        success_rate: recipe.success_rate ?? 100,
+        fail_return_rate: recipe.fail_return_rate ?? 0,
+        product_name: product?.name ?? null,
+        product_icon: product?.icon ?? null,
+        product_category: product?.category ?? null,
+        product_sub_category: product?.sub_category ?? null,
+      } satisfies RecipeRow;
+    })
+    .filter((entry) => entry.id.length > 0)
+    .sort((left, right) => left.recipe_type.localeCompare(right.recipe_type) || left.id.localeCompare(right.id));
 };
 
 const getUnlockedItemCounts = async (
@@ -273,11 +264,11 @@ const getItemNameMap = async (itemDefIds: string[]): Promise<Map<string, string>
   const ids = Array.from(new Set(itemDefIds.map((x) => x.trim()).filter(Boolean)));
   const map = new Map<string, string>();
   if (ids.length === 0) return map;
-  const res = await query(`SELECT id, name FROM item_def WHERE id = ANY($1::varchar[])`, [ids]);
-  for (const row of res.rows ?? []) {
-    const id = asString((row as Record<string, unknown>).id);
-    if (!id) continue;
-    map.set(id, asString((row as Record<string, unknown>).name, id) || id);
+
+  const defs = getItemDefinitionsByIds(ids);
+  for (const id of ids) {
+    const name = asString(defs.get(id)?.name, id);
+    map.set(id, name || id);
   }
   return map;
 };
@@ -494,43 +485,33 @@ export const executeCraftRecipe = async (
       return { success: false, message: '角色不存在' };
     }
 
-    const recipeRes = await client.query(
-      `
-        SELECT
-          r.id,
-          r.name,
-          r.recipe_type,
-          r.product_item_def_id,
-          r.product_qty,
-          r.cost_silver,
-          r.cost_spirit_stones,
-          r.cost_exp,
-          r.cost_items,
-          r.req_realm,
-          r.req_level,
-          r.req_building,
-          r.success_rate,
-          r.fail_return_rate,
-          i.name AS product_name,
-          i.icon AS product_icon,
-          i.category AS product_category,
-          i.sub_category AS product_sub_category
-        FROM item_recipe r
-        LEFT JOIN item_def i ON i.id = r.product_item_def_id
-        WHERE r.id = $1
-          AND r.enabled = true
-        FOR UPDATE OF r
-        LIMIT 1
-      `,
-      [recipeId],
-    );
-
-    if (!recipeRes.rows?.[0]) {
+    const recipeDef = getItemRecipeById(recipeId);
+    if (!recipeDef || recipeDef.enabled === false) {
       await client.query('ROLLBACK');
       return { success: false, message: '配方不存在' };
     }
 
-    const recipe = recipeRes.rows[0] as RecipeRow;
+    const recipeProductDef = getItemDefinitionById(String(recipeDef.product_item_def_id || '').trim());
+    const recipe = {
+      id: String(recipeDef.id || '').trim(),
+      name: String(recipeDef.name || '').trim(),
+      recipe_type: String(recipeDef.recipe_type || 'craft').trim(),
+      product_item_def_id: String(recipeDef.product_item_def_id || '').trim(),
+      product_qty: recipeDef.product_qty ?? 1,
+      cost_silver: recipeDef.cost_silver ?? 0,
+      cost_spirit_stones: recipeDef.cost_spirit_stones ?? 0,
+      cost_exp: recipeDef.cost_exp ?? 0,
+      cost_items: Array.isArray(recipeDef.cost_items) ? recipeDef.cost_items : [],
+      req_realm: recipeDef.req_realm ?? null,
+      req_level: recipeDef.req_level ?? 0,
+      req_building: recipeDef.req_building ?? null,
+      success_rate: recipeDef.success_rate ?? 100,
+      fail_return_rate: recipeDef.fail_return_rate ?? 0,
+      product_name: recipeProductDef?.name ?? null,
+      product_icon: recipeProductDef?.icon ?? null,
+      product_category: recipeProductDef?.category ?? null,
+      product_sub_category: recipeProductDef?.sub_category ?? null,
+    } satisfies RecipeRow;
     const reqRealm = asString(recipe.req_realm) || null;
     if (!isRealmSufficient(character.realm, reqRealm)) {
       await client.query('ROLLBACK');

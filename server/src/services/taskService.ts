@@ -3,7 +3,14 @@ import { createItem } from './itemService.js';
 import type { PoolClient } from 'pg';
 import { updateSectionProgress } from './mainQuestService.js';
 import { updateAchievementProgress } from './achievementService.js';
-import { getNpcDefinitions, getTalkTreeDefinitions } from './staticConfigLoader.js';
+import {
+  getItemDefinitionById,
+  getItemDefinitionsByIds,
+  getMainQuestChapterById,
+  getMainQuestSectionById,
+  getNpcDefinitions,
+  getTalkTreeDefinitions,
+} from './staticConfigLoader.js';
 import {
   getStaticTaskDefinitions,
   getTaskDefinitionById,
@@ -268,13 +275,14 @@ export const getTaskOverview = async (
   const itemMeta = new Map<string, { name: string; icon: string | null }>();
   if (itemRewardIds.size > 0) {
     const ids = Array.from(itemRewardIds);
-    const metaRes = await query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::varchar[])`, [ids]);
-    for (const row of metaRes.rows ?? []) {
-      const id = asNonEmptyString(row?.id);
-      if (!id) continue;
-      const name = String(row?.name ?? id);
-      const icon = typeof row?.icon === 'string' ? row.icon : null;
-      itemMeta.set(id, { name, icon });
+    const defs = getItemDefinitionsByIds(ids);
+    for (const id of ids) {
+      const def = defs.get(id);
+      if (!def) continue;
+      itemMeta.set(id, {
+        name: String(def.name ?? id),
+        icon: typeof def.icon === 'string' ? def.icon : null,
+      });
     }
   }
 
@@ -430,13 +438,14 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
   const itemMeta = new Map<string, { name: string; icon: string | null }>();
   if (itemRewardIds.size > 0) {
     const ids = Array.from(itemRewardIds);
-    const metaRes = await query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::varchar[])`, [ids]);
-    for (const row of metaRes.rows ?? []) {
-      const id = asNonEmptyString(row?.id);
-      if (!id) continue;
-      const name = String(row?.name ?? id);
-      const icon = typeof row?.icon === 'string' ? row.icon : null;
-      itemMeta.set(id, { name, icon });
+    const defs = getItemDefinitionsByIds(ids);
+    for (const id of ids) {
+      const def = defs.get(id);
+      if (!def) continue;
+      itemMeta.set(id, {
+        name: String(def.name ?? id),
+        icon: typeof def.icon === 'string' ? def.icon : null,
+      });
     }
   }
 
@@ -592,12 +601,9 @@ const applyTaskRewardsTx = async (
       if (!itemDefId) continue;
       const qtyRange = resolveRewardQtyRange(rw);
       const qty = rollRangeIntInclusive(qtyRange.min, qtyRange.max);
-      const itemDefRes = await client.query(
-        `SELECT name, icon FROM item_def WHERE id = $1 AND enabled = true`,
-        [itemDefId]
-      );
-      const itemName = asNonEmptyString(itemDefRes.rows?.[0]?.name);
-      const itemIcon = asNonEmptyString(itemDefRes.rows?.[0]?.icon);
+      const itemDef = getItemDefinitionById(itemDefId);
+      const itemName = asNonEmptyString(itemDef?.name);
+      const itemIcon = asNonEmptyString(itemDef?.icon);
       const result = await createItem(userId, characterId, itemDefId, qty, { dbClient: client, obtainedFrom: 'task_reward' });
       if (!result.success) return { success: false, message: result.message, rewards: out };
       out.push({
@@ -1349,34 +1355,36 @@ export const npcTalk = async (
   // 查询主线任务
   let mainQuest: NpcTalkMainQuestOption | undefined;
   const mainQuestRes = await query(
-    `SELECT 
-       p.current_section_id, p.section_status,
-       s.id as section_id, s.name as section_name, s.npc_id, s.objectives,
-       c.name as chapter_name
-     FROM character_main_quest_progress p
-     JOIN main_quest_section s ON s.id = p.current_section_id
-     JOIN main_quest_chapter c ON c.id = s.chapter_id
-     WHERE p.character_id = $1 AND s.npc_id = $2 AND s.enabled = true`,
-    [cid, nid]
+    `SELECT current_section_id, section_status FROM character_main_quest_progress WHERE character_id = $1 LIMIT 1`,
+    [cid],
   );
-  
+
   if (mainQuestRes.rows?.[0]) {
-    const mq = mainQuestRes.rows[0];
-    const sectionStatus = mq.section_status as 'not_started' | 'dialogue' | 'objectives' | 'turnin' | 'completed';
-    
-    // 判断是否可以开始对话（未开始或对话中）
-    const canStartDialogue = sectionStatus === 'not_started' || sectionStatus === 'dialogue';
-    // 判断是否可以完成（可交付状态）
-    const canComplete = sectionStatus === 'turnin';
-    
-    mainQuest = {
-      sectionId: String(mq.section_id),
-      sectionName: String(mq.section_name),
-      chapterName: String(mq.chapter_name),
-      status: sectionStatus,
-      canStartDialogue,
-      canComplete
-    };
+    const currentSectionId = asNonEmptyString(mainQuestRes.rows[0].current_section_id);
+    const section = currentSectionId ? getMainQuestSectionById(currentSectionId) : null;
+    const chapter = section ? getMainQuestChapterById(section.chapter_id) : null;
+    if (section && section.enabled !== false && chapter && chapter.enabled !== false && section.npc_id === nid) {
+      const sectionStatus = (mainQuestRes.rows[0].section_status ?? 'not_started') as
+        | 'not_started'
+        | 'dialogue'
+        | 'objectives'
+        | 'turnin'
+        | 'completed';
+
+      // 判断是否可以开始对话（未开始或对话中）
+      const canStartDialogue = sectionStatus === 'not_started' || sectionStatus === 'dialogue';
+      // 判断是否可以完成（可交付状态）
+      const canComplete = sectionStatus === 'turnin';
+
+      mainQuest = {
+        sectionId: section.id,
+        sectionName: String(section.name || section.id),
+        chapterName: String(chapter.name || chapter.id),
+        status: sectionStatus,
+        canStartDialogue,
+        canComplete,
+      };
+    }
   }
 
   return { success: true, message: 'ok', data: { npcId: nid, npcName, lines, tasks, mainQuest } };

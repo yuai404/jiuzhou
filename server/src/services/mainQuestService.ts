@@ -13,7 +13,17 @@ import {
 import { createItem } from './itemService.js';
 import { getRoomsInMap } from './mapService.js';
 import { getRealmOrderIndex } from './shared/realmOrder.js';
-import { getTechniqueDefinitions } from './staticConfigLoader.js';
+import {
+  getItemDefinitionById,
+  getItemDefinitionsByIds,
+  getMainQuestChapterById,
+  getMainQuestChapterDefinitions,
+  getMainQuestSectionById,
+  getMainQuestSectionDefinitions,
+  getTechniqueDefinitions,
+  type MainQuestChapterConfig,
+  type MainQuestSectionConfig,
+} from './staticConfigLoader.js';
 
 type ChapterDto = {
   id: string;
@@ -72,6 +82,37 @@ const asArray = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
 const asObject = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+const isMainQuestChapterEnabled = (chapter: MainQuestChapterConfig | null): boolean => {
+  return !!chapter && chapter.enabled !== false;
+};
+
+const isMainQuestSectionEnabled = (section: MainQuestSectionConfig | null): boolean => {
+  if (!section || section.enabled === false) return false;
+  const chapter = getMainQuestChapterById(section.chapter_id);
+  return isMainQuestChapterEnabled(chapter);
+};
+
+const getEnabledMainQuestSectionById = (sectionId: string): MainQuestSectionConfig | null => {
+  const section = getMainQuestSectionById(sectionId);
+  return isMainQuestSectionEnabled(section) ? section : null;
+};
+
+const getEnabledMainQuestChapterById = (chapterId: string): MainQuestChapterConfig | null => {
+  const chapter = getMainQuestChapterById(chapterId);
+  return isMainQuestChapterEnabled(chapter) ? chapter : null;
+};
+
+const getEnabledMainQuestSectionsSorted = (): MainQuestSectionConfig[] => {
+  return getMainQuestSectionDefinitions()
+    .filter((section) => isMainQuestSectionEnabled(section))
+    .sort((left, right) => {
+      const leftChapterNum = Number(getMainQuestChapterById(left.chapter_id)?.chapter_num ?? 0);
+      const rightChapterNum = Number(getMainQuestChapterById(right.chapter_id)?.chapter_num ?? 0);
+      if (leftChapterNum !== rightChapterNum) return leftChapterNum - rightChapterNum;
+      return Number(left.section_num || 0) - Number(right.section_num || 0);
+    });
+};
 
 const resolveNpcRoomId = async (mapId: string | null, npcId: string | null): Promise<string | null> => {
   const mid = asString(mapId).trim();
@@ -157,13 +198,13 @@ const syncCurrentSectionStaticProgress = async (characterId: number): Promise<vo
       return;
     }
 
-    const sectionRes = await client.query(`SELECT objectives FROM main_quest_section WHERE id = $1 AND enabled = true LIMIT 1`, [sectionId]);
-    if (!sectionRes.rows?.[0]) {
+    const section = getEnabledMainQuestSectionById(sectionId);
+    if (!section) {
       await client.query('ROLLBACK');
       return;
     }
 
-    const objectives = asArray<{ id?: unknown; type?: unknown; target?: unknown; params?: unknown }>(sectionRes.rows[0].objectives);
+    const objectives = asArray<{ id?: unknown; type?: unknown; target?: unknown; params?: unknown }>(section.objectives);
     const progressData = asObject(progress.objectives_progress);
 
     const characterRes = await client.query(`SELECT realm, sub_realm FROM characters WHERE id = $1 LIMIT 1`, [cid]);
@@ -248,19 +289,9 @@ const syncCurrentSectionStaticProgress = async (characterId: number): Promise<vo
 };
 
 const getFirstSection = async (): Promise<{ id: string; chapter_id: string } | null> => {
-  const res = await query(
-    `SELECT s.id, s.chapter_id
-     FROM main_quest_section s
-     JOIN main_quest_chapter c ON c.id = s.chapter_id
-     WHERE s.enabled = true AND c.enabled = true
-     ORDER BY c.chapter_num ASC, s.section_num ASC
-     LIMIT 1`,
-  );
-  const row = res.rows?.[0] as { id?: unknown; chapter_id?: unknown } | undefined;
-  const id = asString(row?.id);
-  const chapterId = asString(row?.chapter_id);
-  if (!id || !chapterId) return null;
-  return { id, chapter_id: chapterId };
+  const first = getEnabledMainQuestSectionsSorted()[0];
+  if (!first) return null;
+  return { id: first.id, chapter_id: first.chapter_id };
 };
 
 type DbQueryLike = {
@@ -268,6 +299,7 @@ type DbQueryLike = {
 };
 
 const decorateSectionRewards = async (db: DbQueryLike, rewards: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  void db;
   const items = asArray<{ item_def_id?: unknown; quantity?: unknown }>((rewards as { items?: unknown }).items);
   const itemIds = Array.from(
     new Set(items.map((it) => asString(it.item_def_id)).map((x) => x.trim()).filter(Boolean)),
@@ -275,12 +307,14 @@ const decorateSectionRewards = async (db: DbQueryLike, rewards: Record<string, u
 
   const itemDefMap = new Map<string, { name: string; icon: string | null }>();
   if (itemIds.length > 0) {
-    const res = await db.query(`SELECT id, name, icon FROM item_def WHERE id = ANY($1::text[])`, [itemIds]);
-    for (const row of res.rows ?? []) {
-      const r = row as { id?: unknown; name?: unknown; icon?: unknown };
-      const id = asString(r.id).trim();
-      if (!id) continue;
-      itemDefMap.set(id, { name: asString(r.name).trim(), icon: asString(r.icon).trim() || null });
+    const itemDefs = getItemDefinitionsByIds(itemIds);
+    for (const itemId of itemIds) {
+      const itemDef = itemDefs.get(itemId);
+      if (!itemDef) continue;
+      itemDefMap.set(itemId, {
+        name: asString(itemDef.name).trim(),
+        icon: asString(itemDef.icon).trim() || null,
+      });
     }
   }
 
@@ -385,19 +419,16 @@ export const getMainQuestProgress = async (characterId: number): Promise<MainQue
   let currentChapter: ChapterDto | null = null;
   const currentChapterId = asString(progress.current_chapter_id);
   if (currentChapterId) {
-    const chapterRes = await query(`SELECT * FROM main_quest_chapter WHERE id = $1 AND enabled = true`, [currentChapterId]);
-    const c = chapterRes.rows?.[0] as
-      | { id?: unknown; chapter_num?: unknown; name?: unknown; description?: unknown; background?: unknown; min_realm?: unknown }
-      | undefined;
-    if (c?.id) {
+    const chapter = getEnabledMainQuestChapterById(currentChapterId);
+    if (chapter) {
       currentChapter = {
-        id: asString(c.id),
-        chapterNum: asNumber(c.chapter_num, 0),
-        name: asString(c.name),
-        description: asString(c.description),
-        background: asString(c.background),
-        minRealm: asString(c.min_realm) || '凡人',
-        isCompleted: completedChapters.includes(asString(c.id)),
+        id: chapter.id,
+        chapterNum: asNumber(chapter.chapter_num, 0),
+        name: asString(chapter.name),
+        description: asString(chapter.description),
+        background: asString(chapter.background),
+        minRealm: asString(chapter.min_realm) || '凡人',
+        isCompleted: completedChapters.includes(chapter.id),
       };
     }
   }
@@ -405,26 +436,11 @@ export const getMainQuestProgress = async (characterId: number): Promise<MainQue
   let currentSection: SectionDto | null = null;
   const currentSectionId = asString(progress.current_section_id);
   if (currentSectionId) {
-    const sectionRes = await query(`SELECT * FROM main_quest_section WHERE id = $1 AND enabled = true`, [currentSectionId]);
-    const s = sectionRes.rows?.[0] as
-      | {
-          id?: unknown;
-          chapter_id?: unknown;
-          section_num?: unknown;
-          name?: unknown;
-          description?: unknown;
-          brief?: unknown;
-          npc_id?: unknown;
-          map_id?: unknown;
-          room_id?: unknown;
-          objectives?: unknown;
-          rewards?: unknown;
-          is_chapter_final?: unknown;
-        }
-      | undefined;
-
-    if (s?.id) {
-      const objectivesRaw = asArray<{ id?: unknown; type?: unknown; text?: unknown; target?: unknown; params?: unknown }>(s.objectives);
+    const section = getEnabledMainQuestSectionById(currentSectionId);
+    if (section) {
+      const objectivesRaw = asArray<{ id?: unknown; type?: unknown; text?: unknown; target?: unknown; params?: unknown }>(
+        section.objectives,
+      );
       const progressData = asObject(progress.objectives_progress);
       const objectives: SectionObjectiveDto[] = objectivesRaw.map((o) => {
         const id = asString(o.id);
@@ -439,9 +455,9 @@ export const getMainQuestProgress = async (characterId: number): Promise<MainQue
       });
 
       const status = (asString(progress.section_status) as SectionStatus) || 'not_started';
-      const mapId = asString(s.map_id) || null;
-      const npcId = asString(s.npc_id) || null;
-      const baseRoomId = asString(s.room_id) || null;
+      const mapId = asString(section.map_id) || null;
+      const npcId = asString(section.npc_id) || null;
+      const baseRoomId = asString(section.room_id) || null;
       const effectiveRoomId = await resolveCurrentSectionRoomId({
         status,
         mapId,
@@ -451,19 +467,19 @@ export const getMainQuestProgress = async (characterId: number): Promise<MainQue
       });
 
       currentSection = {
-        id: asString(s.id),
-        chapterId: asString(s.chapter_id),
-        sectionNum: asNumber(s.section_num, 0),
-        name: asString(s.name),
-        description: asString(s.description),
-        brief: asString(s.brief),
+        id: section.id,
+        chapterId: asString(section.chapter_id),
+        sectionNum: asNumber(section.section_num, 0),
+        name: asString(section.name),
+        description: asString(section.description),
+        brief: asString(section.brief),
         npcId,
         mapId,
         roomId: effectiveRoomId,
         status,
         objectives,
-        rewards: await decorateSectionRewards({ query }, asObject(s.rewards)),
-        isChapterFinal: s.is_chapter_final === true,
+        rewards: await decorateSectionRewards({ query }, asObject(section.rewards)),
+        isChapterFinal: section.is_chapter_final === true,
       };
     }
   }
@@ -500,10 +516,7 @@ export const startDialogue = async (
 
   let targetDialogueId = typeof dialogueId === 'string' && dialogueId.trim() ? dialogueId.trim() : '';
   if (!targetDialogueId && progress.current_section_id) {
-    const sectionRes = await query(`SELECT dialogue_id, dialogue_complete_id FROM main_quest_section WHERE id = $1`, [
-      progress.current_section_id,
-    ]);
-    const section = sectionRes.rows?.[0] as { dialogue_id?: unknown; dialogue_complete_id?: unknown } | undefined;
+    const section = getEnabledMainQuestSectionById(asString(progress.current_section_id));
     if (section) {
       const status = asString(progress.section_status);
       if (status === 'turnin' || status === 'completed') {
@@ -568,10 +581,7 @@ export const advanceDialogue = async (
         return { success: false, message: '没有进行中的对话' };
       }
 
-      const sectionRes = await client.query(`SELECT dialogue_id, dialogue_complete_id FROM main_quest_section WHERE id = $1`, [
-        sectionId,
-      ]);
-      const section = sectionRes.rows?.[0] as { dialogue_id?: unknown; dialogue_complete_id?: unknown } | undefined;
+      const section = getEnabledMainQuestSectionById(sectionId);
       const startDialogueId =
         sectionStatus === 'turnin' || sectionStatus === 'completed'
           ? asString(section?.dialogue_complete_id) || asString(section?.dialogue_id)
@@ -634,8 +644,8 @@ export const advanceDialogue = async (
 
       let newSectionStatus: SectionStatus = 'dialogue';
       if (sectionId) {
-        const sectionRes = await client.query(`SELECT objectives FROM main_quest_section WHERE id = $1`, [sectionId]);
-        const objectives = asArray(sectionRes.rows?.[0]?.objectives);
+        const section = getEnabledMainQuestSectionById(sectionId);
+        const objectives = asArray(section?.objectives);
         newSectionStatus = objectives.length > 0 ? 'objectives' : 'turnin';
       } else {
         newSectionStatus = 'turnin';
@@ -829,13 +839,13 @@ export const updateSectionProgress = async (
       return { success: false, message: '任务节不存在', updated: false, completed: false };
     }
 
-    const sectionRes = await client.query(`SELECT objectives FROM main_quest_section WHERE id = $1`, [sectionId]);
-    if (!sectionRes.rows?.[0]) {
+    const section = getEnabledMainQuestSectionById(sectionId);
+    if (!section) {
       await client.query('ROLLBACK');
       return { success: false, message: '任务节不存在', updated: false, completed: false };
     }
 
-    const objectives = asArray<{ id?: unknown; type?: unknown; target?: unknown; params?: unknown }>(sectionRes.rows[0].objectives);
+    const objectives = asArray<{ id?: unknown; type?: unknown; target?: unknown; params?: unknown }>(section.objectives);
     const progressData = asObject(progress.objectives_progress);
     let updated = false;
 
@@ -1021,12 +1031,9 @@ const grantSectionRewardsTx = async (
     const itemDefId = asString(item.item_def_id);
     const quantity = Math.max(1, Math.floor(asNumber(item.quantity, 1)));
     if (!itemDefId || quantity <= 0) continue;
-    const itemDefRes = await client.query(
-      `SELECT name, icon FROM item_def WHERE id = $1 AND enabled = true`,
-      [itemDefId],
-    );
-    const itemName = asString(itemDefRes.rows?.[0]?.name);
-    const itemIcon = asString(itemDefRes.rows?.[0]?.icon);
+    const itemDef = getItemDefinitionById(itemDefId);
+    const itemName = asString(itemDef?.name);
+    const itemIcon = asString(itemDef?.icon);
     const result = await createItem(userId, characterId, itemDefId, quantity, {
       dbClient: client,
       location: 'bag',
@@ -1118,18 +1125,12 @@ export const completeCurrentSection = async (
       return { success: false, message: '任务节不存在' };
     }
 
-    const sectionRes = await client.query(
-      `SELECT id, chapter_id, rewards, is_chapter_final
-       FROM main_quest_section
-       WHERE id = $1`,
-      [currentSectionId],
-    );
-    if (!sectionRes.rows?.[0]) {
+    const section = getEnabledMainQuestSectionById(currentSectionId);
+    if (!section) {
       await client.query('ROLLBACK');
       return { success: false, message: '任务节不存在' };
     }
 
-    const section = sectionRes.rows[0] as { id?: unknown; chapter_id?: unknown; rewards?: unknown; is_chapter_final?: unknown };
     const sectionId = asString(section.id);
     const chapterId = asString(section.chapter_id);
     if (!sectionId || !chapterId) {
@@ -1150,8 +1151,7 @@ export const completeCurrentSection = async (
       chapterCompleted = true;
       if (!completedChapters.includes(chapterId)) completedChapters.push(chapterId);
 
-      const chapterRes = await client.query(`SELECT chapter_rewards FROM main_quest_chapter WHERE id = $1`, [chapterId]);
-      const chapterRewards = asObject(chapterRes.rows?.[0]?.chapter_rewards);
+      const chapterRewards = asObject(getMainQuestChapterById(chapterId)?.chapter_rewards);
       const chapterRewardResults = await grantSectionRewardsTx(client, uid, cid, chapterRewards);
       rewardResults.push(
         ...chapterRewardResults.map((r) => {
@@ -1162,21 +1162,14 @@ export const completeCurrentSection = async (
         }),
       );
 
-      const nextChapterRes = await client.query(
-        `SELECT s.*
-         FROM main_quest_section s
-         JOIN main_quest_chapter c ON c.id = s.chapter_id
-         WHERE c.chapter_num > (SELECT chapter_num FROM main_quest_chapter WHERE id = $1)
-           AND s.enabled = true AND c.enabled = true
-         ORDER BY c.chapter_num ASC, s.section_num ASC
-         LIMIT 1`,
-        [chapterId],
+      const currentChapterNum = asNumber(getMainQuestChapterById(chapterId)?.chapter_num, 0);
+      const nextSection = getEnabledMainQuestSectionsSorted().find(
+        (entry) => asNumber(getMainQuestChapterById(entry.chapter_id)?.chapter_num, 0) > currentChapterNum,
       );
 
-      if (nextChapterRes.rows?.[0]) {
-        const next = nextChapterRes.rows[0] as { id?: unknown; chapter_id?: unknown };
-        const nextId = asString(next.id);
-        const nextChapterId = asString(next.chapter_id);
+      if (nextSection) {
+        const nextId = asString(nextSection.id);
+        const nextChapterId = asString(nextSection.chapter_id);
         if (nextId && nextChapterId) {
           await client.query(
             `UPDATE character_main_quest_progress
@@ -1204,32 +1197,13 @@ export const completeCurrentSection = async (
         );
       }
     } else {
-      const nextSectionRes = await client.query(
-        `SELECT *
-         FROM main_quest_section
-         WHERE chapter_id = $1
-           AND section_num > (SELECT section_num FROM main_quest_section WHERE id = $2)
-           AND enabled = true
-         ORDER BY section_num ASC
-         LIMIT 1`,
-        [chapterId, sectionId],
+      const currentSectionNum = asNumber(section.section_num, 0);
+      const nextSection = getEnabledMainQuestSectionsSorted().find(
+        (entry) => entry.chapter_id === chapterId && asNumber(entry.section_num, 0) > currentSectionNum,
       );
 
-      if (nextSectionRes.rows?.[0]) {
-        const next = nextSectionRes.rows[0] as {
-          id?: unknown;
-          chapter_id?: unknown;
-          section_num?: unknown;
-          name?: unknown;
-          description?: unknown;
-          brief?: unknown;
-          npc_id?: unknown;
-          map_id?: unknown;
-          room_id?: unknown;
-          rewards?: unknown;
-          is_chapter_final?: unknown;
-        };
-        const nextId = asString(next.id);
+      if (nextSection) {
+        const nextId = asString(nextSection.id);
         if (nextId) {
           await client.query(
             `UPDATE character_main_quest_progress
@@ -1245,18 +1219,18 @@ export const completeCurrentSection = async (
 
           nextSectionDto = {
             id: nextId,
-            chapterId: asString(next.chapter_id),
-            sectionNum: asNumber(next.section_num, 0),
-            name: asString(next.name),
-            description: asString(next.description),
-            brief: asString(next.brief),
-            npcId: asString(next.npc_id) || null,
-            mapId: asString(next.map_id) || null,
-            roomId: asString(next.room_id) || null,
+            chapterId: asString(nextSection.chapter_id),
+            sectionNum: asNumber(nextSection.section_num, 0),
+            name: asString(nextSection.name),
+            description: asString(nextSection.description),
+            brief: asString(nextSection.brief),
+            npcId: asString(nextSection.npc_id) || null,
+            mapId: asString(nextSection.map_id) || null,
+            roomId: asString(nextSection.room_id) || null,
             status: 'not_started',
             objectives: [],
-            rewards: await decorateSectionRewards(client, asObject(next.rewards)),
-            isChapterFinal: next.is_chapter_final === true,
+            rewards: await decorateSectionRewards(client, asObject(nextSection.rewards)),
+            isChapterFinal: nextSection.is_chapter_final === true,
           };
         }
       }
@@ -1280,38 +1254,43 @@ export const getChapterList = async (characterId: number): Promise<{ chapters: C
   const progressRes = await query(`SELECT completed_chapters FROM character_main_quest_progress WHERE character_id = $1`, [cid]);
   const completedChapters = asArray<string>((progressRes.rows?.[0] as { completed_chapters?: unknown } | undefined)?.completed_chapters);
 
-  const res = await query(
-    `
-      SELECT 
-        c.*,
-        COALESCE(s.section_count, 0) AS section_count
-      FROM main_quest_chapter c
-      LEFT JOIN (
-        SELECT chapter_id, COUNT(*)::int AS section_count
-        FROM main_quest_section
-        WHERE enabled = true
-        GROUP BY chapter_id
-      ) s ON s.chapter_id = c.id
-      WHERE c.enabled = true
-      ORDER BY c.chapter_num ASC, s.section_count DESC, c.sort_weight DESC, c.created_at DESC
-    `,
-  );
+  const enabledSections = getMainQuestSectionDefinitions().filter((section) => isMainQuestSectionEnabled(section));
+  const sectionCountByChapterId = new Map<string, number>();
+  for (const section of enabledSections) {
+    sectionCountByChapterId.set(section.chapter_id, (sectionCountByChapterId.get(section.chapter_id) ?? 0) + 1);
+  }
+
+  const chaptersSorted = getMainQuestChapterDefinitions()
+    .filter((chapter) => chapter.enabled !== false)
+    .map((chapter) => ({
+      chapter,
+      sectionCount: sectionCountByChapterId.get(chapter.id) ?? 0,
+    }))
+    .sort((left, right) => {
+      const chapterNumDiff = asNumber(left.chapter.chapter_num, 0) - asNumber(right.chapter.chapter_num, 0);
+      if (chapterNumDiff !== 0) return chapterNumDiff;
+      const sectionCountDiff = right.sectionCount - left.sectionCount;
+      if (sectionCountDiff !== 0) return sectionCountDiff;
+      const sortWeightDiff = asNumber(right.chapter.sort_weight, 0) - asNumber(left.chapter.sort_weight, 0);
+      if (sortWeightDiff !== 0) return sortWeightDiff;
+      return asString(left.chapter.id).localeCompare(asString(right.chapter.id));
+    });
 
   const seenChapterNums = new Set<number>();
   const chapters: ChapterDto[] = [];
-  for (const c of res.rows ?? []) {
-    const id = asString((c as { id?: unknown }).id);
-    const chapterNum = asNumber((c as { chapter_num?: unknown }).chapter_num, 0);
+  for (const { chapter } of chaptersSorted) {
+    const id = asString(chapter.id);
+    const chapterNum = asNumber(chapter.chapter_num, 0);
     if (!id || chapterNum <= 0) continue;
     if (seenChapterNums.has(chapterNum)) continue;
     seenChapterNums.add(chapterNum);
     chapters.push({
       id,
       chapterNum,
-      name: asString((c as { name?: unknown }).name),
-      description: asString((c as { description?: unknown }).description),
-      background: asString((c as { background?: unknown }).background),
-      minRealm: asString((c as { min_realm?: unknown }).min_realm) || '凡人',
+      name: asString(chapter.name),
+      description: asString(chapter.description),
+      background: asString(chapter.background),
+      minRealm: asString(chapter.min_realm) || '凡人',
       isCompleted: completedChapters.includes(id),
     });
   }
@@ -1341,9 +1320,11 @@ export const getSectionList = async (characterId: number, chapterId: string): Pr
   const currentStatus = (asString(progress?.section_status) as SectionStatus) || 'not_started';
   const currentProgress = asObject(progress?.objectives_progress);
 
-  const res = await query(`SELECT * FROM main_quest_section WHERE chapter_id = $1 AND enabled = true ORDER BY section_num ASC`, [chapId]);
-  const sections: SectionDto[] = (res.rows ?? []).map((s) => {
-    const row = s as Record<string, unknown>;
+  const sectionDefs = getMainQuestSectionDefinitions()
+    .filter((section) => section.chapter_id === chapId)
+    .filter((section) => isMainQuestSectionEnabled(section))
+    .sort((left, right) => asNumber(left.section_num, 0) - asNumber(right.section_num, 0));
+  const sections: SectionDto[] = sectionDefs.map((row) => {
     const id = asString(row.id);
     const isCurrentSection = id === currentSectionId;
     const isCompleted = completedSections.includes(id);
@@ -1352,7 +1333,9 @@ export const getSectionList = async (characterId: number, chapterId: string): Pr
     if (isCompleted) status = 'completed';
     else if (isCurrentSection) status = currentStatus;
 
-    const objectivesRaw = asArray<{ id?: unknown; type?: unknown; text?: unknown; target?: unknown; params?: unknown }>(row.objectives);
+    const objectivesRaw = asArray<{ id?: unknown; type?: unknown; text?: unknown; target?: unknown; params?: unknown }>(
+      row.objectives,
+    );
     const objectives: SectionObjectiveDto[] = objectivesRaw.map((o) => {
       const oid = asString(o.id);
       const target = asNumber(o.target, 1);

@@ -17,7 +17,7 @@ import path from 'path';
 import { query } from '../config/database.js';
 import { redis } from '../config/redis.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
-import { getItemSetDefinitions, getTechniqueLayerDefinitions, getTitleDefinitions } from './staticConfigLoader.js';
+import { getItemDefinitionsByIds, getItemSetDefinitions, getTechniqueLayerDefinitions, getTitleDefinitions } from './staticConfigLoader.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -591,25 +591,37 @@ const loadEquippedAttrBonuses = async (characterId: number): Promise<CharacterCo
         ii.strengthen_level,
         ii.refine_level,
         ii.socketed_gems,
-        id.base_attrs,
-        id.quality_rank AS def_quality_rank,
-        COALESCE(ii.quality_rank, id.quality_rank) AS resolved_quality_rank,
-        id.set_id
+        ii.item_def_id,
+        ii.quality_rank
       FROM item_instance ii
-      JOIN item_def id ON id.id = ii.item_def_id
       WHERE ii.owner_character_id = $1
         AND ii.location = 'equipped'
-        AND id.category = 'equipment'
     `,
     [characterId],
   );
 
+  const itemDefIds = Array.from(
+    new Set(
+      (equippedResult.rows as Array<Record<string, unknown>>)
+        .map((row) => String(row.item_def_id || '').trim())
+        .filter((itemDefId) => itemDefId.length > 0),
+    ),
+  );
+  const defs = getItemDefinitionsByIds(itemDefIds);
   const setCountMap = new Map<string, number>();
   for (const row of equippedResult.rows as Array<Record<string, unknown>>) {
+    const itemDefId = String(row.item_def_id || '').trim();
+    if (!itemDefId) continue;
+    const def = defs.get(itemDefId);
+    if (!def || def.category !== 'equipment') continue;
+    const defQualityRank = Number.isFinite(Number(def.quality_rank)) ? Number(def.quality_rank) : 1;
+    const resolvedQualityRank = Number.isFinite(Number(row.quality_rank))
+      ? Number(row.quality_rank)
+      : defQualityRank;
     const displayBaseAttrs = buildEquipmentDisplayBaseAttrs({
-      baseAttrsRaw: row.base_attrs,
-      defQualityRankRaw: row.def_quality_rank,
-      resolvedQualityRankRaw: row.resolved_quality_rank,
+      baseAttrsRaw: def.base_attrs ?? null,
+      defQualityRankRaw: defQualityRank,
+      resolvedQualityRankRaw: resolvedQualityRank,
       strengthenLevelRaw: row.strengthen_level,
       refineLevelRaw: row.refine_level,
       socketedGemsRaw: row.socketed_gems,
@@ -627,7 +639,7 @@ const loadEquippedAttrBonuses = async (characterId: number): Promise<CharacterCo
       applyAttrDelta(stats, attrKey, affix.value);
     }
 
-    const setId = String(row.set_id || '').trim();
+    const setId = String(def.set_id || '').trim();
     if (setId) setCountMap.set(setId, (setCountMap.get(setId) || 0) + 1);
   }
 

@@ -6,6 +6,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { query } from '../config/database.js';
+import {
+  getDialogueDefinitions,
+  getItemRecipeDefinitions,
+  getMainQuestChapterDefinitions,
+  getMainQuestSectionDefinitions,
+  getTaskDefinitions,
+} from './staticConfigLoader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1972,11 +1979,11 @@ export const loadAllSeeds = async (): Promise<void> => {
 
   // 1. 加载物品定义
   const itemCount = await loadItemDefSeeds();
-  console.log(`  物品定义: ${itemCount} 条`);
+  console.log(`  物品定义: ${itemCount} 条（暂保留入库）`);
 
   // 2. 加载装备定义
   const equipCount = await loadEquipmentDefSeeds();
-  console.log(`  装备定义: ${equipCount} 条`);
+  console.log(`  装备定义: ${equipCount} 条（暂保留入库）`);
 
   // 3. 词条池改为静态 JSON 直读，不再写入数据库
   console.log('  词条池: 使用静态JSON加载（跳过入库）');
@@ -1984,9 +1991,9 @@ export const loadAllSeeds = async (): Promise<void> => {
   // 4. 套装定义改为静态 JSON 直读，不再写入数据库
   console.log('  套装定义: 使用静态JSON加载（跳过入库）');
 
-  // 5. 加载配方
-  const recipeCount = await loadRecipeSeeds();
-  console.log(`  配方: ${recipeCount} 条`);
+  // 5. 配方改为静态 JSON 直读，不再写入数据库
+  const recipeCount = getItemRecipeDefinitions().filter((entry) => entry.enabled !== false).length;
+  console.log(`  配方: ${recipeCount} 条（静态JSON，跳过入库）`);
 
   // 6. NPC/对话树/怪物定义改为静态 JSON 直读，不再写入数据库
   console.log('  NPC定义: 使用静态JSON加载（跳过入库）');
@@ -2000,9 +2007,9 @@ export const loadAllSeeds = async (): Promise<void> => {
   console.log('  刷新规则: 使用静态JSON加载（跳过入库）');
   console.log('  地图定义: 使用静态JSON加载（跳过入库）');
 
-  // 11. 加载任务定义
-  const taskCount = await loadTaskDefSeeds();
-  console.log(`  任务定义: ${taskCount} 条`);
+  // 11. 任务定义改为静态 JSON 直读，不再写入数据库
+  const taskCount = getTaskDefinitions().filter((entry) => entry.enabled !== false).length;
+  console.log(`  任务定义: ${taskCount} 条（静态JSON，跳过入库）`);
   console.log('  悬赏定义: 使用静态JSON加载（跳过入库）');
 
   // 11.1 成就系统定义改为静态 JSON 直读，不再写入数据库
@@ -2025,9 +2032,13 @@ export const loadAllSeeds = async (): Promise<void> => {
   // 15. 功法层级改为静态 JSON 直读，不再写入数据库
   console.log('  功法层级: 使用静态JSON加载（跳过入库）');
 
-  // 16. 加载主线任务章节和对话
-  const mainQuestCount = await loadMainQuestSeeds();
-  console.log(`  主线任务: ${mainQuestCount.chapters} 章, ${mainQuestCount.sections} 节（对话${mainQuestCount.dialogues}条使用静态JSON）`);
+  // 16. 主线任务章节/节改为静态 JSON 直读，不再写入数据库
+  const mainQuestChapterCount = getMainQuestChapterDefinitions().filter((entry) => entry.enabled !== false).length;
+  const mainQuestSectionCount = getMainQuestSectionDefinitions().filter((entry) => entry.enabled !== false).length;
+  const mainQuestDialogueCount = getDialogueDefinitions().filter((entry) => entry.enabled !== false).length;
+  console.log(
+    `  主线任务: ${mainQuestChapterCount} 章, ${mainQuestSectionCount} 节（对话${mainQuestDialogueCount}条使用静态JSON）`,
+  );
 
   console.log('✓ 种子数据加载完成');
 };

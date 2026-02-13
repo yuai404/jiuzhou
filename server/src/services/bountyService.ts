@@ -1,6 +1,6 @@
 import { pool } from '../config/database.js';
 import crypto from 'crypto';
-import { getBountyDefinitions } from './staticConfigLoader.js';
+import { getBountyDefinitions, getItemDefinitions, getItemDefinitionsByIds } from './staticConfigLoader.js';
 import { getTaskDefinitionById } from './taskDefinitionService.js';
 
 export type BountySourceType = 'daily' | 'player';
@@ -467,15 +467,12 @@ export const publishBounty = async (
     await client.query('BEGIN');
 
     const itemIds = Array.from(new Set(requiredItems.map((x) => x.itemDefId)));
-    const itemMetaRes = await client.query(
-      `SELECT id, name FROM item_def WHERE enabled = true AND id = ANY($1::varchar[])`,
-      [itemIds],
-    );
     const nameById = new Map<string, string>();
-    for (const row of itemMetaRes.rows ?? []) {
-      const id = asNonEmptyString(row?.id);
-      if (!id) continue;
-      const name = asNonEmptyString(row?.name) ?? id;
+    const defs = getItemDefinitionsByIds(itemIds);
+    for (const id of itemIds) {
+      const def = defs.get(id);
+      if (!def || def.enabled === false) continue;
+      const name = asNonEmptyString(def.name) ?? id;
       nameById.set(id, name);
     }
     if (nameById.size !== itemIds.length) {
@@ -618,24 +615,25 @@ export const searchItemDefsForBounty = async (
   const q = asNonEmptyString(keyword) ?? '';
   const take = Math.max(1, Math.min(50, Math.trunc(limit)));
   if (!q) return { success: true, data: { items: [] } };
-
-  const res = await pool.query(
-    `
-      SELECT id, name, icon, category
-      FROM item_def
-      WHERE enabled = true AND name ILIKE $1
-      ORDER BY category ASC, quality_rank DESC, id ASC
-      LIMIT $2
-    `,
-    [`%${q}%`, take],
-  );
-
-  const items = (res.rows ?? []).map((r: any) => ({
-    id: asNonEmptyString(r?.id) ?? '',
-    name: String(r?.name ?? ''),
-    icon: typeof r?.icon === 'string' ? r.icon : null,
-    category: typeof r?.category === 'string' ? r.category : null,
-  })).filter((x: any) => x.id);
+  const keywordLower = q.toLowerCase();
+  const items = getItemDefinitions()
+    .filter((entry) => entry.enabled !== false)
+    .filter((entry) => String(entry.name || '').toLowerCase().includes(keywordLower))
+    .sort((left, right) => {
+      const categoryDiff = String(left.category || '').localeCompare(String(right.category || ''));
+      if (categoryDiff !== 0) return categoryDiff;
+      const qualityRankDiff = Number(right.quality_rank ?? 0) - Number(left.quality_rank ?? 0);
+      if (qualityRankDiff !== 0) return qualityRankDiff;
+      return String(left.id || '').localeCompare(String(right.id || ''));
+    })
+    .slice(0, take)
+    .map((entry) => ({
+      id: String(entry.id || ''),
+      name: String(entry.name || ''),
+      icon: typeof entry.icon === 'string' ? entry.icon : null,
+      category: typeof entry.category === 'string' ? entry.category : null,
+    }))
+    .filter((entry) => entry.id);
 
   return { success: true, data: { items } };
 };
@@ -785,4 +783,3 @@ export const submitBountyMaterials = async (
     client.release();
   }
 };
-

@@ -13,6 +13,7 @@ import { query, pool } from '../config/database.js';
 import { createItem } from './itemService.js';
 import { getInventoryInfoWithClient } from './inventoryService.js';
 import { recordCollectItemEvent } from './taskService.js';
+import { getItemDefinitionsByIds } from './staticConfigLoader.js';
 
 // ============================================
 // 类型定义
@@ -75,17 +76,20 @@ const estimateRequiredSlots = async (
   client: { query: (text: string, params?: any[]) => Promise<{ rows: any[] }> },
   items: MailAttachItem[]
 ): Promise<number> => {
+  void client;
   if (!items || items.length === 0) return 0;
 
   const ids = Array.from(new Set(items.map((i) => i.item_def_id)));
-  const defResult = await client.query(
-    'SELECT id, category, stack_max FROM item_def WHERE id = ANY($1)',
-    [ids]
-  );
+  const defs = getItemDefinitionsByIds(ids);
 
   const defMap = new Map<string, { category: string; stack_max: number }>();
-  for (const row of defResult.rows) {
-    defMap.set(row.id, { category: row.category, stack_max: row.stack_max });
+  for (const id of ids) {
+    const def = defs.get(id);
+    if (!def) continue;
+    defMap.set(id, {
+      category: String(def.category || ''),
+      stack_max: Math.max(1, Math.floor(Number(def.stack_max) || 1)),
+    });
   }
 
   let slots = 0;
@@ -261,14 +265,15 @@ export const getMailList = async (
 
     const itemDefMap = new Map<string, { name: string; quality: string }>();
     if (itemDefIds.length > 0) {
-      const defsResult = await query(
-        'SELECT id, name, quality FROM item_def WHERE id = ANY($1)',
-        [itemDefIds]
-      );
-      for (const row of defsResult.rows) {
-        const id = String(row.id || '').trim();
-        const name = String(row.name || '').trim();
-        if (id) itemDefMap.set(id, { name: name || id, quality: String(row.quality || '').trim() });
+      const defs = getItemDefinitionsByIds(itemDefIds);
+      for (const id of itemDefIds) {
+        const def = defs.get(id);
+        if (!def) continue;
+        const name = String(def.name || '').trim();
+        itemDefMap.set(id, {
+          name: name || id,
+          quality: String(def.quality || '').trim(),
+        });
       }
     }
 
@@ -744,4 +749,3 @@ export const getUnreadCount = async (
     return { unreadCount: 0, unclaimedCount: 0 };
   }
 };
-

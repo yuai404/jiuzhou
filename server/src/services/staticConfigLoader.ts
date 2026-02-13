@@ -375,6 +375,143 @@ type TechniqueDefFile = { techniques: TechniqueDefConfig[] };
 type SkillDefFile = { skills: SkillDefConfig[] };
 type TaskDefFile = { tasks: TaskDefConfig[] };
 
+export type ItemDefConfig = {
+  id: string;
+  code?: string;
+  name: string;
+  category: string;
+  sub_category?: string;
+  quality?: string;
+  quality_rank?: number;
+  quality_min?: string;
+  quality_max?: string;
+  rarity?: string;
+  level?: number;
+  stack_max?: number;
+  bind_type?: string;
+  tradeable?: boolean;
+  icon?: string;
+  model?: string;
+  description?: string;
+  long_desc?: string;
+  tags?: string[];
+  use_type?: string;
+  use_cd_round?: number;
+  use_cd_sec?: number;
+  use_limit_daily?: number;
+  use_limit_total?: number;
+  use_req_realm?: string;
+  use_req_level?: number;
+  use_req_attrs?: Record<string, number>;
+  equip_slot?: string;
+  equip_req_realm?: string;
+  equip_req_attrs?: Record<string, number>;
+  battle_skill_ids?: string[];
+  effect_defs?: unknown[];
+  base_attrs?: Record<string, number>;
+  growth_attrs?: Record<string, unknown>;
+  affix_pool_id?: string;
+  affix_count_min?: number;
+  affix_count_max?: number;
+  socket_max?: number;
+  gem_slot_types?: string[];
+  set_id?: string;
+  composed_from?: string[];
+  source_hint?: string[];
+  market_min_price?: number;
+  market_max_price?: number;
+  tax_rate?: number;
+  expire_seconds?: number;
+  unique_type?: string;
+  unique_limit?: number;
+  quest_only?: boolean;
+  droppable?: boolean;
+  destroyable?: boolean;
+  mailable?: boolean;
+  storageable?: boolean;
+  sort_weight?: number;
+  enabled?: boolean;
+};
+
+type ItemDefFile = { items: ItemDefConfig[] };
+
+export type ItemRecipeCostItemConfig = {
+  item_def_id: string;
+  qty: number;
+};
+
+export type ItemRecipeConfig = {
+  id: string;
+  name: string;
+  recipe_type: string;
+  product_item_def_id: string;
+  product_qty: number;
+  product_quality_min?: string;
+  product_quality_max?: string;
+  cost_silver?: number;
+  cost_spirit_stones?: number;
+  cost_exp?: number;
+  cost_items?: ItemRecipeCostItemConfig[];
+  req_realm?: string;
+  req_level?: number;
+  req_building?: string;
+  success_rate?: number;
+  fail_return_rate?: number;
+  enabled?: boolean;
+};
+
+type ItemRecipeFile = {
+  recipes: ItemRecipeConfig[];
+};
+
+export type MainQuestChapterConfig = {
+  id: string;
+  chapter_num: number;
+  name: string;
+  description?: string;
+  background?: string;
+  min_realm?: string;
+  chapter_rewards?: Record<string, unknown>;
+  unlock_features?: string[];
+  sort_weight?: number;
+  enabled?: boolean;
+};
+
+export type MainQuestSectionObjectiveConfig = {
+  id: string;
+  type: string;
+  text: string;
+  target: number;
+  params?: Record<string, unknown>;
+};
+
+export type MainQuestSectionConfig = {
+  id: string;
+  chapter_id: string;
+  section_num: number;
+  name: string;
+  description?: string;
+  brief?: string;
+  npc_id?: string;
+  map_id?: string;
+  room_id?: string;
+  min_realm?: string;
+  dialogue_id?: string;
+  dialogue_complete_id?: string;
+  objectives?: MainQuestSectionObjectiveConfig[];
+  rewards?: Record<string, unknown>;
+  auto_accept?: boolean;
+  auto_complete?: boolean;
+  is_chapter_final?: boolean;
+  sort_weight?: number;
+  enabled?: boolean;
+};
+
+type MainQuestFile = {
+  chapters?: MainQuestChapterConfig[];
+  sections?: MainQuestSectionConfig[];
+};
+
 export type DropPoolEntryConfig = {
   item_def_id: string;
   chance?: number;
@@ -508,6 +645,10 @@ type TechniqueLayerFile = {
 
 let battlePassCache: BattlePassStaticConfig | null | undefined;
 let monthCardCache: MonthCardDef[] | null | undefined;
+let itemDefCache: ItemDefConfig[] | null | undefined;
+let itemDefByIdCache: Map<string, ItemDefConfig> | null | undefined;
+let itemRecipeCache: ItemRecipeConfig[] | null | undefined;
+let itemRecipeByIdCache: Map<string, ItemRecipeConfig> | null | undefined;
 let achievementDefCache: AchievementDefConfig[] | null | undefined;
 let titleDefCache: TitleDefConfig[] | null | undefined;
 let achievementPointsRewardCache: AchievementPointsRewardConfig[] | null | undefined;
@@ -526,6 +667,174 @@ let dropPoolDefCache: DropPoolDefConfig[] | null | undefined;
 let affixPoolDefCache: AffixPoolDefConfig[] | null | undefined;
 let itemSetDefCache: ItemSetDefConfig[] | null | undefined;
 let techniqueLayerCache: TechniqueLayerConfig[] | null | undefined;
+let mainQuestChapterCache: MainQuestChapterConfig[] | null | undefined;
+let mainQuestSectionCache: MainQuestSectionConfig[] | null | undefined;
+let mainQuestChapterByIdCache: Map<string, MainQuestChapterConfig> | null | undefined;
+let mainQuestSectionByIdCache: Map<string, MainQuestSectionConfig> | null | undefined;
+
+const ensureItemDefinitionSnapshot = (): { list: ItemDefConfig[]; byId: Map<string, ItemDefConfig> } => {
+  if (itemDefCache !== undefined && itemDefByIdCache !== undefined) {
+    return {
+      list: itemDefCache ?? [],
+      byId: itemDefByIdCache ?? new Map<string, ItemDefConfig>(),
+    };
+  }
+
+  const mergedMap = new Map<string, ItemDefConfig>();
+  const files: string[] = ['item_def.json', 'gem_def.json', 'equipment_def.json'];
+  for (const filename of files) {
+    const file = readJsonFile<ItemDefFile>(filename);
+    const items = Array.isArray(file?.items) ? file.items : [];
+    for (const entry of items) {
+      const id = String(entry?.id ?? '').trim();
+      if (!id) continue;
+      mergedMap.set(id, {
+        ...entry,
+        id,
+        enabled: entry.enabled !== false,
+      });
+    }
+  }
+
+  itemDefCache = Array.from(mergedMap.values());
+  itemDefByIdCache = mergedMap;
+  return { list: itemDefCache, byId: itemDefByIdCache };
+};
+
+const ensureItemRecipeSnapshot = (): { list: ItemRecipeConfig[]; byId: Map<string, ItemRecipeConfig> } => {
+  if (itemRecipeCache !== undefined && itemRecipeByIdCache !== undefined) {
+    return {
+      list: itemRecipeCache ?? [],
+      byId: itemRecipeByIdCache ?? new Map<string, ItemRecipeConfig>(),
+    };
+  }
+
+  const mergedMap = new Map<string, ItemRecipeConfig>();
+  const files: string[] = ['item_recipe.json', 'gem_synthesis_recipe.json'];
+  for (const filename of files) {
+    const file = readJsonFile<ItemRecipeFile>(filename);
+    const recipes = Array.isArray(file?.recipes) ? file.recipes : [];
+    for (const entry of recipes) {
+      const id = String(entry?.id ?? '').trim();
+      if (!id) continue;
+      mergedMap.set(id, {
+        ...entry,
+        id,
+        enabled: entry.enabled !== false,
+      });
+    }
+  }
+
+  itemRecipeCache = Array.from(mergedMap.values());
+  itemRecipeByIdCache = mergedMap;
+  return { list: itemRecipeCache, byId: itemRecipeByIdCache };
+};
+
+const ensureMainQuestSnapshot = (): {
+  chapters: MainQuestChapterConfig[];
+  sections: MainQuestSectionConfig[];
+  chapterById: Map<string, MainQuestChapterConfig>;
+  sectionById: Map<string, MainQuestSectionConfig>;
+} => {
+  if (
+    mainQuestChapterCache !== undefined &&
+    mainQuestSectionCache !== undefined &&
+    mainQuestChapterByIdCache !== undefined &&
+    mainQuestSectionByIdCache !== undefined
+  ) {
+    return {
+      chapters: mainQuestChapterCache ?? [],
+      sections: mainQuestSectionCache ?? [],
+      chapterById: mainQuestChapterByIdCache ?? new Map<string, MainQuestChapterConfig>(),
+      sectionById: mainQuestSectionByIdCache ?? new Map<string, MainQuestSectionConfig>(),
+    };
+  }
+
+  const chapterById = new Map<string, MainQuestChapterConfig>();
+  const sectionById = new Map<string, MainQuestSectionConfig>();
+  const files = fs.existsSync(SEEDS_DIR)
+    ? fs
+        .readdirSync(SEEDS_DIR)
+        .filter((filename) => /^main_quest_chapter\d+\.json$/i.test(filename))
+        .sort((left, right) => left.localeCompare(right))
+    : [];
+
+  for (const filename of files) {
+    const file = readJsonFile<MainQuestFile>(filename);
+    const chapters = Array.isArray(file?.chapters) ? file.chapters : [];
+    const sections = Array.isArray(file?.sections) ? file.sections : [];
+
+    for (const chapter of chapters) {
+      const id = String(chapter?.id ?? '').trim();
+      if (!id) continue;
+      const chapterNum = Number(chapter?.chapter_num);
+      chapterById.set(id, {
+        ...chapter,
+        id,
+        chapter_num: Number.isFinite(chapterNum) ? Math.max(0, Math.floor(chapterNum)) : 0,
+        enabled: chapter.enabled !== false,
+      });
+    }
+
+    for (const section of sections) {
+      const id = String(section?.id ?? '').trim();
+      const chapterId = String(section?.chapter_id ?? '').trim();
+      if (!id || !chapterId) continue;
+      const sectionNum = Number(section?.section_num);
+      sectionById.set(id, {
+        ...section,
+        id,
+        chapter_id: chapterId,
+        section_num: Number.isFinite(sectionNum) ? Math.max(0, Math.floor(sectionNum)) : 0,
+        enabled: section.enabled !== false,
+      });
+    }
+  }
+
+  const enabledSectionCountByChapterId = new Map<string, number>();
+  for (const section of sectionById.values()) {
+    if (section.enabled === false) continue;
+    enabledSectionCountByChapterId.set(
+      section.chapter_id,
+      (enabledSectionCountByChapterId.get(section.chapter_id) ?? 0) + 1,
+    );
+  }
+
+  const maxEnabledSectionCountByChapterNum = new Map<number, number>();
+  for (const chapter of chapterById.values()) {
+    if (chapter.enabled === false) continue;
+    const chapterNum = Number(chapter.chapter_num);
+    if (!Number.isFinite(chapterNum) || chapterNum <= 0) continue;
+    const count = enabledSectionCountByChapterId.get(chapter.id) ?? 0;
+    const previous = maxEnabledSectionCountByChapterNum.get(chapterNum) ?? 0;
+    if (count > previous) maxEnabledSectionCountByChapterNum.set(chapterNum, count);
+  }
+
+  const chapterList = Array.from(chapterById.values()).map((chapter) => {
+    if (chapter.enabled === false) return chapter;
+    const chapterNum = Number(chapter.chapter_num);
+    if (!Number.isFinite(chapterNum) || chapterNum <= 0) return chapter;
+    const enabledCount = enabledSectionCountByChapterId.get(chapter.id) ?? 0;
+    const maxEnabledCount = maxEnabledSectionCountByChapterNum.get(chapterNum) ?? 0;
+    if (maxEnabledCount > 0 && enabledCount < maxEnabledCount) {
+      return { ...chapter, enabled: false };
+    }
+    return chapter;
+  });
+
+  const patchedChapterById = new Map(chapterList.map((chapter) => [chapter.id, chapter]));
+  mainQuestChapterCache = chapterList;
+  mainQuestSectionCache = Array.from(sectionById.values());
+  mainQuestChapterByIdCache = patchedChapterById;
+  mainQuestSectionByIdCache = sectionById;
+
+  return {
+    chapters: mainQuestChapterCache,
+    sections: mainQuestSectionCache,
+    chapterById: mainQuestChapterByIdCache,
+    sectionById: mainQuestSectionByIdCache,
+  };
+};
 
 export const getBattlePassStaticConfig = (): BattlePassStaticConfig | null => {
   if (battlePassCache !== undefined) return battlePassCache;
@@ -577,6 +886,70 @@ export const getMonthCardDefinitions = (): MonthCardDef[] => {
   const file = readJsonFile<MonthCardFile>('month_card.json');
   monthCardCache = Array.isArray(file?.month_cards) ? file.month_cards : [];
   return monthCardCache;
+};
+
+export const getItemDefinitions = (): ItemDefConfig[] => {
+  return ensureItemDefinitionSnapshot().list;
+};
+
+export const getEnabledItemDefinitions = (): ItemDefConfig[] => {
+  return ensureItemDefinitionSnapshot().list.filter((entry) => entry.enabled !== false);
+};
+
+export const getItemDefinitionById = (itemDefId: string): ItemDefConfig | null => {
+  const id = String(itemDefId || '').trim();
+  if (!id) return null;
+  return ensureItemDefinitionSnapshot().byId.get(id) ?? null;
+};
+
+export const getItemDefinitionsByIds = (itemDefIds: string[]): Map<string, ItemDefConfig> => {
+  const ids = Array.from(new Set(itemDefIds.map((entry) => String(entry || '').trim()).filter((entry) => entry.length > 0)));
+  const map = new Map<string, ItemDefConfig>();
+  if (ids.length === 0) return map;
+
+  const byId = ensureItemDefinitionSnapshot().byId;
+  for (const id of ids) {
+    const def = byId.get(id);
+    if (def) map.set(id, def);
+  }
+  return map;
+};
+
+export const getItemRecipeDefinitions = (): ItemRecipeConfig[] => {
+  return ensureItemRecipeSnapshot().list;
+};
+
+export const getItemRecipeById = (recipeId: string): ItemRecipeConfig | null => {
+  const id = String(recipeId || '').trim();
+  if (!id) return null;
+  return ensureItemRecipeSnapshot().byId.get(id) ?? null;
+};
+
+export const getItemRecipeDefinitionsByType = (recipeType?: string): ItemRecipeConfig[] => {
+  const type = String(recipeType || '').trim();
+  const list = ensureItemRecipeSnapshot().list.filter((entry) => entry.enabled !== false);
+  if (!type) return list;
+  return list.filter((entry) => String(entry.recipe_type || '').trim() === type);
+};
+
+export const getMainQuestChapterDefinitions = (): MainQuestChapterConfig[] => {
+  return ensureMainQuestSnapshot().chapters;
+};
+
+export const getMainQuestSectionDefinitions = (): MainQuestSectionConfig[] => {
+  return ensureMainQuestSnapshot().sections;
+};
+
+export const getMainQuestChapterById = (chapterId: string): MainQuestChapterConfig | null => {
+  const id = String(chapterId || '').trim();
+  if (!id) return null;
+  return ensureMainQuestSnapshot().chapterById.get(id) ?? null;
+};
+
+export const getMainQuestSectionById = (sectionId: string): MainQuestSectionConfig | null => {
+  const id = String(sectionId || '').trim();
+  if (!id) return null;
+  return ensureMainQuestSnapshot().sectionById.get(id) ?? null;
 };
 
 export const getAchievementDefinitions = (): AchievementDefConfig[] => {
