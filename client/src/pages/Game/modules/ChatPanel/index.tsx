@@ -226,19 +226,40 @@ const isPublicChatChannel = (channel: ChatChannel): channel is PublicChatChannel
   return channel === 'world' || channel === 'team' || channel === 'sect' || channel === 'battle' || channel === 'system';
 };
 
+const BATTLE_LOOT_PREFIXES = ['【战利分配】', '【斗法所得】'] as const;
+
+const isBattleLootMessage = (content: string): boolean => {
+  const line = String(content ?? '').trim();
+  if (!line) return false;
+  return BATTLE_LOOT_PREFIXES.some((prefix) => line.startsWith(prefix));
+};
+
+const shouldIncludeInAllChannel = (message: Message & { channel: PublicChatChannel }): boolean => {
+  if (message.channel !== 'battle') return true;
+  return isBattleLootMessage(message.content);
+};
+
 const appendPublicMessage = (
   buckets: MessageBuckets,
   message: Message & { channel: PublicChatChannel },
 ): MessageBuckets => {
-  if (buckets.all.some((msg) => msg.id === message.id)) return buckets;
-
   const channelList = buckets[message.channel];
+  if (channelList.some((msg) => msg.id === message.id)) return buckets;
+
+  const includeInAll = shouldIncludeInAllChannel(message);
+  if (includeInAll && buckets.all.some((msg) => msg.id === message.id)) return buckets;
+
   const nextChannelList = pushWithLimit(channelList, message, MAX_MESSAGES_PER_CHANNEL);
-  return {
+  const nextBuckets = {
     ...buckets,
-    all: pushWithLimit(buckets.all, message, MAX_MESSAGES_ALL),
     [message.channel]: nextChannelList,
   } as MessageBuckets;
+
+  if (!includeInAll) return nextBuckets;
+  return {
+    ...nextBuckets,
+    all: pushWithLimit(buckets.all, message, MAX_MESSAGES_ALL),
+  };
 };
 
 const appendPrivateMessage = (buckets: MessageBuckets, message: Message): MessageBuckets => {
@@ -452,20 +473,25 @@ const ChatPanelBase = forwardRef<ChatPanelHandle, ChatPanelProps>(({ onSelectPla
         };
 
         if (isSelf && msg.clientId) {
+          const includeInAll = shouldIncludeInAllChannel(nextMessage as Message & { channel: PublicChatChannel });
           const channelList = prev[channel];
           const channelResult = replaceMessageById(channelList, msg.clientId, nextMessage);
-          const allResult = replaceMessageById(prev.all, msg.clientId, nextMessage);
+          const allResult = includeInAll
+            ? replaceMessageById(prev.all, msg.clientId, nextMessage)
+            : { replaced: false, list: prev.all };
           if (channelResult.replaced || allResult.replaced) {
             const nextChannelList = channelResult.replaced
               ? channelResult.list
               : channelList.some((item) => item.id === nextMessage.id)
                 ? channelList
                 : pushWithLimit(channelList, nextMessage, MAX_MESSAGES_PER_CHANNEL);
-            const nextAll = allResult.replaced
-              ? allResult.list
-              : prev.all.some((item) => item.id === nextMessage.id)
-                ? prev.all
-                : pushWithLimit(prev.all, nextMessage, MAX_MESSAGES_ALL);
+            const nextAll = !includeInAll
+              ? prev.all
+              : allResult.replaced
+                ? allResult.list
+                : prev.all.some((item) => item.id === nextMessage.id)
+                  ? prev.all
+                  : pushWithLimit(prev.all, nextMessage, MAX_MESSAGES_ALL);
             return {
               ...prev,
               all: nextAll,
