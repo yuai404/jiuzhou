@@ -7,8 +7,19 @@ import type { BuyResult, ShopItem } from './types.js';
 
 const BAG_EXPAND_SHOP_ITEM_ID = 'sect-shop-007';
 const BAG_EXPAND_DAILY_LIMIT = 1;
+const REROLL_SCROLL_SHOP_ITEM_ID = 'sect-shop-008';
+const REROLL_SCROLL_DAILY_LIMIT = 50;
 
 const buildShopLogMarker = (shopItemId: string): string => `[shop_item:${shopItemId}]`;
+const extractShopBuyQtyFromLogContent = (content: string, marker: string): number => {
+  const markerIndex = content.indexOf(marker);
+  if (markerIndex < 0) return 0;
+  const prefix = content.slice(0, markerIndex);
+  const matched = /×\s*(\d+)\s*$/.exec(prefix);
+  const qty = matched ? Number.parseInt(matched[1] ?? '1', 10) : 1;
+  if (!Number.isFinite(qty) || qty <= 0) return 1;
+  return qty;
+};
 
 const SHOP: ShopItem[] = [
   { id: 'sect-shop-001', name: '淬灵石×10', costContribution: 100, itemDefId: 'enhance-001', qty: 10 },
@@ -17,6 +28,14 @@ const SHOP: ShopItem[] = [
   { id: 'sect-shop-004', name: '《纯阳功》×1', costContribution: 2200, itemDefId: 'book-chunyang-gong', qty: 1 },
   { id: 'sect-shop-005', name: '功法残页×12', costContribution: 480, itemDefId: 'mat-gongfa-canye', qty: 12 },
   { id: 'sect-shop-006', name: '灵墨×5', costContribution: 1800, itemDefId: 'mat-lingmo', qty: 5 },
+  {
+    id: REROLL_SCROLL_SHOP_ITEM_ID,
+    name: '洗炼符×1',
+    costContribution: 1000,
+    itemDefId: 'scroll-003',
+    qty: 1,
+    limitDaily: REROLL_SCROLL_DAILY_LIMIT,
+  },
   {
     id: BAG_EXPAND_SHOP_ITEM_ID,
     name: '背包扩容符×1',
@@ -58,6 +77,11 @@ export const buyFromSectShop = async (characterId: number, itemId: string, quant
   const shopItem = SHOP.find((x) => x.id === itemId);
   if (!shopItem) return { success: false, message: '商品不存在' };
   const isBagExpandItem = shopItem.id === BAG_EXPAND_SHOP_ITEM_ID;
+  const dailyLimitRaw = shopItem.limitDaily;
+  const dailyLimit =
+    typeof dailyLimitRaw === 'number' && Number.isInteger(dailyLimitRaw)
+      ? Math.max(0, dailyLimitRaw)
+      : 0;
   if (isBagExpandItem && q !== 1) return { success: false, message: '该商品每次仅可兑换1个' };
 
   const client = await pool.connect();
@@ -80,11 +104,11 @@ export const buyFromSectShop = async (characterId: number, itemId: string, quant
       return { success: false, message: '未加入宗门' };
     }
 
-    if (isBagExpandItem) {
-      const marker = buildShopLogMarker(BAG_EXPAND_SHOP_ITEM_ID);
+    if (dailyLimit > 0) {
+      const marker = buildShopLogMarker(shopItem.id);
       const limitResult = await client.query(
         `
-          SELECT COUNT(*)::int AS count
+          SELECT content
           FROM sect_log
           WHERE sect_id = $1
             AND log_type = 'shop_buy'
@@ -94,10 +118,17 @@ export const buyFromSectShop = async (characterId: number, itemId: string, quant
         `,
         [member.sectId, characterId, `%${marker}%`]
       );
-      const usedToday = toNumber(limitResult.rows[0]?.count);
-      if (usedToday >= BAG_EXPAND_DAILY_LIMIT) {
+      const usedToday = (limitResult.rows as Array<{ content: string | null }>).reduce((sum, row) => {
+        const content = typeof row.content === 'string' ? row.content : '';
+        return sum + extractShopBuyQtyFromLogContent(content, marker);
+      }, 0);
+      if (usedToday + q > dailyLimit) {
         await client.query('ROLLBACK');
-        return { success: false, message: '该商品今日已兑换' };
+        if (dailyLimit <= 1) {
+          return { success: false, message: '该商品今日已兑换' };
+        }
+        const remain = Math.max(0, dailyLimit - usedToday);
+        return { success: false, message: `该商品今日最多兑换${dailyLimit}个（剩余${remain}个）` };
       }
     }
 

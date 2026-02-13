@@ -256,6 +256,12 @@
                     "qty_min": 1,
                     "qty_max": 2,
                     "chance": 0.6
+                  },
+                  {
+                    "item_def_id": "scroll-003",
+                    "qty_min": 1,
+                    "qty_max": 1,
+                    "chance": 0.2
                   }
                 ]
               },
@@ -474,6 +480,12 @@
                     "qty_min": 1,
                     "qty_max": 1,
                     "chance": 0.08
+                  },
+                  {
+                    "item_def_id": "scroll-003",
+                    "qty_min": 1,
+                    "qty_max": 1,
+                    "chance": 0.2
                   }
                 ]
               },
@@ -751,6 +763,12 @@
                     "qty_min": 1,
                     "qty_max": 1,
                     "chance": 0.12
+                  },
+                  {
+                    "item_def_id": "scroll-003",
+                    "qty_min": 1,
+                    "qty_max": 1,
+                    "chance": 0.2
                   }
                 ]
               },

@@ -248,6 +248,12 @@
                     "qty_min": 1,
                     "qty_max": 1,
                     "chance": 0.025
+                  },
+                  {
+                    "item_def_id": "scroll-003",
+                    "qty_min": 1,
+                    "qty_max": 1,
+                    "chance": 0.2
                   }
                 ]
               },
@@ -520,6 +526,12 @@
                     "qty_min": 1,
                     "qty_max": 1,
                     "chance": 0.05
+                  },
+                  {
+                    "item_def_id": "scroll-003",
+                    "qty_min": 1,
+                    "qty_max": 1,
+                    "chance": 0.2
                   }
                 ]
               },
