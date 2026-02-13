@@ -28,6 +28,79 @@ const DEFAULT_AFFIX_COUNT_BY_QUALITY: Record<Quality, { min: number; max: number
   '天': { min: 6, max: 6 },
 };
 
+const EQUIP_REALM_ORDER = [
+  '凡人',
+  '炼精化炁·养气期',
+  '炼精化炁·通脉期',
+  '炼精化炁·凝炁期',
+  '炼炁化神·炼己期',
+  '炼炁化神·采药期',
+  '炼炁化神·结胎期',
+  '炼神返虚·养神期',
+  '炼神返虚·还虚期',
+  '炼神返虚·合道期',
+  '炼虚合道·证道期',
+  '炼虚合道·历劫期',
+  '炼虚合道·成圣期',
+] as const;
+
+type EquipRealm = (typeof EQUIP_REALM_ORDER)[number];
+
+const EQUIP_REALM_MAJOR_TO_FIRST: Record<string, EquipRealm> = {
+  凡人: '凡人',
+  炼精化炁: '炼精化炁·养气期',
+  炼炁化神: '炼炁化神·炼己期',
+  炼神返虚: '炼神返虚·养神期',
+  炼虚合道: '炼虚合道·证道期',
+};
+
+const EQUIP_REALM_SUB_TO_FULL: Record<string, EquipRealm> = {
+  养气期: '炼精化炁·养气期',
+  通脉期: '炼精化炁·通脉期',
+  凝炁期: '炼精化炁·凝炁期',
+  炼己期: '炼炁化神·炼己期',
+  采药期: '炼炁化神·采药期',
+  结胎期: '炼炁化神·结胎期',
+  养神期: '炼神返虚·养神期',
+  还虚期: '炼神返虚·还虚期',
+  合道期: '炼神返虚·合道期',
+  证道期: '炼虚合道·证道期',
+  历劫期: '炼虚合道·历劫期',
+  成圣期: '炼虚合道·成圣期',
+};
+
+const isEquipRealm = (value: string): value is EquipRealm => {
+  return (EQUIP_REALM_ORDER as readonly string[]).includes(value);
+};
+
+const normalizeEquipRealm = (realmRaw?: string | null): EquipRealm => {
+  const raw = typeof realmRaw === 'string' ? realmRaw.trim() : '';
+  if (!raw) return '凡人';
+  if (isEquipRealm(raw)) return raw;
+
+  const mappedMajor = EQUIP_REALM_MAJOR_TO_FIRST[raw];
+  if (mappedMajor) return mappedMajor;
+
+  const mappedSub = EQUIP_REALM_SUB_TO_FULL[raw];
+  if (mappedSub) return mappedSub;
+
+  const split = raw.split('·');
+  if (split.length >= 2) {
+    const full = `${split[0]}·${split[1]}`;
+    if (isEquipRealm(full)) return full;
+    const subMapped = EQUIP_REALM_SUB_TO_FULL[split[1] ?? ''];
+    if (subMapped) return subMapped;
+  }
+
+  return '凡人';
+};
+
+const getEquipRealmRank = (realmRaw?: string | null): number => {
+  const normalized = normalizeEquipRealm(realmRaw);
+  const index = EQUIP_REALM_ORDER.indexOf(normalized);
+  return index >= 0 ? index + 1 : 1;
+};
+
 const coerceQuality = (value: unknown): Quality | null => {
   return QUALITIES.includes(value as Quality) ? (value as Quality) : null;
 };
@@ -132,7 +205,7 @@ export interface EquipmentDef {
 export interface GenerateOptions {
   quality?: Quality;                    // 指定品质（不指定则随机）
   qualityWeights?: Record<Quality, number>; // 品质权重
-  realmRank?: number;                   // 玩家境界等级（影响词条tier）
+  realmRank?: number;                   // 覆盖装备境界等级（影响词条tier）
   identified?: boolean;                 // 是否已鉴定
   bindType?: string;                    // 绑定类型
   obtainedFrom?: string;                // 获取来源
@@ -515,7 +588,10 @@ export const generateEquipment = async (
   if (def.affix_pool_id) {
     const pool = await getAffixPool(def.affix_pool_id);
     if (pool) {
-      const realmRank = options.realmRank || Math.max(baseQualityRank, qualityRank);
+      const explicitRealmRank = Number.isInteger(options.realmRank) && Number(options.realmRank) > 0
+        ? Number(options.realmRank)
+        : null;
+      const realmRank = explicitRealmRank ?? getEquipRealmRank(def.equip_req_realm);
       affixes = rollAffixes(rng, pool, quality, realmRank, attrFactor);
     }
   }
