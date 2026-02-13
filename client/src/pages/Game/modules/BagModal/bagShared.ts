@@ -474,9 +474,7 @@ export const formatEquipmentAffixLine = (affix: EquipmentAffix): string => {
   const label = (key ? attrLabel[key] : undefined) ?? affix.name ?? key ?? "未知";
 
   if (affix.apply_type === "special") {
-    return affix.description
-      ? `${prefix} ${tierText}：${label}（${affix.description}）`
-      : `${prefix} ${tierText}：${label}`;
+    return `${prefix} ${tierText}：${label}`;
   }
 
   if (typeof affix.value === "number") {
@@ -489,9 +487,7 @@ export const formatEquipmentAffixLine = (affix: EquipmentAffix): string => {
     return `${prefix} ${tierText}：${label} ${valText}`;
   }
 
-  return affix.description
-    ? `${prefix} ${tierText}：${label}（${affix.description}）`
-    : `${prefix} ${tierText}：${label}`;
+  return `${prefix} ${tierText}：${label}`;
 };
 
 const toFiniteNumber = (value: unknown): number | null => {

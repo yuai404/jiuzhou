@@ -349,14 +349,12 @@ const renderEquipTooltip = (uiSlot: string, it: InventoryItemDto) => {
                       ? formatSignedPermyriadPercent(a.value)
                       : formatSignedNumber(a.value)
                     : '';
-                const descText = isSpecial ? String(a.description ?? '').trim() : '';
                 return (
                   <div key={`${a.key ?? label}-${idx}`} className="equip-tooltip-affix">
                     <span className="equip-tooltip-affix-k">
                       {prefix} {tierText}：{label}
                     </span>
                     {valueText ? <span className="equip-tooltip-affix-v">{valueText}</span> : null}
-                    {!valueText && descText ? <span className="equip-tooltip-affix-v">（{descText}）</span> : null}
                   </div>
                 );
               })}
