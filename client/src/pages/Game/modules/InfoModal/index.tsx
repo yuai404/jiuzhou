@@ -904,7 +904,6 @@ const InfoModal: React.FC<InfoModalProps> = ({ open, target, onClose, onAction }
     player: [
       { key: 'talk', text: '交流' },
       { key: 'pm', text: '私聊' },
-      { key: 'attack', text: '攻击' },
     ],
   };
 

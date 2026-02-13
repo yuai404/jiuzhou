@@ -1539,6 +1539,12 @@ const Game: FC<GameProps> = ({ onLogout }) => {
 
   const handleInfoAction = (action: string, target: InfoTarget) => {
     if (action === 'attack') {
+      // 当前“攻击”流程只接入了 PVE（怪物）开战接口，玩家目标没有对应开战后端。
+      // 若放行会进入空战斗页（回合=0、无敌方单位），看起来像“卡住”。
+      if (target.type !== 'monster') {
+        messageRef.current.error('当前仅支持攻击怪物目标');
+        return;
+      }
       if (inTeam && !isTeamLeader) {
         messageRef.current.error('组队中只有队长可以发起战斗');
         return;

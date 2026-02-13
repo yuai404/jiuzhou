@@ -178,13 +178,50 @@ const titleEffectOrder: Record<string, number> = Object.fromEntries(
   ].map((key, idx) => [key, idx]),
 );
 
+const titlePercentEffectKeys = new Set<string>([
+  'shuxing_shuzhi',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+]);
+
 const normalizeEffectKey = (key: string): string => {
   return key.trim().replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
 };
 
-const formatEffectValue = (value: number): string | null => {
+const formatSignedNumber = (value: number): string => {
+  const fixed = Math.abs(value - Math.round(value)) < 1e-9 ? value.toFixed(0) : value.toFixed(2);
+  const trimmed = fixed.replace(/\.?0+$/, '') || '0';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${trimmed}`;
+};
+
+const formatSignedPercent = (value: number): string => {
+  const percent = value * 100;
+  const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
+  const trimmed = fixed.replace(/\.?0+$/, '') || '0';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${trimmed}%`;
+};
+
+const formatEffectValue = (key: string, value: number): string | null => {
   if (!Number.isFinite(value) || value === 0) return null;
-  return value > 0 ? `+${value}` : `${value}`;
+  if (titlePercentEffectKeys.has(key)) return formatSignedPercent(value);
+  return formatSignedNumber(value);
 };
 
 const formatTitleEffects = (effects: Record<string, number>): string => {
@@ -192,7 +229,7 @@ const formatTitleEffects = (effects: Record<string, number>): string => {
     .map(([rawKey, rawValue]) => {
       const key = normalizeEffectKey(rawKey);
       const value = Number(rawValue);
-      const valueText = formatEffectValue(value);
+      const valueText = formatEffectValue(key, value);
       if (!valueText) return null;
       const label = titleEffectLabel[key] ?? titleEffectLabel[rawKey] ?? rawKey;
       return { key, text: `${label}${valueText}` };
