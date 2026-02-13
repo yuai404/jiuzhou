@@ -66,7 +66,14 @@ const parseRooms = (rooms: unknown): MapRoom[] => {
   return [];
 };
 
+const mapDefCache = new Map<string, MapDefRow | null>();
+const mapRoomsCache = new Map<string, MapRoom[]>();
+
 export const getMapDefById = async (mapId: string): Promise<MapDefRow | null> => {
+  if (mapDefCache.has(mapId)) {
+    return mapDefCache.get(mapId) ?? null;
+  }
+
   const result = await query(
     `
       SELECT
@@ -79,7 +86,12 @@ export const getMapDefById = async (mapId: string): Promise<MapDefRow | null> =>
     `,
     [mapId]
   );
-  return result.rows[0] ?? null;
+  const row = (result.rows[0] ?? null) as MapDefRow | null;
+  mapDefCache.set(mapId, row);
+  if (row) {
+    mapRoomsCache.set(mapId, parseRooms(row.rooms));
+  }
+  return row;
 };
 
 export const getEnabledMaps = async (): Promise<
@@ -102,9 +114,14 @@ export const getEnabledMaps = async (): Promise<
 };
 
 export const getRoomsInMap = async (mapId: string): Promise<MapRoom[]> => {
+  const cachedRooms = mapRoomsCache.get(mapId);
+  if (cachedRooms) return cachedRooms;
+
   const map = await getMapDefById(mapId);
   if (!map) return [];
-  return parseRooms(map.rooms);
+  const rooms = parseRooms(map.rooms);
+  mapRoomsCache.set(mapId, rooms);
+  return rooms;
 };
 
 export const getRoomInMap = async (mapId: string, roomId: string): Promise<MapRoom | null> => {

@@ -869,33 +869,33 @@ export const calculateTechniquePassives = async (
   characterId: number
 ): Promise<ServiceResult<Record<string, number>>> => {
   try {
-    // 获取已装备功法及其层数
-    const sql = `
-      SELECT ct.technique_id, ct.current_layer, ct.slot_type
-      FROM character_technique ct
-      WHERE ct.character_id = $1 AND ct.slot_type IS NOT NULL
-    `;
-    const ctResult = await query(sql, [characterId]);
-    
+    const passiveRows = await query(
+      `
+        SELECT ct.slot_type, tl.passives
+        FROM character_technique ct
+        JOIN technique_layer tl
+          ON tl.technique_id = ct.technique_id
+         AND tl.layer <= ct.current_layer
+        WHERE ct.character_id = $1
+          AND ct.slot_type IS NOT NULL
+      `,
+      [characterId],
+    );
+
     const passives: Record<string, number> = {};
-    
-    for (const ct of ctResult.rows) {
-      // 获取该功法所有已达成层级的被动加成
-      const layerResult = await query(
-        'SELECT passives FROM technique_layer WHERE technique_id = $1 AND layer <= $2',
-        [ct.technique_id, ct.current_layer]
-      );
-      
-      // 主功法100%，副功法30%
-      const multiplier = ct.slot_type === 'main' ? 10000 : 3000;
-      
-      for (const layer of layerResult.rows) {
-        const layerPassives: TechniquePassive[] = layer.passives || [];
-        for (const p of layerPassives) {
-          // 应用倍率（万分比计算）
-          const effectiveValue = Math.floor((p.value * multiplier) / 10000);
-          passives[p.key] = (passives[p.key] || 0) + effectiveValue;
-        }
+
+    for (const row of passiveRows.rows) {
+      const slotType = row.slot_type === 'main' ? 'main' : row.slot_type === 'sub' ? 'sub' : null;
+      if (!slotType) continue;
+
+      const multiplier = slotType === 'main' ? 10000 : 3000;
+      const layerPassives = Array.isArray(row.passives) ? (row.passives as TechniquePassive[]) : [];
+      for (const p of layerPassives) {
+        if (!p || typeof p !== 'object') continue;
+        if (typeof p.key !== 'string' || p.key.length === 0) continue;
+        if (typeof p.value !== 'number' || !Number.isFinite(p.value)) continue;
+        const effectiveValue = Math.floor((p.value * multiplier) / 10000);
+        passives[p.key] = (passives[p.key] || 0) + effectiveValue;
       }
     }
     
@@ -913,61 +913,61 @@ export const getBattleSkills = async (
   characterId: number
 ): Promise<ServiceResult<{ skillId: string; upgradeLevel: number }[]>> => {
   try {
-    // 获取已装备的技能
     const slotResult = await query(
       'SELECT skill_id FROM character_skill_slot WHERE character_id = $1 ORDER BY slot_index',
       [characterId]
     );
-    
+
     if (slotResult.rows.length === 0) {
       return { success: true, message: '无装备技能', data: [] };
     }
-    
-    const skillIds = slotResult.rows.map(r => r.skill_id);
-    
-    // 计算每个技能的升级等级（基于功法层数）
-    const skills: { skillId: string; upgradeLevel: number }[] = [];
-    
-    for (const skillId of skillIds) {
-      // 获取技能来源功法
-      const skillResult = await query(
-        'SELECT source_id FROM skill_def WHERE id = $1 AND source_type = $2',
-        [skillId, 'technique']
-      );
-      
-      if (skillResult.rows.length === 0) {
-        // 非功法技能（如先天技能），升级等级为0
-        skills.push({ skillId, upgradeLevel: 0 });
-        continue;
-      }
-      
-      const techniqueId = skillResult.rows[0].source_id;
-      
-      // 获取角色该功法的层数
-      const ctResult = await query(
-        'SELECT current_layer FROM character_technique WHERE character_id = $1 AND technique_id = $2',
-        [characterId, techniqueId]
-      );
-      
-      if (ctResult.rows.length === 0) {
-        skills.push({ skillId, upgradeLevel: 0 });
-        continue;
-      }
-      
-      const currentLayer = ctResult.rows[0].current_layer;
-      
-      // 计算技能升级等级（基于upgrade_skill_ids出现的次数）
-      const upgradeResult = await query(
-        `SELECT COUNT(*) as upgrade_count 
-         FROM technique_layer 
-         WHERE technique_id = $1 AND layer <= $2 AND $3 = ANY(upgrade_skill_ids)`,
-        [techniqueId, currentLayer, skillId]
-      );
-      
-      const upgradeLevel = parseInt(upgradeResult.rows[0].upgrade_count);
-      skills.push({ skillId, upgradeLevel });
+
+    const orderedSkillIds = slotResult.rows
+      .map((row) => (typeof row.skill_id === 'string' ? row.skill_id.trim() : ''))
+      .filter((skillId): skillId is string => skillId.length > 0);
+
+    if (orderedSkillIds.length === 0) {
+      return { success: true, message: '无装备技能', data: [] };
     }
-    
+
+    const uniqueSkillIds = [...new Set(orderedSkillIds)];
+    const upgradeResult = await query(
+      `
+        SELECT
+          sd.id AS skill_id,
+          CASE
+            WHEN sd.source_type <> 'technique' THEN 0
+            ELSE COALESCE((
+              SELECT COUNT(*)::int
+              FROM character_technique ct
+              JOIN technique_layer tl
+                ON tl.technique_id = ct.technique_id
+               AND tl.layer <= ct.current_layer
+              WHERE ct.character_id = $1
+                AND ct.technique_id = sd.source_id
+                AND sd.id = ANY(COALESCE(tl.upgrade_skill_ids, ARRAY[]::varchar[]))
+            ), 0)
+          END AS upgrade_level
+        FROM skill_def sd
+        WHERE sd.id = ANY($2::varchar[])
+      `,
+      [characterId, uniqueSkillIds],
+    );
+
+    const upgradeLevelBySkillId = new Map<string, number>();
+    for (const row of upgradeResult.rows) {
+      const skillId = typeof row.skill_id === 'string' ? row.skill_id : '';
+      if (!skillId) continue;
+      const rawLevel = Number(row.upgrade_level);
+      const upgradeLevel = Number.isFinite(rawLevel) && rawLevel > 0 ? Math.floor(rawLevel) : 0;
+      upgradeLevelBySkillId.set(skillId, upgradeLevel);
+    }
+
+    const skills = orderedSkillIds.map((skillId) => ({
+      skillId,
+      upgradeLevel: upgradeLevelBySkillId.get(skillId) ?? 0,
+    }));
+
     return { success: true, message: '获取成功', data: skills };
   } catch (error) {
     console.error('获取战斗技能失败:', error);
@@ -1034,4 +1034,3 @@ export const getCharacterTechniqueStatus = async (
     return { success: false, message: '获取功法状态失败' };
   }
 };
-

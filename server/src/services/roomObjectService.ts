@@ -4,7 +4,7 @@ import { getRoomInMap } from './mapService.js';
 import { getGameServer } from '../game/GameServer.js';
 import { addItemToInventoryTx } from './inventoryService.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
-import { npcTalk, recordGatherResourceEvent } from './taskService.js';
+import { recordGatherResourceEvent } from './taskService.js';
 
 export type MapObjectDto =
   | {
@@ -239,6 +239,142 @@ type RawObjective = { id?: unknown; type?: unknown; target?: unknown; params?: u
 
 const parseObjectives = (objectives: unknown): RawObjective[] => (Array.isArray(objectives) ? (objectives as RawObjective[]) : []);
 
+const parseStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter((entry): entry is string => entry.length > 0);
+};
+
+const isObjectiveCompleted = (objectives: RawObjective[], progressRecord: Record<string, number>): boolean => {
+  const objectiveIds = objectives
+    .map((objective) => asNonEmptyString(objective?.id))
+    .filter((objectiveId): objectiveId is string => Boolean(objectiveId));
+  if (objectiveIds.length === 0) return false;
+
+  for (const objective of objectives) {
+    const objectiveId = asNonEmptyString(objective?.id);
+    if (!objectiveId) continue;
+    const target = Math.max(1, asFiniteNonNegativeInt(objective?.target, 1));
+    const done = Math.min(target, asFiniteNonNegativeInt(progressRecord[objectiveId], 0));
+    if (done < target) return false;
+  }
+  return true;
+};
+
+const isPrerequisiteSatisfied = (prereqTaskIds: string[], statusByTaskId: Map<string, string>): boolean => {
+  if (prereqTaskIds.length === 0) return true;
+  for (const prereqTaskId of prereqTaskIds) {
+    const status = statusByTaskId.get(prereqTaskId);
+    if (!status) return false;
+    if (status !== 'turnin' && status !== 'claimable' && status !== 'claimed') return false;
+  }
+  return true;
+};
+
+const loadNpcTaskMarkers = async (characterId: number, npcIds: string[]): Promise<Map<string, TaskMarker>> => {
+  if (!Number.isFinite(characterId) || characterId <= 0 || npcIds.length === 0) {
+    return new Map();
+  }
+
+  const taskRes = await query(
+    `
+      SELECT
+        d.id AS task_id,
+        d.giver_npc_id,
+        d.prereq_task_ids,
+        d.objectives,
+        p.status AS progress_status,
+        p.progress
+      FROM task_def d
+      LEFT JOIN character_task_progress p
+        ON p.task_id = d.id
+       AND p.character_id = $1
+      WHERE d.enabled = true
+        AND d.giver_npc_id = ANY($2::varchar[])
+      ORDER BY d.sort_weight DESC, d.id ASC
+    `,
+    [characterId, npcIds],
+  );
+
+  const setMarker = (markerByNpcId: Map<string, TaskMarker>, npcId: string, marker: TaskMarker): void => {
+    const current = markerByNpcId.get(npcId);
+    if (current === '?') return;
+    if (marker === '?') {
+      markerByNpcId.set(npcId, '?');
+      return;
+    }
+    if (!current) markerByNpcId.set(npcId, '!');
+  };
+
+  const rows = taskRes.rows as Array<{
+    task_id?: unknown;
+    giver_npc_id?: unknown;
+    prereq_task_ids?: unknown;
+    objectives?: unknown;
+    progress_status?: unknown;
+    progress?: unknown;
+  }>;
+
+  const prerequisiteTaskIds = new Set<string>();
+  for (const row of rows) {
+    const progressStatus = asNonEmptyString(row.progress_status) ?? '';
+    if (progressStatus.length > 0) continue;
+    const prereqIds = parseStringArray(row.prereq_task_ids);
+    for (const prereqId of prereqIds) prerequisiteTaskIds.add(prereqId);
+  }
+
+  const prerequisiteStatusByTaskId = new Map<string, string>();
+  if (prerequisiteTaskIds.size > 0) {
+    const prerequisiteRes = await query(
+      `
+        SELECT task_id, status
+        FROM character_task_progress
+        WHERE character_id = $1
+          AND task_id = ANY($2::varchar[])
+      `,
+      [characterId, [...prerequisiteTaskIds]],
+    );
+    for (const row of prerequisiteRes.rows) {
+      const taskId = asNonEmptyString(row?.task_id);
+      if (!taskId) continue;
+      const status = asNonEmptyString(row?.status) ?? '';
+      prerequisiteStatusByTaskId.set(taskId, status);
+    }
+  }
+
+  const markerByNpcId = new Map<string, TaskMarker>();
+  for (const row of rows) {
+    const npcId = asNonEmptyString(row.giver_npc_id);
+    if (!npcId) continue;
+
+    const progressStatus = asNonEmptyString(row.progress_status) ?? '';
+    if (progressStatus.length === 0) {
+      const prereqIds = parseStringArray(row.prereq_task_ids);
+      if (isPrerequisiteSatisfied(prereqIds, prerequisiteStatusByTaskId)) {
+        setMarker(markerByNpcId, npcId, '!');
+      }
+      continue;
+    }
+
+    if (progressStatus === 'claimed') continue;
+    if (progressStatus === 'claimable') {
+      setMarker(markerByNpcId, npcId, '?');
+      continue;
+    }
+
+    if (progressStatus === 'turnin' || progressStatus === 'ongoing') {
+      const objectives = parseObjectives(row.objectives);
+      const progressRecord = parseProgressRecord(row.progress);
+      if (isObjectiveCompleted(objectives, progressRecord)) {
+        setMarker(markerByNpcId, npcId, '?');
+      }
+    }
+  }
+
+  return markerByNpcId;
+};
+
 export const getRoomObjects = async (mapId: string, roomId: string, excludeUserId?: number): Promise<MapObjectDto[]> => {
   const room = await getRoomInMap(mapId, roomId);
   if (!room) return [];
@@ -276,31 +412,9 @@ export const getRoomObjects = async (mapId: string, roomId: string, excludeUserI
       if (!current) map.set(id, '!');
     };
 
-    const npcMarkerPairs = await Promise.all(
-      npcIds.map(async (nid) => {
-        try {
-          const talkRes = await npcTalk(characterId, nid);
-          if (!talkRes?.success || !talkRes.data) return [nid, null] as const;
-          let marker: TaskMarker | null = null;
-
-          const statuses = (talkRes.data.tasks ?? []).map((t) => t?.status).filter(Boolean);
-          if (statuses.includes('turnin') || statuses.includes('claimable')) marker = '?';
-          else if (statuses.includes('available')) marker = '!';
-
-          const mainQuest = talkRes.data.mainQuest;
-          if (mainQuest) {
-            if (mainQuest.canComplete) marker = '?';
-            else if (mainQuest.canStartDialogue && marker !== '?') marker = marker ?? '!';
-          }
-
-          return [nid, marker] as const;
-        } catch {
-          return [nid, null] as const;
-        }
-      }),
-    );
-    for (const [nid, marker] of npcMarkerPairs) {
-      if (marker) setMarker(taskMarkerByNpcId, nid, marker);
+    const npcTaskMarkers = await loadNpcTaskMarkers(characterId, npcIds);
+    for (const [npcId, marker] of npcTaskMarkers.entries()) {
+      setMarker(taskMarkerByNpcId, npcId, marker);
     }
 
     try {
@@ -393,7 +507,7 @@ export const getRoomObjects = async (mapId: string, roomId: string, excludeUserI
     try {
       const mqRes = await query(
         `
-          SELECT p.section_status, p.tracked, p.objectives_progress, s.objectives
+          SELECT p.section_status, p.tracked, p.objectives_progress, s.objectives, s.npc_id
           FROM character_main_quest_progress p
           JOIN main_quest_section s ON s.id = p.current_section_id
           WHERE p.character_id = $1 AND s.enabled = true
@@ -403,10 +517,21 @@ export const getRoomObjects = async (mapId: string, roomId: string, excludeUserI
       );
 
       const row = mqRes.rows?.[0] as
-        | { section_status?: unknown; tracked?: unknown; objectives_progress?: unknown; objectives?: unknown }
+        | { section_status?: unknown; tracked?: unknown; objectives_progress?: unknown; objectives?: unknown; npc_id?: unknown }
         | undefined;
       const tracked = row?.tracked !== false;
       const status = typeof row?.section_status === 'string' ? row.section_status.trim() : String(row?.section_status ?? '').trim();
+      const mainQuestNpcId = asNonEmptyString(row?.npc_id);
+      if (tracked && mainQuestNpcId) {
+        if (status === 'turnin') {
+          setMarker(taskMarkerByNpcId, mainQuestNpcId, '?');
+        } else if (status === 'not_started' || status === 'dialogue') {
+          setMarker(taskMarkerByNpcId, mainQuestNpcId, '!');
+        }
+        if (status === 'not_started' || status === 'dialogue' || status === 'turnin' || status === 'objectives') {
+          trackedNpcIds.add(mainQuestNpcId);
+        }
+      }
       if (tracked && status === 'objectives') {
         const objectives = parseObjectives(row?.objectives);
         const progressRecord = parseProgressRecord(row?.objectives_progress);

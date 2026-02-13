@@ -28,6 +28,7 @@ interface OnlinePlayerDto {
 }
 
 const ONLINE_PLAYERS_EMIT_INTERVAL_MS = 500;
+const CHARACTER_PUSH_DEBOUNCE_MS = 80;
 
 // 游戏服务器类
 class GameServer {
@@ -37,6 +38,9 @@ class GameServer {
   private onlinePlayersEmitTimer: ReturnType<typeof setTimeout> | null = null;
   private onlinePlayersEmitQueued = false;
   private onlinePlayersLastEmitAt = 0;
+  private characterPushTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
+  private characterPushInFlight: Set<number> = new Set();
+  private characterPushQueued: Set<number> = new Set();
 
   constructor(
     httpServer: HttpServer,
@@ -277,6 +281,7 @@ class GameServer {
       socket.on('disconnect', () => {
         const session = this.sessions.get(socket.id);
         if (session) {
+          this.cancelQueuedCharacterPush(session.userId);
           this.userSocketMap.delete(session.userId);
           this.sessions.delete(socket.id);
           this.scheduleEmitOnlinePlayers(true);
@@ -461,22 +466,69 @@ class GameServer {
   }
 
   // 向指定用户推送角色更新
+  private cancelQueuedCharacterPush(userId: number): void {
+    const timer = this.characterPushTimers.get(userId);
+    if (timer) {
+      clearTimeout(timer);
+      this.characterPushTimers.delete(userId);
+    }
+    this.characterPushQueued.delete(userId);
+  }
+
+  private scheduleCharacterPush(userId: number): void {
+    if (!Number.isFinite(userId) || userId <= 0) return;
+
+    if (this.characterPushInFlight.has(userId)) {
+      this.characterPushQueued.add(userId);
+      return;
+    }
+
+    if (this.characterPushTimers.has(userId)) {
+      this.characterPushQueued.add(userId);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      this.characterPushTimers.delete(userId);
+      void this.flushCharacterPush(userId);
+    }, CHARACTER_PUSH_DEBOUNCE_MS);
+    this.characterPushTimers.set(userId, timer);
+  }
+
+  private async flushCharacterPush(userId: number): Promise<void> {
+    if (this.characterPushInFlight.has(userId)) {
+      this.characterPushQueued.add(userId);
+      return;
+    }
+
+    this.characterPushInFlight.add(userId);
+    try {
+      const socketId = this.userSocketMap.get(userId);
+      if (!socketId) return;
+
+      const session = this.sessions.get(socketId);
+      const prevCharacter = session?.character ?? null;
+      const character = await this.loadCharacter(userId);
+      if (session) {
+        session.character = character;
+        session.lastUpdate = Date.now();
+      }
+
+      this.io.to(socketId).emit('game:character', { character });
+      if (this.shouldRefreshOnlinePlayers(prevCharacter, character)) {
+        this.scheduleEmitOnlinePlayers(false);
+      }
+    } finally {
+      this.characterPushInFlight.delete(userId);
+      if (this.characterPushQueued.has(userId)) {
+        this.characterPushQueued.delete(userId);
+        this.scheduleCharacterPush(userId);
+      }
+    }
+  }
+
   public async pushCharacterUpdate(userId: number): Promise<void> {
-    const socketId = this.userSocketMap.get(userId);
-    if (!socketId) return;
-
-    const session = this.sessions.get(socketId);
-    const prevCharacter = session?.character ?? null;
-    const character = await this.loadCharacter(userId);
-    if (session) {
-      session.character = character;
-      session.lastUpdate = Date.now();
-    }
-
-    this.io.to(socketId).emit('game:character', { character });
-    if (this.shouldRefreshOnlinePlayers(prevCharacter, character)) {
-      this.scheduleEmitOnlinePlayers(false);
-    }
+    this.scheduleCharacterPush(userId);
   }
 
   public getOnlinePlayersInRoom(mapId: string, roomId: string, excludeUserId?: number): CharacterAttributes[] {
@@ -502,6 +554,7 @@ class GameServer {
   public kickUser(userId: number, reason: string = '账号已在其他设备登录'): void {
     const socketId = this.userSocketMap.get(userId);
     if (!socketId) return;
+    this.cancelQueuedCharacterPush(userId);
 
     const socket = this.io.sockets.sockets.get(socketId);
     if (socket) {

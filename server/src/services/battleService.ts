@@ -32,13 +32,15 @@ const battleParticipants = new Map<string, number[]>();
 const finishedBattleResults = new Map<string, { result: BattleResult; at: number }>();
 const FINISHED_BATTLE_TTL_MS = 2 * 60 * 1000;
 const characterAutoCastCache = new Map<number, { enabled: boolean; at: number }>();
-const CHARACTER_AUTO_CAST_CACHE_TTL_MS = 2000;
+const CHARACTER_AUTO_CAST_CACHE_TTL_MS = 15000;
 const battleTickers = new Map<string, ReturnType<typeof setInterval>>();
 const battleTickLocks = new Set<string>();
 const characterOwnerCache = new Map<number, { userId: number; at: number }>();
-const CHARACTER_OWNER_CACHE_TTL_MS = 5000;
+const CHARACTER_OWNER_CACHE_TTL_MS = 60000;
 const BATTLE_TICK_MS = 650;
 const battleLastEmittedLogLen = new Map<string, number>();
+const battleLastRedisSavedAt = new Map<string, number>();
+const BATTLE_REDIS_SAVE_INTERVAL_MS = 2000;
 const MAX_BATTLE_LOG_DELTA = 80;
 const BATTLE_SET_BONUS_TRIGGER_SET = new Set([
   'on_turn_start',
@@ -636,7 +638,18 @@ function emitBattleUpdate(battleId: string, payload: any): void {
     // 保存战斗状态到 Redis（异步，不阻塞）
     const engine = activeBattles.get(battleId);
     if (engine) {
-      void saveBattleToRedis(battleId, engine, participants);
+      const kind = typeof payload?.kind === 'string' ? payload.kind : '';
+      const now = Date.now();
+      const lastSavedAt = battleLastRedisSavedAt.get(battleId) ?? 0;
+      const shouldSave =
+        kind === 'battle_started' ||
+        kind === 'battle_finished' ||
+        kind === 'battle_abandoned' ||
+        now - lastSavedAt >= BATTLE_REDIS_SAVE_INTERVAL_MS;
+      if (shouldSave) {
+        battleLastRedisSavedAt.set(battleId, now);
+        void saveBattleToRedis(battleId, engine, participants);
+      }
     }
   } catch {
     // 忽略
@@ -709,6 +722,7 @@ function stopBattleTicker(battleId: string): void {
   battleTickers.delete(battleId);
   battleTickLocks.delete(battleId);
   battleLastEmittedLogLen.delete(battleId);
+  battleLastRedisSavedAt.delete(battleId);
 }
 
 /**
@@ -744,19 +758,16 @@ async function getTeamMembersData(userId: number, characterId: number): Promise<
     [teamId, characterId]
   );
 
-  const members: Array<{ data: CharacterData; skills: SkillData[] }> = [];
-  
-  for (const row of teamMembersResult.rows) {
-    const base = row as CharacterData;
-    const memberCharacterId = Number((row as any)?.id);
-    const withPassives = await applyTechniquePassivesToCharacterData(memberCharacterId, base);
-    const data = await attachSetBonusEffectsToCharacterData(memberCharacterId, withPassives);
-    const skills = await getCharacterBattleSkillData(memberCharacterId);
-    members.push({
-      data,
-      skills,
-    });
-  }
+  const members = await Promise.all(
+    teamMembersResult.rows.map(async (row) => {
+      const base = row as CharacterData;
+      const memberCharacterId = Number((row as any)?.id);
+      const withPassives = await applyTechniquePassivesToCharacterData(memberCharacterId, base);
+      const data = await attachSetBonusEffectsToCharacterData(memberCharacterId, withPassives);
+      const skills = await getCharacterBattleSkillData(memberCharacterId);
+      return { data, skills };
+    }),
+  );
 
   return { isInTeam: true, isLeader, teamId, members };
 }
