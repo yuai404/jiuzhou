@@ -96,6 +96,12 @@
   background: var(--panel-bg-soft);
 }
 
+.setting-row-column {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .setting-cdk-mobile {
   width: 100%;
 }

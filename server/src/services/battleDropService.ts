@@ -12,10 +12,10 @@ import { createItem, CreateItemOptions } from './itemService.js';
 import { sendSystemMail, type MailAttachItem } from './mailService.js';
 import { recordCollectItemEvent } from './taskService.js';
 import {
-  clampQualityRank,
-  resolveDisassembleRewardItemDefIdByQualityRank,
-  resolveQualityRank,
-} from './equipmentDisassembleRules.js';
+  grantRewardItemWithAutoDisassemble,
+  type AutoDisassembleSetting,
+} from './autoDisassembleRewardService.js';
+import { normalizeAutoDisassembleSetting } from './autoDisassembleRules.js';
 import type { MonsterData } from '../battle/BattleFactory.js';
 
 // ============================================
@@ -88,11 +88,6 @@ export interface BattleParticipant {
   characterId: number;
   nickname: string;
   fuyuan?: number;
-}
-
-interface AutoDisassembleSetting {
-  enabled: boolean;
-  maxQualityRank: number;
 }
 
 // ============================================
@@ -365,13 +360,23 @@ export const distributeBattleRewards = async (
     
     // 4. 分发物品（组队随机分配，单人全部获得）
     const allItems: DistributeResult['rewards']['items'] = [];
-    const itemMetaCache = new Map<string, { name: string; category: string }>();
+    const itemMetaCache = new Map<
+      string,
+      {
+        name: string;
+        category: string;
+        subCategory: string | null;
+        effectDefs: unknown;
+        level: number;
+        qualityRank: number;
+      }
+    >();
     const autoDisassembleSettings = new Map<number, AutoDisassembleSetting>();
 
     if (participantCharacterIds.length > 0) {
       const settingResult = await client.query(
         `
-          SELECT id, auto_disassemble_enabled, auto_disassemble_max_quality_rank
+          SELECT id, auto_disassemble_enabled, auto_disassemble_max_quality_rank, auto_disassemble_rules
           FROM characters
           WHERE id = ANY($1)
         `,
@@ -381,11 +386,16 @@ export const distributeBattleRewards = async (
         id: number;
         auto_disassemble_enabled: boolean | null;
         auto_disassemble_max_quality_rank: number | null;
+        auto_disassemble_rules: unknown;
       }>) {
-        autoDisassembleSettings.set(Number(row.id), {
-          enabled: Boolean(row.auto_disassemble_enabled),
-          maxQualityRank: clampQualityRank(row.auto_disassemble_max_quality_rank, 1),
-        });
+        autoDisassembleSettings.set(
+          Number(row.id),
+          normalizeAutoDisassembleSetting({
+            enabled: row.auto_disassemble_enabled,
+            maxQualityRank: row.auto_disassemble_max_quality_rank,
+            rules: row.auto_disassemble_rules,
+          })
+        );
       }
     }
 
@@ -439,13 +449,27 @@ export const distributeBattleRewards = async (
       pendingMailByReceiver.set(receiverCharacterId, existing);
     };
 
-    const getItemMeta = async (itemDefId: string): Promise<{ name: string; category: string }> => {
+    const getItemMeta = async (itemDefId: string): Promise<{
+      name: string;
+      category: string;
+      subCategory: string | null;
+      effectDefs: unknown;
+      level: number;
+      qualityRank: number;
+    }> => {
       const cached = itemMetaCache.get(itemDefId);
       if (cached) return cached;
-      const result = await client.query('SELECT name, category FROM item_def WHERE id = $1', [itemDefId]);
+      const result = await client.query(
+        'SELECT name, category, sub_category, effect_defs, level, quality_rank FROM item_def WHERE id = $1',
+        [itemDefId]
+      );
       const meta = {
         name: result.rows[0]?.name || itemDefId,
         category: result.rows[0]?.category || 'misc',
+        subCategory: result.rows[0]?.sub_category || null,
+        effectDefs: result.rows[0]?.effect_defs ?? null,
+        level: Math.max(0, Math.floor(Number(result.rows[0]?.level) || 0)),
+        qualityRank: Math.max(1, Math.floor(Number(result.rows[0]?.quality_rank) || 1)),
       };
       itemMetaCache.set(itemDefId, meta);
       return meta;
@@ -459,140 +483,96 @@ export const distributeBattleRewards = async (
         console.warn(`奖励分发跳过：非法角色ID ${String(receiver.characterId)}`);
         continue;
       }
-      const { name: itemName, category: itemCategory } = await getItemMeta(drop.itemDefId);
 
+      const sourceMeta = await getItemMeta(drop.itemDefId);
       const createOptions: CreateItemOptions = {
         location: 'bag',
         bindType: drop.bindType,
         obtainedFrom: 'battle_drop',
         dbClient: client,
       };
-
-      if (itemCategory === 'equipment') {
+      if (sourceMeta.category === 'equipment') {
         createOptions.equipOptions = {
           fuyuan: entry.receiverFuyuan,
-          ...(drop.qualityWeights ? { qualityWeights: drop.qualityWeights as any } : {}),
+          ...(drop.qualityWeights ? { qualityWeights: drop.qualityWeights as Record<string, number> } : {}),
         };
       }
 
-      const receiverAutoDisassemble = autoDisassembleSettings.get(receiverCharacterId) || {
-        enabled: false,
-        maxQualityRank: 1,
-      };
-      const shouldTryAutoDisassemble = itemCategory === 'equipment' && receiverAutoDisassemble.enabled;
+      const receiverAutoDisassemble =
+        autoDisassembleSettings.get(receiverCharacterId) ||
+        normalizeAutoDisassembleSetting({ enabled: false, maxQualityRank: 1, rules: undefined });
 
-      if (shouldTryAutoDisassemble) {
-        for (let i = 0; i < drop.quantity; i++) {
-          const createResult = await createItem(
-            receiver.userId,
-            receiverCharacterId,
-            drop.itemDefId,
-            1,
-            createOptions
+      const grantResult = await grantRewardItemWithAutoDisassemble({
+        characterId: receiverCharacterId,
+        itemDefId: drop.itemDefId,
+        qty: drop.quantity,
+        bindType: drop.bindType,
+        itemMeta: {
+          itemName: sourceMeta.name,
+          category: sourceMeta.category,
+          subCategory: sourceMeta.subCategory,
+          effectDefs: sourceMeta.effectDefs,
+          level: sourceMeta.level,
+          qualityRank: sourceMeta.qualityRank,
+        },
+        autoDisassembleSetting: receiverAutoDisassemble,
+        sourceObtainedFrom: 'battle_drop',
+        sourceEquipOptions: createOptions.equipOptions,
+        createItem: async ({ itemDefId, qty, bindType, obtainedFrom, equipOptions }) => {
+          return createItem(receiver.userId, receiverCharacterId, itemDefId, qty, {
+            location: 'bag',
+            obtainedFrom,
+            ...(bindType ? { bindType } : {}),
+            ...(equipOptions ? { equipOptions } : {}),
+            dbClient: client,
+          });
+        },
+        deleteItemInstances: async (ownerCharacterId, itemIds) => {
+          const safeItemIds = itemIds.filter((id) => Number.isInteger(id) && id > 0);
+          if (safeItemIds.length <= 0) return;
+          await client.query('DELETE FROM item_instance WHERE owner_character_id = $1 AND id = ANY($2)', [
+            ownerCharacterId,
+            safeItemIds,
+          ]);
+        },
+        addSilver: async (ownerCharacterId, silverGain) => {
+          const safeSilver = Math.max(0, Math.floor(Number(silverGain) || 0));
+          if (safeSilver <= 0) return { success: true, message: '无需增加银两' };
+          const updateResult = await client.query(
+            `
+              UPDATE characters
+              SET silver = silver + $1,
+                  updated_at = NOW()
+              WHERE id = $2
+            `,
+            [safeSilver, ownerCharacterId]
           );
+          if (updateResult.rowCount === 0) return { success: false, message: '角色不存在' };
+          return { success: true, message: '银两增加成功' };
+        },
+      });
 
-          if (!createResult.success) {
-            if (createResult.message === '背包已满') {
-              queuePendingMailItem(receiver, receiverCharacterId, {
-                item_def_id: drop.itemDefId,
-                qty: 1,
-                options: {
-                  bindType: createOptions.bindType,
-                  equipOptions: createOptions.equipOptions,
-                },
-              });
-              appendRewardRecord(receiverCharacterId, drop.itemDefId, itemName, 1, []);
-            } else {
-              console.warn(`物品创建失败: ${drop.itemDefId}, ${createResult.message}`);
-            }
-            continue;
-          }
-
-          const generatedQualityRank = (() => {
-            const raw = Number(createResult.equipment?.qualityRank);
-            if (Number.isInteger(raw) && raw > 0) return raw;
-            return resolveQualityRank(createResult.equipment?.quality);
-          })();
-          const disassembleRewardItemDefId = resolveDisassembleRewardItemDefIdByQualityRank(generatedQualityRank);
-          const shouldDisassembleCurrent =
-            Boolean(disassembleRewardItemDefId) &&
-            generatedQualityRank > 0 &&
-            generatedQualityRank <= receiverAutoDisassemble.maxQualityRank;
-
-          if (shouldDisassembleCurrent && disassembleRewardItemDefId) {
-            const rewardCreateResult = await createItem(
-              receiver.userId,
-              receiverCharacterId,
-              disassembleRewardItemDefId,
-              1,
-              {
-                location: 'bag',
-                obtainedFrom: 'auto_disassemble',
-                dbClient: client,
-              }
-            );
-
-            if (rewardCreateResult.success || rewardCreateResult.message === '背包已满') {
-              const sourceItemIds = (createResult.itemIds || []).filter((id) => Number.isInteger(id) && id > 0);
-              if (sourceItemIds.length > 0) {
-                await client.query(
-                  'DELETE FROM item_instance WHERE owner_character_id = $1 AND id = ANY($2)',
-                  [receiverCharacterId, sourceItemIds]
-                );
-              }
-
-              const rewardMeta = await getItemMeta(disassembleRewardItemDefId);
-              if (rewardCreateResult.success) {
-                appendCollectCount(receiverCharacterId, disassembleRewardItemDefId, 1);
-                appendRewardRecord(
-                  receiverCharacterId,
-                  disassembleRewardItemDefId,
-                  rewardMeta.name,
-                  1,
-                  rewardCreateResult.itemIds || []
-                );
-              } else {
-                queuePendingMailItem(receiver, receiverCharacterId, {
-                  item_def_id: disassembleRewardItemDefId,
-                  qty: 1,
-                });
-                appendRewardRecord(receiverCharacterId, disassembleRewardItemDefId, rewardMeta.name, 1, []);
-              }
-              continue;
-            }
-
-            console.warn(`自动分解入包失败，保留原装备: ${disassembleRewardItemDefId}, ${rewardCreateResult.message}`);
-          }
-
-          appendCollectCount(receiverCharacterId, drop.itemDefId, 1);
-          appendRewardRecord(receiverCharacterId, drop.itemDefId, itemName, 1, createResult.itemIds || []);
-        }
-        continue;
+      for (const warning of grantResult.warnings) {
+        console.warn(`战斗掉落自动分解失败: ${warning}`);
       }
 
-      const createResult = await createItem(
-        receiver.userId,
-        receiverCharacterId,
-        drop.itemDefId,
-        drop.quantity,
-        createOptions
-      );
+      for (const mailItem of grantResult.pendingMailItems) {
+        queuePendingMailItem(receiver, receiverCharacterId, mailItem);
+      }
 
-      if (createResult.success) {
-        appendCollectCount(receiverCharacterId, drop.itemDefId, drop.quantity);
-        appendRewardRecord(receiverCharacterId, drop.itemDefId, itemName, drop.quantity, createResult.itemIds || []);
-      } else if (createResult.message === '背包已满') {
-        queuePendingMailItem(receiver, receiverCharacterId, {
-          item_def_id: drop.itemDefId,
-          qty: drop.quantity,
-          options: {
-            bindType: createOptions.bindType,
-            equipOptions: createOptions.equipOptions,
-          },
-        });
-        appendRewardRecord(receiverCharacterId, drop.itemDefId, itemName, drop.quantity, []);
-      } else {
-        console.warn(`物品创建失败: ${drop.itemDefId}, ${createResult.message}`);
+      if (grantResult.gainedSilver > 0) {
+        totalSilver += grantResult.gainedSilver;
+        const playerReward = perPlayerRewards.find((p) => p.characterId === receiverCharacterId);
+        if (playerReward) {
+          playerReward.silver += grantResult.gainedSilver;
+        }
+      }
+
+      for (const granted of grantResult.grantedItems) {
+        const grantedMeta =
+          granted.itemDefId === drop.itemDefId ? sourceMeta : await getItemMeta(granted.itemDefId);
+        appendCollectCount(receiverCharacterId, granted.itemDefId, granted.qty);
+        appendRewardRecord(receiverCharacterId, granted.itemDefId, grantedMeta.name, granted.qty, granted.itemIds);
       }
     }
     

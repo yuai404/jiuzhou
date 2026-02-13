@@ -43,11 +43,8 @@ import {
   resolveQualityForReroll,
 } from './equipmentAffixRerollService.js';
 import {
-  calculateDefaultDisassembleSilver,
-  clampQualityRank,
-  resolveDisassembleRewardItemDefIdByQualityRank,
-  resolveTechniqueBookDisassembleRewardByQualityRank,
-} from './equipmentDisassembleRules.js';
+  buildDisassembleRewardPlan,
+} from './disassembleRewardPlanner.js';
 import type { GeneratedAffix } from './equipmentService.js';
 
 // 背包位置类型
@@ -2725,100 +2722,15 @@ export const expandInventory = async (
 };
 
 // ============================================
-const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
-  if (!Array.isArray(effectDefs)) return false;
-  return effectDefs.some((raw) => {
-    if (!raw || typeof raw !== 'object') return false;
-    const row = raw as { effect_type?: unknown };
-    return String(row.effect_type || '') === 'learn_technique';
-  });
-};
-
-const isTechniqueBookItem = (item: { subCategory: string | null; effectDefs: unknown }): boolean => {
-  const subCategory = String(item.subCategory || '').trim();
-  if (subCategory === 'technique_book') return true;
-  return hasLearnTechniqueEffect(item.effectDefs);
-};
-
-type DisassembleItemReward = {
+type DisassembleGrantedItemReward = {
   itemDefId: string;
   qty: number;
   itemIds?: number[];
 };
 
-type DisassembleRewards = {
+type DisassembleRewardsPayload = {
   silver: number;
-  items: DisassembleItemReward[];
-};
-
-const resolveAffixCount = (affixesRaw: unknown): number => {
-  let source = affixesRaw;
-  if (typeof source === 'string') {
-    try {
-      source = JSON.parse(source) as unknown;
-    } catch {
-      return 0;
-    }
-  }
-  if (!Array.isArray(source)) return 0;
-  return source.length;
-};
-
-/**
- * 计算单个物品在指定分解数量下的奖励计划。
- *
- * 规则：
- * - 特殊分解保留：装备 -> 淬/蕴灵石；功法书 -> 功法残页
- * - 其余物品统一按公式返银两
- */
-const buildDisassembleRewardPlan = (params: {
-  category: string;
-  subCategory: string | null;
-  effectDefs: unknown;
-  qualityRankRaw: unknown;
-  itemLevelRaw: unknown;
-  strengthenLevelRaw: unknown;
-  refineLevelRaw: unknown;
-  affixesRaw: unknown;
-  qty: number;
-}): { success: boolean; message: string; rewards: DisassembleRewards } => {
-  const qty = clampInt(params.qty, 1, 999999);
-  const qualityRank = clampQualityRank(params.qualityRankRaw, 1);
-  const rewards: DisassembleRewards = { silver: 0, items: [] };
-
-  if (params.category === 'equipment') {
-    const rewardItemDefId = resolveDisassembleRewardItemDefIdByQualityRank(qualityRank);
-    if (!rewardItemDefId) {
-      return { success: false, message: '装备品质异常', rewards };
-    }
-    rewards.items.push({ itemDefId: rewardItemDefId, qty });
-    return { success: true, message: 'ok', rewards };
-  }
-
-  const isTechniqueBook = isTechniqueBookItem({
-    subCategory: params.subCategory,
-    effectDefs: params.effectDefs,
-  });
-  if (isTechniqueBook) {
-    const reward = resolveTechniqueBookDisassembleRewardByQualityRank(qualityRank);
-    if (!reward) {
-      return { success: false, message: '功法书品质异常', rewards };
-    }
-    rewards.items.push({ itemDefId: reward.itemDefId, qty: reward.qty * qty });
-    return { success: true, message: 'ok', rewards };
-  }
-
-  const affixCount = resolveAffixCount(params.affixesRaw);
-  const silverResult = calculateDefaultDisassembleSilver({
-    level: Number(params.itemLevelRaw) || 0,
-    qualityRank,
-    strengthenLevel: Number(params.strengthenLevelRaw) || 0,
-    refineLevel: Number(params.refineLevelRaw) || 0,
-    affixCount,
-    qty,
-  });
-  rewards.silver = silverResult.totalSilver;
-  return { success: true, message: 'ok', rewards };
+  items: DisassembleGrantedItemReward[];
 };
 
 export const disassembleEquipment = async (
@@ -2829,7 +2741,7 @@ export const disassembleEquipment = async (
 ): Promise<{
   success: boolean;
   message: string;
-  rewards?: DisassembleRewards;
+  rewards?: DisassembleRewardsPayload;
 }> => {
   const client = await pool.connect();
 
@@ -2937,7 +2849,7 @@ export const disassembleEquipment = async (
       return { success: false, message: consumeRes.message };
     }
 
-    const grantedItemRewards: DisassembleItemReward[] = [];
+    const grantedItemRewards: DisassembleGrantedItemReward[] = [];
     for (const itemReward of rewardPlan.rewards.items) {
       const addResult = await addItemToInventoryTx(client, characterId, userId, itemReward.itemDefId, itemReward.qty, {
         location: 'bag',
@@ -2991,7 +2903,7 @@ export const disassembleEquipmentBatch = async (
   message: string;
   disassembledCount?: number;
   disassembledQtyTotal?: number;
-  rewards?: DisassembleRewards;
+  rewards?: DisassembleRewardsPayload;
 }> => {
   if (!Array.isArray(items) || items.length === 0) {
     return { success: false, message: 'items参数错误' };
@@ -3139,7 +3051,7 @@ export const disassembleEquipmentBatch = async (
       }
     }
 
-    const grantedItemRewards: DisassembleItemReward[] = [];
+    const grantedItemRewards: DisassembleGrantedItemReward[] = [];
     for (const [itemDefId, rewardQty] of rewardItemQtyByDefId.entries()) {
       if (rewardQty <= 0) continue;
       const addRes = await addItemToInventoryTx(client, characterId, userId, itemDefId, rewardQty, {

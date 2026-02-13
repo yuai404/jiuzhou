@@ -86,6 +86,7 @@ export type BagItem = {
   name: string;
   category: Exclude<BagCategory, "all">;
   subCategory: string | null;
+  itemLevel: number;
   quality: BagQuality;
   tags: string[];
   icon: string;
@@ -932,12 +933,62 @@ export const isDisassemblableBagItem = (item: {
 
 export const collectBatchDisassembleCandidates = (
   items: BagItem[],
+  rules?: {
+    categories?: Array<Exclude<BagCategory, "all">>;
+    subCategories?: string[];
+    qualities?: BagQuality[];
+    keyword?: string;
+    includeKeywords?: string[];
+    excludeKeywords?: string[];
+  },
 ): BagItem[] => {
+  const categorySet =
+    Array.isArray(rules?.categories) && rules.categories.length > 0
+      ? new Set(rules.categories)
+      : null;
+  const subCategorySet =
+    Array.isArray(rules?.subCategories) && rules.subCategories.length > 0
+      ? new Set(
+          rules.subCategories
+            .map((value) => String(value ?? "").trim().toLowerCase())
+            .filter((value) => value.length > 0),
+        )
+      : null;
+  const qualitySet =
+    Array.isArray(rules?.qualities) && rules.qualities.length > 0
+      ? new Set(rules.qualities)
+      : null;
+  const includeKeywords =
+    Array.isArray(rules?.includeKeywords) && rules.includeKeywords.length > 0
+      ? rules.includeKeywords
+          .map((value) => String(value ?? "").trim().toLowerCase())
+          .filter((value) => value.length > 0)
+      : [];
+  const excludeKeywords =
+    Array.isArray(rules?.excludeKeywords) && rules.excludeKeywords.length > 0
+      ? rules.excludeKeywords
+          .map((value) => String(value ?? "").trim().toLowerCase())
+          .filter((value) => value.length > 0)
+      : [];
+  const keyword = String(rules?.keyword ?? "").trim().toLowerCase();
+
   const out: BagItem[] = [];
   for (const item of items) {
     if (item.location !== "bag") continue;
     if (item.locked) continue;
     if (!isDisassemblableBagItem(item)) continue;
+    if (categorySet && !categorySet.has(item.category)) continue;
+    if (subCategorySet) {
+      const subCategory = String(item.subCategory ?? "").trim().toLowerCase();
+      if (!subCategorySet.has(subCategory)) continue;
+    }
+    if (qualitySet && !qualitySet.has(item.quality)) continue;
+    const searchableText = `${item.name} ${item.tags.join(" ")} ${item.subCategory ?? ""}`.toLowerCase();
+    if (includeKeywords.length > 0 && !includeKeywords.some((value) => searchableText.includes(value))) continue;
+    if (excludeKeywords.some((value) => searchableText.includes(value))) continue;
+    if (keyword) {
+      if (!searchableText.includes(keyword)) continue;
+    }
     out.push(item);
   }
   return out;
@@ -1229,6 +1280,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
     name: def.name,
     category,
     subCategory: def.sub_category ?? null,
+    itemLevel: Math.max(0, Math.floor(Number(def.level) || 0)),
     quality,
     tags,
     icon: resolveIcon(def),

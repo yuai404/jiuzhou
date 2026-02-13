@@ -91,6 +91,8 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
   const [batchCategory, setBatchCategory] = useState<BagCategory>('all');
   const [batchSubCategory, setBatchSubCategory] = useState<string>('all');
   const [batchKeyword, setBatchKeyword] = useState('');
+  const [batchIncludeKeywordsText, setBatchIncludeKeywordsText] = useState('');
+  const [batchExcludeKeywordsText, setBatchExcludeKeywordsText] = useState('');
   const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState<InventoryInfoData | null>(null);
@@ -286,6 +288,8 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       setBatchSubmitting(false);
       setBatchKeyword('');
       setBatchSubCategory('all');
+      setBatchIncludeKeywordsText('');
+      setBatchExcludeKeywordsText('');
       setBatchQualities(quality === 'all' ? qualityLabels : [quality]);
       if (mode === 'remove') {
         setBatchCategory(category === 'all' ? 'all' : category);
@@ -700,16 +704,25 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
 
   const batchCandidates = useMemo(() => {
     const kw = batchKeyword.trim().toLowerCase();
+    const includeKeywords = batchIncludeKeywordsText
+      .split(',')
+      .map((v) => v.trim().toLowerCase())
+      .filter((v) => v.length > 0);
+    const excludeKeywords = batchExcludeKeywordsText
+      .split(',')
+      .map((v) => v.trim().toLowerCase())
+      .filter((v) => v.length > 0);
 
     let list = bagOnlyItems.filter((i) => !i.locked);
     if (batchMode === 'disassemble') {
-      list = collectBatchDisassembleCandidates(list);
-      if (batchCategory !== 'all') {
-        list = list.filter((i) => i.category === batchCategory);
-      }
-      if (batchSubCategory !== 'all') {
-        list = list.filter((i) => (i.subCategory ?? '') === batchSubCategory);
-      }
+      list = collectBatchDisassembleCandidates(list, {
+        ...(batchCategory !== 'all' ? { categories: [batchCategory] } : {}),
+        ...(batchSubCategory !== 'all' ? { subCategories: [batchSubCategory] } : {}),
+        ...(batchQualities.length > 0 ? { qualities: batchQualities } : {}),
+        ...(kw ? { keyword: kw } : {}),
+        ...(includeKeywords.length > 0 ? { includeKeywords } : {}),
+        ...(excludeKeywords.length > 0 ? { excludeKeywords } : {}),
+      });
     } else {
       if (batchCategory !== 'all') {
         list = list.filter((i) => i.category === batchCategory);
@@ -729,7 +742,16 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     }
 
     return list;
-  }, [bagOnlyItems, batchCategory, batchKeyword, batchMode, batchQualities, batchSubCategory]);
+  }, [
+    bagOnlyItems,
+    batchCategory,
+    batchExcludeKeywordsText,
+    batchIncludeKeywordsText,
+    batchKeyword,
+    batchMode,
+    batchQualities,
+    batchSubCategory,
+  ]);
 
   const batchSummary = useMemo(() => {
     const qty = batchCandidates.reduce((sum, it) => sum + Math.max(0, it.qty || 0), 0);
@@ -1596,6 +1618,22 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
               options={[{ value: 'all', label: '全部子类型' }, ...batchSubCategoryOptions.map((s) => ({ value: s, label: s }))]}
             />
           </div>
+          {batchMode === 'disassemble' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Input
+                value={batchIncludeKeywordsText}
+                onChange={(e) => setBatchIncludeKeywordsText(e.target.value)}
+                placeholder="包含关键词（逗号分隔）"
+                allowClear
+              />
+              <Input
+                value={batchExcludeKeywordsText}
+                onChange={(e) => setBatchExcludeKeywordsText(e.target.value)}
+                placeholder="排除关键词（逗号分隔）"
+                allowClear
+              />
+            </div>
+          ) : null}
 
           <div style={{ color: 'rgba(255,255,255,0.7)' }}>
             将处理 {batchCandidates.length} 个物品{batchSummary ? `（${batchSummary}）` : ''}

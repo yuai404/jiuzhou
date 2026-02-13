@@ -3,6 +3,10 @@ import { createInventoryForCharacter } from '../models/inventoryTable.js';
 import { updateSectionProgress } from './mainQuestService.js';
 import { initCharacterAchievements, updateAchievementProgress } from './achievementService.js';
 import { applyStaminaRecoveryByUserId } from './staminaService.js';
+import {
+  normalizeAutoDisassembleSetting,
+  type AutoDisassembleRuleSet,
+} from './autoDisassembleRules.js';
 
 export interface Character {
   id: number;
@@ -14,6 +18,7 @@ export interface Character {
   auto_cast_skills: boolean;
   auto_disassemble_enabled: boolean;
   auto_disassemble_max_quality_rank: number;
+  auto_disassemble_rules: AutoDisassembleRuleSet | null;
   spirit_stones: number;
   silver: number;
   stamina: number;
@@ -273,27 +278,29 @@ export const updateCharacterAutoCastSkills = async (
   }
 };
 
-const clampQualityRank = (value: unknown): number => {
-  const n = Number(value);
-  if (!Number.isInteger(n)) return 1;
-  return Math.max(1, Math.min(4, n));
-};
-
 export const updateCharacterAutoDisassembleSettings = async (
   userId: number,
   enabled: boolean,
-  maxQualityRank?: number
+  maxQualityRank?: number,
+  rules?: unknown
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    const parsedRank = maxQualityRank == null ? null : clampQualityRank(maxQualityRank);
+    const normalized = normalizeAutoDisassembleSetting({
+      enabled,
+      maxQualityRank,
+      rules,
+    });
+    const parsedRank = maxQualityRank == null ? null : normalized.maxQualityRank;
+    const parsedRulesJson = rules === undefined ? null : JSON.stringify(normalized.rules);
     const sql = `
       UPDATE characters
       SET auto_disassemble_enabled = $1,
           auto_disassemble_max_quality_rank = GREATEST(1, LEAST(4, COALESCE($2, auto_disassemble_max_quality_rank, 1))),
+          auto_disassemble_rules = COALESCE($3::jsonb, auto_disassemble_rules, '{}'::jsonb),
           updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = $3
+      WHERE user_id = $4
     `;
-    const result = await query(sql, [Boolean(enabled), parsedRank, userId]);
+    const result = await query(sql, [normalized.enabled, parsedRank, parsedRulesJson, userId]);
 
     if (result.rowCount === 0) {
       return { success: false, message: '角色不存在' };

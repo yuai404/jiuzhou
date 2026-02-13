@@ -5,7 +5,7 @@ import { createItem } from './itemService.js';
 import { sendSystemMail, type MailAttachItem } from './mailService.js';
 import { recordDungeonClearEvent } from './taskService.js';
 import { applyStaminaRecoveryTx, STAMINA_MAX } from './staminaService.js';
-import { clampQualityRank } from './equipmentDisassembleRules.js';
+import { normalizeAutoDisassembleSetting } from './autoDisassembleRules.js';
 import { REALM_ORDER } from './shared/realmOrder.js';
 import {
   grantRewardItemWithAutoDisassemble,
@@ -1572,7 +1572,17 @@ export const nextDungeonInstance = async (
         const participantCharacterIds = participants.map((p) => Number(p.characterId)).filter((id) => Number.isFinite(id) && id > 0);
         const clearCountMap = new Map<number, number>();
         const autoDisassembleSettings = new Map<number, AutoDisassembleSetting>();
-        const itemCategoryCache = new Map<string, string>();
+        const itemMetaCache = new Map<
+          string,
+          {
+            name: string;
+            category: string;
+            subCategory: string | null;
+            effectDefs: unknown;
+            level: number;
+            qualityRank: number;
+          }
+        >();
 
         const appendGrantedItem = (
           list: Array<{ item_def_id: string; qty: number; item_ids: number[] }>,
@@ -1622,14 +1632,40 @@ export const nextDungeonInstance = async (
           pendingMailByCharacter.set(characterId, pending);
         };
 
-        const getItemCategory = async (itemDefId: string): Promise<string> => {
-          const cached = itemCategoryCache.get(itemDefId);
+        const getItemMeta = async (itemDefId: string): Promise<{
+          name: string;
+          category: string;
+          subCategory: string | null;
+          effectDefs: unknown;
+          level: number;
+          qualityRank: number;
+        }> => {
+          const cached = itemMetaCache.get(itemDefId);
           if (cached) return cached;
-          const itemDefRes = await client.query('SELECT category FROM item_def WHERE id = $1 LIMIT 1', [itemDefId]);
-          const categoryRaw = itemDefRes.rows?.[0]?.category;
-          const category = typeof categoryRaw === 'string' && categoryRaw.length > 0 ? categoryRaw : 'misc';
-          itemCategoryCache.set(itemDefId, category);
-          return category;
+          const itemDefRes = await client.query(
+            'SELECT name, category, sub_category, effect_defs, level, quality_rank FROM item_def WHERE id = $1 LIMIT 1',
+            [itemDefId]
+          );
+          const row = itemDefRes.rows?.[0] as
+            | {
+                name?: unknown;
+                category?: unknown;
+                sub_category?: unknown;
+                effect_defs?: unknown;
+                level?: unknown;
+                quality_rank?: unknown;
+              }
+            | undefined;
+          const meta = {
+            name: typeof row?.name === 'string' && row.name.length > 0 ? row.name : itemDefId,
+            category: typeof row?.category === 'string' && row.category.length > 0 ? row.category : 'misc',
+            subCategory: typeof row?.sub_category === 'string' && row.sub_category.length > 0 ? row.sub_category : null,
+            effectDefs: row?.effect_defs ?? null,
+            level: Math.max(0, Math.floor(Number(row?.level) || 0)),
+            qualityRank: Math.max(1, Math.floor(Number(row?.quality_rank) || 1)),
+          };
+          itemMetaCache.set(itemDefId, meta);
+          return meta;
         };
 
         if (participantCharacterIds.length > 0) {
@@ -1651,7 +1687,7 @@ export const nextDungeonInstance = async (
 
           const settingRes = await client.query(
             `
-              SELECT id, auto_disassemble_enabled, auto_disassemble_max_quality_rank
+              SELECT id, auto_disassemble_enabled, auto_disassemble_max_quality_rank, auto_disassemble_rules
               FROM characters
               WHERE id = ANY($1)
             `,
@@ -1661,13 +1697,18 @@ export const nextDungeonInstance = async (
             id: unknown;
             auto_disassemble_enabled: boolean | null;
             auto_disassemble_max_quality_rank: number | null;
+            auto_disassemble_rules: unknown;
           }>) {
             const id = asNumber(row.id, 0);
             if (!Number.isFinite(id) || id <= 0) continue;
-            autoDisassembleSettings.set(id, {
-              enabled: Boolean(row.auto_disassemble_enabled),
-              maxQualityRank: clampQualityRank(row.auto_disassemble_max_quality_rank, 1),
-            });
+            autoDisassembleSettings.set(
+              id,
+              normalizeAutoDisassembleSetting({
+                enabled: row.auto_disassemble_enabled,
+                maxQualityRank: row.auto_disassemble_max_quality_rank,
+                rules: row.auto_disassemble_rules,
+              })
+            );
           }
         }
 
@@ -1697,19 +1738,26 @@ export const nextDungeonInstance = async (
             );
           }
 
-          const autoDisassembleSetting = autoDisassembleSettings.get(characterId) || {
-            enabled: false,
-            maxQualityRank: 1,
-          };
+          const autoDisassembleSetting =
+            autoDisassembleSettings.get(characterId) ||
+            normalizeAutoDisassembleSetting({ enabled: false, maxQualityRank: 1, rules: undefined });
           const grantedItems: Array<{ item_def_id: string; qty: number; item_ids: number[] }> = [];
+          let autoDisassembleSilverGained = 0;
           for (const rewardItem of rewardBundle.items) {
-            const itemCategory = await getItemCategory(rewardItem.itemDefId);
+            const itemMeta = await getItemMeta(rewardItem.itemDefId);
             const grantResult = await grantRewardItemWithAutoDisassemble({
               characterId,
               itemDefId: rewardItem.itemDefId,
               qty: rewardItem.qty,
               ...(rewardItem.bindType ? { bindType: rewardItem.bindType } : {}),
-              itemCategory,
+              itemMeta: {
+                itemName: itemMeta.name,
+                category: itemMeta.category,
+                subCategory: itemMeta.subCategory,
+                effectDefs: itemMeta.effectDefs,
+                level: itemMeta.level,
+                qualityRank: itemMeta.qualityRank,
+              },
               autoDisassembleSetting,
               sourceObtainedFrom: 'dungeon_clear_reward',
               createItem: async ({ itemDefId, qty, bindType, obtainedFrom, equipOptions }) => {
@@ -1729,6 +1777,21 @@ export const nextDungeonInstance = async (
                   [ownerCharacterId, safeItemIds]
                 );
               },
+              addSilver: async (ownerCharacterId, silverGain) => {
+                const safeSilver = Math.max(0, Math.floor(Number(silverGain) || 0));
+                if (safeSilver <= 0) return { success: true, message: '无需增加银两' };
+                const updateRes = await client.query(
+                  `
+                    UPDATE characters
+                    SET silver = silver + $1,
+                        updated_at = NOW()
+                    WHERE id = $2
+                  `,
+                  [safeSilver, ownerCharacterId]
+                );
+                if (updateRes.rowCount === 0) return { success: false, message: '角色不存在' };
+                return { success: true, message: '银两增加成功' };
+              },
             });
 
             for (const warning of grantResult.warnings) {
@@ -1738,11 +1801,14 @@ export const nextDungeonInstance = async (
               appendGrantedItem(grantedItems, granted.itemDefId, granted.qty, granted.itemIds);
             }
             appendPendingMailItems(characterId, p.userId, grantResult.pendingMailItems);
+            if (grantResult.gainedSilver > 0) {
+              autoDisassembleSilverGained += grantResult.gainedSilver;
+            }
           }
 
           const rewardsPayload = {
             exp: rewardBundle.exp,
-            silver: rewardBundle.silver,
+            silver: rewardBundle.silver + autoDisassembleSilverGained,
             items: grantedItems,
             is_first_clear: isFirstClear,
           };

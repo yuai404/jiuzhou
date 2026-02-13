@@ -949,7 +949,10 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
   }, [activeItem, clampUseQty, refresh, useQty]);
 
   const handleBatchDisassemble = useCallback(async () => {
-    const candidates = collectBatchDisassembleCandidates(items);
+    const candidates = collectBatchDisassembleCandidates(items, {
+      ...(category !== 'all' ? { categories: [category] } : {}),
+      ...(query.trim().length > 0 ? { keyword: query.trim().toLowerCase() } : {}),
+    });
     if (candidates.length === 0) { message.info('没有可分解的物品'); return; }
     setLoading(true);
     try {
@@ -964,7 +967,7 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [items, message, refresh]);
+  }, [category, items, message, query, refresh]);
 
   const handleBatchRemove = useCallback(async () => {
     const candidates = items.filter(

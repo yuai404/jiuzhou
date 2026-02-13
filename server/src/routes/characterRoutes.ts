@@ -136,19 +136,23 @@ router.post('/updateAutoCastSkills', authMiddleware, async (req: Request, res: R
 router.post('/updateAutoDisassemble', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId: number }).userId;
-    const body = req.body as { enabled?: unknown; maxQualityRank?: unknown };
+    const body = req.body as { enabled?: unknown; maxQualityRank?: unknown; rules?: unknown };
 
     const enabled = Boolean(body?.enabled);
     const parsedRank =
       body?.maxQualityRank === undefined || body?.maxQualityRank === null
         ? undefined
         : Number(body.maxQualityRank);
+    const parsedRules = body?.rules;
 
     if (parsedRank !== undefined && (!Number.isInteger(parsedRank) || parsedRank < 1 || parsedRank > 4)) {
       return res.status(400).json({ success: false, message: 'maxQualityRank参数错误' });
     }
+    if (parsedRules !== undefined && (parsedRules === null || typeof parsedRules !== 'object' || Array.isArray(parsedRules))) {
+      return res.status(400).json({ success: false, message: 'rules参数错误' });
+    }
 
-    const result = await updateCharacterAutoDisassembleSettings(userId, enabled, parsedRank);
+    const result = await updateCharacterAutoDisassembleSettings(userId, enabled, parsedRank, parsedRules);
 
     if (result.success) {
       try {
