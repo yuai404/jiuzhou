@@ -363,6 +363,16 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
     return out;
   }, [allItems]);
 
+  const bagItemCounts = useMemo(() => {
+    // 洗炼符是 consumable，因此需要按背包全部物品统计，而不是仅 material。
+    const out: Record<string, number> = {};
+    for (const it of allItems) {
+      if (it.location !== 'bag') continue;
+      out[it.itemDefId] = (out[it.itemDefId] ?? 0) + Math.max(0, it.qty);
+    }
+    return out;
+  }, [allItems]);
+
   useEffect(() => {
     const affixCount = item.equip?.affixes.length ?? 0;
     setRerollLockIndexes((prev) => normalizeAffixLockIndexes(prev, affixCount));
@@ -443,11 +453,11 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
       lockIndexes,
       lockIndexSet,
       rerollScrollQty: costPlan.rerollScrollQty,
-      rerollScrollOwned: materialCounts[costPlan.rerollScrollItemDefId] ?? 0,
+      rerollScrollOwned: bagItemCounts[costPlan.rerollScrollItemDefId] ?? 0,
       spiritStoneCost: costPlan.spiritStoneCost,
       silverCost: costPlan.silverCost,
     };
-  }, [item, materialCounts, rerollLockIndexes]);
+  }, [item, bagItemCounts, rerollLockIndexes]);
 
   const handleEnhance = useCallback(async () => {
     setSubmitting(true);

@@ -282,6 +282,16 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     return out;
   }, [items]);
 
+  const bagItemCounts = useMemo(() => {
+    // 洗炼符属于 consumable，不在 materialCounts 里；这里按背包全部道具统计 itemDefId 数量。
+    const out: Record<string, number> = {};
+    for (const it of items) {
+      if (it.location !== 'bag') continue;
+      out[it.itemDefId] = (out[it.itemDefId] ?? 0) + Math.max(0, Math.floor(it.qty));
+    }
+    return out;
+  }, [items]);
+
   const openBatch = useCallback(
     (mode: BatchMode) => {
       setBatchMode(mode);
@@ -551,11 +561,11 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       lockIndexes,
       lockIndexSet,
       rerollScrollQty: costPlan.rerollScrollQty,
-      rerollScrollOwned: materialCounts[costPlan.rerollScrollItemDefId] ?? 0,
+      rerollScrollOwned: bagItemCounts[costPlan.rerollScrollItemDefId] ?? 0,
       spiritStoneCost: costPlan.spiritStoneCost,
       silverCost: costPlan.silverCost,
     };
-  }, [activeItem, materialCounts, rerollLockIndexes]);
+  }, [activeItem, bagItemCounts, rerollLockIndexes]);
 
   const handleEnhance = useCallback(async () => {
     if (!activeItem) return;
