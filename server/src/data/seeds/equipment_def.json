@@ -2773,10 +2773,10 @@
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
         "zhiliao": 0.016,
-        "qixue_huifu": 120
+        "qixue_huifu": 12
       },
       "implicit_attrs": {
-        "qixue_huifu": 80
+        "qixue_huifu": 8
       },
       "affix_pool_id": "ap-armor-rare",
       "affix_count_min": 2,
@@ -2883,7 +2883,7 @@
       "equip_slot": "accessory",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
-        "qixue_huifu": 160,
+        "qixue_huifu": 16,
         "xixue": 0.01
       },
       "implicit_attrs": {
