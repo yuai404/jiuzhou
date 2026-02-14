@@ -41,6 +41,7 @@ type TaskOverviewDto = {
   category: TaskCategory;
   title: string;
   realm: string;
+  giverNpcId: string | null;
   mapId: string | null;
   roomId: string | null;
   status: TaskStatus;
@@ -151,6 +152,34 @@ const resetRecurringTaskProgressIfNeeded = async (
   const cid = Number(characterId);
   if (!Number.isFinite(cid) || cid <= 0) return;
   const runner = dbClient ?? { query };
+  const autoAcceptDailyTaskIds = getStaticTaskDefinitions()
+    .filter((entry) => entry.enabled && entry.category === 'daily')
+    .map((entry) => entry.id)
+    .filter((taskId) => taskId.trim().length > 0);
+
+  if (autoAcceptDailyTaskIds.length > 0) {
+    // 日常任务为自动接取：缺失进度行时自动补齐，避免首次必须手动“接取”。
+    await runner.query(
+      `
+        INSERT INTO character_task_progress
+          (character_id, task_id, status, progress, tracked, accepted_at, completed_at, claimed_at, updated_at)
+        SELECT
+          $1,
+          daily_task.task_id,
+          'ongoing',
+          '{}'::jsonb,
+          false,
+          NOW(),
+          NULL,
+          NULL,
+          NOW()
+        FROM unnest($2::varchar[]) AS daily_task(task_id)
+        ON CONFLICT (character_id, task_id) DO NOTHING
+      `,
+      [cid, autoAcceptDailyTaskIds],
+    );
+  }
+
   const progressRes = await runner.query(
     `
       SELECT task_id
@@ -251,6 +280,7 @@ export const getTaskOverview = async (
         category: def.category,
         title: def.title,
         realm: def.realm,
+        giver_npc_id: def.giver_npc_id,
         map_id: def.map_id,
         room_id: def.room_id,
         description: def.description,
@@ -292,6 +322,7 @@ export const getTaskOverview = async (
       const category = normalizeTaskCategory(r.category) ?? 'main';
       const title = String(r.title ?? id);
       const realm = asNonEmptyString(r.realm) ?? '凡人';
+      const giverNpcId = asNonEmptyString(r.giver_npc_id);
       const mapId = asNonEmptyString(r.map_id);
       const roomId = asNonEmptyString(r.room_id);
       const description = String(r.description ?? '');
@@ -339,7 +370,7 @@ export const getTaskOverview = async (
         })
         .filter((x): x is TaskRewardDto => x !== null && x.amount > 0);
 
-      return { id, category, title, realm, mapId, roomId, status, tracked, description, objectives, rewards };
+      return { id, category, title, realm, giverNpcId, mapId, roomId, status, tracked, description, objectives, rewards };
     })
     .filter((t) => t.id);
 
@@ -464,6 +495,7 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
       const taskDef = taskDefMap.get(taskId);
       if (!taskDef) return null;
       const realm = taskDef.realm ?? '凡人';
+      const giverNpcId = asNonEmptyString(taskDef.giver_npc_id);
       const mapId = taskDef.map_id;
       const roomId = taskDef.room_id;
       const description = String(r.bounty_description ?? '');
@@ -520,6 +552,7 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
         category: 'bounty',
         title,
         realm,
+        giverNpcId,
         mapId,
         roomId,
         status,

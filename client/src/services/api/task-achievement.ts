@@ -23,6 +23,7 @@ export type TaskOverviewRowDto = {
   category: TaskCategory;
   title: string;
   realm: string;
+  giverNpcId: string | null;
   mapId: string | null;
   roomId: string | null;
   status: TaskStatus;

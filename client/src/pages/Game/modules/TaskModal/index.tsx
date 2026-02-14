@@ -11,6 +11,7 @@ import {
   getDungeonWeeklyTargets,
   getTaskOverview,
   setTaskTracked,
+  submitTaskToNpc,
   submitBountyMaterials,
   type DungeonWeeklyTargetDto,
 } from '../../../../services/api';
@@ -33,6 +34,7 @@ type TaskItem = {
   category: TaskCategory;
   title: string;
   realm: string;
+  giverNpcId?: string | null;
   status: TaskStatus;
   tracked: boolean;
   desc: string;
@@ -251,6 +253,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
             category: (t.category || 'main') as TaskCategory,
             title: String(t.title || ''),
             realm: typeof t.realm === 'string' && t.realm.trim() ? t.realm.trim() : '凡人',
+            giverNpcId: typeof t.giverNpcId === 'string' && t.giverNpcId.trim() ? t.giverNpcId.trim() : null,
             status: (t.status || 'ongoing') as TaskStatus,
             tracked: Boolean(t.tracked),
             desc: String(t.description || ''),
@@ -303,6 +306,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
             category: 'bounty',
             title: String(t.title || ''),
             realm: typeof t.realm === 'string' && t.realm.trim() ? t.realm.trim() : '凡人',
+            giverNpcId: typeof t.giverNpcId === 'string' && t.giverNpcId.trim() ? t.giverNpcId.trim() : null,
             status: (t.status || 'ongoing') as TaskStatus,
             tracked: Boolean(t.tracked),
             desc: String(t.description || ''),
@@ -439,6 +443,25 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
       message.error(getErrorMessage(e) || '领取失败');
     }
   }, [appendSystemChat, formatTaskRewardsToText, message, refresh]);
+
+  const completeTask = useCallback(async (task: TaskItem | null) => {
+    if (!task?.id) return;
+    if (task.category !== 'daily') return;
+    const npcId = String(task.giverNpcId ?? '').trim();
+    if (!npcId) {
+      message.error('该日常任务缺少发布NPC，无法完成');
+      return;
+    }
+    try {
+      const res = await submitTaskToNpc(npcId, task.id);
+      if (!res?.success) throw new Error(res?.message || '完成失败');
+      message.success('完成成功');
+      appendSystemChat(`【任务】已完成：${task.title}`);
+      await refresh();
+    } catch (e: unknown) {
+      message.error(getErrorMessage(e) || '完成失败');
+    }
+  }, [appendSystemChat, message, refresh]);
 
   const submitMaterials = useCallback(
     async (task: TaskItem | null) => {
@@ -665,13 +688,25 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
                           提交材料
                         </Button>
                       ) : null}
+                      {/* 日常任务在 turnin 阶段提供“完成”，领取阶段提供“领取”。 */}
                       <Button
                         className="task-action"
                         type="primary"
-                        disabled={activeTask.status !== 'claimable' || loading}
-                        onClick={() => claimReward(activeTask)}
+                        disabled={
+                          loading
+                          || (activeTask.status !== 'claimable' && !(activeTask.category === 'daily' && activeTask.status === 'turnin'))
+                        }
+                        onClick={() => {
+                          if (activeTask.status === 'claimable') {
+                            void claimReward(activeTask);
+                            return;
+                          }
+                          if (activeTask.category === 'daily' && activeTask.status === 'turnin') {
+                            void completeTask(activeTask);
+                          }
+                        }}
                       >
-                        领取
+                        {activeTask.category === 'daily' && activeTask.status !== 'claimable' ? '完成' : '领取'}
                       </Button>
                     </div>
                   </>
