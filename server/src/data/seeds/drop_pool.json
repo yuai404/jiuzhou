@@ -717,6 +717,13 @@
           "qty_min": 1,
           "qty_max": 2,
           "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-huo-lingsha",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
         }
       ],
       "common_pool_ids": [
@@ -732,6 +739,13 @@
         {
           "item_def_id": "mat-xinmo-jinghua",
           "chance": 0.95,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.35,
           "qty_min": 1,
           "qty_max": 2,
           "show_in_ui": true
@@ -760,6 +774,20 @@
           "qty_min": 1,
           "qty_max": 2,
           "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-huo-lingsha",
+          "chance": 0.22,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.22,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
         }
       ],
       "common_pool_ids": [
@@ -775,6 +803,13 @@
         {
           "item_def_id": "mat-xinmo-jinghua",
           "chance": 0.75,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.32,
           "qty_min": 1,
           "qty_max": 2,
           "show_in_ui": true
@@ -803,6 +838,20 @@
           "qty_min": 2,
           "qty_max": 4,
           "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-huo-lingsha",
+          "chance": 0.6,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.6,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
         }
       ],
       "common_pool_ids": [
@@ -828,6 +877,20 @@
           "chance": 0.95,
           "qty_min": 2,
           "qty_max": 4,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-huo-lingsha",
+          "chance": 0.72,
+          "qty_min": 1,
+          "qty_max": 3,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.45,
+          "qty_min": 1,
+          "qty_max": 2,
           "show_in_ui": true
         }
       ],
@@ -861,6 +924,34 @@
           "chance": 0.65,
           "qty_min": 1,
           "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-huo-lingsha",
+          "chance": 0.9,
+          "qty_min": 2,
+          "qty_max": 4,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.5,
+          "qty_min": 1,
+          "qty_max": 3,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-wudao-yujian",
+          "chance": 0.2,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-daoyun-jinghe",
+          "chance": 0.05,
+          "qty_min": 1,
+          "qty_max": 1,
           "show_in_ui": true
         }
       ],
@@ -908,6 +999,34 @@
           "chance": 1,
           "qty_min": 4,
           "qty_max": 7,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-huo-lingsha",
+          "chance": 1,
+          "qty_min": 2,
+          "qty_max": 4,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-shui-lingsu",
+          "chance": 0.8,
+          "qty_min": 2,
+          "qty_max": 4,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-wudao-yujian",
+          "chance": 0.24,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-daoyun-jinghe",
+          "chance": 0.08,
+          "qty_min": 1,
+          "qty_max": 1,
           "show_in_ui": true
         }
       ],
