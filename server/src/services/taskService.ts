@@ -152,13 +152,13 @@ const resetRecurringTaskProgressIfNeeded = async (
   const cid = Number(characterId);
   if (!Number.isFinite(cid) || cid <= 0) return;
   const runner = dbClient ?? { query };
-  const autoAcceptDailyTaskIds = getStaticTaskDefinitions()
-    .filter((entry) => entry.enabled && entry.category === 'daily')
+  const autoAcceptRecurringTaskIds = getStaticTaskDefinitions()
+    .filter((entry) => entry.enabled && (entry.category === 'daily' || entry.category === 'event'))
     .map((entry) => entry.id)
     .filter((taskId) => taskId.trim().length > 0);
 
-  if (autoAcceptDailyTaskIds.length > 0) {
-    // 日常任务为自动接取：缺失进度行时自动补齐，避免首次必须手动“接取”。
+  if (autoAcceptRecurringTaskIds.length > 0) {
+    // 日常/周常任务为自动接取：缺失进度行时自动补齐，避免首次必须手动“接取”。
     await runner.query(
       `
         INSERT INTO character_task_progress
@@ -176,7 +176,7 @@ const resetRecurringTaskProgressIfNeeded = async (
         FROM unnest($2::varchar[]) AS daily_task(task_id)
         ON CONFLICT (character_id, task_id) DO NOTHING
       `,
-      [cid, autoAcceptDailyTaskIds],
+      [cid, autoAcceptRecurringTaskIds],
     );
   }
 

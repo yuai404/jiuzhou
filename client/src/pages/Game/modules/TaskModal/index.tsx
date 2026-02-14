@@ -446,10 +446,10 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
 
   const completeTask = useCallback(async (task: TaskItem | null) => {
     if (!task?.id) return;
-    if (task.category !== 'daily') return;
+    if (task.category !== 'daily' && task.category !== 'event') return;
     const npcId = String(task.giverNpcId ?? '').trim();
     if (!npcId) {
-      message.error('该日常任务缺少发布NPC，无法完成');
+      message.error('该任务缺少发布NPC，无法完成');
       return;
     }
     try {
@@ -688,25 +688,28 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
                           提交材料
                         </Button>
                       ) : null}
-                      {/* 日常任务在 turnin 阶段提供“完成”，领取阶段提供“领取”。 */}
+                      {/* 日常/周常任务在 turnin 阶段提供“完成”，领取阶段提供“领取”。 */}
                       <Button
                         className="task-action"
                         type="primary"
                         disabled={
                           loading
-                          || (activeTask.status !== 'claimable' && !(activeTask.category === 'daily' && activeTask.status === 'turnin'))
+                          || (
+                            activeTask.status !== 'claimable'
+                            && !((activeTask.category === 'daily' || activeTask.category === 'event') && activeTask.status === 'turnin')
+                          )
                         }
                         onClick={() => {
                           if (activeTask.status === 'claimable') {
                             void claimReward(activeTask);
                             return;
                           }
-                          if (activeTask.category === 'daily' && activeTask.status === 'turnin') {
+                          if ((activeTask.category === 'daily' || activeTask.category === 'event') && activeTask.status === 'turnin') {
                             void completeTask(activeTask);
                           }
                         }}
                       >
-                        {activeTask.category === 'daily' && activeTask.status !== 'claimable' ? '完成' : '领取'}
+                        {(activeTask.category === 'daily' || activeTask.category === 'event') && activeTask.status !== 'claimable' ? '完成' : '领取'}
                       </Button>
                     </div>
                   </>
