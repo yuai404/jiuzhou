@@ -36,43 +36,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-1",
-          "chance": 0.01,
+          "item_def_id": "box-006",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -113,43 +78,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-1",
-          "chance": 0.01,
+          "item_def_id": "box-006",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -190,43 +120,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-1",
-          "chance": 0.01,
+          "item_def_id": "box-006",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -281,43 +176,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-1",
-          "chance": 0.01,
+          "item_def_id": "box-006",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -358,43 +218,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-1",
-          "chance": 0.01,
+          "item_def_id": "box-006",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -449,43 +274,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-1",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-1",
-          "chance": 0.01,
+          "item_def_id": "box-006",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -575,85 +365,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-2",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-2",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-2",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-2",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-2",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-2",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-2",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-2",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-2",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-2",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-2",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-2",
-          "chance": 0.001665,
+          "item_def_id": "box-007",
+          "chance": 0.16,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -855,85 +568,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001665,
+          "item_def_id": "box-008",
+          "chance": 0.16,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1016,43 +652,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-2",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-2",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-2",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-2",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-2",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-2",
-          "chance": 0.01,
+          "item_def_id": "box-007",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1135,43 +736,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1247,43 +813,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1366,43 +897,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1520,85 +1016,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001,
+          "item_def_id": "box-008",
+          "chance": 0.111,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1730,85 +1149,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001665,
+          "item_def_id": "box-008",
+          "chance": 0.16,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1856,43 +1198,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1940,43 +1247,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2024,43 +1296,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2108,43 +1345,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2192,43 +1394,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2276,43 +1443,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-008",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2374,85 +1506,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001,
+          "item_def_id": "box-008",
+          "chance": 0.111,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2514,85 +1569,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001,
+          "item_def_id": "box-008",
+          "chance": 0.111,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2675,85 +1653,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001665,
+          "item_def_id": "box-008",
+          "chance": 0.16,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2829,85 +1730,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001665,
+          "item_def_id": "box-008",
+          "chance": 0.16,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -2955,43 +1779,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-005",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -3039,43 +1828,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-005",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -3123,43 +1877,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-005",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -3207,43 +1926,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.01,
+          "item_def_id": "box-005",
+          "chance": 0.06,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -3305,85 +1989,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001,
+          "item_def_id": "box-005",
+          "chance": 0.111,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -3445,85 +2052,8 @@
           "show_in_ui": true
         },
         {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.0175,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001,
+          "item_def_id": "box-005",
+          "chance": 0.111,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -3593,93 +2123,9 @@
         },
         {
           "item_def_id": "box-005",
-          "chance": 0.8,
+          "chance": 0.96,
           "qty_min": 1,
           "qty_max": 3,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001665,
-          "qty_min": 1,
-          "qty_max": 1,
           "show_in_ui": true
         },
         {
@@ -3754,93 +2200,9 @@
         },
         {
           "item_def_id": "box-005",
-          "chance": 0.78,
+          "chance": 0.94,
           "qty_min": 1,
           "qty_max": 3,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-wg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-atk-fg-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-wf-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-def-ff-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-hp-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-sur-lq-3",
-          "chance": 0.025,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-mz-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-sb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-bj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zj-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-kb-3",
-          "chance": 0.001667,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "gem-all-zs-3",
-          "chance": 0.001665,
-          "qty_min": 1,
-          "qty_max": 1,
           "show_in_ui": true
         },
         {

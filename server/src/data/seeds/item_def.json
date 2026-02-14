@@ -845,45 +845,9 @@
       ]
     },
     {
-      "id": "box-004",
-      "code": "low_gem_bag",
-      "name": "低级宝石袋",
-      "category": "consumable",
-      "sub_category": "box",
-      "quality": "黄",
-      "quality_rank": 1,
-      "rarity": "common",
-      "level": 1,
-      "stack_max": 999,
-      "bind_type": "none",
-      "tradeable": true,
-      "icon": "/assets/items/Props-baodai-2.png",
-      "description": "打开后可随机获得1个低级宝石",
-      "long_desc": "使用后随机获得1个低级宝石。",
-      "tags": [
-        "宝箱",
-        "宝石",
-        "随机"
-      ],
-      "use_type": "instant",
-      "effect_defs": [
-        {
-          "trigger": "use",
-          "target": "self",
-          "effect_type": "loot",
-          "params": {
-            "loot_type": "random_gem",
-            "min_level": 2,
-            "max_level": 3,
-            "gems_per_use": 1
-          }
-        }
-      ]
-    },
-    {
       "id": "box-005",
       "code": "advanced_gem_bag",
-      "name": "进阶宝石袋",
+      "name": "采药宝石袋",
       "category": "consumable",
       "sub_category": "box",
       "quality": "玄",
@@ -894,12 +858,12 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/Props-baodai-2.png",
-      "description": "打开后可随机获得1个2~4级宝石",
-      "long_desc": "使用后随机获得1个2~4级攻击/防御/生存类宝石。",
+      "description": "打开后可随机获得1个1~4级宝石",
+      "long_desc": "使用后随机获得1个1~4级宝石。",
       "tags": [
         "宝箱",
         "宝石",
-        "进阶",
+        "采药",
         "随机"
       ],
       "use_type": "instant",
@@ -910,13 +874,121 @@
           "effect_type": "loot",
           "params": {
             "loot_type": "random_gem",
-            "sub_categories": [
-              "gem_attack",
-              "gem_defense",
-              "gem_survival"
-            ],
-            "min_level": 2,
+            "min_level": 1,
             "max_level": 4,
+            "gems_per_use": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "box-006",
+      "code": "level_1_gem_bag",
+      "name": "凡人宝石袋",
+      "category": "consumable",
+      "sub_category": "box",
+      "quality": "黄",
+      "quality_rank": 1,
+      "rarity": "common",
+      "level": 1,
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/Props-baodai-2.png",
+      "description": "打开后可随机获得1个1级宝石",
+      "long_desc": "使用后随机获得1个1级宝石。",
+      "tags": [
+        "宝箱",
+        "宝石",
+        "凡人",
+        "随机"
+      ],
+      "use_type": "instant",
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "loot",
+          "params": {
+            "loot_type": "random_gem",
+            "min_level": 1,
+            "max_level": 1,
+            "gems_per_use": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "box-007",
+      "code": "level_1_2_gem_bag",
+      "name": "养气宝石袋",
+      "category": "consumable",
+      "sub_category": "box",
+      "quality": "黄",
+      "quality_rank": 1,
+      "rarity": "common",
+      "level": 8,
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/Props-baodai-2.png",
+      "description": "打开后可随机获得1个1~2级宝石",
+      "long_desc": "使用后随机获得1个1~2级宝石。",
+      "tags": [
+        "宝箱",
+        "宝石",
+        "养气",
+        "凝炁",
+        "随机"
+      ],
+      "use_type": "instant",
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "loot",
+          "params": {
+            "loot_type": "random_gem",
+            "min_level": 1,
+            "max_level": 2,
+            "gems_per_use": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "box-008",
+      "code": "level_1_3_gem_bag",
+      "name": "通脉宝石袋",
+      "category": "consumable",
+      "sub_category": "box",
+      "quality": "玄",
+      "quality_rank": 2,
+      "rarity": "uncommon",
+      "level": 12,
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/Props-baodai-2.png",
+      "description": "打开后可随机获得1个1~3级宝石",
+      "long_desc": "使用后随机获得1个1~3级宝石。",
+      "tags": [
+        "宝箱",
+        "宝石",
+        "通脉",
+        "炼己",
+        "随机"
+      ],
+      "use_type": "instant",
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "loot",
+          "params": {
+            "loot_type": "random_gem",
+            "min_level": 1,
+            "max_level": 3,
             "gems_per_use": 1
           }
         }
