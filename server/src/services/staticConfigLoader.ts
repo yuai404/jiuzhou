@@ -208,7 +208,6 @@ export type MonsterPhaseTriggerConfig = {
 };
 
 export type MonsterAIProfileConfig = {
-  behavior?: string;
   skills?: string[];
   skill_weights?: Record<string, number>;
   phase_triggers?: MonsterPhaseTriggerConfig[];

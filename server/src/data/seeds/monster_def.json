@@ -53,7 +53,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "passive",
         "skills": []
       },
       "drop_pool_id": "dp-wild-rabbit",
@@ -113,7 +112,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": []
       },
       "drop_pool_id": "dp-wild-boar",
@@ -173,7 +171,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-bite"
         ]
@@ -235,7 +232,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-bite",
           "sk-howl"
@@ -298,7 +294,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-poison-bite"
         ]
@@ -360,7 +355,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "passive",
         "skills": [
           "sk-stone-smash"
         ]
@@ -422,7 +416,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-bite",
           "sk-howl",
@@ -492,7 +485,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "boss",
         "skills": [
           "sk-vine-whip",
           "sk-poison-spore",
@@ -584,7 +576,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-bite"
         ]
@@ -646,7 +637,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-poison-bite"
         ]
@@ -708,7 +698,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "passive",
         "skills": [
           "sk-stone-smash"
         ]
@@ -770,7 +759,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-bite",
           "sk-howl"
@@ -833,7 +821,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "aggressive",
         "skills": [
           "sk-bite",
           "sk-howl",
@@ -903,7 +890,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "boss",
         "skills": [
           "sk-vine-whip",
           "sk-poison-spore",
@@ -996,7 +982,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-stone-smash",
           "sk-quake-stomp"
@@ -1064,7 +1049,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-shadow-claw",
           "sk-ghost-curse"
@@ -1132,7 +1116,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-poison-bite",
           "sk-venom-spray"
@@ -1200,7 +1183,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-tide-spike",
           "sk-cold-surge"
@@ -1268,7 +1250,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-xinmo-thorn",
           "sk-xinmo-whisper"
@@ -1336,7 +1317,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-crystal-bash",
           "sk-earth-shock"
@@ -1404,7 +1384,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "elite",
         "skills": [
           "sk-youming-slash",
           "sk-soul-chain",
@@ -1474,7 +1453,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "elite",
         "skills": [
           "sk-crystal-bash",
           "sk-earth-shock",
@@ -1544,7 +1522,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "boss",
         "skills": [
           "sk-xinmo-pierce",
           "sk-xinmo-fear",
@@ -1637,7 +1614,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "boss",
         "skills": [
           "sk-earth-crush",
           "sk-crystal-rain",
@@ -1737,7 +1713,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-tide-spike",
           "sk-cold-surge"
@@ -1805,7 +1780,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-shadow-claw",
           "sk-ghost-curse"
@@ -1873,7 +1847,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-crystal-bash",
           "sk-earth-shock"
@@ -1941,7 +1914,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-xinmo-thorn",
           "sk-xinmo-whisper"
@@ -2009,7 +1981,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "elite",
         "skills": [
           "sk-youming-slash",
           "sk-soul-chain",
@@ -2079,7 +2050,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "elite",
         "skills": [
           "sk-crystal-bash",
           "sk-earth-shock",
@@ -2149,7 +2119,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "boss",
         "skills": [
           "sk-earth-crush",
           "sk-crystal-rain",
@@ -2249,7 +2218,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "boss",
         "skills": [
           "sk-xinmo-pierce",
           "sk-xinmo-fear",
@@ -2342,7 +2310,6 @@
         }
       ],
       "ai_profile": {
-        "behavior": "normal",
         "skills": [
           "sk-vine-whip"
         ],

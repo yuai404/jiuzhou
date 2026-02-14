@@ -17,7 +17,6 @@ import type {
   BattleSkill,
   BattleState,
   BattleSetBonusEffect,
-  MonsterAIBehavior,
   MonsterAIPhaseTrigger,
   MonsterAIProfile,
   SkillEffect,
@@ -277,15 +276,6 @@ function toText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-const MONSTER_AI_BEHAVIOR_SET = new Set<MonsterAIBehavior>([
-  'passive',
-  'aggressive',
-  'defensive',
-  'support',
-  'boss',
-  'normal',
-  'elite',
-]);
 const MONSTER_PHASE_ACTION_SET = new Set(['enrage', 'summon']);
 const MONSTER_PHASE_BUFF_PATTERN = /^(buff|debuff)-([a-z0-9-]+)-(up|down)$/i;
 const MONSTER_SKILL_TARGET_TYPE_SET = new Set<BattleSkill['targetType']>([
@@ -454,15 +444,6 @@ function extractMonsterAttrsForSummon(def: MonsterDefConfig): BattleAttrs {
   };
 }
 
-function parseMonsterBehavior(raw: unknown, monsterId: string): MonsterAIBehavior | null {
-  const behaviorText = toText(raw);
-  if (!behaviorText) return 'aggressive';
-  if (!MONSTER_AI_BEHAVIOR_SET.has(behaviorText as MonsterAIBehavior)) {
-    return null;
-  }
-  return behaviorText as MonsterAIBehavior;
-}
-
 function parsePhaseEffects(
   raw: unknown,
   monsterId: string,
@@ -534,11 +515,6 @@ function resolveMonsterRuntime(
 
   resolvingPath.add(monsterId);
   const aiProfileRaw: MonsterAIProfileConfig = def.ai_profile ?? {};
-  const behavior = parseMonsterBehavior(aiProfileRaw.behavior, monsterId);
-  if (!behavior) {
-    resolvingPath.delete(monsterId);
-    return { success: false, error: `怪物[${monsterId}] behavior非法: ${toText(aiProfileRaw.behavior)}` };
-  }
 
   const skillIds = uniqueStringIds(
     (Array.isArray(aiProfileRaw.skills) ? aiProfileRaw.skills : [])
@@ -647,7 +623,6 @@ function resolveMonsterRuntime(
   }
 
   const aiProfile: MonsterAIProfile = {
-    behavior,
     skillIds,
     skillWeights,
     phaseTriggers,

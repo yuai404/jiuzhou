@@ -5,15 +5,6 @@
 // ============================================
 // 怪物AI配置
 // ============================================
-export type MonsterAIBehavior =
-  | 'passive'
-  | 'aggressive'
-  | 'defensive'
-  | 'support'
-  | 'boss'
-  | 'normal'
-  | 'elite';
-
 export type MonsterPhaseTriggerAction = 'enrage' | 'summon';
 
 export interface MonsterAISummonTemplate {
@@ -37,7 +28,6 @@ export interface MonsterAIPhaseTrigger {
 }
 
 export interface MonsterAIProfile {
-  behavior: MonsterAIBehavior;
   skillIds: string[];
   skillWeights: Record<string, number>;
   phaseTriggers: MonsterAIPhaseTrigger[];
