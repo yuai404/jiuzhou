@@ -4,7 +4,6 @@
   "items": [
     {
       "id": "cons-001",
-      "code": "qing_ling_dan",
       "name": "清灵丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -41,7 +40,6 @@
     },
     {
       "id": "cons-002",
-      "code": "hui_qi_dan",
       "name": "回气丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -75,7 +73,6 @@
     },
     {
       "id": "cons-003",
-      "code": "xuan_ling_dan",
       "name": "玄灵丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -107,7 +104,6 @@
     },
     {
       "id": "cons-004",
-      "code": "da_huan_dan",
       "name": "大还丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -143,7 +139,6 @@
     },
     {
       "id": "cons-005",
-      "code": "zhu_ji_dan",
       "name": "筑基丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -179,7 +174,6 @@
     },
     {
       "id": "cons-006",
-      "code": "jie_du_dan",
       "name": "解毒丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -210,7 +204,6 @@
     },
     {
       "id": "cons-007",
-      "code": "li_li_san",
       "name": "力力散",
       "category": "consumable",
       "sub_category": "pill",
@@ -246,7 +239,6 @@
     },
     {
       "id": "cons-008",
-      "code": "ling_hui_san",
       "name": "灵慧散",
       "category": "consumable",
       "sub_category": "pill",
@@ -282,7 +274,6 @@
     },
     {
       "id": "cons-009",
-      "code": "bi_zhang_dan",
       "name": "避瘴丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -323,7 +314,6 @@
     },
     {
       "id": "cons-010",
-      "code": "yu_feng_dan",
       "name": "御风丹",
       "category": "consumable",
       "sub_category": "pill",
@@ -370,7 +360,6 @@
     },
     {
       "id": "cons-monthcard-001",
-      "code": "xiuxing_month_card_item",
       "name": "修行月卡",
       "category": "consumable",
       "sub_category": "month_card",
@@ -403,7 +392,6 @@
     },
     {
       "id": "cons-battlepass-001",
-      "code": "battle_pass_card",
       "name": "战令卡",
       "category": "consumable",
       "sub_category": "battle_pass",
@@ -435,7 +423,6 @@
     },
     {
       "id": "mat-001",
-      "code": "ling_cao",
       "name": "灵草",
       "category": "material",
       "sub_category": "herb",
@@ -455,7 +442,6 @@
     },
     {
       "id": "mat-002",
-      "code": "tie_kuang",
       "name": "铁矿石",
       "category": "material",
       "sub_category": "ore",
@@ -475,7 +461,6 @@
     },
     {
       "id": "mat-003",
-      "code": "xuan_tie",
       "name": "玄铁",
       "category": "material",
       "sub_category": "ore",
@@ -496,7 +481,6 @@
     },
     {
       "id": "mat-004",
-      "code": "ling_mu",
       "name": "灵木",
       "category": "material",
       "sub_category": "wood",
@@ -516,7 +500,6 @@
     },
     {
       "id": "mat-005",
-      "code": "shou_pi",
       "name": "兽皮",
       "category": "material",
       "sub_category": "leather",
@@ -536,7 +519,6 @@
     },
     {
       "id": "mat-006",
-      "code": "yao_dan",
       "name": "妖丹",
       "category": "material",
       "sub_category": "essence",
@@ -557,7 +539,6 @@
     },
     {
       "id": "mat-007",
-      "code": "ling_shi_sui",
       "name": "灵石碎片",
       "category": "material",
       "sub_category": "gem",
@@ -577,7 +558,6 @@
     },
     {
       "id": "mat-008",
-      "code": "duan_bei_can_pian",
       "name": "断碑残片",
       "category": "material",
       "sub_category": "relic",
@@ -597,7 +577,6 @@
     },
     {
       "id": "mat-009",
-      "code": "feng_ling_lang_ya",
       "name": "风岭狼牙",
       "category": "material",
       "sub_category": "bone",
@@ -617,7 +596,6 @@
     },
     {
       "id": "mat-010",
-      "code": "ying_wen_she_dan",
       "name": "影纹蛇胆",
       "category": "material",
       "sub_category": "essence",
@@ -638,7 +616,6 @@
     },
     {
       "id": "mat-011",
-      "code": "fu_wen_yan_he",
       "name": "符纹岩核",
       "category": "material",
       "sub_category": "ore",
@@ -659,7 +636,6 @@
     },
     {
       "id": "mat-012",
-      "code": "ku_mu_xin_sui",
       "name": "枯木心髓",
       "category": "material",
       "sub_category": "essence",
@@ -685,7 +661,6 @@
     },
     {
       "id": "box-001",
-      "code": "ling_shi_dai",
       "name": "灵石袋",
       "category": "consumable",
       "sub_category": "box",
@@ -720,7 +695,6 @@
     },
     {
       "id": "box-002",
-      "code": "xin_shou_li_bao",
       "name": "新手礼包",
       "category": "consumable",
       "sub_category": "box",
@@ -771,7 +745,6 @@
     },
     {
       "id": "box-003",
-      "code": "yang_qi_li_bao",
       "name": "养气期礼包",
       "category": "consumable",
       "sub_category": "box",
@@ -819,7 +792,6 @@
     },
     {
       "id": "box-005",
-      "code": "advanced_gem_bag",
       "name": "采药宝石袋",
       "category": "consumable",
       "sub_category": "box",
@@ -855,7 +827,6 @@
     },
     {
       "id": "box-006",
-      "code": "level_1_gem_bag",
       "name": "凡人宝石袋",
       "category": "consumable",
       "sub_category": "box",
@@ -891,7 +862,6 @@
     },
     {
       "id": "box-007",
-      "code": "level_1_2_gem_bag",
       "name": "养气宝石袋",
       "category": "consumable",
       "sub_category": "box",
@@ -928,7 +898,6 @@
     },
     {
       "id": "box-008",
-      "code": "level_1_3_gem_bag",
       "name": "通脉宝石袋",
       "category": "consumable",
       "sub_category": "box",
@@ -965,7 +934,6 @@
     },
     {
       "id": "func-001",
-      "code": "bei_bao_kuo_rong",
       "name": "背包扩容符",
       "category": "consumable",
       "sub_category": "function",
@@ -998,7 +966,6 @@
     },
     {
       "id": "enhance-001",
-      "code": "cui_ling_shi",
       "name": "淬灵石",
       "category": "material",
       "sub_category": "enhance",
@@ -1023,7 +990,6 @@
     },
     {
       "id": "enhance-002",
-      "code": "yun_ling_shi",
       "name": "蕴灵石",
       "category": "material",
       "sub_category": "enhance",
@@ -1049,7 +1015,6 @@
     },
     {
       "id": "scroll-003",
-      "code": "xi_lian_fu",
       "name": "洗炼符",
       "category": "consumable",
       "sub_category": "scroll",
@@ -1079,7 +1044,6 @@
     },
     {
       "id": "gem-001",
-      "code": "gong_ji_bao_shi_1",
       "name": "攻击宝石·一级",
       "category": "material",
       "sub_category": "gem",
@@ -1110,7 +1074,6 @@
     },
     {
       "id": "gem-002",
-      "code": "fang_yu_bao_shi_1",
       "name": "防御宝石·一级",
       "category": "material",
       "sub_category": "gem",
@@ -1141,7 +1104,6 @@
     },
     {
       "id": "gem-003",
-      "code": "sheng_ming_bao_shi_1",
       "name": "生命宝石·一级",
       "category": "material",
       "sub_category": "gem",
@@ -1172,7 +1134,6 @@
     },
     {
       "id": "gem-004",
-      "code": "ling_li_bao_shi_1",
       "name": "灵力宝石·一级",
       "category": "material",
       "sub_category": "gem",
@@ -1203,7 +1164,6 @@
     },
     {
       "id": "token-001",
-      "code": "ri_chang_ling",
       "name": "日常令",
       "category": "consumable",
       "sub_category": "token",
@@ -1223,7 +1183,6 @@
     },
     {
       "id": "token-002",
-      "code": "zong_men_gong_xian",
       "name": "宗门贡献",
       "category": "consumable",
       "sub_category": "token",
@@ -1243,7 +1202,6 @@
     },
     {
       "id": "token-003",
-      "code": "jing_ji_bi",
       "name": "竞技币",
       "category": "consumable",
       "sub_category": "token",
@@ -1263,7 +1221,6 @@
     },
     {
       "id": "quest-001",
-      "code": "mi_jing_yao_shi",
       "name": "秘境钥匙",
       "category": "quest",
       "sub_category": "key",
@@ -1285,7 +1242,6 @@
     },
     {
       "id": "quest-002",
-      "code": "yao_shou_xin",
       "name": "妖兽心",
       "category": "quest",
       "sub_category": "collect",
@@ -1306,7 +1262,6 @@
     },
     {
       "id": "mat-gongfa-canye",
-      "code": "gongfa_canye",
       "name": "功法残页",
       "category": "material",
       "sub_category": "technique",
@@ -1332,7 +1287,6 @@
     },
     {
       "id": "mat-lingmo",
-      "code": "ling_mo",
       "name": "灵墨",
       "category": "material",
       "sub_category": "technique",
@@ -1357,7 +1311,6 @@
     },
     {
       "id": "mat-huo-lingsha",
-      "code": "huo_ling_sha",
       "name": "火灵砂",
       "category": "material",
       "sub_category": "technique",
@@ -1382,7 +1335,6 @@
     },
     {
       "id": "mat-shui-lingsu",
-      "code": "shui_ling_su",
       "name": "水灵髓",
       "category": "material",
       "sub_category": "technique",
@@ -1407,7 +1359,6 @@
     },
     {
       "id": "mat-wudao-yujian",
-      "code": "wudao_yujian",
       "name": "悟道玉简",
       "category": "material",
       "sub_category": "technique",
@@ -1434,7 +1385,6 @@
     },
     {
       "id": "mat-daoyun-jinghe",
-      "code": "daoyun_jinghe",
       "name": "道韵晶核",
       "category": "material",
       "sub_category": "technique",
@@ -1461,7 +1411,6 @@
     },
     {
       "id": "book-jichu-quanfa",
-      "code": "book_jichu_quanfa",
       "name": "《基础拳法》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1496,7 +1445,6 @@
     },
     {
       "id": "book-jichu-jianfa",
-      "code": "book_jichu_jianfa",
       "name": "《基础剑法》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1531,7 +1479,6 @@
     },
     {
       "id": "book-jichu-daofa",
-      "code": "book_jichu_daofa",
       "name": "《基础刀法》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1566,7 +1513,6 @@
     },
     {
       "id": "book-yangqi-jue",
-      "code": "book_yangqi_jue",
       "name": "《养气诀》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1601,7 +1547,6 @@
     },
     {
       "id": "book-jichu-fushu",
-      "code": "book_jichu_fushu",
       "name": "《基础符术》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1636,7 +1581,6 @@
     },
     {
       "id": "book-qinggong-ru",
-      "code": "book_qinggong_rumen",
       "name": "《轻功入门》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1671,7 +1615,6 @@
     },
     {
       "id": "book-huifu-shu",
-      "code": "book_huifu_shu",
       "name": "《恢复术》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1706,7 +1649,6 @@
     },
     {
       "id": "book-tiebu-quan",
-      "code": "book_tiebu_quan",
       "name": "《铁布拳》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1741,7 +1683,6 @@
     },
     {
       "id": "book-jingang-quan",
-      "code": "book_jingang_quan",
       "name": "《金刚拳》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1778,7 +1719,6 @@
     },
     {
       "id": "book-qingfeng-jian",
-      "code": "book_qingfeng_jian",
       "name": "《清风剑法》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1815,7 +1755,6 @@
     },
     {
       "id": "book-qingmu-jue",
-      "code": "book_qingmu_jue",
       "name": "《青木诀》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1852,7 +1791,6 @@
     },
     {
       "id": "book-houtu-gong",
-      "code": "book_houtu_gong",
       "name": "《厚土功》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1889,7 +1827,6 @@
     },
     {
       "id": "book-tunajue",
-      "code": "book_tuna_jue",
       "name": "《吐纳诀》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1924,7 +1861,6 @@
     },
     {
       "id": "book-shuiyun-zhang",
-      "code": "book_shuiyun_zhang",
       "name": "《水云掌》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1961,7 +1897,6 @@
     },
     {
       "id": "book-lingbo-weibu",
-      "code": "book_lingbo_weibu",
       "name": "《凌波微步》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -1998,7 +1933,6 @@
     },
     {
       "id": "book-chunyang-gong",
-      "code": "book_chunyang_gong",
       "name": "《纯阳功》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -2035,7 +1969,6 @@
     },
     {
       "id": "book-lieyang-jian",
-      "code": "book_lieyang_jian",
       "name": "《烈阳剑诀》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -2072,7 +2005,6 @@
     },
     {
       "id": "book-hanbing-jue",
-      "code": "book_hanbing_jue",
       "name": "《寒冰诀》",
       "category": "consumable",
       "sub_category": "technique_book",
@@ -2109,7 +2041,6 @@
     },
     {
       "id": "item-hidden-chest",
-      "code": "hidden_chest",
       "name": "隐秘宝箱",
       "category": "consumable",
       "sub_category": "box",
@@ -2128,7 +2059,6 @@
     },
     {
       "id": "obj-warehouse",
-      "code": "warehouse",
       "name": "仓库",
       "category": "other",
       "sub_category": "object",
@@ -2148,7 +2078,6 @@
     },
     {
       "id": "item-snake-egg",
-      "code": "snake_egg",
       "name": "蛇蛋",
       "category": "material",
       "sub_category": "egg",
@@ -2168,7 +2097,6 @@
     },
     {
       "id": "res-wild-herb",
-      "code": "wild_herb",
       "name": "野生草药",
       "category": "material",
       "sub_category": "herb",
@@ -2187,7 +2115,6 @@
     },
     {
       "id": "res-spirit-grass",
-      "code": "spirit_grass",
       "name": "灵草叶",
       "category": "material",
       "sub_category": "herb",
@@ -2207,7 +2134,6 @@
     },
     {
       "id": "res-spirit-herb",
-      "code": "spirit_herb",
       "name": "灵草",
       "category": "material",
       "sub_category": "herb",
@@ -2227,7 +2153,6 @@
     },
     {
       "id": "res-spirit-stone-ore",
-      "code": "spirit_stone_ore",
       "name": "灵石矿石",
       "category": "material",
       "sub_category": "ore",
@@ -2247,7 +2172,6 @@
     },
     {
       "id": "mat-lingmai-jingshi",
-      "code": "lingmai_jingshi",
       "name": "灵脉精石",
       "category": "material",
       "sub_category": "forge",
@@ -2273,7 +2197,6 @@
     },
     {
       "id": "mat-youming-gupi",
-      "code": "youming_gupi",
       "name": "幽冥骨片",
       "category": "material",
       "sub_category": "armor",
@@ -2299,7 +2222,6 @@
     },
     {
       "id": "mat-nanhai-lingzhu",
-      "code": "nanhai_lingzhu",
       "name": "南海灵珠",
       "category": "material",
       "sub_category": "accessory",
@@ -2325,7 +2247,6 @@
     },
     {
       "id": "mat-xinmo-jinghua",
-      "code": "xinmo_jinghua",
       "name": "心魔精华",
       "category": "material",
       "sub_category": "technique",
@@ -2351,7 +2272,6 @@
     },
     {
       "id": "mat-lianji-dan",
-      "code": "lianji_dan",
       "name": "炼己丹",
       "category": "material",
       "sub_category": "breakthrough",

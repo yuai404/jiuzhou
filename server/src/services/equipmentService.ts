@@ -178,7 +178,6 @@ export interface GeneratedAffix {
 // 装备模板
 export interface EquipmentDef {
   id: string;
-  code: string;
   name: string;
   category: string;
   sub_category: string;
@@ -293,7 +292,6 @@ export const getEquipmentDef = async (itemDefId: string): Promise<EquipmentDef |
 
   return {
     id: row.id,
-    code: String(row.code || ''),
     name: String(row.name || row.id),
     category: String(row.category || 'equipment'),
     sub_category: String(row.sub_category || ''),

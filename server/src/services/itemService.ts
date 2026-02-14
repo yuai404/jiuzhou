@@ -25,7 +25,6 @@ import { getItemDefinitionById, getItemDefinitions, getTechniqueDefinitions } fr
 // 物品定义接口
 export interface ItemDef {
   id: string;
-  code: string;
   name: string;
   category: string;
   sub_category: string;
@@ -120,7 +119,6 @@ export const getItemDefWithClient = async (itemDefId: string, client?: PoolClien
 
   return {
     id: def.id,
-    code: String(def.code || ''),
     name: String(def.name || def.id),
     category: String(def.category || ''),
     sub_category: String(def.sub_category || ''),
@@ -744,7 +742,6 @@ export const getItemInstance = async (instanceId: number): Promise<any | null> =
     id: row.id,
     itemDefId: row.item_def_id,
     name: itemDef.name,
-    code: itemDef.code,
     icon: itemDef.icon,
     category: itemDef.category,
     subCategory: itemDef.sub_category,

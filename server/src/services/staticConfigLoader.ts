@@ -431,7 +431,6 @@ type TaskDefFile = { tasks: TaskDefConfig[] };
 
 export type ItemDefConfig = {
   id: string;
-  code?: string;
   name: string;
   category: string;
   sub_category?: string;

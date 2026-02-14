@@ -4,7 +4,6 @@
   "items": [
     {
       "id": "equip-weapon-001",
-      "code": "xin_shou_jian",
       "name": "新手剑",
       "category": "equipment",
       "sub_category": "sword",
@@ -31,7 +30,6 @@
     },
     {
       "id": "equip-weapon-002",
-      "code": "qing_feng_jian",
       "name": "清风剑",
       "category": "equipment",
       "sub_category": "sword",
@@ -59,7 +57,6 @@
     },
     {
       "id": "equip-weapon-003",
-      "code": "xuan_yuan_jian",
       "name": "玄元剑",
       "category": "equipment",
       "sub_category": "sword",
@@ -88,7 +85,6 @@
     },
     {
       "id": "equip-head-001",
-      "code": "bu_yi_mao",
       "name": "布衣帽",
       "category": "equipment",
       "sub_category": "hat",
@@ -115,7 +111,6 @@
     },
     {
       "id": "equip-clothes-001",
-      "code": "bu_yi",
       "name": "布衣",
       "category": "equipment",
       "sub_category": "robe",
@@ -143,7 +138,6 @@
     },
     {
       "id": "equip-clothes-002",
-      "code": "xuan_ling_pao",
       "name": "玄灵袍",
       "category": "equipment",
       "sub_category": "robe",
@@ -172,7 +166,6 @@
     },
     {
       "id": "equip-necklace-001",
-      "code": "ling_shi_zhui",
       "name": "灵石坠",
       "category": "equipment",
       "sub_category": "necklace",
@@ -198,7 +191,6 @@
     },
     {
       "id": "equip-artifact-001",
-      "code": "yu_jian",
       "name": "御剑符",
       "category": "equipment",
       "sub_category": "talisman",
@@ -227,7 +219,6 @@
     },
     {
       "id": "set-qingfeng-weapon",
-      "code": "qing_feng_jian_set",
       "name": "青锋剑",
       "category": "equipment",
       "sub_category": "sword",
@@ -258,7 +249,6 @@
     },
     {
       "id": "set-qingfeng-head",
-      "code": "qing_feng_guan",
       "name": "青锋冠",
       "category": "equipment",
       "sub_category": "hat",
@@ -289,7 +279,6 @@
     },
     {
       "id": "set-qingfeng-clothes",
-      "code": "qing_feng_yi",
       "name": "青锋衣",
       "category": "equipment",
       "sub_category": "robe",
@@ -320,7 +309,6 @@
     },
     {
       "id": "set-qingfeng-gloves",
-      "code": "qing_feng_shou",
       "name": "青锋护手",
       "category": "equipment",
       "sub_category": "gloves",
@@ -351,7 +339,6 @@
     },
     {
       "id": "set-qingfeng-pants",
-      "code": "qing_feng_ku",
       "name": "青锋裤",
       "category": "equipment",
       "sub_category": "pants",
@@ -382,7 +369,6 @@
     },
     {
       "id": "set-qingfeng-necklace",
-      "code": "qing_feng_pei",
       "name": "青锋玉佩",
       "category": "equipment",
       "sub_category": "necklace",
@@ -413,7 +399,6 @@
     },
     {
       "id": "set-qingfeng-accessory",
-      "code": "qing_feng_jie",
       "name": "青锋戒",
       "category": "equipment",
       "sub_category": "ring",
@@ -444,7 +429,6 @@
     },
     {
       "id": "set-qingfeng-artifact",
-      "code": "qing_feng_ling",
       "name": "青锋令",
       "category": "equipment",
       "sub_category": "token",
@@ -478,7 +462,6 @@
     },
     {
       "id": "set-xuantie-weapon",
-      "code": "xuan_tie_dao",
       "name": "玄铁刀",
       "category": "equipment",
       "sub_category": "blade",
@@ -509,7 +492,6 @@
     },
     {
       "id": "set-xuantie-head",
-      "code": "xuan_tie_kui",
       "name": "玄铁盔",
       "category": "equipment",
       "sub_category": "helmet",
@@ -540,7 +522,6 @@
     },
     {
       "id": "set-xuantie-clothes",
-      "code": "xuan_tie_jia",
       "name": "玄铁甲",
       "category": "equipment",
       "sub_category": "armor",
@@ -571,7 +552,6 @@
     },
     {
       "id": "set-xuantie-gloves",
-      "code": "xuan_tie_wan",
       "name": "玄铁腕甲",
       "category": "equipment",
       "sub_category": "gauntlets",
@@ -602,7 +582,6 @@
     },
     {
       "id": "set-xuantie-pants",
-      "code": "xuan_tie_qun",
       "name": "玄铁战裙",
       "category": "equipment",
       "sub_category": "legguards",
@@ -633,7 +612,6 @@
     },
     {
       "id": "set-xuantie-necklace",
-      "code": "xuan_tie_suo",
       "name": "玄铁锁",
       "category": "equipment",
       "sub_category": "necklace",
@@ -664,7 +642,6 @@
     },
     {
       "id": "set-xuantie-accessory",
-      "code": "xuan_tie_huan",
       "name": "玄铁环",
       "category": "equipment",
       "sub_category": "ring",
@@ -695,7 +672,6 @@
     },
     {
       "id": "set-xuantie-artifact",
-      "code": "xuan_tie_dun",
       "name": "玄铁盾符",
       "category": "equipment",
       "sub_category": "shield",
@@ -729,7 +705,6 @@
     },
     {
       "id": "set-zixiao-weapon",
-      "code": "zi_xiao_jian",
       "name": "紫霄剑",
       "category": "equipment",
       "sub_category": "sword",
@@ -760,7 +735,6 @@
     },
     {
       "id": "set-zixiao-head",
-      "code": "zi_xiao_guan",
       "name": "紫霄道冠",
       "category": "equipment",
       "sub_category": "hat",
@@ -791,7 +765,6 @@
     },
     {
       "id": "set-zixiao-clothes",
-      "code": "zi_xiao_pao",
       "name": "紫霄道袍",
       "category": "equipment",
       "sub_category": "robe",
@@ -822,7 +795,6 @@
     },
     {
       "id": "set-zixiao-gloves",
-      "code": "zi_xiao_xiu",
       "name": "紫霄袖套",
       "category": "equipment",
       "sub_category": "gloves",
@@ -853,7 +825,6 @@
     },
     {
       "id": "set-zixiao-pants",
-      "code": "zi_xiao_qun",
       "name": "紫霄道裙",
       "category": "equipment",
       "sub_category": "pants",
@@ -884,7 +855,6 @@
     },
     {
       "id": "set-zixiao-necklace",
-      "code": "zi_xiao_ling",
       "name": "紫霄灵珠",
       "category": "equipment",
       "sub_category": "necklace",
@@ -915,7 +885,6 @@
     },
     {
       "id": "set-zixiao-accessory",
-      "code": "zi_xiao_jie",
       "name": "紫霄戒",
       "category": "equipment",
       "sub_category": "ring",
@@ -946,7 +915,6 @@
     },
     {
       "id": "set-zixiao-artifact",
-      "code": "zi_xiao_fu",
       "name": "紫霄符箓",
       "category": "equipment",
       "sub_category": "talisman",
@@ -980,7 +948,6 @@
     },
     {
       "id": "set-biluo-weapon",
-      "code": "bi_luo_zhang",
       "name": "碧落杖",
       "category": "equipment",
       "sub_category": "staff",
@@ -1011,7 +978,6 @@
     },
     {
       "id": "set-biluo-head",
-      "code": "bi_luo_guan",
       "name": "碧落莲冠",
       "category": "equipment",
       "sub_category": "hat",
@@ -1042,7 +1008,6 @@
     },
     {
       "id": "set-biluo-clothes",
-      "code": "bi_luo_yi",
       "name": "碧落仙衣",
       "category": "equipment",
       "sub_category": "robe",
@@ -1073,7 +1038,6 @@
     },
     {
       "id": "set-biluo-gloves",
-      "code": "bi_luo_shou",
       "name": "碧落玉手",
       "category": "equipment",
       "sub_category": "gloves",
@@ -1104,7 +1068,6 @@
     },
     {
       "id": "set-biluo-pants",
-      "code": "bi_luo_qun",
       "name": "碧落云裙",
       "category": "equipment",
       "sub_category": "pants",
@@ -1135,7 +1098,6 @@
     },
     {
       "id": "set-biluo-necklace",
-      "code": "bi_luo_zhu",
       "name": "碧落念珠",
       "category": "equipment",
       "sub_category": "necklace",
@@ -1166,7 +1128,6 @@
     },
     {
       "id": "set-biluo-accessory",
-      "code": "bi_luo_huan",
       "name": "碧落玉环",
       "category": "equipment",
       "sub_category": "ring",
@@ -1197,7 +1158,6 @@
     },
     {
       "id": "set-biluo-artifact",
-      "code": "bi_luo_jing",
       "name": "碧落宝镜",
       "category": "equipment",
       "sub_category": "mirror",
@@ -1231,7 +1191,6 @@
     },
     {
       "id": "equip-weapon-004",
-      "code": "duan_bei_can_ren",
       "name": "断碑残刃",
       "category": "equipment",
       "sub_category": "sword",
@@ -1261,7 +1220,6 @@
     },
     {
       "id": "equip-head-002",
-      "code": "lie_feng_dou_mao",
       "name": "裂风兜帽",
       "category": "equipment",
       "sub_category": "hat",
@@ -1291,7 +1249,6 @@
     },
     {
       "id": "equip-clothes-003",
-      "code": "xuan_teng_zhan_jia",
       "name": "玄藤战甲",
       "category": "equipment",
       "sub_category": "robe",
@@ -1321,7 +1278,6 @@
     },
     {
       "id": "equip-necklace-002",
-      "code": "yi_ji_gu_lian",
       "name": "遗迹骨链",
       "category": "equipment",
       "sub_category": "necklace",
@@ -1351,7 +1307,6 @@
     },
     {
       "id": "equip-accessory-001",
-      "code": "fu_wen_zhi_jie",
       "name": "符纹指戒",
       "category": "equipment",
       "sub_category": "ring",
@@ -1381,7 +1336,6 @@
     },
     {
       "id": "equip-artifact-002",
-      "code": "ku_mu_ling_deng",
       "name": "枯木灵灯",
       "category": "equipment",
       "sub_category": "talisman",
@@ -1411,7 +1365,6 @@
     },
     {
       "id": "equip-weapon-005",
-      "code": "you_lin_yao_jian",
       "name": "幽林曜剑",
       "category": "equipment",
       "sub_category": "sword",
@@ -1441,7 +1394,6 @@
     },
     {
       "id": "equip-head-003",
-      "code": "xuan_teng_hu_e",
       "name": "玄藤护额",
       "category": "equipment",
       "sub_category": "hat",
@@ -1471,7 +1423,6 @@
     },
     {
       "id": "equip-gloves-001",
-      "code": "ku_mu_hu_shou",
       "name": "枯木护手",
       "category": "equipment",
       "sub_category": "gloves",
@@ -1501,7 +1452,6 @@
     },
     {
       "id": "equip-pants-001",
-      "code": "you_teng_zhan_qun",
       "name": "幽藤战裙",
       "category": "equipment",
       "sub_category": "pants",
@@ -1531,7 +1481,6 @@
     },
     {
       "id": "equip-necklace-003",
-      "code": "ning_qi_xin_lian",
       "name": "凝炁心链",
       "category": "equipment",
       "sub_category": "necklace",
@@ -1561,7 +1510,6 @@
     },
     {
       "id": "equip-accessory-002",
-      "code": "hui_guang_zhi_huan",
       "name": "回光指环",
       "category": "equipment",
       "sub_category": "ring",
@@ -1594,7 +1542,6 @@
     },
     {
       "id": "set-chiyan-weapon",
-      "code": "chiyan_weapon",
       "name": "赤焰斩刀",
       "category": "equipment",
       "sub_category": "sword",
@@ -1625,7 +1572,6 @@
     },
     {
       "id": "set-chiyan-head",
-      "code": "chiyan_head",
       "name": "赤焰战盔",
       "category": "equipment",
       "sub_category": "hat",
@@ -1656,7 +1602,6 @@
     },
     {
       "id": "set-chiyan-clothes",
-      "code": "chiyan_clothes",
       "name": "赤焰战甲",
       "category": "equipment",
       "sub_category": "robe",
@@ -1687,7 +1632,6 @@
     },
     {
       "id": "set-chiyan-gloves",
-      "code": "chiyan_gloves",
       "name": "赤焰护手",
       "category": "equipment",
       "sub_category": "gloves",
@@ -1717,7 +1661,6 @@
     },
     {
       "id": "set-chiyan-pants",
-      "code": "chiyan_pants",
       "name": "赤焰胫甲",
       "category": "equipment",
       "sub_category": "pants",
@@ -1748,7 +1691,6 @@
     },
     {
       "id": "set-chiyan-necklace",
-      "code": "chiyan_necklace",
       "name": "赤焰坠",
       "category": "equipment",
       "sub_category": "necklace",
@@ -1778,7 +1720,6 @@
     },
     {
       "id": "set-chiyan-accessory",
-      "code": "chiyan_accessory",
       "name": "赤焰戒",
       "category": "equipment",
       "sub_category": "ring",
@@ -1808,7 +1749,6 @@
     },
     {
       "id": "set-chiyan-artifact",
-      "code": "chiyan_artifact",
       "name": "赤焰火印",
       "category": "equipment",
       "sub_category": "token",
@@ -1841,7 +1781,6 @@
     },
     {
       "id": "set-xuanwu-weapon",
-      "code": "xuanwu_weapon",
       "name": "玄武重戟",
       "category": "equipment",
       "sub_category": "sword",
@@ -1872,7 +1811,6 @@
     },
     {
       "id": "set-xuanwu-head",
-      "code": "xuanwu_head",
       "name": "玄武铁盔",
       "category": "equipment",
       "sub_category": "hat",
@@ -1903,7 +1841,6 @@
     },
     {
       "id": "set-xuanwu-clothes",
-      "code": "xuanwu_clothes",
       "name": "玄武重铠",
       "category": "equipment",
       "sub_category": "robe",
@@ -1934,7 +1871,6 @@
     },
     {
       "id": "set-xuanwu-gloves",
-      "code": "xuanwu_gloves",
       "name": "玄武臂铠",
       "category": "equipment",
       "sub_category": "gloves",
@@ -1964,7 +1900,6 @@
     },
     {
       "id": "set-xuanwu-pants",
-      "code": "xuanwu_pants",
       "name": "玄武腿铠",
       "category": "equipment",
       "sub_category": "pants",
@@ -1994,7 +1929,6 @@
     },
     {
       "id": "set-xuanwu-necklace",
-      "code": "xuanwu_necklace",
       "name": "玄武护链",
       "category": "equipment",
       "sub_category": "necklace",
@@ -2024,7 +1958,6 @@
     },
     {
       "id": "set-xuanwu-accessory",
-      "code": "xuanwu_accessory",
       "name": "玄武玄环",
       "category": "equipment",
       "sub_category": "ring",
@@ -2054,7 +1987,6 @@
     },
     {
       "id": "set-xuanwu-artifact",
-      "code": "xuanwu_artifact",
       "name": "玄武龟甲印",
       "category": "equipment",
       "sub_category": "token",
@@ -2087,7 +2019,6 @@
     },
     {
       "id": "set-tianxuan-weapon",
-      "code": "tianxuan_weapon",
       "name": "天璇法杖",
       "category": "equipment",
       "sub_category": "sword",
@@ -2118,7 +2049,6 @@
     },
     {
       "id": "set-tianxuan-head",
-      "code": "tianxuan_head",
       "name": "天璇灵冠",
       "category": "equipment",
       "sub_category": "hat",
@@ -2149,7 +2079,6 @@
     },
     {
       "id": "set-tianxuan-clothes",
-      "code": "tianxuan_clothes",
       "name": "天璇法袍",
       "category": "equipment",
       "sub_category": "robe",
@@ -2180,7 +2109,6 @@
     },
     {
       "id": "set-tianxuan-gloves",
-      "code": "tianxuan_gloves",
       "name": "天璇护腕",
       "category": "equipment",
       "sub_category": "gloves",
@@ -2210,7 +2138,6 @@
     },
     {
       "id": "set-tianxuan-pants",
-      "code": "tianxuan_pants",
       "name": "天璇灵履",
       "category": "equipment",
       "sub_category": "pants",
@@ -2241,7 +2168,6 @@
     },
     {
       "id": "set-tianxuan-necklace",
-      "code": "tianxuan_necklace",
       "name": "天璇星链",
       "category": "equipment",
       "sub_category": "necklace",
@@ -2271,7 +2197,6 @@
     },
     {
       "id": "set-tianxuan-accessory",
-      "code": "tianxuan_accessory",
       "name": "天璇星戒",
       "category": "equipment",
       "sub_category": "ring",
@@ -2301,7 +2226,6 @@
     },
     {
       "id": "set-tianxuan-artifact",
-      "code": "tianxuan_artifact",
       "name": "天璇星盘",
       "category": "equipment",
       "sub_category": "token",
@@ -2334,7 +2258,6 @@
     },
     {
       "id": "set-qinglian-weapon",
-      "code": "qinglian_weapon",
       "name": "青莲玉扇",
       "category": "equipment",
       "sub_category": "sword",
@@ -2364,7 +2287,6 @@
     },
     {
       "id": "set-qinglian-head",
-      "code": "qinglian_head",
       "name": "青莲灵冠",
       "category": "equipment",
       "sub_category": "hat",
@@ -2394,7 +2316,6 @@
     },
     {
       "id": "set-qinglian-clothes",
-      "code": "qinglian_clothes",
       "name": "青莲羽衣",
       "category": "equipment",
       "sub_category": "robe",
@@ -2425,7 +2346,6 @@
     },
     {
       "id": "set-qinglian-gloves",
-      "code": "qinglian_gloves",
       "name": "青莲纱手",
       "category": "equipment",
       "sub_category": "gloves",
@@ -2455,7 +2375,6 @@
     },
     {
       "id": "set-qinglian-pants",
-      "code": "qinglian_pants",
       "name": "青莲云履",
       "category": "equipment",
       "sub_category": "pants",
@@ -2485,7 +2404,6 @@
     },
     {
       "id": "set-qinglian-necklace",
-      "code": "qinglian_necklace",
       "name": "青莲心链",
       "category": "equipment",
       "sub_category": "necklace",
@@ -2515,7 +2433,6 @@
     },
     {
       "id": "set-qinglian-accessory",
-      "code": "qinglian_accessory",
       "name": "青莲灵佩",
       "category": "equipment",
       "sub_category": "ring",
@@ -2545,7 +2462,6 @@
     },
     {
       "id": "set-qinglian-artifact",
-      "code": "qinglian_artifact",
       "name": "青莲宝莲台",
       "category": "equipment",
       "sub_category": "token",
