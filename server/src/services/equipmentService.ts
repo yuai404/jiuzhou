@@ -27,6 +27,18 @@ import {
   type RealmName,
 } from './shared/realmOrder.js';
 import { getAffixPoolDefinitions, getItemDefinitionById } from './staticConfigLoader.js';
+import {
+  buildGeneratedAffixModifiers,
+  isRatioAttrKey,
+  normalizeAffixModifierDefs,
+  normalizeAffixValueByContext,
+  resolvePrimaryAffixAttrKey,
+  type AffixApplyType,
+  type AffixEffectType,
+  type AffixModifierDef,
+  type AffixParams,
+  type GeneratedAffixModifier,
+} from './shared/affixModifier.js';
 
 // ============================================
 // 类型定义
@@ -97,75 +109,6 @@ const getStrengthenMultiplier = (strengthenLevel: number): number => {
   return 1 + lv * 0.03;
 };
 
-const RATIO_ATTR_KEYS = new Set([
-  'shuxing_shuzhi',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
-
-const isRatioAttrKey = (attrKeyRaw: unknown): boolean => {
-  return typeof attrKeyRaw === 'string' && RATIO_ATTR_KEYS.has(attrKeyRaw);
-};
-
-const isRatioSpecialAffixValue = (affix: AffixDef): boolean => {
-  if (affix.apply_type !== 'special' || !affix.params) return false;
-  const params = affix.params;
-  const effectType = affix.effect_type;
-  const paramApplyType = typeof params.apply_type === 'string' ? params.apply_type : '';
-  const paramAttrKey = typeof params.attr_key === 'string' ? params.attr_key : '';
-  const damageType = typeof params.damage_type === 'string' ? params.damage_type : '';
-  const debuffType = typeof params.debuff_type === 'string' ? params.debuff_type : '';
-
-  if ((effectType === 'buff' || effectType === 'debuff') && (paramApplyType === 'percent' || isRatioAttrKey(paramAttrKey))) {
-    return true;
-  }
-  if (effectType === 'damage' && damageType === 'reflect') return true;
-  if (effectType === 'debuff' && debuffType === 'bleed') return true;
-  return false;
-};
-
-const shouldKeepRatioPrecision = (affix: AffixDef): boolean => {
-  if (affix.apply_type === 'percent') return true;
-  if (isRatioAttrKey(affix.attr_key)) return true;
-  if (affix.apply_type !== 'special') return false;
-  return isRatioSpecialAffixValue(affix);
-};
-
-const normalizeGeneratedAffixAttrKey = (
-  attrKeyRaw: unknown,
-  applyType: GeneratedAffix['apply_type'],
-  fallbackKey: string
-): string | null => {
-  const normalizedAttrKey = typeof attrKeyRaw === 'string' ? attrKeyRaw.trim() : '';
-  if (normalizedAttrKey) return normalizedAttrKey;
-  if (applyType !== 'special') return null;
-
-  // special词条身份匹配以key为准，缺失attr_key时回填为key，确保后续洗炼流程稳定。
-  const normalizedFallbackKey = fallbackKey.trim();
-  return normalizedFallbackKey || null;
-};
-
-const normalizeAffixValuePrecision = (affix: AffixDef, value: number): number => {
-  if (!Number.isFinite(value)) return 0;
-  if (shouldKeepRatioPrecision(affix)) return Number(value.toFixed(6));
-  return Math.round(value);
-};
-
 const normalizeScaledAttrValue = (attrKey: string, value: number): number => {
   if (!Number.isFinite(value)) return 0;
   return isRatioAttrKey(attrKey) ? Number(value.toFixed(6)) : Math.round(value);
@@ -186,16 +129,16 @@ const scaleAttrs = (attrs: Record<string, number>, factor: number): Record<strin
 export interface AffixDef {
   key: string;
   name: string;
-  attr_key: string;
-  apply_type: 'flat' | 'percent' | 'special';
+  modifiers?: AffixModifierDef[];
+  apply_type: AffixApplyType;
   group: string;
   weight: number;
   is_legendary?: boolean;
   trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
   target?: 'self' | 'enemy';
-  effect_type?: 'buff' | 'debuff' | 'damage' | 'heal' | 'resource';
+  effect_type?: AffixEffectType;
   duration_round?: number;
-  params?: Record<string, string | number | boolean>;
+  params?: AffixParams;
   tiers: AffixTier[];
 }
 
@@ -220,17 +163,17 @@ export interface AffixPoolRules {
 export interface GeneratedAffix {
   key: string;
   name: string;
-  attr_key: string;
-  apply_type: 'flat' | 'percent' | 'special';
+  modifiers?: GeneratedAffixModifier[];
+  apply_type: AffixApplyType;
   tier: number;
   value: number;
   is_legendary?: boolean;
   description?: string;
   trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
   target?: 'self' | 'enemy';
-  effect_type?: 'buff' | 'debuff' | 'damage' | 'heal' | 'resource';
+  effect_type?: AffixEffectType;
   duration_round?: number;
-  params?: Record<string, string | number | boolean>;
+  params?: AffixParams;
 }
 
 // 装备模板
@@ -602,24 +545,52 @@ const rollAffixValue = (
   const rawScaledValue = Number.isFinite(attrFactor) && attrFactor !== 1
     ? sampledValue * attrFactor
     : sampledValue;
-  const affixAttrKey = normalizeGeneratedAffixAttrKey(
-    affix.attr_key,
-    affix.apply_type,
-    affix.key
-  );
+
+  const modifierDefs =
+    affix.apply_type === 'special'
+      ? []
+      : normalizeAffixModifierDefs(affix.modifiers, undefined);
+  const generatedModifiers =
+    affix.apply_type === 'special'
+      ? []
+      : buildGeneratedAffixModifiers({
+          applyType: affix.apply_type,
+          effectType: affix.effect_type,
+          params: affix.params,
+          modifierDefs,
+          baseValue: rawScaledValue,
+        });
+
+  const affixAttrKey = resolvePrimaryAffixAttrKey({
+    applyType: affix.apply_type,
+    keyRaw: affix.key,
+    attrKeyRaw: undefined,
+    modifiers: generatedModifiers,
+  });
   if (!affixAttrKey) return null;
-  const scaledValue = normalizeAffixValuePrecision(affix, rawScaledValue);
+  const scaledValue =
+    affix.apply_type === 'special'
+      ? normalizeAffixValueByContext(
+          {
+            applyType: affix.apply_type,
+            attrKey: affixAttrKey,
+            effectType: affix.effect_type,
+            params: affix.params,
+          },
+          rawScaledValue
+        )
+      : generatedModifiers[0]?.value ?? 0;
 
   const out: GeneratedAffix = {
     key: affix.key,
     name: affix.name,
-    attr_key: affixAttrKey,
     apply_type: affix.apply_type,
     tier: selectedTier.tier,
     value: scaledValue,
     is_legendary: affix.is_legendary,
     description: selectedTier.description
   };
+  if (generatedModifiers.length > 0) out.modifiers = generatedModifiers;
 
   if (affix.apply_type === 'special') {
     out.trigger = affix.trigger;

@@ -18,6 +18,7 @@ import { query } from '../config/database.js';
 import { redis } from '../config/redis.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getItemDefinitionsByIds, getItemSetDefinitions, getTechniqueLayerDefinitions, getTitleDefinitions } from './staticConfigLoader.js';
+import { extractFlatAffixDeltas } from './shared/affixModifier.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -632,11 +633,10 @@ const loadEquippedAttrBonuses = async (characterId: number): Promise<CharacterCo
 
     const affixes = toArray(row.affixes);
     for (const affixRaw of affixes) {
-      const affix = toRecord(affixRaw);
-      const attrKey = String(affix.attr_key || '').trim();
-      const applyType = String(affix.apply_type || '').trim();
-      if (!attrKey || applyType !== 'flat') continue;
-      applyAttrDelta(stats, attrKey, affix.value);
+      const rows = extractFlatAffixDeltas(affixRaw);
+      for (const rowValue of rows) {
+        applyAttrDelta(stats, rowValue.attrKey, rowValue.value);
+      }
     }
 
     const setId = String(def.set_id || '').trim();

@@ -6,9 +6,12 @@
  */
 
 export type EquipmentAffixTextInput = {
+  modifiers?: Array<{
+    attr_key?: string;
+    value?: number;
+  }>;
   key?: string;
   name?: string;
-  attr_key?: string;
   apply_type?: string;
   tier?: number;
   value?: number;
@@ -48,6 +51,16 @@ const normalizeText = (value: string | undefined): string => {
   return value.trim();
 };
 
+const pickPrimaryModifierAttrKey = (affix: EquipmentAffixTextInput): string => {
+  const rows = Array.isArray(affix.modifiers) ? affix.modifiers : [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const key = normalizeText(typeof row.attr_key === 'string' ? row.attr_key : undefined);
+    if (key) return key;
+  }
+  return '';
+};
+
 const tryPickLabel = (raw: string, rejectLatinLabel: boolean): string => {
   const text = raw.trim();
   if (!text) return '';
@@ -60,7 +73,7 @@ export const pickEquipmentAffixLabel = (
   options: PickEquipmentAffixLabelOptions = {},
 ): string => {
   const rejectLatinLabel = options.rejectLatinLabel === true;
-  const attrKey = normalizeText(affix.attr_key);
+  const attrKey = pickPrimaryModifierAttrKey(affix);
 
   if (attrKey) {
     const mapped = options.keyLabelMap?.[attrKey];
@@ -101,7 +114,7 @@ export const buildEquipmentAffixDisplayText = (
   const titleText = `${prefixText} ${tierText}：${label}`;
 
   let valueText = '';
-  const attrKey = normalizeText(affix.attr_key);
+  const attrKey = pickPrimaryModifierAttrKey(affix);
   if (affix.apply_type !== 'special' && typeof affix.value === 'number') {
     const isPercent =
       affix.apply_type === 'percent' ||

@@ -151,8 +151,10 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
         if (k) set.add(k);
       }
       for (const a of it.equip.affixes || []) {
-        const k = a.attr_key;
-        if (k) set.add(k);
+        for (const m of a.modifiers || []) {
+          const k = m?.attr_key;
+          if (k) set.add(k);
+        }
       }
     }
     const list = [...set];
@@ -189,8 +191,10 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
           if (set.has(k)) return true;
         }
         for (const a of i.equip.affixes || []) {
-          const k = a.attr_key;
-          if (k && set.has(k)) return true;
+          for (const m of a.modifiers || []) {
+            const k = m?.attr_key;
+            if (k && set.has(k)) return true;
+          }
         }
         return false;
       });

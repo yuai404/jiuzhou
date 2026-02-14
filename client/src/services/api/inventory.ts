@@ -207,7 +207,10 @@ export const refineInventoryItem = (
 export interface InventoryRerolledAffixDto {
   key: string;
   name: string;
-  attr_key: string;
+  modifiers?: Array<{
+    attr_key: string;
+    value: number;
+  }>;
   apply_type: 'flat' | 'percent' | 'special';
   tier: number;
   value: number;

@@ -215,11 +215,28 @@ const coerceAffixes = (value: unknown): EquipmentAffix[] => {
       const a = x as Record<string, unknown>;
       const tierNum = typeof a.tier === 'number' ? a.tier : typeof a.tier === 'string' ? Number(a.tier) : undefined;
       const valueNum = typeof a.value === 'number' ? a.value : typeof a.value === 'string' ? Number(a.value) : undefined;
+      const modifiersRaw = Array.isArray(a.modifiers) ? a.modifiers : [];
+      const modifiers: Array<{ attr_key: string; value: number }> = [];
+      const seenModifierKeys = new Set<string>();
+      for (const row of modifiersRaw) {
+        if (!row || typeof row !== 'object') continue;
+        const modifier = row as Record<string, unknown>;
+        const attrKey = typeof modifier.attr_key === 'string' ? modifier.attr_key.trim() : '';
+        const modifierValue =
+          typeof modifier.value === 'number'
+            ? modifier.value
+            : typeof modifier.value === 'string'
+              ? Number(modifier.value)
+              : NaN;
+        if (!attrKey || seenModifierKeys.has(attrKey) || !Number.isFinite(modifierValue)) continue;
+        seenModifierKeys.add(attrKey);
+        modifiers.push({ attr_key: attrKey, value: modifierValue });
+      }
 
       const out: EquipmentAffix = {
         key: typeof a.key === 'string' ? a.key : undefined,
         name: typeof a.name === 'string' ? a.name : undefined,
-        attr_key: typeof a.attr_key === 'string' ? a.attr_key : undefined,
+        modifiers: modifiers.length > 0 ? modifiers : undefined,
         apply_type: typeof a.apply_type === 'string' ? a.apply_type : undefined,
         tier: Number.isFinite(tierNum ?? NaN) ? tierNum : undefined,
         value: Number.isFinite(valueNum ?? NaN) ? valueNum : undefined,

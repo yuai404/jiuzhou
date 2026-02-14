@@ -9,6 +9,14 @@ import {
   isRealmName,
   type RealmName,
 } from './shared/realmOrder.js';
+import {
+  buildGeneratedAffixModifiers,
+  normalizeAffixModifierDefs,
+  normalizeAffixValueByContext,
+  normalizeGeneratedAffixModifiers,
+  resolvePrimaryAffixAttrKey,
+  type AffixParams,
+} from './shared/affixModifier.js';
 
 export interface RerollAffixPool {
   rules: AffixPoolRules;
@@ -36,69 +44,6 @@ const clampInt = (value: number, min: number, max: number): number => {
   const num = Number(value);
   if (!Number.isFinite(num)) return min;
   return Math.max(min, Math.min(max, Math.floor(num)));
-};
-
-const RATIO_ATTR_KEYS = new Set([
-  'shuxing_shuzhi',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
-
-const isRatioAttrKey = (attrKeyRaw: unknown): boolean => {
-  return typeof attrKeyRaw === 'string' && RATIO_ATTR_KEYS.has(attrKeyRaw);
-};
-
-type RatioAffixContext = {
-  applyType: GeneratedAffix['apply_type'];
-  attrKey: string;
-  effectType?: GeneratedAffix['effect_type'];
-  params?: Record<string, string | number | boolean>;
-};
-
-const isRatioSpecialAffixValue = (
-  effectType: GeneratedAffix['effect_type'] | undefined,
-  params?: Record<string, string | number | boolean>
-): boolean => {
-  if (!params) return false;
-  const paramApplyType = typeof params.apply_type === 'string' ? params.apply_type : '';
-  const paramAttrKey = typeof params.attr_key === 'string' ? params.attr_key : '';
-  const damageType = typeof params.damage_type === 'string' ? params.damage_type : '';
-  const debuffType = typeof params.debuff_type === 'string' ? params.debuff_type : '';
-
-  if ((effectType === 'buff' || effectType === 'debuff') && (paramApplyType === 'percent' || isRatioAttrKey(paramAttrKey))) {
-    return true;
-  }
-  if (effectType === 'damage' && damageType === 'reflect') return true;
-  if (effectType === 'debuff' && debuffType === 'bleed') return true;
-  return false;
-};
-
-const shouldKeepRatioPrecision = (context: RatioAffixContext): boolean => {
-  if (context.applyType === 'percent') return true;
-  if (isRatioAttrKey(context.attrKey)) return true;
-  if (context.applyType !== 'special') return false;
-  return isRatioSpecialAffixValue(context.effectType, context.params);
-};
-
-const normalizeAffixValueByContext = (context: RatioAffixContext, value: number): number => {
-  if (!Number.isFinite(value)) return 0;
-  if (shouldKeepRatioPrecision(context)) return Number(value.toFixed(6));
-  return Math.round(value);
 };
 
 const normalizeQualityByRank = (qualityRankRaw: unknown): Quality => {
@@ -160,20 +105,6 @@ const normalizeGeneratedAffixApplyType = (value: unknown): GeneratedAffix['apply
   return null;
 };
 
-const normalizeGeneratedAffixAttrKey = (
-  attrKeyRaw: unknown,
-  applyType: GeneratedAffix['apply_type'],
-  fallbackKey: string
-): string | null => {
-  const normalizedAttrKey = typeof attrKeyRaw === 'string' ? attrKeyRaw.trim() : '';
-  if (normalizedAttrKey) return normalizedAttrKey;
-  if (applyType !== 'special') return null;
-
-  // special词条身份匹配以key为准，缺失attr_key时回填为key，避免后续洗炼解析丢词缀。
-  const normalizedFallbackKey = fallbackKey.trim();
-  return normalizedFallbackKey || null;
-};
-
 export const parseGeneratedAffixesForReroll = (raw: unknown): GeneratedAffix[] => {
   let arr: unknown = raw;
   if (typeof arr === 'string') {
@@ -202,7 +133,7 @@ export const parseGeneratedAffixesForReroll = (raw: unknown): GeneratedAffix[] =
       row.params && typeof row.params === 'object' && !Array.isArray(row.params)
         ? (row.params as Record<string, unknown>)
         : null;
-    const params: Record<string, string | number | boolean> = {};
+    const params: AffixParams = {};
     if (paramsRaw) {
       for (const [paramKey, paramValue] of Object.entries(paramsRaw)) {
         if (typeof paramValue === 'string' || typeof paramValue === 'boolean') {
@@ -215,28 +146,44 @@ export const parseGeneratedAffixesForReroll = (raw: unknown): GeneratedAffix[] =
       }
     }
     const normalizedParams = Object.keys(params).length > 0 ? params : undefined;
-    const attrKey = normalizeGeneratedAffixAttrKey(row.attr_key, applyType, key);
+    const modifiers = normalizeGeneratedAffixModifiers({
+      applyType,
+      effectType: effectType as GeneratedAffix['effect_type'] | undefined,
+      params: normalizedParams,
+      modifiersRaw: row.modifiers,
+      fallbackAttrKeyRaw: undefined,
+      fallbackValueRaw: row.value,
+    });
+    const attrKey = resolvePrimaryAffixAttrKey({
+      applyType,
+      keyRaw: key,
+      attrKeyRaw: undefined,
+      modifiers,
+    });
     if (!attrKey) continue;
-    const value = normalizeAffixValueByContext(
-      {
-        applyType,
-        attrKey,
-        effectType: effectType as GeneratedAffix['effect_type'] | undefined,
-        params: normalizedParams,
-      },
-      toNumber(row.value, 0)
-    );
+    const value =
+      applyType === 'special'
+        ? normalizeAffixValueByContext(
+            {
+              applyType,
+              attrKey,
+              effectType: effectType as GeneratedAffix['effect_type'] | undefined,
+              params: normalizedParams,
+            },
+            toNumber(row.value, 0)
+          )
+        : modifiers[0]?.value ?? toNumber(row.value, 0);
 
     const parsed: GeneratedAffix = {
       key,
       name,
-      attr_key: attrKey,
       apply_type: applyType,
       tier,
       value,
       is_legendary: Boolean(row.is_legendary),
       description: typeof row.description === 'string' ? row.description : undefined,
     };
+    if (modifiers.length > 0) parsed.modifiers = modifiers;
 
     if (applyType === 'special') {
       const trigger = typeof row.trigger === 'string' ? row.trigger : undefined;
@@ -325,32 +272,50 @@ const rollAffixValue = (rng: SeededRandom, affix: AffixDef, realmRank: number, a
   const rawScaledValue = Number.isFinite(attrFactor) && attrFactor !== 1
     ? value * attrFactor
     : value;
-  const affixAttrKey = normalizeGeneratedAffixAttrKey(
-    affix.attr_key,
-    affix.apply_type,
-    affix.key
-  );
+  const modifierDefs =
+    affix.apply_type === 'special'
+      ? []
+      : normalizeAffixModifierDefs(affix.modifiers, undefined);
+  const generatedModifiers =
+    affix.apply_type === 'special'
+      ? []
+      : buildGeneratedAffixModifiers({
+          applyType: affix.apply_type,
+          effectType: affix.effect_type,
+          params: affix.params,
+          modifierDefs,
+          baseValue: rawScaledValue,
+        });
+  const affixAttrKey = resolvePrimaryAffixAttrKey({
+    applyType: affix.apply_type,
+    keyRaw: affix.key,
+    attrKeyRaw: undefined,
+    modifiers: generatedModifiers,
+  });
   if (!affixAttrKey) return null;
-  const scaledValue = normalizeAffixValueByContext(
-    {
-      applyType: affix.apply_type,
-      attrKey: affixAttrKey,
-      effectType: affix.effect_type,
-      params: affix.params,
-    },
-    rawScaledValue
-  );
+  const scaledValue =
+    affix.apply_type === 'special'
+      ? normalizeAffixValueByContext(
+          {
+            applyType: affix.apply_type,
+            attrKey: affixAttrKey,
+            effectType: affix.effect_type,
+            params: affix.params,
+          },
+          rawScaledValue
+        )
+      : generatedModifiers[0]?.value ?? 0;
 
   const result: GeneratedAffix = {
     key: affix.key,
     name: affix.name,
-    attr_key: affixAttrKey,
     apply_type: affix.apply_type,
     tier: Math.max(1, Math.floor(toNumber(selectedTier.tier, 1))),
     value: scaledValue,
     is_legendary: Boolean(affix.is_legendary),
     description: typeof selectedTier.description === 'string' ? selectedTier.description : undefined,
   };
+  if (generatedModifiers.length > 0) result.modifiers = generatedModifiers;
 
   if (affix.apply_type === 'special') {
     result.trigger = affix.trigger;

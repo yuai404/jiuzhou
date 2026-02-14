@@ -41,7 +41,7 @@ export type BatchMode = "disassemble" | "remove";
 export type EquipmentAffix = {
   key?: string;
   name?: string;
-  attr_key?: string;
+  modifiers?: Array<{ attr_key: string; value: number }>;
   apply_type?: string;
   trigger?: string;
   target?: string;
@@ -363,10 +363,27 @@ export const coerceAffixes = (value: unknown): EquipmentAffix[] => {
           else if (typeof v === "number" && Number.isFinite(v)) params[k] = v;
         }
       }
+      const modifiersRaw = Array.isArray(a.modifiers) ? a.modifiers : [];
+      const modifiers: Array<{ attr_key: string; value: number }> = [];
+      const seenModifierKeys = new Set<string>();
+      for (const row of modifiersRaw) {
+        if (!row || typeof row !== "object") continue;
+        const modifier = row as Record<string, unknown>;
+        const attrKey = typeof modifier.attr_key === "string" ? modifier.attr_key.trim() : "";
+        const modifierValue =
+          typeof modifier.value === "number"
+            ? modifier.value
+            : typeof modifier.value === "string"
+              ? Number(modifier.value)
+              : NaN;
+        if (!attrKey || seenModifierKeys.has(attrKey) || !Number.isFinite(modifierValue)) continue;
+        seenModifierKeys.add(attrKey);
+        modifiers.push({ attr_key: attrKey, value: modifierValue });
+      }
       return {
         key: typeof a.key === "string" ? a.key : undefined,
         name: typeof a.name === "string" ? a.name : undefined,
-        attr_key: typeof a.attr_key === "string" ? a.attr_key : undefined,
+        modifiers: modifiers.length > 0 ? modifiers : undefined,
         apply_type: typeof a.apply_type === "string" ? a.apply_type : undefined,
         trigger: typeof a.trigger === "string" ? a.trigger : undefined,
         target: typeof a.target === "string" ? a.target : undefined,

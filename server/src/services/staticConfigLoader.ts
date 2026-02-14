@@ -590,10 +590,15 @@ export type AffixTierConfig = {
   description?: string;
 };
 
+export type AffixModifierConfig = {
+  attr_key: string;
+  ratio?: number;
+};
+
 export type AffixDefConfig = {
   key: string;
   name: string;
-  attr_key: string;
+  modifiers?: AffixModifierConfig[];
   apply_type: 'flat' | 'percent' | 'special';
   group: string;
   weight: number;

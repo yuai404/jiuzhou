@@ -6,6 +6,10 @@
  * 2. 仅保留运行时动态数据表（实例、冷却、使用计数）。
  */
 import { query } from '../config/database.js';
+import { runDbMigrationOnce } from './migrationHistoryTable.js';
+import {
+  normalizeGeneratedAffixModifiers,
+} from '../services/shared/affixModifier.js';
 
 // ============================================
 // 1. 物品实例表（动态）
@@ -169,6 +173,104 @@ const dropLegacyStaticDefForeignKeys = async () => {
   await query('ALTER TABLE item_use_count DROP CONSTRAINT IF EXISTS item_use_count_item_def_id_fkey');
 };
 
+const parseAffixArray = (raw: unknown): unknown[] => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const normalizeItemInstanceAffixForModifiers = (affixRaw: unknown): {
+  changed: boolean;
+  normalized: unknown;
+} => {
+  if (!affixRaw || typeof affixRaw !== 'object') {
+    return { changed: false, normalized: affixRaw };
+  }
+
+  const affix = { ...(affixRaw as Record<string, unknown>) };
+  const applyType = String(affix.apply_type || '').trim().toLowerCase();
+  let changed = false;
+
+  if (applyType === 'flat' || applyType === 'percent') {
+    const modifiers = normalizeGeneratedAffixModifiers({
+      applyType,
+      effectType: undefined,
+      params: undefined,
+      modifiersRaw: affix.modifiers,
+      fallbackAttrKeyRaw: affix.attr_key,
+      fallbackValueRaw: affix.value,
+    });
+    if (modifiers.length > 0) {
+      const normalizedModifiers = modifiers.map((modifier) => ({
+        attr_key: modifier.attr_key,
+        value: modifier.value,
+      }));
+      const previousModifiersText = JSON.stringify(affix.modifiers ?? null);
+      const nextModifiersText = JSON.stringify(normalizedModifiers);
+      if (previousModifiersText !== nextModifiersText) changed = true;
+      affix.modifiers = normalizedModifiers;
+
+      const primaryValue = modifiers[0]?.value ?? 0;
+      if (typeof affix.value !== 'number' || !Number.isFinite(affix.value) || affix.value !== primaryValue) {
+        affix.value = primaryValue;
+        changed = true;
+      }
+    }
+  } else if (applyType === 'special') {
+    // special外层不再保留attr_key，触发语义由key与params定义。
+  }
+
+  if ('attr_key' in affix) {
+    delete affix.attr_key;
+    changed = true;
+  }
+
+  return { changed, normalized: affix };
+};
+
+const migrateItemInstanceAffixesToModifiers = async (): Promise<void> => {
+  const result = await query(
+    `
+      SELECT id, affixes
+      FROM item_instance
+      WHERE affixes IS NOT NULL
+    `
+  );
+
+  let scannedCount = 0;
+  let updatedCount = 0;
+
+  for (const row of result.rows as Array<{ id: string | number; affixes: unknown }>) {
+    const affixes = parseAffixArray(row.affixes);
+    if (affixes.length <= 0) continue;
+    scannedCount += 1;
+
+    let changed = false;
+    const normalizedAffixes: unknown[] = [];
+    for (const affixRaw of affixes) {
+      const normalizedAffix = normalizeItemInstanceAffixForModifiers(affixRaw);
+      if (normalizedAffix.changed) changed = true;
+      normalizedAffixes.push(normalizedAffix.normalized);
+    }
+
+    if (!changed) continue;
+    updatedCount += 1;
+    await query(
+      'UPDATE item_instance SET affixes = $1::jsonb, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(normalizedAffixes), row.id]
+    );
+  }
+
+  console.log(`  → 词条复合结构迁移完成：扫描装备=${scannedCount}，更新装备=${updatedCount}`);
+};
+
 // ============================================
 // 初始化物品系统表
 // ============================================
@@ -182,6 +284,12 @@ export const initItemTables = async (): Promise<void> => {
 
     await dropLegacyStaticDefForeignKeys();
     await checkAndAddItemInstanceColumns();
+
+    await runDbMigrationOnce({
+      migrationKey: 'item_instance_affixes_modifiers_v1',
+      description: '将装备词条实例统一迁移为支持modifiers复合结构',
+      execute: migrateItemInstanceAffixesToModifiers,
+    });
 
     await query("COMMENT ON COLUMN item_instance.identified IS '是否已鉴定';");
     await query("COMMENT ON COLUMN item_instance.quality IS '实例品质（为空则按定义表）';");

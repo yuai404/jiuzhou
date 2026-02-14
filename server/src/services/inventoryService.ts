@@ -51,6 +51,7 @@ import {
   buildDisassembleRewardPlan,
 } from './disassembleRewardPlanner.js';
 import type { GeneratedAffix } from './equipmentService.js';
+import { extractFlatAffixDeltas } from './shared/affixModifier.js';
 
 // 背包位置类型
 export type InventoryLocation = 'bag' | 'warehouse' | 'equipped';
@@ -273,11 +274,10 @@ const getEquipmentAttrDeltaByInstanceIdTx = async (
       : [];
 
   for (const affix of affixes) {
-    if (!affix || typeof affix !== 'object') continue;
-    const a = affix as { attr_key?: unknown; apply_type?: unknown; value?: unknown };
-    if (typeof a.attr_key !== 'string') continue;
-    if (a.apply_type !== 'flat') continue;
-    addToDelta(delta, a.attr_key, a.value);
+    const rows = extractFlatAffixDeltas(affix);
+    for (const row of rows) {
+      addToDelta(delta, row.attrKey, row.value);
+    }
   }
 
   return delta;
