@@ -2671,7 +2671,7 @@
           "type": "heal",
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 0.22
+          "scaleRate": 0.10
         },
         {
           "type": "buff",
