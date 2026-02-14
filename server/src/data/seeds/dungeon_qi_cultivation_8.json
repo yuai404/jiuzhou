@@ -246,12 +246,6 @@
                     "chance": 0.5
                   },
                   {
-                    "item_def_id": "scroll-004",
-                    "qty_min": 1,
-                    "qty_max": 1,
-                    "chance": 0.22
-                  },
-                  {
                     "item_def_id": "book-lieyang-jian",
                     "qty_min": 1,
                     "qty_max": 1,
@@ -320,10 +314,6 @@
               {
                 "item_def_id": "box-005",
                 "qty": 2
-              },
-              {
-                "item_def_id": "scroll-004",
-                "qty": 1
               }
             ],
             "silver": 820,
@@ -520,12 +510,6 @@
                     "qty_min": 1,
                     "qty_max": 2,
                     "chance": 0.65
-                  },
-                  {
-                    "item_def_id": "scroll-004",
-                    "qty_min": 1,
-                    "qty_max": 1,
-                    "chance": 0.3
                   },
                   {
                     "item_def_id": "book-lieyang-jian",

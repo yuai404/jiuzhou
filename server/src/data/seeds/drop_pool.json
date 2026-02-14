@@ -1331,13 +1331,6 @@
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
         }
       ],
       "common_pool_ids": [
@@ -1367,13 +1360,6 @@
         {
           "item_def_id": "box-005",
           "chance": 0.06,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1416,13 +1402,6 @@
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
         }
       ],
       "common_pool_ids": [
@@ -1452,13 +1431,6 @@
         {
           "item_def_id": "box-005",
           "chance": 0.06,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1522,13 +1494,6 @@
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
         }
       ],
       "common_pool_ids": [
@@ -1586,13 +1551,6 @@
         {
           "item_def_id": "box-005",
           "chance": 0.111,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
@@ -1662,13 +1620,6 @@
           "chance": 0.96,
           "qty_min": 1,
           "qty_max": 3,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
           "show_in_ui": true
         }
       ],
@@ -1751,13 +1702,6 @@
           "chance": 0.94,
           "qty_min": 1,
           "qty_max": 3,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "scroll-004",
-          "chance": 0.01,
-          "qty_min": 1,
-          "qty_max": 1,
           "show_in_ui": true
         }
       ],

@@ -1267,38 +1267,6 @@
       ]
     },
     {
-      "id": "scroll-004",
-      "code": "feng_yin_fu",
-      "name": "封印符",
-      "category": "consumable",
-      "sub_category": "scroll",
-      "quality": "玄",
-      "quality_rank": 2,
-      "rarity": "uncommon",
-      "level": 1,
-      "stack_max": 999,
-      "bind_type": "none",
-      "tradeable": true,
-      "icon": "/assets/ui/sh_icon_0006_jinbi_02.png",
-      "description": "锁定装备一条词条不被洗炼",
-      "tags": [
-        "符箓",
-        "封印",
-        "洗炼"
-      ],
-      "use_type": "target",
-      "effect_defs": [
-        {
-          "trigger": "use",
-          "effect_type": "lock",
-          "params": {
-            "target_type": "affix",
-            "lock_count": 1
-          }
-        }
-      ]
-    },
-    {
       "id": "gem-001",
       "code": "gong_ji_bao_shi_1",
       "name": "攻击宝石·一级",

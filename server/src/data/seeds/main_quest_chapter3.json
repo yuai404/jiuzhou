@@ -15,10 +15,6 @@
           {
             "item_def_id": "box-005",
             "quantity": 2
-          },
-          {
-            "item_def_id": "scroll-004",
-            "quantity": 1
           }
         ]
       },
@@ -334,10 +330,6 @@
         "silver": 1900,
         "spirit_stones": 155,
         "items": [
-          {
-            "item_def_id": "scroll-004",
-            "quantity": 1
-          }
         ]
       },
       "auto_accept": true,
