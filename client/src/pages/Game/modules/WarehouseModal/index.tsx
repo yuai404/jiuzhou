@@ -338,11 +338,14 @@ const WarehouseItemTooltip: React.FC<{ it: InventoryItemDto }> = ({ it }) => {
   const longDesc = normalizeText(def?.long_desc);
 
   const qty = useMemo(() => Math.max(0, Number(it.qty || 0)), [it.qty]);
-  const descText = useMemo(() => longDesc || desc, [desc, longDesc]);
   const isEquip = useMemo(() => {
     const raw = String(def?.category ?? '').trim();
     return raw === 'equipment' || raw === '装备';
   }, [def?.category]);
+  const descText = useMemo(() => {
+    if (isEquip) return '';
+    return longDesc || desc;
+  }, [desc, isEquip, longDesc]);
 
   const infoTags = useMemo(() => {
     const tags: string[] = [];
@@ -411,7 +414,7 @@ const WarehouseItemTooltip: React.FC<{ it: InventoryItemDto }> = ({ it }) => {
         </div>
       ) : null}
 
-      {descText ? <div className="warehouse-tooltip-desc">{descText}</div> : null}
+      {!isEquip && descText ? <div className="warehouse-tooltip-desc">{descText}</div> : null}
 
       {equipMetaLines.length > 0 ? (
         <div className="warehouse-tooltip-section">

@@ -345,6 +345,106 @@
       "quest_giver_id": "qg-chapter3-main",
       "sort_weight": 235,
       "enabled": true
+    },
+    {
+      "id": "npc-taixi-warden",
+      "code": "taixi_warden",
+      "name": "镇沼使",
+      "title": "胎息前哨统领",
+      "gender": "男",
+      "realm": "炼炁化神·采药期",
+      "avatar": "/assets/npc/teleporter.png",
+      "description": "常年镇守胎息沼前哨，负责稳定沼地灵压与调度清剿。",
+      "npc_type": "quest",
+      "area": "S",
+      "base_attrs": {
+        "qixue": 7800,
+        "max_qixue": 7800,
+        "wugong": 230,
+        "fagong": 210,
+        "wufang": 198,
+        "fafang": 190,
+        "sudu": 10
+      },
+      "talk_tree_id": "talk-taixi-warden",
+      "quest_giver_id": "qg-chapter4-main",
+      "sort_weight": 240,
+      "enabled": true
+    },
+    {
+      "id": "npc-taixi-apothecary",
+      "code": "taixi_apothecary",
+      "name": "胎息药师",
+      "title": "沼地丹房执事",
+      "gender": "女",
+      "realm": "炼炁化神·采药期",
+      "avatar": "/assets/npc/herbalist.png",
+      "description": "专精稳压类丹药，擅长调和采药后段躁动灵息。",
+      "npc_type": "quest",
+      "area": "S",
+      "base_attrs": {
+        "qixue": 6900,
+        "max_qixue": 6900,
+        "wugong": 180,
+        "fagong": 240,
+        "wufang": 170,
+        "fafang": 205,
+        "sudu": 11
+      },
+      "talk_tree_id": "talk-taixi-apothecary",
+      "quest_giver_id": "qg-chapter4-main",
+      "sort_weight": 238,
+      "enabled": true
+    },
+    {
+      "id": "npc-jiutai-hermit",
+      "code": "jiutai_hermit",
+      "name": "九台隐修者",
+      "title": "宫阙守序人",
+      "gender": "男",
+      "realm": "炼炁化神·结胎期",
+      "avatar": "/assets/npc/village_elder.png",
+      "description": "看守九台宫阙阵心，主持采药到结胎的关键仪式。",
+      "npc_type": "quest",
+      "area": "S",
+      "base_attrs": {
+        "qixue": 9200,
+        "max_qixue": 9200,
+        "wugong": 260,
+        "fagong": 260,
+        "wufang": 220,
+        "fafang": 220,
+        "sudu": 10
+      },
+      "talk_tree_id": "talk-jiutai-hermit",
+      "quest_giver_id": "qg-chapter4-main",
+      "sort_weight": 242,
+      "enabled": true
+    },
+    {
+      "id": "npc-jiutai-broker",
+      "code": "jiutai_broker",
+      "name": "九台行商",
+      "title": "宫阙中间人",
+      "gender": "女",
+      "realm": "炼炁化神·采药期",
+      "avatar": "/assets/npc/mysterious_merchant.png",
+      "description": "往来于宫阙与外界之间，经营高阶材料与套装散件。",
+      "npc_type": "merchant",
+      "area": "S",
+      "base_attrs": {
+        "qixue": 7000,
+        "max_qixue": 7000,
+        "wugong": 190,
+        "fagong": 220,
+        "wufang": 180,
+        "fafang": 188,
+        "sudu": 10
+      },
+      "talk_tree_id": "talk-jiutai-broker",
+      "shop_id": "shop-jiutai",
+      "sort_weight": 236,
+      "enabled": true
     }
   ],
   "talk_trees": [
@@ -445,6 +545,50 @@
       ],
       "enabled": true,
       "sort_weight": 235,
+      "version": 1
+    },
+    {
+      "id": "talk-taixi-warden",
+      "name": "镇沼使对话",
+      "greeting_lines": [
+        "胎息先稳，方可结胎。",
+        "阵线我来守，你专注修行。"
+      ],
+      "enabled": true,
+      "sort_weight": 80,
+      "version": 1
+    },
+    {
+      "id": "talk-taixi-apothecary",
+      "name": "胎息药师对话",
+      "greeting_lines": [
+        "丹药可稳压，不能替你守心。",
+        "采药后段最忌心浮气躁。"
+      ],
+      "enabled": true,
+      "sort_weight": 79,
+      "version": 1
+    },
+    {
+      "id": "talk-jiutai-hermit",
+      "name": "九台隐修者对话",
+      "greeting_lines": [
+        "九台只看结果，不听借口。",
+        "你若能守住阵心，结胎只是开始。"
+      ],
+      "enabled": true,
+      "sort_weight": 78,
+      "version": 1
+    },
+    {
+      "id": "talk-jiutai-broker",
+      "name": "九台行商对话",
+      "greeting_lines": [
+        "宫阙里什么都贵，但都值。",
+        "想快一步，就得舍得投资源。"
+      ],
+      "enabled": true,
+      "sort_weight": 77,
       "version": 1
     }
   ]

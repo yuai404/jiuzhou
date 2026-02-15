@@ -2321,6 +2321,868 @@
       "silver_reward_min": 0,
       "silver_reward_max": 0,
       "enabled": true
+    },
+    {
+      "id": "monster-taixi-mire-lurker",
+      "code": "taixi_mire_lurker",
+      "name": "泥沼伏行者",
+      "title": "胎息沼异化体",
+      "realm": "炼炁化神·采药期",
+      "level": 32,
+      "avatar": "/assets/monster/venomous_snake.png",
+      "kind": "normal",
+      "element": "木",
+      "base_attrs": {
+        "qixue": 4200,
+        "max_qixue": 4200,
+        "lingqi": 320,
+        "max_lingqi": 320,
+        "wugong": 168,
+        "fagong": 118,
+        "wufang": 108,
+        "fafang": 98,
+        "mingzhong": 1.2,
+        "shanbi": 0.1,
+        "baoji": 0.16,
+        "baoshang": 2.12,
+        "sudu": 8,
+        "kongzhi_kangxing": 0.8
+      },
+      "attr_variance": 0.08,
+      "attr_multiplier_min": 1.1,
+      "attr_multiplier_max": 1.3,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 32
+        },
+        {
+          "label": "气血",
+          "value": 4200
+        },
+        {
+          "label": "物攻",
+          "value": 168
+        },
+        {
+          "label": "物防",
+          "value": 108
+        },
+        {
+          "label": "法防",
+          "value": 98
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-poison-bite",
+          "sk-venom-spray"
+        ],
+        "skill_weights": {
+          "sk-poison-bite": 66,
+          "sk-venom-spray": 34
+        }
+      },
+      "drop_pool_id": "dp-caiyao-mire-lurker",
+      "exp_reward": 286,
+      "silver_reward_min": 126,
+      "silver_reward_max": 186,
+      "enabled": true
+    },
+    {
+      "id": "monster-taixi-herb-wraith",
+      "code": "taixi_herb_wraith",
+      "name": "幽蕨怨灵",
+      "title": "沼雾残念",
+      "realm": "炼炁化神·采药期",
+      "level": 33,
+      "avatar": "/assets/monster/shadow_viper.png",
+      "kind": "normal",
+      "element": "暗",
+      "base_attrs": {
+        "qixue": 3980,
+        "max_qixue": 3980,
+        "lingqi": 420,
+        "max_lingqi": 420,
+        "wugong": 142,
+        "fagong": 176,
+        "wufang": 96,
+        "fafang": 110,
+        "mingzhong": 1.22,
+        "shanbi": 0.106,
+        "baoji": 0.172,
+        "baoshang": 2.2,
+        "sudu": 8,
+        "kongzhi_kangxing": 0.82
+      },
+      "attr_variance": 0.08,
+      "attr_multiplier_min": 1.1,
+      "attr_multiplier_max": 1.32,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 33
+        },
+        {
+          "label": "气血",
+          "value": 3980
+        },
+        {
+          "label": "法攻",
+          "value": 176
+        },
+        {
+          "label": "物防",
+          "value": 96
+        },
+        {
+          "label": "法防",
+          "value": 110
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-shadow-claw",
+          "sk-ghost-curse"
+        ],
+        "skill_weights": {
+          "sk-shadow-claw": 58,
+          "sk-ghost-curse": 42
+        }
+      },
+      "drop_pool_id": "dp-caiyao-herb-wraith",
+      "exp_reward": 292,
+      "silver_reward_min": 130,
+      "silver_reward_max": 192,
+      "enabled": true
+    },
+    {
+      "id": "monster-taixi-swamp-serpent",
+      "code": "taixi_swamp_serpent",
+      "name": "沼泽鳞蛇",
+      "title": "湿地猎袭者",
+      "realm": "炼炁化神·采药期",
+      "level": 33,
+      "avatar": "/assets/monster/venomous_snake.png",
+      "kind": "normal",
+      "element": "水",
+      "base_attrs": {
+        "qixue": 4060,
+        "max_qixue": 4060,
+        "lingqi": 360,
+        "max_lingqi": 360,
+        "wugong": 174,
+        "fagong": 134,
+        "wufang": 102,
+        "fafang": 102,
+        "mingzhong": 1.2,
+        "shanbi": 0.102,
+        "baoji": 0.164,
+        "baoshang": 2.14,
+        "sudu": 8,
+        "kongzhi_kangxing": 0.81
+      },
+      "attr_variance": 0.07,
+      "attr_multiplier_min": 1.1,
+      "attr_multiplier_max": 1.3,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 33
+        },
+        {
+          "label": "气血",
+          "value": 4060
+        },
+        {
+          "label": "物攻",
+          "value": 174
+        },
+        {
+          "label": "物防",
+          "value": 102
+        },
+        {
+          "label": "法防",
+          "value": 102
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-poison-bite",
+          "sk-cold-surge"
+        ],
+        "skill_weights": {
+          "sk-poison-bite": 62,
+          "sk-cold-surge": 38
+        }
+      },
+      "drop_pool_id": "dp-caiyao-swamp-serpent",
+      "exp_reward": 296,
+      "silver_reward_min": 132,
+      "silver_reward_max": 194,
+      "enabled": true
+    },
+    {
+      "id": "monster-jiutai-shadow-disciple",
+      "code": "jiutai_shadow_disciple",
+      "name": "影阙侍徒",
+      "title": "宫阙守影",
+      "realm": "炼炁化神·采药期",
+      "level": 34,
+      "avatar": "/assets/monster/storm_wolf_lord.png",
+      "kind": "normal",
+      "element": "暗",
+      "base_attrs": {
+        "qixue": 4300,
+        "max_qixue": 4300,
+        "lingqi": 430,
+        "max_lingqi": 430,
+        "wugong": 166,
+        "fagong": 168,
+        "wufang": 110,
+        "fafang": 112,
+        "mingzhong": 1.24,
+        "shanbi": 0.1,
+        "baoji": 0.176,
+        "baoshang": 2.22,
+        "sudu": 8,
+        "kongzhi_kangxing": 0.84
+      },
+      "attr_variance": 0.08,
+      "attr_multiplier_min": 1.12,
+      "attr_multiplier_max": 1.34,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 34
+        },
+        {
+          "label": "气血",
+          "value": 4300
+        },
+        {
+          "label": "双攻",
+          "value": 168
+        },
+        {
+          "label": "物防",
+          "value": 110
+        },
+        {
+          "label": "法防",
+          "value": 112
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-xinmo-thorn",
+          "sk-xinmo-whisper"
+        ],
+        "skill_weights": {
+          "sk-xinmo-thorn": 60,
+          "sk-xinmo-whisper": 40
+        }
+      },
+      "drop_pool_id": "dp-caiyao-shadow-disciple",
+      "exp_reward": 304,
+      "silver_reward_min": 136,
+      "silver_reward_max": 200,
+      "enabled": true
+    },
+    {
+      "id": "monster-elite-taixi-mire-overlord",
+      "code": "elite_taixi_mire_overlord",
+      "name": "泥渊霸体",
+      "title": "精英",
+      "realm": "炼炁化神·采药期",
+      "level": 35,
+      "avatar": "/assets/monster/rune_golem.png",
+      "kind": "elite",
+      "element": "土",
+      "base_attrs": {
+        "qixue": 12800,
+        "max_qixue": 12800,
+        "lingqi": 520,
+        "max_lingqi": 520,
+        "wugong": 248,
+        "fagong": 172,
+        "wufang": 166,
+        "fafang": 142,
+        "mingzhong": 1.34,
+        "shanbi": 0.09,
+        "baoji": 0.184,
+        "baoshang": 2.4,
+        "sudu": 7,
+        "kongzhi_kangxing": 0.96
+      },
+      "attr_variance": 0,
+      "attr_multiplier_min": 1.26,
+      "attr_multiplier_max": 1.5,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 35
+        },
+        {
+          "label": "气血",
+          "value": 12800
+        },
+        {
+          "label": "物攻",
+          "value": 248
+        },
+        {
+          "label": "物防",
+          "value": 166
+        },
+        {
+          "label": "法防",
+          "value": 142
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-crystal-bash",
+          "sk-earth-shock",
+          "sk-stone-wall"
+        ],
+        "skill_weights": {
+          "sk-crystal-bash": 52,
+          "sk-earth-shock": 30,
+          "sk-stone-wall": 18
+        }
+      },
+      "drop_pool_id": "dp-caiyao-elite-mire-overlord",
+      "exp_reward": 780,
+      "silver_reward_min": 276,
+      "silver_reward_max": 408,
+      "enabled": true
+    },
+    {
+      "id": "monster-elite-jiutai-bone-monk",
+      "code": "elite_jiutai_bone_monk",
+      "name": "骨阙行者",
+      "title": "精英",
+      "realm": "炼炁化神·采药期",
+      "level": 36,
+      "avatar": "/assets/monster/storm_wolf_lord.png",
+      "kind": "elite",
+      "element": "暗",
+      "base_attrs": {
+        "qixue": 12200,
+        "max_qixue": 12200,
+        "lingqi": 680,
+        "max_lingqi": 680,
+        "wugong": 226,
+        "fagong": 238,
+        "wufang": 152,
+        "fafang": 158,
+        "mingzhong": 1.36,
+        "shanbi": 0.094,
+        "baoji": 0.19,
+        "baoshang": 2.44,
+        "sudu": 7,
+        "kongzhi_kangxing": 0.94
+      },
+      "attr_variance": 0,
+      "attr_multiplier_min": 1.26,
+      "attr_multiplier_max": 1.52,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 36
+        },
+        {
+          "label": "气血",
+          "value": 12200
+        },
+        {
+          "label": "双攻",
+          "value": 238
+        },
+        {
+          "label": "物防",
+          "value": 152
+        },
+        {
+          "label": "法防",
+          "value": 158
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-youming-slash",
+          "sk-soul-chain",
+          "sk-ghost-curse"
+        ],
+        "skill_weights": {
+          "sk-youming-slash": 44,
+          "sk-soul-chain": 34,
+          "sk-ghost-curse": 22
+        }
+      },
+      "drop_pool_id": "dp-caiyao-elite-bone-monk",
+      "exp_reward": 804,
+      "silver_reward_min": 288,
+      "silver_reward_max": 420,
+      "enabled": true
+    },
+    {
+      "id": "monster-boss-taiyuan-fetus-beast",
+      "code": "boss_taiyuan_fetus_beast",
+      "name": "胎元魇兽",
+      "title": "首领",
+      "realm": "炼炁化神·采药期",
+      "level": 37,
+      "avatar": "/assets/monster/ancient_tree.png",
+      "kind": "boss",
+      "element": "木",
+      "base_attrs": {
+        "qixue": 29800,
+        "max_qixue": 29800,
+        "lingqi": 1320,
+        "max_lingqi": 1320,
+        "wugong": 388,
+        "fagong": 326,
+        "wufang": 262,
+        "fafang": 228,
+        "mingzhong": 1.56,
+        "shanbi": 0.082,
+        "baoji": 0.2,
+        "baoshang": 2.56,
+        "sudu": 6,
+        "kongzhi_kangxing": 1.08
+      },
+      "attr_variance": 0,
+      "attr_multiplier_min": 1.34,
+      "attr_multiplier_max": 1.64,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 37
+        },
+        {
+          "label": "气血",
+          "value": 29800
+        },
+        {
+          "label": "双攻",
+          "value": 388
+        },
+        {
+          "label": "物防",
+          "value": 262
+        },
+        {
+          "label": "法防",
+          "value": 228
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-earth-crush",
+          "sk-crystal-rain",
+          "sk-core-pulse",
+          "sk-dark-heal"
+        ],
+        "skill_weights": {
+          "sk-earth-crush": 34,
+          "sk-crystal-rain": 24,
+          "sk-core-pulse": 22,
+          "sk-dark-heal": 20
+        },
+        "phase_triggers": [
+          {
+            "hp_percent": 0.65,
+            "action": "enrage",
+            "effects": [
+              {
+                "type": "buff",
+                "buffId": "buff-zengshang-up",
+                "value": 0.22,
+                "duration": 99,
+                "stacks": 1
+              }
+            ]
+          },
+          {
+            "hp_percent": 0.35,
+            "action": "summon",
+            "summon_id": "monster-taixi-mire-lurker",
+            "summon_count": 1
+          }
+        ]
+      },
+      "drop_pool_id": "dp-caiyao-boss-fetus-beast",
+      "exp_reward": 1860,
+      "silver_reward_min": 620,
+      "silver_reward_max": 940,
+      "enabled": true
+    },
+    {
+      "id": "monster-jietai-xuanmu-puppet",
+      "code": "jietai_xuanmu_puppet",
+      "name": "玄木傀儡",
+      "title": "神台守御",
+      "realm": "炼炁化神·结胎期",
+      "level": 39,
+      "avatar": "/assets/monster/rune_golem.png",
+      "kind": "normal",
+      "element": "土",
+      "base_attrs": {
+        "qixue": 5060,
+        "max_qixue": 5060,
+        "lingqi": 420,
+        "max_lingqi": 420,
+        "wugong": 208,
+        "fagong": 152,
+        "wufang": 132,
+        "fafang": 124,
+        "mingzhong": 1.24,
+        "shanbi": 0.094,
+        "baoji": 0.178,
+        "baoshang": 2.24,
+        "sudu": 7,
+        "kongzhi_kangxing": 0.9
+      },
+      "attr_variance": 0.07,
+      "attr_multiplier_min": 1.14,
+      "attr_multiplier_max": 1.38,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 39
+        },
+        {
+          "label": "气血",
+          "value": 5060
+        },
+        {
+          "label": "物攻",
+          "value": 208
+        },
+        {
+          "label": "物防",
+          "value": 132
+        },
+        {
+          "label": "法防",
+          "value": 124
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-crystal-bash",
+          "sk-stone-wall"
+        ],
+        "skill_weights": {
+          "sk-crystal-bash": 68,
+          "sk-stone-wall": 32
+        }
+      },
+      "drop_pool_id": "dp-jietai-xuanmu-puppet",
+      "exp_reward": 336,
+      "silver_reward_min": 146,
+      "silver_reward_max": 214,
+      "enabled": true
+    },
+    {
+      "id": "monster-jietai-soul-lotus-spirit",
+      "code": "jietai_soul_lotus_spirit",
+      "name": "魂莲灵",
+      "title": "神台映灵",
+      "realm": "炼炁化神·结胎期",
+      "level": 40,
+      "avatar": "/assets/monster/shadow_viper.png",
+      "kind": "normal",
+      "element": "暗",
+      "base_attrs": {
+        "qixue": 4820,
+        "max_qixue": 4820,
+        "lingqi": 560,
+        "max_lingqi": 560,
+        "wugong": 178,
+        "fagong": 226,
+        "wufang": 122,
+        "fafang": 138,
+        "mingzhong": 1.26,
+        "shanbi": 0.1,
+        "baoji": 0.188,
+        "baoshang": 2.3,
+        "sudu": 8,
+        "kongzhi_kangxing": 0.92
+      },
+      "attr_variance": 0.08,
+      "attr_multiplier_min": 1.14,
+      "attr_multiplier_max": 1.4,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 40
+        },
+        {
+          "label": "气血",
+          "value": 4820
+        },
+        {
+          "label": "法攻",
+          "value": 226
+        },
+        {
+          "label": "物防",
+          "value": 122
+        },
+        {
+          "label": "法防",
+          "value": 138
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-xinmo-thorn",
+          "sk-xinmo-whisper"
+        ],
+        "skill_weights": {
+          "sk-xinmo-thorn": 56,
+          "sk-xinmo-whisper": 44
+        }
+      },
+      "drop_pool_id": "dp-jietai-soul-lotus-spirit",
+      "exp_reward": 344,
+      "silver_reward_min": 150,
+      "silver_reward_max": 220,
+      "enabled": true
+    },
+    {
+      "id": "monster-elite-jietai-lotus-guardian",
+      "code": "elite_jietai_lotus_guardian",
+      "name": "莲台守将",
+      "title": "精英",
+      "realm": "炼炁化神·结胎期",
+      "level": 41,
+      "avatar": "/assets/monster/storm_wolf_lord.png",
+      "kind": "elite",
+      "element": "水",
+      "base_attrs": {
+        "qixue": 14500,
+        "max_qixue": 14500,
+        "lingqi": 760,
+        "max_lingqi": 760,
+        "wugong": 278,
+        "fagong": 264,
+        "wufang": 182,
+        "fafang": 176,
+        "mingzhong": 1.38,
+        "shanbi": 0.096,
+        "baoji": 0.194,
+        "baoshang": 2.46,
+        "sudu": 7,
+        "kongzhi_kangxing": 1
+      },
+      "attr_variance": 0,
+      "attr_multiplier_min": 1.3,
+      "attr_multiplier_max": 1.56,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 41
+        },
+        {
+          "label": "气血",
+          "value": 14500
+        },
+        {
+          "label": "双攻",
+          "value": 278
+        },
+        {
+          "label": "物防",
+          "value": 182
+        },
+        {
+          "label": "法防",
+          "value": 176
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-youming-slash",
+          "sk-soul-chain",
+          "sk-cold-surge"
+        ],
+        "skill_weights": {
+          "sk-youming-slash": 42,
+          "sk-soul-chain": 34,
+          "sk-cold-surge": 24
+        }
+      },
+      "drop_pool_id": "dp-jietai-elite-lotus-guardian",
+      "exp_reward": 920,
+      "silver_reward_min": 324,
+      "silver_reward_max": 470,
+      "enabled": true
+    },
+    {
+      "id": "monster-elite-jietai-void-general",
+      "code": "elite_jietai_void_general",
+      "name": "虚渊将",
+      "title": "精英",
+      "realm": "炼炁化神·结胎期",
+      "level": 42,
+      "avatar": "/assets/monster/rune_golem.png",
+      "kind": "elite",
+      "element": "暗",
+      "base_attrs": {
+        "qixue": 15200,
+        "max_qixue": 15200,
+        "lingqi": 820,
+        "max_lingqi": 820,
+        "wugong": 286,
+        "fagong": 282,
+        "wufang": 188,
+        "fafang": 184,
+        "mingzhong": 1.4,
+        "shanbi": 0.094,
+        "baoji": 0.198,
+        "baoshang": 2.5,
+        "sudu": 7,
+        "kongzhi_kangxing": 1.02
+      },
+      "attr_variance": 0,
+      "attr_multiplier_min": 1.3,
+      "attr_multiplier_max": 1.58,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 42
+        },
+        {
+          "label": "气血",
+          "value": 15200
+        },
+        {
+          "label": "双攻",
+          "value": 286
+        },
+        {
+          "label": "物防",
+          "value": 188
+        },
+        {
+          "label": "法防",
+          "value": 184
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-xinmo-pierce",
+          "sk-soul-chain",
+          "sk-ghost-curse"
+        ],
+        "skill_weights": {
+          "sk-xinmo-pierce": 38,
+          "sk-soul-chain": 36,
+          "sk-ghost-curse": 26
+        }
+      },
+      "drop_pool_id": "dp-jietai-elite-void-general",
+      "exp_reward": 950,
+      "silver_reward_min": 336,
+      "silver_reward_max": 486,
+      "enabled": true
+    },
+    {
+      "id": "monster-boss-jietai-shentai-avatar",
+      "code": "boss_jietai_shentai_avatar",
+      "name": "神台真影",
+      "title": "首领",
+      "realm": "炼炁化神·结胎期",
+      "level": 43,
+      "avatar": "/assets/monster/withered_ent.png",
+      "kind": "boss",
+      "element": "暗",
+      "base_attrs": {
+        "qixue": 35600,
+        "max_qixue": 35600,
+        "lingqi": 1680,
+        "max_lingqi": 1680,
+        "wugong": 442,
+        "fagong": 436,
+        "wufang": 298,
+        "fafang": 286,
+        "mingzhong": 1.62,
+        "shanbi": 0.09,
+        "baoji": 0.22,
+        "baoshang": 2.72,
+        "sudu": 6,
+        "kongzhi_kangxing": 1.16
+      },
+      "attr_variance": 0,
+      "attr_multiplier_min": 1.38,
+      "attr_multiplier_max": 1.7,
+      "display_stats": [
+        {
+          "label": "等级",
+          "value": 43
+        },
+        {
+          "label": "气血",
+          "value": 35600
+        },
+        {
+          "label": "双攻",
+          "value": 442
+        },
+        {
+          "label": "物防",
+          "value": 298
+        },
+        {
+          "label": "法防",
+          "value": 286
+        }
+      ],
+      "ai_profile": {
+        "skills": [
+          "sk-xinmo-pierce",
+          "sk-xinmo-fear",
+          "sk-core-pulse",
+          "sk-dark-heal"
+        ],
+        "skill_weights": {
+          "sk-xinmo-pierce": 32,
+          "sk-xinmo-fear": 28,
+          "sk-core-pulse": 22,
+          "sk-dark-heal": 18
+        },
+        "phase_triggers": [
+          {
+            "hp_percent": 0.65,
+            "action": "enrage",
+            "effects": [
+              {
+                "type": "buff",
+                "buffId": "buff-zengshang-up",
+                "value": 0.25,
+                "duration": 99,
+                "stacks": 1
+              }
+            ]
+          },
+          {
+            "hp_percent": 0.32,
+            "action": "summon",
+            "summon_id": "monster-jietai-soul-lotus-spirit",
+            "summon_count": 1
+          }
+        ]
+      },
+      "drop_pool_id": "dp-jietai-boss-shentai-avatar",
+      "exp_reward": 2220,
+      "silver_reward_min": 740,
+      "silver_reward_max": 1100,
+      "enabled": true
     }
   ]
 }

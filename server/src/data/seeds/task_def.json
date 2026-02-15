@@ -885,6 +885,609 @@
       "prereq_task_ids": [],
       "enabled": true,
       "sort_weight": 563
+    },
+    {
+      "id": "task-caiyao-daily-001",
+      "category": "daily",
+      "title": "胎沼清剿",
+      "realm": "炼炁化神·采药期",
+      "description": "清理胎息沼外围异化体，减轻前哨压力。",
+      "giver_npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-camp",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击败泥沼伏行者 10 个",
+          "target": 10,
+          "params": {
+            "monster_id": "monster-taixi-mire-lurker"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 620
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 58
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-taiyuan-jingpo",
+          "qty": 2
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 610
+    },
+    {
+      "id": "task-caiyao-daily-002",
+      "category": "daily",
+      "title": "芦雾净场",
+      "realm": "炼炁化神·采药期",
+      "description": "清理芦雾迷阵中的怨灵残影。",
+      "giver_npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-camp",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击败幽蕨怨灵 8 个",
+          "target": 8,
+          "params": {
+            "monster_id": "monster-taixi-herb-wraith"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 640
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 60
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jiutai-jinghua",
+          "qty": 2
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 611
+    },
+    {
+      "id": "task-caiyao-daily-003",
+      "category": "daily",
+      "title": "胎元采样",
+      "realm": "炼炁化神·采药期",
+      "description": "采集胎元晶魄，补充丹房储备。",
+      "giver_npc_id": "npc-taixi-apothecary",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-alchemy-pad",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "gather_resource",
+          "text": "采集胎元晶魄 6 份",
+          "target": 6,
+          "params": {
+            "resource_id": "mat-taiyuan-jingpo"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 600
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 56
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 612
+    },
+    {
+      "id": "task-caiyao-daily-004",
+      "category": "daily",
+      "title": "明泉日修",
+      "realm": "炼炁化神·采药期",
+      "description": "完成一次胎元明泉修行。",
+      "giver_npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-pool-gate",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "dungeon_clear",
+          "text": "通关胎元明泉 1 次",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-taiyuan-mingquan"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 680
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 66
+        },
+        {
+          "type": "item",
+          "item_def_id": "box-009",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 613
+    },
+    {
+      "id": "task-caiyao-daily-005",
+      "category": "daily",
+      "title": "宫阙巡检",
+      "realm": "炼炁化神·采药期",
+      "description": "完成一次九台宫阙巡检试炼。",
+      "giver_npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-outer-gate",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "dungeon_clear",
+          "text": "通关九台宫阙 1 次",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-jiutai-gongque"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 700
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 68
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jiutai-jinghua",
+          "qty": 2
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 614
+    },
+    {
+      "id": "task-caiyao-weekly-001",
+      "category": "event",
+      "title": "周常：明泉压测",
+      "realm": "炼炁化神·采药期",
+      "description": "本周累计完成胎元明泉深度压测。",
+      "giver_npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-pool-gate",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "dungeon_clear",
+          "text": "通关胎元明泉 3 次",
+          "target": 3,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-taiyuan-mingquan"
+          }
+        },
+        {
+          "id": "obj-002",
+          "type": "dungeon_clear",
+          "text": "通关胎元明泉（困难）1 次",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-taiyuan-mingquan",
+            "difficulty_id": "dd-lianqi-taiyuan-h"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "spirit_stones",
+          "amount": 260
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-taiyuan-jingpo",
+          "qty": 6
+        },
+        {
+          "type": "item",
+          "item_def_id": "box-009",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 660
+    },
+    {
+      "id": "task-caiyao-weekly-002",
+      "category": "event",
+      "title": "周常：宫阙连战",
+      "realm": "炼炁化神·采药期",
+      "description": "在九台宫阙完成多轮清剿与困难挑战。",
+      "giver_npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-outer-gate",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "dungeon_clear",
+          "text": "通关九台宫阙 3 次",
+          "target": 3,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-jiutai-gongque"
+          }
+        },
+        {
+          "id": "obj-002",
+          "type": "dungeon_clear",
+          "text": "通关九台宫阙（困难）1 次",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-jiutai-gongque",
+            "difficulty_id": "dd-lianqi-jiutai-h"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "spirit_stones",
+          "amount": 280
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jiutai-jinghua",
+          "qty": 8
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 661
+    },
+    {
+      "id": "task-caiyao-weekly-003",
+      "category": "event",
+      "title": "周常：精英双猎",
+      "realm": "炼炁化神·采药期",
+      "description": "击杀两类采药后段精英，回收高压材料。",
+      "giver_npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-camp",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击败泥渊霸体 2 次",
+          "target": 2,
+          "params": {
+            "monster_id": "monster-elite-taixi-mire-overlord"
+          }
+        },
+        {
+          "id": "obj-002",
+          "type": "kill_monster",
+          "text": "击败骨阙行者 2 次",
+          "target": 2,
+          "params": {
+            "monster_id": "monster-elite-jiutai-bone-monk"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "spirit_stones",
+          "amount": 300
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jietai-dan",
+          "qty": 2
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 662
+    },
+    {
+      "id": "task-caiyao-weekly-004",
+      "category": "event",
+      "title": "周常：结胎备料",
+      "realm": "炼炁化神·采药期",
+      "description": "集中收集突破所需核心材料。",
+      "giver_npc_id": "npc-taixi-apothecary",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-alchemy-pad",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "gather_resource",
+          "text": "采集胎元晶魄 12 份",
+          "target": 12,
+          "params": {
+            "resource_id": "mat-taiyuan-jingpo"
+          }
+        },
+        {
+          "id": "obj-002",
+          "type": "gather_resource",
+          "text": "收集九台精华 10 份",
+          "target": 10,
+          "params": {
+            "resource_id": "mat-jiutai-jinghua"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "spirit_stones",
+          "amount": 320
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jietai-dan",
+          "qty": 2
+        },
+        {
+          "type": "item",
+          "item_def_id": "box-009",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 663
+    },
+    {
+      "id": "task-jietai-daily-001",
+      "category": "daily",
+      "title": "神台净域",
+      "realm": "炼炁化神·结胎期",
+      "description": "清理玄母神台外围守御体。",
+      "giver_npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击败玄木傀儡 8 个",
+          "target": 8,
+          "params": {
+            "monster_id": "monster-jietai-xuanmu-puppet"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 860
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 84
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jiutai-jinghua",
+          "qty": 3
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 620
+    },
+    {
+      "id": "task-jietai-daily-002",
+      "category": "daily",
+      "title": "魂莲归束",
+      "realm": "炼炁化神·结胎期",
+      "description": "压制魂莲灵扰动，稳定神台波动。",
+      "giver_npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "kill_monster",
+          "text": "击败魂莲灵 8 个",
+          "target": 8,
+          "params": {
+            "monster_id": "monster-jietai-soul-lotus-spirit"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 880
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 86
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 621
+    },
+    {
+      "id": "task-jietai-daily-003",
+      "category": "daily",
+      "title": "神台日修",
+      "realm": "炼炁化神·结胎期",
+      "description": "完成一次玄母神台修行。",
+      "giver_npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "dungeon_clear",
+          "text": "通关玄母神台 1 次",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-xuanmu-shentai"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "silver",
+          "amount": 920
+        },
+        {
+          "type": "spirit_stones",
+          "amount": 92
+        },
+        {
+          "type": "item",
+          "item_def_id": "box-009",
+          "qty": 1
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 622
+    },
+    {
+      "id": "task-jietai-weekly-001",
+      "category": "event",
+      "title": "周常：神台轮战",
+      "realm": "炼炁化神·结胎期",
+      "description": "在神台完成多轮战斗并击败核心首领。",
+      "giver_npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "dungeon_clear",
+          "text": "通关玄母神台 3 次",
+          "target": 3,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-xuanmu-shentai"
+          }
+        },
+        {
+          "id": "obj-002",
+          "type": "kill_monster",
+          "text": "击败神台真影 1 次",
+          "target": 1,
+          "params": {
+            "monster_id": "monster-boss-jietai-shentai-avatar"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "spirit_stones",
+          "amount": 380
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jietai-dan",
+          "qty": 3
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-jiutai-jinghua",
+          "qty": 6
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 670
+    },
+    {
+      "id": "task-jietai-weekly-002",
+      "category": "event",
+      "title": "周常：套装精炼",
+      "realm": "炼炁化神·结胎期",
+      "description": "收集高阶锻铸精华以推进套装养成。",
+      "giver_npc_id": "npc-jiutai-broker",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-trader-court",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "type": "gather_resource",
+          "text": "收集九台精华 16 份",
+          "target": 16,
+          "params": {
+            "resource_id": "mat-jiutai-jinghua"
+          }
+        },
+        {
+          "id": "obj-002",
+          "type": "gather_resource",
+          "text": "收集结胎丹 4 份",
+          "target": 4,
+          "params": {
+            "resource_id": "mat-jietai-dan"
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "type": "spirit_stones",
+          "amount": 420
+        },
+        {
+          "type": "item",
+          "item_def_id": "box-009",
+          "qty": 2
+        },
+        {
+          "type": "item",
+          "item_def_id": "mat-taiyuan-jingpo",
+          "qty": 6
+        }
+      ],
+      "prereq_task_ids": [],
+      "enabled": true,
+      "sort_weight": 671
     }
   ]
 }

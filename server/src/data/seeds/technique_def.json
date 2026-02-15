@@ -465,6 +465,54 @@
         "南海岸"
       ],
       "sort_weight": 63
+    },
+    {
+      "id": "tech-taixi-ningtai-jue",
+      "code": "xuanjia_fanzhen_jue",
+      "name": "玄甲返震诀",
+      "type": "武技",
+      "quality": "天",
+      "max_layer": 9,
+      "required_realm": "炼炁化神·采药期",
+      "attribute_type": "physical",
+      "attribute_element": "tu",
+      "tags": [
+        "武技",
+        "土",
+        "防御",
+        "反击"
+      ],
+      "description": "以土元凝甲，以反震破敌，专精扛伤与借势反击。",
+      "obtain_type": "drop",
+      "obtain_hint": [
+        "胎元明泉",
+        "玄母神台"
+      ],
+      "sort_weight": 64
+    },
+    {
+      "id": "tech-jiutai-zhenpo-yin",
+      "code": "jiuyu_fuling_yin",
+      "name": "九狱缚灵印",
+      "type": "法诀",
+      "quality": "天",
+      "max_layer": 9,
+      "required_realm": "炼炁化神·采药期",
+      "attribute_type": "magic",
+      "attribute_element": "shui",
+      "tags": [
+        "法诀",
+        "控制",
+        "封禁",
+        "阵法"
+      ],
+      "description": "以九狱印纹封灵禁脉，擅长沉默、定身与节奏压制。",
+      "obtain_type": "drop",
+      "obtain_hint": [
+        "九台宫阙",
+        "玄母神台"
+      ],
+      "sort_weight": 65
     }
   ]
 }

@@ -2671,7 +2671,7 @@
           "type": "heal",
           "valueType": "scale",
           "scaleAttr": "max_qixue",
-          "scaleRate": 0.10
+          "scaleRate": 0.1
         },
         {
           "type": "buff",
@@ -2775,6 +2775,236 @@
       "trigger_type": "active",
       "ai_priority": 81,
       "sort_weight": 360,
+      "enabled": true
+    },
+    {
+      "id": "skill-taixi-huanzhou",
+      "code": "xuanjia_shoushi",
+      "name": "玄甲守势",
+      "description": "凝土成甲，建立稳定护盾并回补少量灵气。",
+      "icon": "/assets/skills/icon_skill_34.png",
+      "source_type": "technique",
+      "source_id": "tech-taixi-ningtai-jue",
+      "cost_lingqi": 28,
+      "cooldown": 4,
+      "target_type": "self",
+      "damage_type": "none",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "shield",
+          "valueType": "scale",
+          "scaleAttr": "max_qixue",
+          "scaleRate": 0.10,
+          "duration": 3
+        },
+        {
+          "type": "restore_lingqi",
+          "value": 10
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 64,
+      "upgrades": [
+        {
+          "layer": 3,
+          "upgradeType": "value",
+          "changes": {
+            "effects": [
+              {
+                "type": "shield",
+                "valueType": "scale",
+                "scaleAttr": "max_qixue",
+                "scaleRate": 0.15,
+                "value": 65,
+                "duration": 3
+              },
+              {
+                "type": "restore_lingqi",
+                "value": 16
+              }
+            ]
+          }
+        }
+      ],
+      "sort_weight": 333,
+      "enabled": true
+    },
+    {
+      "id": "skill-taixi-ningtai-yin",
+      "code": "fanzhen_bengyue",
+      "name": "返震崩岳",
+      "description": "借敌力反震回击，以防御转化为破阵伤害。",
+      "icon": "/assets/skills/icon_skill_31.png",
+      "source_type": "technique",
+      "source_id": "tech-taixi-ningtai-jue",
+      "cost_lingqi": 30,
+      "cooldown": 4,
+      "target_type": "single_enemy",
+      "damage_type": "physical",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "wufang",
+          "scaleRate": 1.85
+        },
+        {
+          "type": "control",
+          "controlType": "disarm",
+          "duration": 1,
+          "chance": 0.35
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 74,
+      "upgrades": [
+        {
+          "layer": 5,
+          "upgradeType": "value",
+          "changes": {
+            "effects": [
+              {
+                "type": "damage",
+                "valueType": "scale",
+                "scaleAttr": "wufang",
+                "scaleRate": 2.25,
+                "value": 225
+              },
+              {
+                "type": "control",
+                "controlType": "disarm",
+                "duration": 1,
+                "chance": 0.48
+              }
+            ]
+          }
+        }
+      ],
+      "sort_weight": 334,
+      "enabled": true
+    },
+    {
+      "id": "skill-jiutai-zhenyin",
+      "code": "fuling_zhenyin",
+      "name": "缚灵镇印",
+      "description": "印落锁灵，单体封禁并压制其施法。",
+      "icon": "/assets/skills/icon_skill_39.png",
+      "source_type": "technique",
+      "source_id": "tech-jiutai-zhenpo-yin",
+      "cost_lingqi": 26,
+      "cooldown": 3,
+      "target_type": "single_enemy",
+      "damage_type": "magic",
+      "element": "shui",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "fagong",
+          "scaleRate": 1.55
+        },
+        {
+          "type": "control",
+          "controlType": "silence",
+          "duration": 1,
+          "chance": 0.45
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 70,
+      "upgrades": [
+        {
+          "layer": 3,
+          "upgradeType": "value",
+          "changes": {
+            "effects": [
+              {
+                "type": "damage",
+                "valueType": "scale",
+                "scaleAttr": "fagong",
+                "scaleRate": 1.9,
+                "value": 190
+              },
+              {
+                "type": "control",
+                "controlType": "silence",
+                "duration": 1,
+                "chance": 0.58
+              }
+            ]
+          }
+        }
+      ],
+      "sort_weight": 337,
+      "enabled": true
+    },
+    {
+      "id": "skill-jiutai-luosha-zhen",
+      "code": "jiuyu_jinzhen",
+      "name": "九狱禁阵",
+      "description": "结阵封场，群体定身并压低敌方速度。",
+      "icon": "/assets/skills/icon_skill_26.png",
+      "source_type": "technique",
+      "source_id": "tech-jiutai-zhenpo-yin",
+      "cost_lingqi": 34,
+      "cooldown": 5,
+      "target_type": "all_enemy",
+      "damage_type": "magic",
+      "element": "shui",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "fagong",
+          "scaleRate": 0.95
+        },
+        {
+          "type": "control",
+          "controlType": "root",
+          "duration": 1,
+          "chance": 0.35
+        },
+        {
+          "type": "debuff",
+          "buffId": "debuff-sudu-down",
+          "duration": 2,
+          "value": 2
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 78,
+      "upgrades": [
+        {
+          "layer": 5,
+          "upgradeType": "value",
+          "changes": {
+            "effects": [
+              {
+                "type": "damage",
+                "valueType": "scale",
+                "scaleAttr": "fagong",
+                "scaleRate": 1.18,
+                "value": 118
+              },
+              {
+                "type": "control",
+                "controlType": "root",
+                "duration": 1,
+                "chance": 0.45
+              },
+              {
+                "type": "debuff",
+                "buffId": "debuff-sudu-down",
+                "duration": 2,
+                "value": 3
+              }
+            ]
+          }
+        }
+      ],
+      "sort_weight": 338,
       "enabled": true
     }
   ]

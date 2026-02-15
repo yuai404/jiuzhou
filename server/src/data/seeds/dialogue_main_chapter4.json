@@ -1,0 +1,173 @@
+{
+  "dialogues": [
+    {
+      "id": "dlg-main-4-001",
+      "name": "第四章-001 沼地前哨",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "镇沼使",
+          "text": "你来得及时。胎息沼的灵压已开始内卷，再拖下去会反噬经脉。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：稳定前哨并展开清剿。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-002",
+      "name": "第四章-002 泥潮清剿",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "narration",
+          "text": "泥潮翻涌，异化灵物从沼底不断爬出。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：清剿泥潮区敌群。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-003",
+      "name": "第四章-003 胎元采集",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "胎息药师",
+          "text": "阵基还缺胎元晶魄与九台精华，先把材料补齐。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：采集胎元晶魄并回收九台精华。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-004",
+      "name": "第四章-004 明泉初试",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "镇沼使",
+          "text": "先跑一趟胎元明泉普通强度，确认你的气机是否稳定。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：通关胎元明泉（普通）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-005",
+      "name": "第四章-005 九台入门",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "九台隐修者",
+          "text": "宫阙会放大你体内每一丝偏差。先过普通试炼，再谈突破。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：通关九台宫阙（普通）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-006",
+      "name": "第四章-006 宫阙压测",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "九台隐修者",
+          "text": "困难强度才是真正门槛。扛住它，你才有资格结胎。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：通关九台宫阙（困难）。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-007",
+      "name": "第四章-007 七层归一",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "narration",
+          "text": "功法未至七层，胎元无法稳固成形。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：将任意天阶功法提升至第七层。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-008",
+      "name": "第四章-008 结胎一跃",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "九台隐修者",
+          "text": "去吧，把采药期的散势收拢为胎元。破此关，便是新境。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "目标更新：突破到炼炁化神·结胎期。"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dlg-main-4-009",
+      "name": "第四章-009 胎元定序",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "npc",
+          "speaker": "九台隐修者",
+          "text": "自此胎元有序，心神可守。你已正式踏入结胎期。",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "system",
+          "text": "第四章完成：胎息初成。"
+        }
+      ],
+      "enabled": true
+    }
+  ]
+}

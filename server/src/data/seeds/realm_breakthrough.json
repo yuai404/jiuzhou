@@ -289,15 +289,9 @@
       "to": "炼炁化神·结胎期",
       "requirements": [
         {
-          "id": "version-lock-jietai",
-          "type": "version_locked",
-          "title": "境界开放进度",
-          "reason": "炼炁化神·采药期及以上境界暂未开放"
-        },
-        {
           "id": "exp",
           "type": "exp_min",
-          "min": 1600000,
+          "min": 1800000,
           "title": "修为经验"
         },
         {
@@ -308,41 +302,77 @@
           "title": "功法融会贯通"
         },
         {
-          "id": "dungeon-clear-any-10",
+          "id": "dungeon-clear-taiyuan-hard-2",
           "type": "dungeon_clear_min",
-          "minCount": 10,
-          "title": "秘境通关积累"
+          "dungeonId": "dungeon-lianqi-taiyuan-mingquan",
+          "difficultyId": "dd-lianqi-taiyuan-h",
+          "minCount": 2,
+          "title": "胎元明泉困难通关"
         },
         {
-          "id": "dungeon-clear-frost-abyss-4",
+          "id": "dungeon-clear-jiutai-hard-2",
           "type": "dungeon_clear_min",
-          "dungeonId": "dungeon-qiqi-frost-abyss",
-          "minCount": 4,
-          "title": "寒渊极境突破"
+          "dungeonId": "dungeon-lianqi-jiutai-gongque",
+          "difficultyId": "dd-lianqi-jiutai-h",
+          "minCount": 2,
+          "title": "九台宫阙困难通关"
+        },
+        {
+          "id": "main-quest-chapter-4",
+          "type": "main_quest_chapter_completed",
+          "chapterId": "mq-chapter-4",
+          "title": "完成第四章主线"
+        },
+        {
+          "id": "item-taiyuan-jingpo-12",
+          "type": "item_qty_min",
+          "itemDefId": "mat-taiyuan-jingpo",
+          "qty": 12,
+          "title": "胎元晶魄储备"
+        },
+        {
+          "id": "item-jietai-dan-3",
+          "type": "item_qty_min",
+          "itemDefId": "mat-jietai-dan",
+          "qty": 3,
+          "title": "结胎丹准备"
         }
       ],
       "costs": [
         {
           "type": "spirit_stones",
-          "amount": 5200
+          "amount": 6800
         },
         {
           "type": "exp",
-          "amount": 1600000
+          "amount": 1800000
+        },
+        {
+          "type": "items",
+          "items": [
+            {
+              "itemDefId": "mat-taiyuan-jingpo",
+              "qty": 8
+            },
+            {
+              "itemDefId": "mat-jietai-dan",
+              "qty": 2
+            }
+          ]
         }
       ],
       "rewards": {
-        "attributePoints": 18,
+        "attributePoints": 20,
         "pct": {
-          "max_qixue": 0.22,
-          "max_lingqi": 0.22,
-          "wugong": 0.12,
-          "fagong": 0.12,
-          "wufang": 0.12,
-          "fafang": 0.12
+          "max_qixue": 0.23,
+          "max_lingqi": 0.23,
+          "wugong": 0.13,
+          "fagong": 0.13,
+          "wufang": 0.13,
+          "fafang": 0.13
         },
         "addPercent": {
-          "kongzhi_kangxing": 0.05
+          "kongzhi_kangxing": 0.055
         }
       }
     },

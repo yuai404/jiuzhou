@@ -1,0 +1,530 @@
+{
+  "version": 1,
+  "description": "秘境种子数据 - 采药后段 - 胎元明泉",
+  "dungeons": [
+    {
+      "def": {
+        "id": "dungeon-lianqi-taiyuan-mingquan",
+        "name": "胎元明泉",
+        "type": "trial",
+        "category": "境界",
+        "description": "明泉下涌动着胎元潮，修士需在灵压内卷中稳住心神与经脉节律。",
+        "icon": "/assets/dungeon/frost_abyss.png",
+        "background": "/assets/dungeon/bg_frost_abyss.png",
+        "min_players": 1,
+        "max_players": 4,
+        "min_realm": "炼炁化神·采药期",
+        "recommended_realm": "炼炁化神·采药期",
+        "unlock_condition": {},
+        "daily_limit": 0,
+        "weekly_limit": 0,
+        "stamina_cost": 18,
+        "time_limit_sec": 1200,
+        "revive_limit": 2,
+        "tags": [
+          "采药期",
+          "试炼",
+          "胎元明泉"
+        ],
+        "sort_weight": 108,
+        "enabled": true,
+        "version": 1
+      },
+      "difficulties": [
+        {
+          "id": "dd-lianqi-taiyuan-n",
+          "dungeon_id": "dungeon-lianqi-taiyuan-mingquan",
+          "name": "普通",
+          "difficulty_rank": 1,
+          "monster_level_add": 0,
+          "monster_attr_mult": 1.24,
+          "reward_mult": 1,
+          "min_realm": "炼炁化神·采药期",
+          "unlock_prev_difficulty": false,
+          "first_clear_rewards": {
+            "items": [
+              {
+                "item_def_id": "mat-taiyuan-jingpo",
+                "qty": 5
+              },
+              {
+                "item_def_id": "mat-jiutai-jinghua",
+                "qty": 3
+              },
+              {
+                "item_def_id": "box-009",
+                "qty": 1
+              }
+            ],
+            "silver": 980,
+            "exp": 1120
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-lianqi-taiyuan-n-1",
+              "difficulty_id": "dd-lianqi-taiyuan-n",
+              "stage_index": 1,
+              "name": "泥潮外环",
+              "type": "battle",
+              "description": "泥潮外环灵压不稳，伏行者与鳞蛇交替冲阵。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-taixi-mire-lurker",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-swamp-serpent",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-taixi-herb-wraith",
+                      "count": 2
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-mire-lurker",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-taiyuan-n-2",
+              "difficulty_id": "dd-lianqi-taiyuan-n",
+              "stage_index": 2,
+              "name": "雾芦暗径",
+              "type": "battle",
+              "description": "雾芦间怨灵低鸣，影阙侍徒趁乱突袭。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-taixi-herb-wraith",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-jiutai-shadow-disciple",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 3,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-taixi-mire-overlord",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-swamp-serpent",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-taiyuan-n-3",
+              "difficulty_id": "dd-lianqi-taiyuan-n",
+              "stage_index": 3,
+              "name": "明泉胎核",
+              "type": "boss",
+              "description": "胎元魇兽盘踞泉心，需在高压潮汐中完成速杀。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jiutai-bone-monk",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-boss-taiyuan-fetus-beast",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd-lianqi-taiyuan-h",
+          "dungeon_id": "dungeon-lianqi-taiyuan-mingquan",
+          "name": "困难",
+          "difficulty_rank": 2,
+          "monster_level_add": 2,
+          "monster_attr_mult": 1.42,
+          "reward_mult": 1.45,
+          "min_realm": "炼炁化神·采药期",
+          "unlock_prev_difficulty": true,
+          "first_clear_rewards": {
+            "items": [
+              {
+                "item_def_id": "mat-taiyuan-jingpo",
+                "qty": 8
+              },
+              {
+                "item_def_id": "mat-jiutai-jinghua",
+                "qty": 5
+              },
+              {
+                "item_def_id": "mat-jietai-dan",
+                "qty": 1
+              }
+            ],
+            "silver": 1360,
+            "exp": 1540
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-lianqi-taiyuan-h-1",
+              "difficulty_id": "dd-lianqi-taiyuan-h",
+              "stage_index": 1,
+              "name": "泥潮外环·极",
+              "type": "battle",
+              "description": "泥潮冲击增强，怪群压迫更高。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-taixi-mire-lurker",
+                      "count": 4
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-swamp-serpent",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-taixi-herb-wraith",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-jiutai-shadow-disciple",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-taiyuan-h-2",
+              "difficulty_id": "dd-lianqi-taiyuan-h",
+              "stage_index": 2,
+              "name": "雾芦暗径·极",
+              "type": "battle",
+              "description": "影徒与怨灵形成夹击，精英压场。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jiutai-shadow-disciple",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-herb-wraith",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 3,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-taixi-mire-overlord",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-elite-jiutai-bone-monk",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-taiyuan-h-3",
+              "difficulty_id": "dd-lianqi-taiyuan-h",
+              "stage_index": 3,
+              "name": "明泉胎核·极",
+              "type": "boss",
+              "description": "胎元魇兽完全觉醒，阵压峰值极高。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jiutai-bone-monk",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-swamp-serpent",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-boss-taiyuan-fetus-beast",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd-lianqi-taiyuan-nm",
+          "dungeon_id": "dungeon-lianqi-taiyuan-mingquan",
+          "name": "噩梦",
+          "difficulty_rank": 3,
+          "monster_level_add": 4,
+          "monster_attr_mult": 1.62,
+          "reward_mult": 1.95,
+          "min_realm": "炼炁化神·结胎期",
+          "unlock_prev_difficulty": true,
+          "first_clear_rewards": {
+            "items": [
+              {
+                "item_def_id": "mat-taiyuan-jingpo",
+                "qty": 12
+              },
+              {
+                "item_def_id": "mat-jietai-dan",
+                "qty": 2
+              },
+              {
+                "item_def_id": "set-pojun-head",
+                "qty": 1
+              }
+            ],
+            "silver": 1880,
+            "exp": 2120
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-lianqi-taiyuan-nm-1",
+              "difficulty_id": "dd-lianqi-taiyuan-nm",
+              "stage_index": 1,
+              "name": "泥潮外环·噩",
+              "type": "battle",
+              "description": "多波高压冲阵，容错空间极小。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-taixi-mire-lurker",
+                      "count": 4
+                    },
+                    {
+                      "monster_def_id": "monster-jiutai-shadow-disciple",
+                      "count": 3
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-taixi-mire-overlord",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-herb-wraith",
+                      "count": 3
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-taiyuan-nm-2",
+              "difficulty_id": "dd-lianqi-taiyuan-nm",
+              "stage_index": 2,
+              "name": "雾芦暗径·噩",
+              "type": "battle",
+              "description": "精英连携出手，持续压缩输出窗口。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jiutai-bone-monk",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-jiutai-shadow-disciple",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 3,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-taixi-mire-overlord",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-taixi-swamp-serpent",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-taiyuan-nm-3",
+              "difficulty_id": "dd-lianqi-taiyuan-nm",
+              "stage_index": 3,
+              "name": "明泉胎核·噩",
+              "type": "boss",
+              "description": "泉心暴走，胎元魇兽进入狂压阶段。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jiutai-bone-monk",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-boss-taiyuan-fetus-beast",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

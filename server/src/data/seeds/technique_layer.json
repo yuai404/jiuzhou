@@ -1730,6 +1730,10 @@
         {
           "itemId": "mat-lingmo",
           "qty": 16
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 2
         }
       ],
       "passives": [
@@ -1998,6 +2002,10 @@
         {
           "itemId": "mat-lingmo",
           "qty": 16
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 2
         }
       ],
       "passives": [
@@ -2509,6 +2517,642 @@
       ],
       "required_realm": "炼炁化神·采药期",
       "layer_desc": "厚土心经圆满，形成全面防御体系"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [
+        {
+          "key": "max_qixue",
+          "value": 0.08
+        },
+        {
+          "key": "wufang",
+          "value": 0.03
+        }
+      ],
+      "unlock_skill_ids": [
+        "skill-taixi-huanzhou"
+      ],
+      "layer_desc": "玄甲返震诀入门，气血与物防提升，解锁玄甲守势"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 2,
+      "cost_spirit_stones": 1200,
+      "cost_exp": 2200,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 16
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "fafang",
+          "value": 0.03
+        },
+        {
+          "key": "kangbao",
+          "value": 0.025
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀小成，法防与抗暴增强"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 3,
+      "cost_spirit_stones": 3600,
+      "cost_exp": 6800,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 24
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 2
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 2
+        }
+      ],
+      "passives": [
+        {
+          "key": "max_qixue",
+          "value": 0.05
+        },
+        {
+          "key": "wufang",
+          "value": 0.045
+        }
+      ],
+      "unlock_skill_ids": [
+        "skill-taixi-ningtai-yin"
+      ],
+      "upgrade_skill_ids": [
+        "skill-taixi-huanzhou"
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀进阶，解锁返震崩岳并强化守势护甲"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 4,
+      "cost_spirit_stones": 7600,
+      "cost_exp": 14000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 34
+        },
+        {
+          "itemId": "mat-lingmo",
+          "qty": 8
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 3
+        }
+      ],
+      "passives": [
+        {
+          "key": "fafang",
+          "value": 0.05
+        },
+        {
+          "key": "qixue_huifu",
+          "value": 1.2
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀大成，法防与续航进一步提升"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 5,
+      "cost_spirit_stones": 14800,
+      "cost_exp": 27000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 48
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 4
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "wufang",
+          "value": 0.065
+        },
+        {
+          "key": "zengshang",
+          "value": 0.025
+        }
+      ],
+      "upgrade_skill_ids": [
+        "skill-taixi-ningtai-yin"
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀圆融，反震崩岳伤害与压制增强"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 6,
+      "cost_spirit_stones": 28000,
+      "cost_exp": 52000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 62
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 4
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 5
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "max_qixue",
+          "value": 0.09
+        },
+        {
+          "key": "kangbao",
+          "value": 0.035
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀通玄，坦度显著抬升"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 7,
+      "cost_spirit_stones": 42000,
+      "cost_exp": 80000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 80
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 8
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 8
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 2
+        }
+      ],
+      "passives": [
+        {
+          "key": "wufang",
+          "value": 0.08
+        },
+        {
+          "key": "fafang",
+          "value": 0.08
+        },
+        {
+          "key": "zengshang",
+          "value": 0.035
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀返璞，双防与反击输出同步提高"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 8,
+      "cost_spirit_stones": 70000,
+      "cost_exp": 140000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 100
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 10
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 10
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 3
+        },
+        {
+          "itemId": "mat-wudao-yujian",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "max_qixue",
+          "value": 0.12
+        },
+        {
+          "key": "wufang",
+          "value": 0.095
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "玄甲返震诀归一，形成高压承伤体系"
+    },
+    {
+      "technique_id": "tech-taixi-ningtai-jue",
+      "layer": 9,
+      "cost_spirit_stones": 165000,
+      "cost_exp": 320000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 120
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 12
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 12
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 4
+        },
+        {
+          "itemId": "mat-daoyun-jinghe",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "max_qixue",
+          "value": 0.16
+        },
+        {
+          "key": "wufang",
+          "value": 0.12
+        },
+        {
+          "key": "fafang",
+          "value": 0.12
+        },
+        {
+          "key": "zengshang",
+          "value": 0.05
+        }
+      ],
+      "required_realm": "炼神返虚·养神期",
+      "layer_desc": "玄甲返震诀极境，防御与反击全面成型"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 1,
+      "cost_spirit_stones": 0,
+      "cost_exp": 0,
+      "cost_materials": [],
+      "passives": [
+        {
+          "key": "fagong",
+          "value": 0.06
+        },
+        {
+          "key": "mingzhong",
+          "value": 0.02
+        }
+      ],
+      "unlock_skill_ids": [
+        "skill-jiutai-zhenyin"
+      ],
+      "layer_desc": "九狱缚灵印入门，法攻与命中提升，解锁缚灵镇印"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 2,
+      "cost_spirit_stones": 1200,
+      "cost_exp": 2200,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 16
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 2
+        }
+      ],
+      "passives": [
+        {
+          "key": "sudu",
+          "value": 0.04
+        },
+        {
+          "key": "fagong",
+          "value": 0.03
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印小成，速度与法术压制加强"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 3,
+      "cost_spirit_stones": 3600,
+      "cost_exp": 6800,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 24
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 3
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 2
+        }
+      ],
+      "passives": [
+        {
+          "key": "zengshang",
+          "value": 0.03
+        },
+        {
+          "key": "mingzhong",
+          "value": 0.03
+        }
+      ],
+      "unlock_skill_ids": [
+        "skill-jiutai-luosha-zhen"
+      ],
+      "upgrade_skill_ids": [
+        "skill-jiutai-zhenyin"
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印进阶，解锁九狱禁阵并强化单体封禁"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 4,
+      "cost_spirit_stones": 7600,
+      "cost_exp": 14000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 34
+        },
+        {
+          "itemId": "mat-lingmo",
+          "qty": 8
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 4
+        }
+      ],
+      "passives": [
+        {
+          "key": "fagong",
+          "value": 0.07
+        },
+        {
+          "key": "baoji",
+          "value": 0.03
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印大成，法攻与暴击提升"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 5,
+      "cost_spirit_stones": 14800,
+      "cost_exp": 27000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 48
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 5
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "zengshang",
+          "value": 0.045
+        },
+        {
+          "key": "sudu",
+          "value": 0.06
+        }
+      ],
+      "upgrade_skill_ids": [
+        "skill-jiutai-luosha-zhen"
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印圆融，群控覆盖与伤害能力增强"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 6,
+      "cost_spirit_stones": 28000,
+      "cost_exp": 52000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 62
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 7
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 4
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "fagong",
+          "value": 0.09
+        },
+        {
+          "key": "mingzhong",
+          "value": 0.04
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印通玄，控制命中更稳定"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 7,
+      "cost_spirit_stones": 42000,
+      "cost_exp": 80000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 80
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 10
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 6
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 2
+        }
+      ],
+      "passives": [
+        {
+          "key": "zengshang",
+          "value": 0.06
+        },
+        {
+          "key": "baoshang",
+          "value": 0.05
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印返璞，控制链后的爆发提升"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 8,
+      "cost_spirit_stones": 70000,
+      "cost_exp": 140000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 100
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 12
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 8
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 3
+        },
+        {
+          "itemId": "mat-wudao-yujian",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "fagong",
+          "value": 0.12
+        },
+        {
+          "key": "sudu",
+          "value": 0.08
+        },
+        {
+          "key": "mingzhong",
+          "value": 0.05
+        }
+      ],
+      "required_realm": "炼炁化神·结胎期",
+      "layer_desc": "九狱缚灵印归一，出手节奏与压制强度同步抬升"
+    },
+    {
+      "technique_id": "tech-jiutai-zhenpo-yin",
+      "layer": 9,
+      "cost_spirit_stones": 165000,
+      "cost_exp": 320000,
+      "cost_materials": [
+        {
+          "itemId": "mat-gongfa-canye",
+          "qty": 120
+        },
+        {
+          "itemId": "mat-jiutai-jinghua",
+          "qty": 14
+        },
+        {
+          "itemId": "mat-taiyuan-jingpo",
+          "qty": 10
+        },
+        {
+          "itemId": "mat-jietai-dan",
+          "qty": 4
+        },
+        {
+          "itemId": "mat-daoyun-jinghe",
+          "qty": 1
+        }
+      ],
+      "passives": [
+        {
+          "key": "fagong",
+          "value": 0.15
+        },
+        {
+          "key": "zengshang",
+          "value": 0.08
+        },
+        {
+          "key": "baoji",
+          "value": 0.05
+        },
+        {
+          "key": "baoshang",
+          "value": 0.07
+        }
+      ],
+      "required_realm": "炼神返虚·养神期",
+      "layer_desc": "九狱缚灵印极境，形成高频控制与高爆发闭环"
     }
   ]
 }

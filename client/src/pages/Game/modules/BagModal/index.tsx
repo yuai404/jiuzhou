@@ -267,7 +267,11 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
   );
 
   const equipLines = useMemo(() => buildEquipmentLines(activeItem), [activeItem]);
-  const hasDesc = useMemo(() => Boolean(activeItem?.desc?.trim()), [activeItem?.desc]);
+  const hasDesc = useMemo(() => {
+    if (!activeItem) return false;
+    if (activeItem.category === 'equipment') return false;
+    return Boolean(activeItem.desc?.trim());
+  }, [activeItem]);
   const hasEquipAttrs = useMemo(() => activeItem?.category === 'equipment' && equipLines.length > 0, [activeItem, equipLines]);
   const hasSetInfo = useMemo(
     () => Boolean(activeItem?.setInfo && activeItem.setInfo.bonuses.length > 0),

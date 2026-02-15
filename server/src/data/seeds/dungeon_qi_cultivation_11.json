@@ -1,0 +1,526 @@
+{
+  "version": 1,
+  "description": "秘境种子数据 - 结胎期 - 玄母神台",
+  "dungeons": [
+    {
+      "def": {
+        "id": "dungeon-lianqi-xuanmu-shentai",
+        "name": "玄母神台",
+        "type": "trial",
+        "category": "境界",
+        "description": "神台深处以胎元共振筛选修士，只有真正稳固结胎者才能穿行全程。",
+        "icon": "/assets/dungeon/withered_altar.png",
+        "background": "/assets/dungeon/bg_withered_altar.png",
+        "min_players": 1,
+        "max_players": 4,
+        "min_realm": "炼炁化神·结胎期",
+        "recommended_realm": "炼炁化神·结胎期",
+        "unlock_condition": {},
+        "daily_limit": 0,
+        "weekly_limit": 0,
+        "stamina_cost": 20,
+        "time_limit_sec": 1260,
+        "revive_limit": 2,
+        "tags": [
+          "结胎期",
+          "试炼",
+          "玄母神台"
+        ],
+        "sort_weight": 106,
+        "enabled": true,
+        "version": 1
+      },
+      "difficulties": [
+        {
+          "id": "dd-lianqi-shentai-n",
+          "dungeon_id": "dungeon-lianqi-xuanmu-shentai",
+          "name": "普通",
+          "difficulty_rank": 1,
+          "monster_level_add": 0,
+          "monster_attr_mult": 1.28,
+          "reward_mult": 1,
+          "min_realm": "炼炁化神·结胎期",
+          "unlock_prev_difficulty": false,
+          "first_clear_rewards": {
+            "items": [
+              {
+                "item_def_id": "mat-jietai-dan",
+                "qty": 2
+              },
+              {
+                "item_def_id": "mat-jiutai-jinghua",
+                "qty": 5
+              },
+              {
+                "item_def_id": "set-guiyuan-head",
+                "qty": 1
+              }
+            ],
+            "silver": 1260,
+            "exp": 1480
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-lianqi-shentai-n-1",
+              "difficulty_id": "dd-lianqi-shentai-n",
+              "stage_index": 1,
+              "name": "神台前阶",
+              "type": "battle",
+              "description": "玄木傀儡与魂莲灵在前阶构筑持续压制。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 2
+                    },
+                    {
+                      "monster_def_id": "monster-elite-jietai-lotus-guardian",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-shentai-n-2",
+              "difficulty_id": "dd-lianqi-shentai-n",
+              "stage_index": 2,
+              "name": "胎轮回廊",
+              "type": "battle",
+              "description": "回廊内胎轮共振，敌方技能冷却显著缩短。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 3,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-void-general",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-shentai-n-3",
+              "difficulty_id": "dd-lianqi-shentai-n",
+              "stage_index": 3,
+              "name": "玄母真台",
+              "type": "boss",
+              "description": "神台真影降临，战斗进入多阶段压制。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-lotus-guardian",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-boss-jietai-shentai-avatar",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd-lianqi-shentai-h",
+          "dungeon_id": "dungeon-lianqi-xuanmu-shentai",
+          "name": "困难",
+          "difficulty_rank": 2,
+          "monster_level_add": 2,
+          "monster_attr_mult": 1.46,
+          "reward_mult": 1.45,
+          "min_realm": "炼炁化神·结胎期",
+          "unlock_prev_difficulty": true,
+          "first_clear_rewards": {
+            "items": [
+              {
+                "item_def_id": "mat-jietai-dan",
+                "qty": 3
+              },
+              {
+                "item_def_id": "mat-jiutai-jinghua",
+                "qty": 8
+              },
+              {
+                "item_def_id": "set-guiyuan-weapon",
+                "qty": 1
+              }
+            ],
+            "silver": 1760,
+            "exp": 2040
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-lianqi-shentai-h-1",
+              "difficulty_id": "dd-lianqi-shentai-h",
+              "stage_index": 1,
+              "name": "神台前阶·极",
+              "type": "battle",
+              "description": "前阶灵压翻倍，敌方高频连携启动。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 4
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-lotus-guardian",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-shentai-h-2",
+              "difficulty_id": "dd-lianqi-shentai-h",
+              "stage_index": 2,
+              "name": "胎轮回廊·极",
+              "type": "battle",
+              "description": "回廊阵波叠加，精英轮转压场。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 3
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 3,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-void-general",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-elite-jietai-lotus-guardian",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-shentai-h-3",
+              "difficulty_id": "dd-lianqi-shentai-h",
+              "stage_index": 3,
+              "name": "玄母真台·极",
+              "type": "boss",
+              "description": "神台真影完全激活，战斗压力持续攀升。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-void-general",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-boss-jietai-shentai-avatar",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dd-lianqi-shentai-nm",
+          "dungeon_id": "dungeon-lianqi-xuanmu-shentai",
+          "name": "噩梦",
+          "difficulty_rank": 3,
+          "monster_level_add": 4,
+          "monster_attr_mult": 1.68,
+          "reward_mult": 1.95,
+          "min_realm": "炼炁化神·结胎期",
+          "unlock_prev_difficulty": true,
+          "first_clear_rewards": {
+            "items": [
+              {
+                "item_def_id": "mat-jietai-dan",
+                "qty": 4
+              },
+              {
+                "item_def_id": "box-009",
+                "qty": 2
+              },
+              {
+                "item_def_id": "set-guiyuan-artifact",
+                "qty": 1
+              }
+            ],
+            "silver": 2360,
+            "exp": 2680
+          },
+          "drop_pool_id": null,
+          "enabled": true,
+          "stages": [
+            {
+              "id": "ds-lianqi-shentai-nm-1",
+              "difficulty_id": "dd-lianqi-shentai-nm",
+              "stage_index": 1,
+              "name": "神台前阶·噩",
+              "type": "battle",
+              "description": "怪潮规模进一步扩大，输出窗口极短。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 4
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 3
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 2,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-lotus-guardian",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-elite-jietai-void-general",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-shentai-nm-2",
+              "difficulty_id": "dd-lianqi-shentai-nm",
+              "stage_index": 2,
+              "name": "胎轮回廊·噩",
+              "type": "battle",
+              "description": "双精英轮换压制，持续考验续航能力。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-jietai-soul-lotus-spirit",
+                      "count": 4
+                    },
+                    {
+                      "monster_def_id": "monster-jietai-xuanmu-puppet",
+                      "count": 2
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 3,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-void-general",
+                      "count": 1
+                    },
+                    {
+                      "monster_def_id": "monster-elite-jietai-lotus-guardian",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            },
+            {
+              "id": "ds-lianqi-shentai-nm-3",
+              "difficulty_id": "dd-lianqi-shentai-nm",
+              "stage_index": 3,
+              "name": "玄母真台·噩",
+              "type": "boss",
+              "description": "最终阶段会触发多次召唤与高额增伤。",
+              "time_limit_sec": 0,
+              "clear_condition": {
+                "type": "kill_all"
+              },
+              "fail_condition": {},
+              "events": [],
+              "waves": [
+                {
+                  "wave_index": 1,
+                  "spawn_delay_sec": 0,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-elite-jietai-void-general",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                },
+                {
+                  "wave_index": 2,
+                  "spawn_delay_sec": 4,
+                  "monsters": [
+                    {
+                      "monster_def_id": "monster-boss-jietai-shentai-avatar",
+                      "count": 1
+                    }
+                  ],
+                  "wave_rewards": {}
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

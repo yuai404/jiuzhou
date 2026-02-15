@@ -11,7 +11,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/chen_tie_jian.png",
-      "description": "新手用的普通长剑",
       "equip_slot": "weapon",
       "equip_req_realm": "凡人",
       "base_attrs": {
@@ -36,7 +35,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/bai_sui_jian.png",
-      "description": "轻盈的长剑，蕴含风之灵气",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -62,7 +60,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/bin_tie_heng_dao.png",
-      "description": "上古名剑，蕴含玄元之力",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·通脉期",
       "base_attrs": {
@@ -89,7 +86,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_01.png",
-      "description": "普通的布帽",
       "equip_slot": "head",
       "equip_req_realm": "凡人",
       "base_attrs": {
@@ -114,7 +110,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/chang_sheng_men_bu_yi.png",
-      "description": "普通的布衣",
       "equip_slot": "clothes",
       "equip_req_realm": "凡人",
       "base_attrs": {
@@ -140,7 +135,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/qing_er_zhi_pao.png",
-      "description": "蕴含灵气的道袍",
       "equip_slot": "clothes",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -167,7 +161,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/shou_ya_xiang_lian.png",
-      "description": "镶嵌灵石的项链",
       "equip_slot": "necklace",
       "equip_req_realm": "凡人",
       "base_attrs": {
@@ -191,7 +184,6 @@
       "bind_type": "pickup",
       "tradeable": true,
       "icon": "/assets/items/Props-taofaquan.png",
-      "description": "可御剑飞行的法宝",
       "equip_slot": "artifact",
       "equip_req_realm": "炼精化炁·通脉期",
       "base_attrs": {
@@ -218,7 +210,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/qing_wen_jian.png",
-      "description": "青锋门弟子佩剑，剑身泛青光，锋利无比",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -247,7 +238,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_02.png",
-      "description": "青锋门制式头冠，轻便灵动",
       "equip_slot": "head",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -276,7 +266,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_03.png",
-      "description": "青锋门制式劲装，便于施展剑法",
       "equip_slot": "clothes",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -305,7 +294,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/leng_gang_hu_tui.png",
-      "description": "青锋门护手，增强握剑稳定性",
       "equip_slot": "gloves",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -334,7 +322,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_pants_1_02.png",
-      "description": "青锋门制式长裤，轻便利落",
       "equip_slot": "pants",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -363,7 +350,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_mpyp.png",
-      "description": "青锋门信物，蕴含剑意",
       "equip_slot": "necklace",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -392,7 +378,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/kun_lun_jie.png",
-      "description": "青锋门戒指，刻有剑纹",
       "equip_slot": "accessory",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -421,7 +406,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/guan_yin_yu_pai.png",
-      "description": "青锋门令牌法宝，可召唤剑气护体",
       "equip_slot": "artifact",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -453,7 +437,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/gu_tong_huai_dao.png",
-      "description": "以玄铁锻造的重刀，刀身厚重，一刀劈山",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -482,7 +465,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_03.png",
-      "description": "玄铁打造的头盔，坚固异常",
       "equip_slot": "head",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -511,7 +493,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/qian_chao_jiang_jun_jia.png",
-      "description": "玄铁锻造的战甲，防御力极强",
       "equip_slot": "clothes",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -540,7 +521,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/leng_gang_hu_tui.png",
-      "description": "玄铁腕甲，攻守兼备",
       "equip_slot": "gloves",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -569,7 +549,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/leng_gang_xie.png",
-      "description": "玄铁战裙，护住下盘要害",
       "equip_slot": "pants",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -598,7 +577,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/jin_xiang_lian.png",
-      "description": "玄铁打造的护心锁，坚不可摧",
       "equip_slot": "necklace",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -627,7 +605,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/jia_chuan_yu_zhuo.png",
-      "description": "玄铁指环，增强力量",
       "equip_slot": "accessory",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -656,7 +633,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_qljd.png",
-      "description": "玄铁盾形法宝，可化出护盾抵挡攻击",
       "equip_slot": "artifact",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -688,7 +664,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/fu_guang_yu.png",
-      "description": "紫霄宫法剑，剑身流转紫气，可引天雷",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -717,7 +692,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_cape_1_01.png",
-      "description": "紫霄宫道冠，凝神静气",
       "equip_slot": "head",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -746,7 +720,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_04.png",
-      "description": "紫霄宫道袍，绣有云纹，灵气流转",
       "equip_slot": "clothes",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -775,7 +748,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoulder armour_1_03.png",
-      "description": "紫霄宫袖套，便于掐诀施法",
       "equip_slot": "gloves",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -804,7 +776,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoes_1_05.png",
-      "description": "紫霄宫道裙，飘逸出尘",
       "equip_slot": "pants",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -833,7 +804,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/frame_qiu4sangpokuangtu.png",
-      "description": "紫霄宫灵珠，蕴含紫霄真气",
       "equip_slot": "necklace",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -862,7 +832,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/du_lao_qian_de_ban_zhi.png",
-      "description": "紫霄宫法戒，增强法力",
       "equip_slot": "accessory",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -891,7 +860,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/018.png",
-      "description": "紫霄宫符箓法宝，可召唤雷电",
       "equip_slot": "artifact",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -923,7 +891,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/chan_you_ling_zhang.png",
-      "description": "碧落派法杖，杖首镶嵌碧玉，可引天地灵气",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -952,7 +919,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_cape_1_06.png",
-      "description": "碧落派莲花冠，清心寡欲",
       "equip_slot": "head",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -981,7 +947,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_05.png",
-      "description": "碧落派仙衣，轻若云烟，灵气充盈",
       "equip_slot": "clothes",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -1010,7 +975,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoulder armour_1_04.png",
-      "description": "碧落派玉手套，施法如行云流水",
       "equip_slot": "gloves",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -1039,7 +1003,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoes_1_10.png",
-      "description": "碧落派云裙，飘逸若仙",
       "equip_slot": "pants",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -1068,7 +1031,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/chen_xiang_zhu_lian.png",
-      "description": "碧落派念珠，每颗皆蕴灵气",
       "equip_slot": "necklace",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -1097,7 +1059,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/0112.png",
-      "description": "碧落派玉环，温润如玉",
       "equip_slot": "accessory",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -1126,7 +1087,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/guan_tian_jing.png",
-      "description": "碧落派宝镜法宝，可照见本心，治愈伤痛",
       "equip_slot": "artifact",
       "equip_req_realm": "炼精化炁·养气期",
       "base_attrs": {
@@ -1158,7 +1118,6 @@
       "bind_type": "pickup",
       "tradeable": true,
       "icon": "/assets/items/bin_tie_heng_dao.png",
-      "description": "出土于断碑遗迹的残兵，刃口缺损却锋寒逼人",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·通脉期",
       "base_attrs": {
@@ -1186,7 +1145,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_02.png",
-      "description": "以风岭狼皮缝制的轻甲兜帽，可缓冲风压",
       "equip_slot": "head",
       "equip_req_realm": "炼精化炁·通脉期",
       "base_attrs": {
@@ -1214,7 +1172,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/icon_clothes_1_03.png",
-      "description": "以枯藤心髓浸炼的护甲，韧性极高，能抵御重击",
       "equip_slot": "clothes",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1242,7 +1199,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/chen_xiang_zhu_lian.png",
-      "description": "古兽骨串成的护符项链，可稳固气息运转",
       "equip_slot": "necklace",
       "equip_req_realm": "炼精化炁·通脉期",
       "base_attrs": {
@@ -1270,7 +1226,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/kun_lun_jie.png",
-      "description": "铭刻古老符纹的戒指，可提升术法穿透",
       "equip_slot": "accessory",
       "equip_req_realm": "炼精化炁·通脉期",
       "base_attrs": {
@@ -1298,7 +1253,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/Props-taofaquan.png",
-      "description": "以枯木心髓点燃的灵灯，既能护体也可照见妖气",
       "equip_slot": "artifact",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1326,7 +1280,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/lin_ri_shen_dao.png",
-      "description": "取幽林妖核锻造而成，剑势沉稳，能破护体灵炁",
       "equip_slot": "weapon",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1354,7 +1307,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/icon_Hat_1_14.png",
-      "description": "以玄藤纤维编成的护额，能稳固神识并分散冲击",
       "equip_slot": "head",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1382,7 +1334,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/icon_shoulder armour_1_13.png",
-      "description": "护手中嵌有枯木芯纹，可在近身缠斗中稳住出手",
       "equip_slot": "gloves",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1410,7 +1361,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/icon_pants_1_13.png",
-      "description": "战裙经幽藤汁液浸炼，韧性极佳，兼顾防护与机动",
       "equip_slot": "pants",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1438,7 +1388,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/icon_Jade pendants_1_13.png",
-      "description": "链身铭刻稳炁纹路，可提升灵炁回转并强化术法节奏",
       "equip_slot": "necklace",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1466,7 +1415,6 @@
       "bind_type": "pickup",
       "tradeable": false,
       "icon": "/assets/items/icon_jiezhi_10004.png",
-      "description": "戒面封存回光灵纹，能在激战中提升术攻与命中",
       "equip_slot": "accessory",
       "equip_req_realm": "炼精化炁·凝炁期",
       "base_attrs": {
@@ -1497,7 +1445,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/lin_ri_shen_dao.png",
-      "description": "赤焰套装·武器，偏向物攻构筑。",
       "equip_slot": "weapon",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1526,7 +1473,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_14.png",
-      "description": "赤焰套装·头部，偏向物攻构筑。",
       "equip_slot": "head",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1555,7 +1501,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_13.png",
-      "description": "赤焰套装·衣服，偏向物攻构筑。",
       "equip_slot": "clothes",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1584,7 +1529,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoulder armour_1_13.png",
-      "description": "赤焰套装·手部，偏向物攻构筑。",
       "equip_slot": "gloves",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1612,7 +1556,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_pants_1_13.png",
-      "description": "赤焰套装·腿部，偏向物攻构筑。",
       "equip_slot": "pants",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1641,7 +1584,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Jade pendants_1_13.png",
-      "description": "赤焰套装·项链，偏向物攻构筑。",
       "equip_slot": "necklace",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1669,7 +1611,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_jiezhi_10004.png",
-      "description": "赤焰套装·戒指，偏向物攻构筑。",
       "equip_slot": "accessory",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1697,7 +1638,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/Props-taolingpai.png",
-      "description": "赤焰套装·法宝，偏向物攻构筑。",
       "equip_slot": "artifact",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1728,7 +1668,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/fang_tian_ji.png",
-      "description": "玄武套装·武器，偏向坦克构筑。",
       "equip_slot": "weapon",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1757,7 +1696,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_12.png",
-      "description": "玄武套装·头部，偏向坦克构筑。",
       "equip_slot": "head",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1786,7 +1724,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_12.png",
-      "description": "玄武套装·衣服，偏向坦克构筑。",
       "equip_slot": "clothes",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1815,7 +1752,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoulder armour_1_12.png",
-      "description": "玄武套装·手部，偏向坦克构筑。",
       "equip_slot": "gloves",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1843,7 +1779,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_pants_1_12.png",
-      "description": "玄武套装·腿部，偏向坦克构筑。",
       "equip_slot": "pants",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1871,7 +1806,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Jade pendants_1_12.png",
-      "description": "玄武套装·项链，偏向坦克构筑。",
       "equip_slot": "necklace",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1899,7 +1833,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_jiezhi_10007.png",
-      "description": "玄武套装·戒指，偏向坦克构筑。",
       "equip_slot": "accessory",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1927,7 +1860,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/Props-zhenhunling.png",
-      "description": "玄武套装·法宝，偏向坦克构筑。",
       "equip_slot": "artifact",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1958,7 +1890,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/shu_tian_xian_zhang.png",
-      "description": "天璇套装·武器，偏向法攻构筑。",
       "equip_slot": "weapon",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -1987,7 +1918,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_16.png",
-      "description": "天璇套装·头部，偏向法攻构筑。",
       "equip_slot": "head",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2016,7 +1946,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_16.png",
-      "description": "天璇套装·衣服，偏向法攻构筑。",
       "equip_slot": "clothes",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2045,7 +1974,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoulder armour_1_16.png",
-      "description": "天璇套装·手部，偏向法攻构筑。",
       "equip_slot": "gloves",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2073,7 +2001,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_pants_1_16.png",
-      "description": "天璇套装·腿部，偏向法攻构筑。",
       "equip_slot": "pants",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2102,7 +2029,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Jade pendants_1_16.png",
-      "description": "天璇套装·项链，偏向法攻构筑。",
       "equip_slot": "necklace",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2130,7 +2056,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_jiezhi_10010.png",
-      "description": "天璇套装·戒指，偏向法攻构筑。",
       "equip_slot": "accessory",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2158,7 +2083,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/guan_tian_jing.png",
-      "description": "天璇套装·法宝，偏向法攻构筑。",
       "equip_slot": "artifact",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2189,7 +2113,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shan_20003.png",
-      "description": "青莲套装·武器，偏向治疗构筑。",
       "equip_slot": "weapon",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2217,7 +2140,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Hat_1_15.png",
-      "description": "青莲套装·头部，偏向治疗构筑。",
       "equip_slot": "head",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2245,7 +2167,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_clothes_1_15.png",
-      "description": "青莲套装·衣服，偏向治疗构筑。",
       "equip_slot": "clothes",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2274,7 +2195,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_shoulder armour_1_15.png",
-      "description": "青莲套装·手部，偏向治疗构筑。",
       "equip_slot": "gloves",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2302,7 +2222,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_pants_1_15.png",
-      "description": "青莲套装·腿部，偏向治疗构筑。",
       "equip_slot": "pants",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2330,7 +2249,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_Jade pendants_1_15.png",
-      "description": "青莲套装·项链，偏向治疗构筑。",
       "equip_slot": "necklace",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2358,7 +2276,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/icon_jiezhi_10009.png",
-      "description": "青莲套装·戒指，偏向治疗构筑。",
       "equip_slot": "accessory",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2386,7 +2303,6 @@
       "bind_type": "equip",
       "tradeable": true,
       "icon": "/assets/items/018.png",
-      "description": "青莲套装·法宝，偏向治疗构筑。",
       "equip_slot": "artifact",
       "equip_req_realm": "炼炁化神·炼己期",
       "base_attrs": {
@@ -2403,6 +2319,650 @@
         "青莲套装",
         "治疗",
         "炼己期"
+      ]
+    },
+    {
+      "_comment": "========== 炼炁化神·采药期套装：破军套装 =========="
+    },
+    {
+      "id": "set-pojun-weapon",
+      "name": "破军斩",
+      "category": "equipment",
+      "sub_category": "sword",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/lin_ri_shen_dao.png",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "wugong": 20,
+        "baoji": 0.014
+      },
+      "implicit_attrs": {
+        "wugong": 10,
+        "mingzhong": 0.01
+      },
+      "affix_pool_id": "ap-weapon-rare",
+      "set_id": "set-pojun",
+      "tags": [
+        "武器",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-head",
+      "name": "破军盔",
+      "category": "equipment",
+      "sub_category": "hat",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_Hat_1_16.png",
+      "equip_slot": "head",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "max_qixue": 160,
+        "wufang": 12,
+        "baoji": 0.008
+      },
+      "implicit_attrs": {
+        "max_qixue": 110
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-pojun",
+      "tags": [
+        "头部",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-clothes",
+      "name": "破军甲",
+      "category": "equipment",
+      "sub_category": "robe",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_clothes_1_16.png",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "max_qixue": 240,
+        "wufang": 16,
+        "zengshang": 0.01
+      },
+      "implicit_attrs": {
+        "wufang": 12
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-pojun",
+      "tags": [
+        "衣服",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-gloves",
+      "name": "破军手甲",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_shoulder armour_1_16.png",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "wugong": 14,
+        "baoji": 0.01
+      },
+      "implicit_attrs": {
+        "baoji": 0.008
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-pojun",
+      "tags": [
+        "手部",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-pants",
+      "name": "破军战胫",
+      "category": "equipment",
+      "sub_category": "pants",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_pants_1_16.png",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "max_qixue": 190,
+        "wufang": 14,
+        "shanbi": 0.01
+      },
+      "implicit_attrs": {
+        "max_qixue": 120
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-pojun",
+      "tags": [
+        "腿部",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-necklace",
+      "name": "破军坠",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_Jade pendants_1_16.png",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "wugong": 11,
+        "baoshang": 0.018
+      },
+      "implicit_attrs": {
+        "baoshang": 0.01
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "set_id": "set-pojun",
+      "tags": [
+        "项链",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-accessory",
+      "name": "破军戒",
+      "category": "equipment",
+      "sub_category": "ring",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_jiezhi_10010.png",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "baoji": 0.014,
+        "baoshang": 0.014
+      },
+      "implicit_attrs": {
+        "baoji": 0.008
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "set_id": "set-pojun",
+      "tags": [
+        "饰品",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-pojun-artifact",
+      "name": "破军兵符",
+      "category": "equipment",
+      "sub_category": "token",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/guan_tian_jing.png",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "zengshang": 0.02,
+        "huo_kangxing": 0.016
+      },
+      "implicit_attrs": {
+        "zengshang": 0.01
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "set_id": "set-pojun",
+      "tags": [
+        "法宝",
+        "破军套装",
+        "采药期"
+      ]
+    },
+    {
+      "_comment": "========== 炼炁化神·采药期套装：苍月套装 =========="
+    },
+    {
+      "id": "set-cangyue-weapon",
+      "name": "苍月灵杖",
+      "category": "equipment",
+      "sub_category": "sword",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/lin_ri_shen_dao.png",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "fagong": 22,
+        "baoji": 0.012
+      },
+      "implicit_attrs": {
+        "fagong": 11,
+        "mingzhong": 0.01
+      },
+      "affix_pool_id": "ap-weapon-rare",
+      "set_id": "set-cangyue",
+      "tags": [
+        "武器",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-head",
+      "name": "苍月冠",
+      "category": "equipment",
+      "sub_category": "hat",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_Hat_1_16.png",
+      "equip_slot": "head",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "max_lingqi": 130,
+        "fafang": 14,
+        "baoji": 0.008
+      },
+      "implicit_attrs": {
+        "max_lingqi": 100
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-cangyue",
+      "tags": [
+        "头部",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-clothes",
+      "name": "苍月法袍",
+      "category": "equipment",
+      "sub_category": "robe",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_clothes_1_16.png",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "max_lingqi": 170,
+        "fafang": 18,
+        "lengque": 0.014
+      },
+      "implicit_attrs": {
+        "fafang": 12
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-cangyue",
+      "tags": [
+        "衣服",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-gloves",
+      "name": "苍月护腕",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_shoulder armour_1_16.png",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "fagong": 13,
+        "baoji": 0.01
+      },
+      "implicit_attrs": {
+        "baoji": 0.008
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-cangyue",
+      "tags": [
+        "手部",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-pants",
+      "name": "苍月云履",
+      "category": "equipment",
+      "sub_category": "pants",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_pants_1_16.png",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "max_qixue": 150,
+        "fafang": 16,
+        "max_lingqi": 110
+      },
+      "implicit_attrs": {
+        "max_lingqi": 80
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-cangyue",
+      "tags": [
+        "腿部",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-necklace",
+      "name": "苍月链",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_Jade pendants_1_16.png",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "fagong": 12,
+        "max_lingqi": 100
+      },
+      "implicit_attrs": {
+        "fagong": 7
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "set_id": "set-cangyue",
+      "tags": [
+        "项链",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-accessory",
+      "name": "苍月环",
+      "category": "equipment",
+      "sub_category": "ring",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_jiezhi_10010.png",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "baoji": 0.014,
+        "lengque": 0.014
+      },
+      "implicit_attrs": {
+        "lengque": 0.01
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "set_id": "set-cangyue",
+      "tags": [
+        "饰品",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "id": "set-cangyue-artifact",
+      "name": "苍月盘",
+      "category": "equipment",
+      "sub_category": "token",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/guan_tian_jing.png",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼炁化神·采药期",
+      "base_attrs": {
+        "zengshang": 0.02,
+        "lingqi_huifu": 14
+      },
+      "implicit_attrs": {
+        "lingqi_huifu": 10
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "set_id": "set-cangyue",
+      "tags": [
+        "法宝",
+        "苍月套装",
+        "采药期"
+      ]
+    },
+    {
+      "_comment": "========== 炼炁化神·结胎期套装：归元套装 =========="
+    },
+    {
+      "id": "set-guiyuan-weapon",
+      "name": "归元重刃",
+      "category": "equipment",
+      "sub_category": "sword",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/lin_ri_shen_dao.png",
+      "equip_slot": "weapon",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "wugong": 18,
+        "wufang": 16
+      },
+      "implicit_attrs": {
+        "wugong": 9,
+        "wufang": 10
+      },
+      "affix_pool_id": "ap-weapon-rare",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "武器",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-head",
+      "name": "归元盔",
+      "category": "equipment",
+      "sub_category": "hat",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_Hat_1_16.png",
+      "equip_slot": "head",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "max_qixue": 260,
+        "wufang": 20,
+        "kangbao": 0.014
+      },
+      "implicit_attrs": {
+        "max_qixue": 160
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "头部",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-clothes",
+      "name": "归元甲",
+      "category": "equipment",
+      "sub_category": "robe",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_clothes_1_16.png",
+      "equip_slot": "clothes",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "max_qixue": 360,
+        "wufang": 24,
+        "fafang": 18
+      },
+      "implicit_attrs": {
+        "max_qixue": 190
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "衣服",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-gloves",
+      "name": "归元护手",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_shoulder armour_1_16.png",
+      "equip_slot": "gloves",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "wufang": 18,
+        "zhaojia": 0.014
+      },
+      "implicit_attrs": {
+        "zhaojia": 0.01
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "手部",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-pants",
+      "name": "归元战履",
+      "category": "equipment",
+      "sub_category": "pants",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_pants_1_16.png",
+      "equip_slot": "pants",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "max_qixue": 300,
+        "fafang": 18
+      },
+      "implicit_attrs": {
+        "fafang": 12
+      },
+      "affix_pool_id": "ap-armor-rare",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "腿部",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-necklace",
+      "name": "归元护链",
+      "category": "equipment",
+      "sub_category": "necklace",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_Jade pendants_1_16.png",
+      "equip_slot": "necklace",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "max_qixue": 220,
+        "kangbao": 0.016
+      },
+      "implicit_attrs": {
+        "kangbao": 0.01
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "项链",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-accessory",
+      "name": "归元环",
+      "category": "equipment",
+      "sub_category": "ring",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_jiezhi_10010.png",
+      "equip_slot": "accessory",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "wufang": 14,
+        "fafang": 14
+      },
+      "implicit_attrs": {
+        "wufang": 10
+      },
+      "affix_pool_id": "ap-accessory-uncommon",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "饰品",
+        "归元套装",
+        "结胎期"
+      ]
+    },
+    {
+      "id": "set-guiyuan-artifact",
+      "name": "归元印",
+      "category": "equipment",
+      "sub_category": "token",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/guan_tian_jing.png",
+      "equip_slot": "artifact",
+      "equip_req_realm": "炼炁化神·结胎期",
+      "base_attrs": {
+        "kongzhi_kangxing": 0.022,
+        "zhaojia": 0.018
+      },
+      "implicit_attrs": {
+        "kongzhi_kangxing": 0.014
+      },
+      "affix_pool_id": "ap-artifact-uncommon",
+      "set_id": "set-guiyuan",
+      "tags": [
+        "法宝",
+        "归元套装",
+        "结胎期"
       ]
     }
   ]

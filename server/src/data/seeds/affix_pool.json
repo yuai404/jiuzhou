@@ -278,6 +278,12 @@
               "min": 24,
               "max": 36,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 27.6,
+              "max": 41.4,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -322,6 +328,12 @@
               "min": 20,
               "max": 28,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 23,
+              "max": 32.2,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -366,6 +378,12 @@
               "min": 0.052,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0598,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -410,6 +428,12 @@
               "min": 0.104,
               "max": 0.128,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1196,
+              "max": 0.1472,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -454,6 +478,12 @@
               "min": 0.04,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -498,6 +528,12 @@
               "min": 0.04,
               "max": 0.08,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.092,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -542,6 +578,12 @@
               "min": 0.02,
               "max": 0.04,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.023,
+              "max": 0.046,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -586,6 +628,12 @@
               "min": 0.04,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -630,6 +678,12 @@
               "min": 5,
               "max": 5,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 5.75,
+              "max": 5.75,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -667,6 +721,13 @@
               "max": 48,
               "realm_rank_min": 6,
               "description": "命中时22%概率触发追魂斩，追加32~48点真伤并附加60%物攻加成"
+            },
+            {
+              "tier": 7,
+              "min": 36.8,
+              "max": 55.2,
+              "realm_rank_min": 7,
+              "description": "命中时22%概率触发追魂斩，追加32~48点真伤并附加60%物攻加成"
             }
           ]
         },
@@ -698,6 +759,13 @@
               "min": 0.34,
               "max": 0.5,
               "realm_rank_min": 6,
+              "description": "暴击时28%概率激发暴怒意，2回合内增伤提高34%~50%"
+            },
+            {
+              "tier": 7,
+              "min": 0.391,
+              "max": 0.575,
+              "realm_rank_min": 7,
               "description": "暴击时28%概率激发暴怒意，2回合内增伤提高34%~50%"
             }
           ]
@@ -756,6 +824,12 @@
               "min": 32,
               "max": 52,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 36.8,
+              "max": 59.8,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -794,6 +868,12 @@
               "min": 0.072,
               "max": 0.112,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0828,
+              "max": 0.1288,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -832,6 +912,12 @@
               "min": 27,
               "max": 40,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 31.05,
+              "max": 46,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -870,6 +956,12 @@
               "min": 0.072,
               "max": 0.112,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0828,
+              "max": 0.1288,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -908,6 +1000,12 @@
               "min": 0.056,
               "max": 0.08,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0644,
+              "max": 0.092,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -946,6 +1044,12 @@
               "min": 0.112,
               "max": 0.16,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1288,
+              "max": 0.184,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -984,6 +1088,12 @@
               "min": 0.052,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0598,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1022,6 +1132,12 @@
               "min": 0.064,
               "max": 0.104,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0736,
+              "max": 0.1196,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1060,6 +1176,12 @@
               "min": 0.036,
               "max": 0.056,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0414,
+              "max": 0.0644,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1098,6 +1220,12 @@
               "min": 0.056,
               "max": 0.08,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0644,
+              "max": 0.092,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1136,6 +1264,12 @@
               "min": 5,
               "max": 9,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 5.75,
+              "max": 10.35,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1173,6 +1307,13 @@
               "max": 48,
               "realm_rank_min": 6,
               "description": "命中时22%概率触发追魂斩，追加32~48点真伤并附加60%物攻加成"
+            },
+            {
+              "tier": 7,
+              "min": 36.8,
+              "max": 55.2,
+              "realm_rank_min": 7,
+              "description": "命中时22%概率触发追魂斩，追加32~48点真伤并附加60%物攻加成"
             }
           ]
         },
@@ -1205,6 +1346,13 @@
               "max": 46,
               "realm_rank_min": 6,
               "description": "命中时22%概率引动天雷，追加30~46点法伤并附加65%法攻加成"
+            },
+            {
+              "tier": 7,
+              "min": 34.5,
+              "max": 52.9,
+              "realm_rank_min": 7,
+              "description": "命中时22%概率引动天雷，追加30~46点法伤并附加65%法攻加成"
             }
           ]
         },
@@ -1236,6 +1384,13 @@
               "min": 0.34,
               "max": 0.5,
               "realm_rank_min": 6,
+              "description": "暴击时28%概率激发暴怒意，2回合内增伤提高34%~50%"
+            },
+            {
+              "tier": 7,
+              "min": 0.391,
+              "max": 0.575,
+              "realm_rank_min": 7,
               "description": "暴击时28%概率激发暴怒意，2回合内增伤提高34%~50%"
             }
           ]
@@ -1740,6 +1895,12 @@
               "min": 144,
               "max": 200,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 165.6,
+              "max": 230,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1784,6 +1945,12 @@
               "min": 72,
               "max": 112,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 82.8,
+              "max": 128.8,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1828,6 +1995,12 @@
               "min": 26,
               "max": 38,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 29.9,
+              "max": 43.7,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1872,6 +2045,12 @@
               "min": 24,
               "max": 33,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 27.6,
+              "max": 37.95,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1916,6 +2095,12 @@
               "min": 0.036,
               "max": 0.056,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0414,
+              "max": 0.0644,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -1960,6 +2145,12 @@
               "min": 0.036,
               "max": 0.056,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0414,
+              "max": 0.0644,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2004,6 +2195,12 @@
               "min": 0.072,
               "max": 0.112,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0828,
+              "max": 0.1288,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2048,6 +2245,12 @@
               "min": 14,
               "max": 17,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 16.1,
+              "max": 19.55,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2092,6 +2295,12 @@
               "min": 6,
               "max": 15,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 6.9,
+              "max": 17.25,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2136,6 +2345,12 @@
               "min": 0.1,
               "max": 0.136,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.115,
+              "max": 0.1564,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2180,6 +2395,12 @@
               "min": 0.1,
               "max": 0.136,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.115,
+              "max": 0.1564,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2224,6 +2445,12 @@
               "min": 0.1,
               "max": 0.136,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.115,
+              "max": 0.1564,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2268,6 +2495,12 @@
               "min": 0.1,
               "max": 0.136,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.115,
+              "max": 0.1564,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2312,6 +2545,12 @@
               "min": 0.1,
               "max": 0.136,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.115,
+              "max": 0.1564,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2356,6 +2595,12 @@
               "min": 0.06,
               "max": 0.088,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.069,
+              "max": 0.1012,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2400,6 +2645,12 @@
               "min": 0.04,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2444,6 +2695,12 @@
               "min": 0.04,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2480,6 +2737,13 @@
               "max": 54,
               "realm_rank_min": 6,
               "description": "受击时26%概率触发护心诀，回复36~54点气血并附加9%生命加成"
+            },
+            {
+              "tier": 7,
+              "min": 41.4,
+              "max": 62.1,
+              "realm_rank_min": 7,
+              "description": "受击时26%概率触发护心诀，回复36~54点气血并附加9%生命加成"
             }
           ]
         },
@@ -2509,6 +2773,13 @@
               "min": 0.46,
               "max": 0.64,
               "realm_rank_min": 6,
+              "description": "受击时22%概率反煞，反弹46%~64%本次伤害"
+            },
+            {
+              "tier": 7,
+              "min": 0.529,
+              "max": 0.736,
+              "realm_rank_min": 7,
               "description": "受击时22%概率反煞，反弹46%~64%本次伤害"
             }
           ]
@@ -2571,6 +2842,12 @@
               "min": 232,
               "max": 360,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 266.8,
+              "max": 414,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2609,6 +2886,12 @@
               "min": 0.064,
               "max": 0.104,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0736,
+              "max": 0.1196,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2647,6 +2930,12 @@
               "min": 104,
               "max": 176,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 119.6,
+              "max": 202.4,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2685,6 +2974,12 @@
               "min": 36,
               "max": 56,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 41.4,
+              "max": 64.4,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2723,6 +3018,12 @@
               "min": 0.064,
               "max": 0.104,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0736,
+              "max": 0.1196,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2761,6 +3062,12 @@
               "min": 34,
               "max": 48,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 39.1,
+              "max": 55.2,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2799,6 +3106,12 @@
               "min": 0.064,
               "max": 0.104,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0736,
+              "max": 0.1196,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2837,6 +3150,12 @@
               "min": 0.052,
               "max": 0.076,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0598,
+              "max": 0.0874,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2875,6 +3194,12 @@
               "min": 0.052,
               "max": 0.076,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0598,
+              "max": 0.0874,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2913,6 +3238,12 @@
               "min": 0.104,
               "max": 0.152,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1196,
+              "max": 0.1748,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2951,6 +3282,12 @@
               "min": 24,
               "max": 36,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 27.6,
+              "max": 41.4,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -2989,6 +3326,12 @@
               "min": 16,
               "max": 26,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 18.4,
+              "max": 29.9,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3027,6 +3370,12 @@
               "min": 0.144,
               "max": 0.2,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1656,
+              "max": 0.23,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3065,6 +3414,12 @@
               "min": 0.144,
               "max": 0.2,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1656,
+              "max": 0.23,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3103,6 +3458,12 @@
               "min": 0.144,
               "max": 0.2,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1656,
+              "max": 0.23,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3141,6 +3502,12 @@
               "min": 0.144,
               "max": 0.2,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1656,
+              "max": 0.23,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3179,6 +3546,12 @@
               "min": 0.144,
               "max": 0.2,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1656,
+              "max": 0.23,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3217,6 +3590,12 @@
               "min": 0.104,
               "max": 0.152,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1196,
+              "max": 0.1748,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3255,6 +3634,12 @@
               "min": 0.068,
               "max": 0.096,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0782,
+              "max": 0.1104,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3293,6 +3678,12 @@
               "min": 0.068,
               "max": 0.096,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0782,
+              "max": 0.1104,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3329,6 +3720,13 @@
               "max": 54,
               "realm_rank_min": 6,
               "description": "受击时26%概率触发护心诀，回复36~54点气血并附加9%生命加成"
+            },
+            {
+              "tier": 7,
+              "min": 41.4,
+              "max": 62.1,
+              "realm_rank_min": 7,
+              "description": "受击时26%概率触发护心诀，回复36~54点气血并附加9%生命加成"
             }
           ]
         },
@@ -3358,6 +3756,13 @@
               "min": 0.46,
               "max": 0.64,
               "realm_rank_min": 6,
+              "description": "受击时22%概率反煞，反弹46%~64%本次伤害"
+            },
+            {
+              "tier": 7,
+              "min": 0.529,
+              "max": 0.736,
+              "realm_rank_min": 7,
               "description": "受击时22%概率反煞，反弹46%~64%本次伤害"
             }
           ]
@@ -3767,6 +4172,12 @@
               "min": 20,
               "max": 28,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 23,
+              "max": 32.2,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3811,6 +4222,12 @@
               "min": 16,
               "max": 23,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 18.4,
+              "max": 26.45,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3855,6 +4272,12 @@
               "min": 104,
               "max": 152,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 119.6,
+              "max": 174.8,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3899,6 +4322,12 @@
               "min": 84,
               "max": 128,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 96.6,
+              "max": 147.2,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3943,6 +4372,12 @@
               "min": 0.0416,
               "max": 0.0632,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.04784,
+              "max": 0.07268,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -3987,6 +4422,12 @@
               "min": 0.084,
               "max": 0.116,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0966,
+              "max": 0.1334,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4031,6 +4472,12 @@
               "min": 0.032,
               "max": 0.0512,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0368,
+              "max": 0.05888,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4075,6 +4522,12 @@
               "min": 0.024,
               "max": 0.0416,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0276,
+              "max": 0.04784,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4119,6 +4572,12 @@
               "min": 0.024,
               "max": 0.0416,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0276,
+              "max": 0.04784,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4163,6 +4622,12 @@
               "min": 0.04,
               "max": 0.08,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.092,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4207,6 +4672,12 @@
               "min": 6,
               "max": 15,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 6.9,
+              "max": 17.25,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4251,6 +4722,12 @@
               "min": 20,
               "max": 28,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 23,
+              "max": 32.2,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4295,6 +4772,12 @@
               "min": 5,
               "max": 6,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 5.75,
+              "max": 6.9,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4339,6 +4822,12 @@
               "min": 5,
               "max": 5,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 5.75,
+              "max": 5.75,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4383,6 +4872,12 @@
               "min": 0.06,
               "max": 0.088,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.069,
+              "max": 0.1012,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4427,6 +4922,12 @@
               "min": 0.04,
               "max": 0.08,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.092,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4471,6 +4972,12 @@
               "min": 0.02,
               "max": 0.04,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.023,
+              "max": 0.046,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4515,6 +5022,12 @@
               "min": 0.04,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4559,6 +5072,12 @@
               "min": 0.04,
               "max": 0.064,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.046,
+              "max": 0.0736,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -4596,6 +5115,13 @@
               "max": 0.5,
               "realm_rank_min": 6,
               "description": "暴击时28%概率激发暴怒意，2回合内增伤提高34%~50%"
+            },
+            {
+              "tier": 7,
+              "min": 0.391,
+              "max": 0.575,
+              "realm_rank_min": 7,
+              "description": "暴击时28%概率激发暴怒意，2回合内增伤提高34%~50%"
             }
           ]
         },
@@ -4625,6 +5151,13 @@
               "min": 12,
               "max": 18,
               "realm_rank_min": 6,
+              "description": "回合开始时30%概率引动灵潮，恢复12~18点灵气"
+            },
+            {
+              "tier": 7,
+              "min": 13.8,
+              "max": 20.7,
+              "realm_rank_min": 7,
               "description": "回合开始时30%概率引动灵潮，恢复12~18点灵气"
             }
           ]
@@ -5006,6 +5539,12 @@
               "min": 26,
               "max": 44,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 29.9,
+              "max": 50.6,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5044,6 +5583,12 @@
               "min": 0.064,
               "max": 0.104,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0736,
+              "max": 0.1196,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5088,6 +5633,12 @@
               "min": 21,
               "max": 35,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 24.15,
+              "max": 40.25,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5132,6 +5683,12 @@
               "min": 136,
               "max": 216,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 156.4,
+              "max": 248.4,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5176,6 +5733,12 @@
               "min": 60,
               "max": 104,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 69,
+              "max": 119.6,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5220,6 +5783,12 @@
               "min": 0.056,
               "max": 0.0832,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.0644,
+              "max": 0.09568,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5264,6 +5833,12 @@
               "min": 0.104,
               "max": 0.152,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1196,
+              "max": 0.1748,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5308,6 +5883,12 @@
               "min": 0.104,
               "max": 0.128,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.1196,
+              "max": 0.1472,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5352,6 +5933,12 @@
               "min": 26,
               "max": 44,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 29.9,
+              "max": 50.6,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5396,6 +5983,12 @@
               "min": 8,
               "max": 10,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 9.2,
+              "max": 11.5,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5440,6 +6033,12 @@
               "min": 0.0336,
               "max": 0.0592,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.03864,
+              "max": 0.06808,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5484,6 +6083,12 @@
               "min": 0.0336,
               "max": 0.0592,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.03864,
+              "max": 0.06808,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5528,6 +6133,12 @@
               "min": 0.0752,
               "max": 0.112,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.08648,
+              "max": 0.1288,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5572,6 +6183,12 @@
               "min": 0.0536,
               "max": 0.0928,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.06164,
+              "max": 0.10672,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5616,6 +6233,12 @@
               "min": 0.0288,
               "max": 0.0536,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.03312,
+              "max": 0.06164,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5660,6 +6283,12 @@
               "min": 0.0536,
               "max": 0.0928,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.06164,
+              "max": 0.10672,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5704,6 +6333,12 @@
               "min": 0.0536,
               "max": 0.0928,
               "realm_rank_min": 6
+            },
+            {
+              "tier": 7,
+              "min": 0.06164,
+              "max": 0.10672,
+              "realm_rank_min": 7
             }
           ],
           "modifiers": [
@@ -5741,6 +6376,13 @@
               "max": 46,
               "realm_rank_min": 6,
               "description": "命中时22%概率引动天雷，追加30~46点法伤并附加65%法攻加成"
+            },
+            {
+              "tier": 7,
+              "min": 34.5,
+              "max": 52.9,
+              "realm_rank_min": 7,
+              "description": "命中时22%概率引动天雷，追加30~46点法伤并附加65%法攻加成"
             }
           ]
         },
@@ -5770,6 +6412,13 @@
               "min": 12,
               "max": 18,
               "realm_rank_min": 6,
+              "description": "回合开始时30%概率引动灵潮，恢复12~18点灵气"
+            },
+            {
+              "tier": 7,
+              "min": 13.8,
+              "max": 20.7,
+              "realm_rank_min": 7,
               "description": "回合开始时30%概率引动灵潮，恢复12~18点灵气"
             }
           ]

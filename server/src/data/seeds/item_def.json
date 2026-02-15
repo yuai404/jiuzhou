@@ -1792,6 +1792,74 @@
       ]
     },
     {
+      "id": "book-xuanjia-fanzhen-jue",
+      "name": "《玄甲返震诀》",
+      "category": "consumable",
+      "sub_category": "technique_book",
+      "quality": "天",
+      "stack_max": 1,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/icon_bygj.png",
+      "description": "使用后学习玄甲返震诀",
+      "long_desc": "记载玄甲返震诀的秘籍，以土元凝甲并借势反震，擅长防御反击。",
+      "tags": [
+        "秘籍",
+        "功法",
+        "武技"
+      ],
+      "use_type": "instant",
+      "use_req_realm": "炼炁化神·采药期",
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "learn_technique",
+          "params": {
+            "technique_id": "tech-taixi-ningtai-jue"
+          }
+        }
+      ],
+      "source_hint": [
+        "玄母神台·困难",
+        "玄母神台·噩梦"
+      ]
+    },
+    {
+      "id": "book-jiuyu-fuling-yin",
+      "name": "《九狱缚灵印》",
+      "category": "consumable",
+      "sub_category": "technique_book",
+      "quality": "天",
+      "stack_max": 1,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/icon_bygj.png",
+      "description": "使用后学习九狱缚灵印",
+      "long_desc": "记载九狱缚灵印的秘籍，以印纹封禁敌势，擅长控制与节奏压制。",
+      "tags": [
+        "秘籍",
+        "功法",
+        "法诀"
+      ],
+      "use_type": "instant",
+      "use_req_realm": "炼炁化神·采药期",
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "learn_technique",
+          "params": {
+            "technique_id": "tech-jiutai-zhenpo-yin"
+          }
+        }
+      ],
+      "source_hint": [
+        "玄母神台·困难",
+        "玄母神台·噩梦"
+      ]
+    },
+    {
       "id": "item-hidden-chest",
       "name": "隐秘宝箱",
       "category": "consumable",
@@ -2021,6 +2089,109 @@
         "药王谷任务",
         "心魔幻境首通",
         "炼己期周常"
+      ]
+    },
+    {
+      "id": "mat-taiyuan-jingpo",
+      "name": "胎元晶魄",
+      "category": "material",
+      "sub_category": "technique",
+      "quality": "天",
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/xinmo_jinghua.png",
+      "description": "胎息潮反复淬炼后形成的晶魄，可稳固结胎前后的功法运转。",
+      "long_desc": "晶魄内封存了高度有序的胎元波动，适合作为高层功法与突破仪式的稳定媒介。",
+      "tags": [
+        "材料",
+        "功法",
+        "结胎期"
+      ],
+      "source_hint": [
+        "胎元明泉",
+        "九台宫阙",
+        "采药后段周常"
+      ]
+    },
+    {
+      "id": "mat-jiutai-jinghua",
+      "name": "九台精华",
+      "category": "material",
+      "sub_category": "forge",
+      "quality": "天",
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/kuangshi_jinghua.png",
+      "description": "九台阵核析出的高纯灵质，常用于采药后段与结胎期装备锻铸。",
+      "long_desc": "该精华兼具稳定性与承压性，是高阶套装部件与结胎期法宝的关键底材。",
+      "tags": [
+        "材料",
+        "锻造",
+        "结胎期"
+      ],
+      "source_hint": [
+        "九台宫阙",
+        "玄母神台",
+        "精英/Boss掉落"
+      ]
+    },
+    {
+      "id": "mat-jietai-dan",
+      "name": "结胎丹",
+      "category": "material",
+      "sub_category": "breakthrough",
+      "quality": "天",
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/lianji_dan.png",
+      "description": "用于采药期冲击结胎期的核心丹药，可显著降低灵压崩解风险。",
+      "long_desc": "药性以稳神、聚息、护脉为主，常与胎元晶魄配合用于结胎仪式。",
+      "tags": [
+        "材料",
+        "突破",
+        "丹药",
+        "结胎期"
+      ],
+      "source_hint": [
+        "第四章主线",
+        "胎元明泉/九台宫阙",
+        "玄母神台"
+      ]
+    },
+    {
+      "id": "box-009",
+      "name": "结胎宝石袋",
+      "category": "consumable",
+      "sub_category": "box",
+      "quality": "地",
+      "stack_max": 999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/items/Props-baodai-2.png",
+      "description": "打开后可随机获得1个2~4级宝石。",
+      "long_desc": "用于结胎阶段强化构筑，产出范围高于通脉与采药宝石袋。",
+      "tags": [
+        "宝箱",
+        "宝石",
+        "结胎",
+        "随机"
+      ],
+      "use_type": "instant",
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "loot",
+          "params": {
+            "loot_type": "random_gem",
+            "min_level": 2,
+            "max_level": 4,
+            "gems_per_use": 1
+          }
+        }
       ]
     }
   ]

@@ -305,7 +305,7 @@ const ItemSheet: React.FC<SheetProps> = ({
   onToggleLock,
 }) => {
   const equipLines = useMemo(() => buildEquipmentLines(item), [item]);
-  const hasDesc = Boolean(item.desc?.trim());
+  const hasDesc = item.category !== 'equipment' && Boolean(item.desc?.trim());
   const hasEquipAttrs = item.category === 'equipment' && equipLines.length > 0;
   const hasSetInfo = Boolean(item.setInfo && item.setInfo.bonuses.length > 0);
   const hasEffects = (item.effects?.length ?? 0) > 0;

@@ -797,6 +797,176 @@
         }
       ],
       "enabled": true
+    },
+    {
+      "id": "dp-common-monster-caiyao",
+      "name": "炼炁化神·采药期公共掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "box-009",
+          "chance": 0.02,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-head",
+          "chance": 0.06,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-gloves",
+          "chance": 0.06,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-clothes",
+          "chance": 0.05,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-pants",
+          "chance": 0.05,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-necklace",
+          "chance": 0.04,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-accessory",
+          "chance": 0.04,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-head",
+          "chance": 0.06,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-gloves",
+          "chance": 0.06,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-clothes",
+          "chance": 0.05,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-pants",
+          "chance": 0.05,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-necklace",
+          "chance": 0.04,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-accessory",
+          "chance": 0.04,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "dp-common-monster-jietai",
+      "name": "炼炁化神·结胎期公共掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "box-009",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-head",
+          "chance": 0.08,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-clothes",
+          "chance": 0.07,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-gloves",
+          "chance": 0.08,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-pants",
+          "chance": 0.07,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-necklace",
+          "chance": 0.06,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-accessory",
+          "chance": 0.06,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-weapon",
+          "chance": 0.035,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-artifact",
+          "chance": 0.045,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "enabled": true
     }
   ]
 }

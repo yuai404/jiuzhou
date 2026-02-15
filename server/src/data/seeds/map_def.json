@@ -2428,11 +2428,400 @@
             {
               "direction": "west",
               "target_room_id": "room-yanbing-crystal-shore"
+            },
+            {
+              "direction": "north",
+              "target_map_id": "map-taixi-marsh",
+              "target_room_id": "room-taixi-camp"
             }
           ],
           "npcs": [],
           "monsters": [],
           "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        }
+      ]
+    },
+    {
+      "id": "map-taixi-marsh",
+      "code": "taixi_marsh",
+      "name": "胎息沼",
+      "description": "雾潮沉降的沼泽地带，灵压向内塌缩，修士需以胎息法维持平衡。",
+      "background_image": "/assets/map/youming_valley.png",
+      "map_type": "field",
+      "parent_map_id": "map-yanbing-rift",
+      "region": "东洲",
+      "world_position": {
+        "x": 192,
+        "y": 238
+      },
+      "req_realm_min": "炼炁化神·采药期",
+      "safe_zone": false,
+      "pk_mode": "normal",
+      "revive_map_id": "map-taixi-marsh",
+      "revive_room_id": "room-taixi-camp",
+      "sort_weight": 580,
+      "enabled": true,
+      "rooms": [
+        {
+          "id": "room-taixi-camp",
+          "name": "胎息营地",
+          "description": "临时搭建的稳压营地，镇沼使与药师驻守于此。",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "room_type": "safe",
+          "connections": [
+            {
+              "direction": "north",
+              "target_room_id": "room-taixi-mudflat"
+            },
+            {
+              "direction": "east",
+              "target_room_id": "room-taixi-alchemy-pad"
+            },
+            {
+              "direction": "south",
+              "target_map_id": "map-yanbing-rift",
+              "target_room_id": "room-yanbing-rift-gate"
+            }
+          ],
+          "npcs": [
+            "npc-taixi-warden",
+            "npc-taixi-apothecary"
+          ],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-taixi-mudflat",
+          "name": "陷潮泥滩",
+          "description": "泥潮时涨时落，伏行者常在此伺机突袭。",
+          "position": {
+            "x": 0,
+            "y": 1
+          },
+          "room_type": "field",
+          "connections": [
+            {
+              "direction": "south",
+              "target_room_id": "room-taixi-camp"
+            },
+            {
+              "direction": "north",
+              "target_room_id": "room-taixi-reed-maze"
+            }
+          ],
+          "npcs": [],
+          "monsters": [
+            {
+              "monster_def_id": "monster-taixi-mire-lurker",
+              "count": 4,
+              "respawn_sec": 55
+            },
+            {
+              "monster_def_id": "monster-taixi-swamp-serpent",
+              "count": 2,
+              "respawn_sec": 70
+            }
+          ],
+          "resources": [
+            {
+              "resource_id": "mat-taiyuan-jingpo",
+              "count": 10,
+              "collect_limit": 10,
+              "respawn_sec": 300
+            }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-taixi-alchemy-pad",
+          "name": "胎息炼药台",
+          "description": "药炉环列，常用于炼制结胎前的稳压丹。",
+          "position": {
+            "x": 1,
+            "y": 0
+          },
+          "room_type": "safe",
+          "connections": [
+            {
+              "direction": "west",
+              "target_room_id": "room-taixi-camp"
+            },
+            {
+              "direction": "north",
+              "target_room_id": "room-taixi-pool-gate"
+            }
+          ],
+          "npcs": [
+            "npc-taixi-apothecary"
+          ],
+          "monsters": [],
+          "resources": [
+            {
+              "resource_id": "mat-jietai-dan",
+              "count": 6,
+              "collect_limit": 6,
+              "respawn_sec": 420
+            }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-taixi-reed-maze",
+          "name": "芦雾迷阵",
+          "description": "湿雾遮蔽视野，怨灵与影徒交错巡游。",
+          "position": {
+            "x": 0,
+            "y": 2
+          },
+          "room_type": "field",
+          "connections": [
+            {
+              "direction": "south",
+              "target_room_id": "room-taixi-mudflat"
+            },
+            {
+              "direction": "east",
+              "target_room_id": "room-taixi-pool-gate"
+            }
+          ],
+          "npcs": [],
+          "monsters": [
+            {
+              "monster_def_id": "monster-taixi-herb-wraith",
+              "count": 3,
+              "respawn_sec": 60
+            },
+            {
+              "monster_def_id": "monster-jiutai-shadow-disciple",
+              "count": 2,
+              "respawn_sec": 70
+            }
+          ],
+          "resources": [
+            {
+              "resource_id": "mat-taiyuan-jingpo",
+              "count": 8,
+              "collect_limit": 8,
+              "respawn_sec": 320
+            }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-taixi-pool-gate",
+          "name": "明泉外庭",
+          "description": "通向胎元明泉的阵门前庭，宫阙侍者在此把守。",
+          "position": {
+            "x": 1,
+            "y": 1
+          },
+          "room_type": "safe",
+          "connections": [
+            {
+              "direction": "south",
+              "target_room_id": "room-taixi-alchemy-pad"
+            },
+            {
+              "direction": "west",
+              "target_room_id": "room-taixi-reed-maze"
+            },
+            {
+              "direction": "north",
+              "target_map_id": "map-jiutai-sanctum",
+              "target_room_id": "room-jiutai-outer-gate"
+            }
+          ],
+          "npcs": [
+            "npc-taixi-warden"
+          ],
+          "monsters": [],
+          "resources": [
+            {
+              "resource_id": "mat-jiutai-jinghua",
+              "count": 8,
+              "collect_limit": 8,
+              "respawn_sec": 360
+            }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        }
+      ]
+    },
+    {
+      "id": "map-jiutai-sanctum",
+      "code": "jiutai_sanctum",
+      "name": "九台宫阙",
+      "description": "古阵九台叠立，灵压被强制整序，是结胎修士的核心试炼场。",
+      "background_image": "/assets/map/yanbing_rift.png",
+      "map_type": "field",
+      "parent_map_id": "map-taixi-marsh",
+      "region": "东洲",
+      "world_position": {
+        "x": 205,
+        "y": 228
+      },
+      "req_realm_min": "炼炁化神·采药期",
+      "safe_zone": false,
+      "pk_mode": "normal",
+      "revive_map_id": "map-jiutai-sanctum",
+      "revive_room_id": "room-jiutai-outer-gate",
+      "sort_weight": 570,
+      "enabled": true,
+      "rooms": [
+        {
+          "id": "room-jiutai-outer-gate",
+          "name": "宫阙外门",
+          "description": "宫阙外门灵纹未散，隐修者在此甄别来者境界。",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "room_type": "safe",
+          "connections": [
+            {
+              "direction": "south",
+              "target_map_id": "map-taixi-marsh",
+              "target_room_id": "room-taixi-pool-gate"
+            },
+            {
+              "direction": "north",
+              "target_room_id": "room-jiutai-shadow-corridor"
+            },
+            {
+              "direction": "east",
+              "target_room_id": "room-jiutai-trader-court"
+            }
+          ],
+          "npcs": [
+            "npc-jiutai-hermit",
+            "npc-jiutai-broker"
+          ],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-jiutai-shadow-corridor",
+          "name": "影阙长廊",
+          "description": "长廊符灯摇曳，影徒与傀儡交替巡守。",
+          "position": {
+            "x": 0,
+            "y": 1
+          },
+          "room_type": "field",
+          "connections": [
+            {
+              "direction": "south",
+              "target_room_id": "room-jiutai-outer-gate"
+            },
+            {
+              "direction": "north",
+              "target_room_id": "room-jiutai-core-hall"
+            }
+          ],
+          "npcs": [],
+          "monsters": [
+            {
+              "monster_def_id": "monster-jiutai-shadow-disciple",
+              "count": 3,
+              "respawn_sec": 55
+            },
+            {
+              "monster_def_id": "monster-jietai-xuanmu-puppet",
+              "count": 2,
+              "respawn_sec": 70
+            }
+          ],
+          "resources": [
+            {
+              "resource_id": "mat-jiutai-jinghua",
+              "count": 10,
+              "collect_limit": 10,
+              "respawn_sec": 320
+            }
+          ],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-jiutai-trader-court",
+          "name": "偏殿商庭",
+          "description": "偏殿中摆满高阶材料，商旅在此交换宫阙情报。",
+          "position": {
+            "x": 1,
+            "y": 0
+          },
+          "room_type": "safe",
+          "connections": [
+            {
+              "direction": "west",
+              "target_room_id": "room-jiutai-outer-gate"
+            },
+            {
+              "direction": "north",
+              "target_room_id": "room-jiutai-core-hall"
+            }
+          ],
+          "npcs": [
+            "npc-jiutai-broker"
+          ],
+          "monsters": [],
+          "resources": [],
+          "items": [],
+          "portals": [],
+          "events": []
+        },
+        {
+          "id": "room-jiutai-core-hall",
+          "name": "中殿阵心",
+          "description": "九台宫阙的阵心所在，灵压最为凝实，亦是结胎仪式之地。",
+          "position": {
+            "x": 1,
+            "y": 1
+          },
+          "room_type": "safe",
+          "connections": [
+            {
+              "direction": "south",
+              "target_room_id": "room-jiutai-trader-court"
+            },
+            {
+              "direction": "west",
+              "target_room_id": "room-jiutai-shadow-corridor"
+            }
+          ],
+          "npcs": [
+            "npc-jiutai-hermit"
+          ],
+          "monsters": [],
+          "resources": [
+            {
+              "resource_id": "mat-jietai-dan",
+              "count": 5,
+              "collect_limit": 5,
+              "respawn_sec": 480
+            }
+          ],
           "items": [],
           "portals": [],
           "events": []

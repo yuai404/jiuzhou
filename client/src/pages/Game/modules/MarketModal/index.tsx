@@ -365,7 +365,7 @@ const MarketItemTooltipContent: React.FC<{ row: ListingItem }> = ({ row }) => {
         </div>
       ) : null}
 
-      {desc ? <div className="market-tooltip-desc">{desc}</div> : null}
+      {!isEquip && desc ? <div className="market-tooltip-desc">{desc}</div> : null}
 
       {equipMetaLines.length > 0 ? (
         <div className="market-tooltip-section">
@@ -448,7 +448,7 @@ const buildBagItem = (it: InventoryItemDto): BagItem | null => {
       def.category === 'skillbook'
       ? def.category
       : 'other';
-  const desc = String(def.description ?? def.long_desc ?? '').trim();
+  const desc = category === 'equipment' ? '' : String(def.description ?? def.long_desc ?? '').trim();
   const qty = Number(it.qty) || 0;
   const stackMax = Number(def.stack_max) || 1;
 
@@ -1305,7 +1305,9 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                         </div>
                       </div>
                     </div>
-                    <div className="market-list-detail-desc">{selectedBagItem.desc}</div>
+                    {selectedBagItem.category !== 'equipment' && selectedBagItem.desc ? (
+                      <div className="market-list-detail-desc">{selectedBagItem.desc}</div>
+                    ) : null}
                     {selectedBagItem.locked ? (
                       <div className="market-list-locked-tip">物品已锁定，无法上架交易。</div>
                     ) : null}

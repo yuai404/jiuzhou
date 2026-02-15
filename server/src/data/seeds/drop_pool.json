@@ -1035,6 +1035,368 @@
         "dp-common-monster-lianji",
         "dp-common-monster-boss"
       ]
+    },
+    {
+      "id": "dp-caiyao-mire-lurker",
+      "name": "泥沼伏行者掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 0.8,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao"
+      ]
+    },
+    {
+      "id": "dp-caiyao-herb-wraith",
+      "name": "幽蕨怨灵掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 0.72,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.18,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao"
+      ]
+    },
+    {
+      "id": "dp-caiyao-swamp-serpent",
+      "name": "沼泽鳞蛇掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 0.7,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao"
+      ]
+    },
+    {
+      "id": "dp-caiyao-shadow-disciple",
+      "name": "影阙侍徒掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 0.82,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 0.38,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao"
+      ]
+    },
+    {
+      "id": "dp-caiyao-elite-mire-overlord",
+      "name": "泥渊霸体掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 1,
+          "qty_min": 2,
+          "qty_max": 4,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 0.92,
+          "qty_min": 2,
+          "qty_max": 4,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao",
+        "dp-common-monster-elite"
+      ]
+    },
+    {
+      "id": "dp-caiyao-elite-bone-monk",
+      "name": "骨阙行者掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 1,
+          "qty_min": 2,
+          "qty_max": 4,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao",
+        "dp-common-monster-elite"
+      ]
+    },
+    {
+      "id": "dp-caiyao-boss-fetus-beast",
+      "name": "胎元魇兽掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 1,
+          "qty_min": 5,
+          "qty_max": 9,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 1,
+          "qty_min": 4,
+          "qty_max": 7,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.7,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-weapon",
+          "chance": 0.12,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-weapon",
+          "chance": 0.12,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-caiyao",
+        "dp-common-monster-boss"
+      ]
+    },
+    {
+      "id": "dp-jietai-xuanmu-puppet",
+      "name": "玄木傀儡掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 0.86,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.22,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-jietai"
+      ]
+    },
+    {
+      "id": "dp-jietai-soul-lotus-spirit",
+      "name": "魂莲灵掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 0.74,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.26,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-jietai"
+      ]
+    },
+    {
+      "id": "dp-jietai-elite-lotus-guardian",
+      "name": "莲台守将掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 1,
+          "qty_min": 3,
+          "qty_max": 5,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.5,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-jietai",
+        "dp-common-monster-elite"
+      ]
+    },
+    {
+      "id": "dp-jietai-elite-void-general",
+      "name": "虚渊将掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-taiyuan-jingpo",
+          "chance": 1,
+          "qty_min": 3,
+          "qty_max": 5,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 0.55,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-jietai",
+        "dp-common-monster-elite"
+      ]
+    },
+    {
+      "id": "dp-jietai-boss-shentai-avatar",
+      "name": "神台真影掉落池",
+      "mode": "prob",
+      "entries": [
+        {
+          "item_def_id": "mat-jietai-dan",
+          "chance": 1,
+          "qty_min": 3,
+          "qty_max": 5,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "mat-jiutai-jinghua",
+          "chance": 1,
+          "qty_min": 6,
+          "qty_max": 10,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "box-009",
+          "chance": 0.9,
+          "qty_min": 1,
+          "qty_max": 2,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "book-xuanjia-fanzhen-jue",
+          "chance": 0.12,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "book-jiuyu-fuling-yin",
+          "chance": 0.12,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-weapon",
+          "chance": 0.14,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-guiyuan-artifact",
+          "chance": 0.14,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        }
+      ],
+      "common_pool_ids": [
+        "dp-common-monster-global",
+        "dp-common-monster-jietai",
+        "dp-common-monster-boss"
+      ]
     }
   ]
 }

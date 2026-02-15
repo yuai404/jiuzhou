@@ -1,0 +1,415 @@
+{
+  "chapters": [
+    {
+      "id": "mq-chapter-4",
+      "chapter_num": 4,
+      "name": "第四章：胎息初成",
+      "description": "你在胎息沼与九台宫阙间调和内外灵压，最终完成结胎突破。",
+      "background": "采药期后段灵压开始向内塌缩，若无法稳定胎元，修士将陷入灵息崩乱。你需在胎息沼沉心、在九台宫阙证道，完成由采药向结胎的关键跨越。",
+      "min_realm": "炼炁化神·采药期",
+      "chapter_rewards": {
+        "exp": 13800,
+        "silver": 17200,
+        "spirit_stones": 1680,
+        "items": [
+          {
+            "item_def_id": "box-009",
+            "quantity": 2
+          },
+          {
+            "item_def_id": "mat-jietai-dan",
+            "quantity": 1
+          }
+        ]
+      },
+      "unlock_features": [
+        "map-taixi-marsh",
+        "dungeon-lianqi-taiyuan-mingquan",
+        "dungeon-lianqi-jiutai-gongque",
+        "map-jiutai-sanctum",
+        "dungeon-lianqi-xuanmu-shentai"
+      ],
+      "sort_weight": 700,
+      "enabled": true
+    }
+  ],
+  "sections": [
+    {
+      "id": "main-4-001",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 1,
+      "name": "沼地前哨",
+      "description": "你抵达胎息沼前哨，与镇守者确认灵压异变。",
+      "brief": "抵达胎息营地并与镇沼使交谈。",
+      "npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-camp",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-001",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "reach",
+          "text": "抵达胎息营地",
+          "target": 1,
+          "params": {
+            "room_id": "room-taixi-camp"
+          }
+        },
+        {
+          "id": "obj-2",
+          "type": "talk_npc",
+          "text": "与镇沼使交谈",
+          "target": 1,
+          "params": {
+            "npc_id": "npc-taixi-warden"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 760,
+        "silver": 980,
+        "spirit_stones": 82
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 700,
+      "enabled": true
+    },
+    {
+      "id": "main-4-002",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 2,
+      "name": "泥潮清剿",
+      "description": "胎息沼泥潮区不断涌现异化灵物，你需先清理外围。",
+      "brief": "击退泥沼伏行者与幽蕨怨灵。",
+      "npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-camp",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-002",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "kill_monster",
+          "text": "击退泥沼伏行者 8 只",
+          "target": 8,
+          "params": {
+            "monster_id": "monster-taixi-mire-lurker"
+          }
+        },
+        {
+          "id": "obj-2",
+          "type": "kill_monster",
+          "text": "击退幽蕨怨灵 6 只",
+          "target": 6,
+          "params": {
+            "monster_id": "monster-taixi-herb-wraith"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 980,
+        "silver": 1240,
+        "spirit_stones": 94
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 690,
+      "enabled": true
+    },
+    {
+      "id": "main-4-003",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 3,
+      "name": "胎元采集",
+      "description": "药师要求你采集胎元晶魄并回收九台精华，以稳固后续突破阵基。",
+      "brief": "采集胎元晶魄并收集九台精华。",
+      "npc_id": "npc-taixi-apothecary",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-alchemy-pad",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-003",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "gather_resource",
+          "text": "采集胎元晶魄 6 份",
+          "target": 6,
+          "params": {
+            "resource_id": "mat-taiyuan-jingpo"
+          }
+        },
+        {
+          "id": "obj-2",
+          "type": "collect",
+          "text": "收集九台精华 4 份",
+          "target": 4,
+          "params": {
+            "item_id": "mat-jiutai-jinghua"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 1120,
+        "silver": 1420,
+        "spirit_stones": 106,
+        "items": [
+          {
+            "item_def_id": "mat-taiyuan-jingpo",
+            "quantity": 2
+          }
+        ]
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 680,
+      "enabled": true
+    },
+    {
+      "id": "main-4-004",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 4,
+      "name": "明泉初试",
+      "description": "你首次进入胎元明泉，验证阵法是否能承受采药后段灵压。",
+      "brief": "通关胎元明泉（普通）1 次。",
+      "npc_id": "npc-taixi-warden",
+      "map_id": "map-taixi-marsh",
+      "room_id": "room-taixi-pool-gate",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-004",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "dungeon_clear",
+          "text": "通关胎元明泉（普通）",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-taiyuan-mingquan",
+            "difficulty_id": "dd-lianqi-taiyuan-n"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 1360,
+        "silver": 1680,
+        "spirit_stones": 124,
+        "items": [
+          {
+            "item_def_id": "box-009",
+            "quantity": 1
+          }
+        ]
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 670,
+      "enabled": true
+    },
+    {
+      "id": "main-4-005",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 5,
+      "name": "九台入门",
+      "description": "前往九台宫阙，完成首次宫阙试炼。",
+      "brief": "通关九台宫阙（普通）1 次。",
+      "npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-outer-gate",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-005",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "dungeon_clear",
+          "text": "通关九台宫阙（普通）",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-jiutai-gongque",
+            "difficulty_id": "dd-lianqi-jiutai-n"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 1520,
+        "silver": 1860,
+        "spirit_stones": 136,
+        "items": [
+          {
+            "item_def_id": "mat-jiutai-jinghua",
+            "quantity": 2
+          }
+        ]
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 660,
+      "enabled": true
+    },
+    {
+      "id": "main-4-006",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 6,
+      "name": "宫阙压测",
+      "description": "在困难强度下稳定宫阙阵核，验证你是否具备冲击结胎的资格。",
+      "brief": "通关九台宫阙（困难）1 次。",
+      "npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-006",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "dungeon_clear",
+          "text": "通关九台宫阙（困难）",
+          "target": 1,
+          "params": {
+            "dungeon_id": "dungeon-lianqi-jiutai-gongque",
+            "difficulty_id": "dd-lianqi-jiutai-h"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 1760,
+        "silver": 2120,
+        "spirit_stones": 152,
+        "items": [
+          {
+            "item_def_id": "mat-jietai-dan",
+            "quantity": 1
+          }
+        ]
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 650,
+      "enabled": true
+    },
+    {
+      "id": "main-4-007",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 7,
+      "name": "七层归一",
+      "description": "隐修者要求你将至少一门天阶功法推至七层，以承载胎元共鸣。",
+      "brief": "任意天阶功法达到第 7 层。",
+      "npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-007",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "upgrade_technique",
+          "text": "任意天阶功法达到 7 层",
+          "target": 1,
+          "params": {
+            "quality": "天",
+            "layer": 7
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 1980,
+        "silver": 2360,
+        "spirit_stones": 166
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 640,
+      "enabled": true
+    },
+    {
+      "id": "main-4-008",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 8,
+      "name": "结胎一跃",
+      "description": "万事俱备，你将以九台阵核完成采药向结胎的真正跃迁。",
+      "brief": "突破到炼炁化神·结胎期。",
+      "npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "min_realm": "炼炁化神·采药期",
+      "dialogue_id": "dlg-main-4-008",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "upgrade_realm",
+          "text": "突破到炼炁化神·结胎期",
+          "target": 1,
+          "params": {
+            "realm": "炼炁化神·结胎期"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 2300,
+        "silver": 2720,
+        "spirit_stones": 210,
+        "items": [
+          {
+            "item_def_id": "box-009",
+            "quantity": 1
+          }
+        ]
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": false,
+      "sort_weight": 630,
+      "enabled": true
+    },
+    {
+      "id": "main-4-009",
+      "chapter_id": "mq-chapter-4",
+      "section_num": 9,
+      "name": "胎元定序",
+      "description": "你回到宫阙中殿复命，结胎秩序正式确立。",
+      "brief": "与九台隐修者交谈，完成第四章。",
+      "npc_id": "npc-jiutai-hermit",
+      "map_id": "map-jiutai-sanctum",
+      "room_id": "room-jiutai-core-hall",
+      "min_realm": "炼炁化神·结胎期",
+      "dialogue_id": "dlg-main-4-009",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "type": "talk_npc",
+          "text": "与九台隐修者复命",
+          "target": 1,
+          "params": {
+            "npc_id": "npc-jiutai-hermit"
+          }
+        }
+      ],
+      "rewards": {
+        "exp": 2800,
+        "silver": 3200,
+        "spirit_stones": 260,
+        "items": [
+          {
+            "item_def_id": "mat-jietai-dan",
+            "quantity": 1
+          },
+          {
+            "item_def_id": "box-009",
+            "quantity": 1
+          }
+        ]
+      },
+      "auto_accept": true,
+      "auto_complete": false,
+      "is_chapter_final": true,
+      "sort_weight": 620,
+      "enabled": true
+    }
+  ]
+}
