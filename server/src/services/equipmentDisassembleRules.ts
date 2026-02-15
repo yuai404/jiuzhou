@@ -99,7 +99,7 @@ export const calculateDefaultDisassembleSilver = (
   const affixCount = Math.max(0, Math.floor(Number(input.affixCount) || 0));
   const qty = Math.max(1, Math.floor(Number(input.qty) || 1));
 
-  const base = 20;
+  const base = 50;
   const qualityFactor = QUALITY_FACTOR_BY_RANK[qualityRank] ?? 1.0;
   const growthFactor = 1 + strengthenLevel * 0.06 + refineLevel * 0.08 + affixCount * 0.03;
   const unitSilver = Math.max(1, Math.floor((base * qualityFactor * growthFactor) / 10));
