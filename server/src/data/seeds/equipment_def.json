@@ -2578,7 +2578,7 @@
       "equip_slot": "head",
       "equip_req_realm": "炼炁化神·采药期",
       "base_attrs": {
-        "max_lingqi": 130,
+        "max_lingqi": 200,
         "fafang": 14,
         "baoji": 0.008
       },
@@ -2605,7 +2605,7 @@
       "equip_slot": "clothes",
       "equip_req_realm": "炼炁化神·采药期",
       "base_attrs": {
-        "max_lingqi": 170,
+        "max_lingqi": 150,
         "fafang": 18,
         "lengque": 0.014
       },
@@ -2632,7 +2632,7 @@
       "equip_slot": "gloves",
       "equip_req_realm": "炼炁化神·采药期",
       "base_attrs": {
-        "fagong": 13,
+        "fagong": 12,
         "baoji": 0.01
       },
       "implicit_attrs": {
@@ -2660,7 +2660,7 @@
       "base_attrs": {
         "max_qixue": 150,
         "fafang": 16,
-        "max_lingqi": 110
+        "max_lingqi": 170
       },
       "implicit_attrs": {
         "max_lingqi": 80
@@ -2686,7 +2686,7 @@
       "equip_req_realm": "炼炁化神·采药期",
       "base_attrs": {
         "fagong": 12,
-        "max_lingqi": 100
+        "max_lingqi": 90
       },
       "implicit_attrs": {
         "fagong": 7
@@ -2738,7 +2738,7 @@
       "equip_req_realm": "炼炁化神·采药期",
       "base_attrs": {
         "zengshang": 0.02,
-        "lingqi_huifu": 14
+        "lingqi_huifu": 18
       },
       "implicit_attrs": {
         "lingqi_huifu": 10
@@ -2766,8 +2766,8 @@
       "equip_slot": "weapon",
       "equip_req_realm": "炼炁化神·结胎期",
       "base_attrs": {
-        "wugong": 18,
-        "wufang": 16
+        "wugong": 22,
+        "wufang": 23
       },
       "implicit_attrs": {
         "wugong": 9,
@@ -2793,9 +2793,9 @@
       "equip_slot": "head",
       "equip_req_realm": "炼炁化神·结胎期",
       "base_attrs": {
-        "max_qixue": 260,
+        "max_qixue": 390,
         "wufang": 20,
-        "kangbao": 0.014
+        "kangbao": 0.013
       },
       "implicit_attrs": {
         "max_qixue": 160
@@ -2820,9 +2820,9 @@
       "equip_slot": "clothes",
       "equip_req_realm": "炼炁化神·结胎期",
       "base_attrs": {
-        "max_qixue": 360,
-        "wufang": 24,
-        "fafang": 18
+        "max_qixue": 530,
+        "wufang": 22,
+        "fafang": 17
       },
       "implicit_attrs": {
         "max_qixue": 190
@@ -2847,8 +2847,8 @@
       "equip_slot": "gloves",
       "equip_req_realm": "炼炁化神·结胎期",
       "base_attrs": {
-        "wufang": 18,
-        "zhaojia": 0.014
+        "wufang": 17,
+        "zhaojia": 0.023
       },
       "implicit_attrs": {
         "zhaojia": 0.01
@@ -2925,7 +2925,7 @@
       "equip_slot": "accessory",
       "equip_req_realm": "炼炁化神·结胎期",
       "base_attrs": {
-        "wufang": 14,
+        "wufang": 22,
         "fafang": 14
       },
       "implicit_attrs": {
@@ -2951,7 +2951,7 @@
       "equip_slot": "artifact",
       "equip_req_realm": "炼炁化神·结胎期",
       "base_attrs": {
-        "kongzhi_kangxing": 0.022,
+        "kongzhi_kangxing": 0.034,
         "zhaojia": 0.018
       },
       "implicit_attrs": {

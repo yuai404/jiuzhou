@@ -948,7 +948,7 @@
     {
       "id": "set-tianxuan",
       "name": "天璇套装",
-      "description": "天璇星辉流转，擅长法术连携与爆发打击。",
+      "description": "天璇借星势换节奏，依靠压制与连发在连携中放大术法爆发。",
       "quality_rank": 3,
       "min_realm": "炼炁化神·炼己期",
       "pieces": [
@@ -1003,18 +1003,20 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "fagong",
-                "value": 20,
+                "value": 16,
                 "apply_type": "flat"
               }
             },
             {
-              "trigger": "equip",
-              "target": "self",
-              "effect_type": "buff",
+              "trigger": "on_skill",
+              "target": "enemy",
+              "effect_type": "debuff",
+              "duration_round": 1,
               "params": {
-                "attr_key": "max_lingqi",
-                "value": 50,
-                "apply_type": "flat"
+                "attr_key": "shanbi",
+                "value": 0.02,
+                "apply_type": "flat",
+                "chance": 0.25
               }
             }
           ],
@@ -1028,19 +1030,31 @@
               "target": "self",
               "effect_type": "buff",
               "params": {
-                "attr_key": "baoji",
-                "value": 0.02,
+                "attr_key": "lengque",
+                "value": 0.018,
                 "apply_type": "flat"
               }
             },
             {
-              "trigger": "equip",
-              "target": "self",
-              "effect_type": "buff",
+              "trigger": "on_crit",
+              "target": "enemy",
+              "effect_type": "damage",
               "params": {
-                "attr_key": "lengque",
-                "value": 0.02,
-                "apply_type": "flat"
+                "value": 0.22,
+                "damage_type": "reflect",
+                "chance": 0.45
+              }
+            },
+            {
+              "trigger": "on_skill",
+              "target": "enemy",
+              "effect_type": "debuff",
+              "duration_round": 2,
+              "params": {
+                "attr_key": "fafang",
+                "value": 12,
+                "apply_type": "flat",
+                "chance": 0.3
               }
             }
           ],
@@ -1055,18 +1069,20 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zengshang",
-                "value": 0.04,
+                "value": 0.03,
                 "apply_type": "flat"
               }
             },
             {
-              "trigger": "equip",
-              "target": "self",
-              "effect_type": "buff",
+              "trigger": "on_skill",
+              "target": "enemy",
+              "effect_type": "debuff",
+              "duration_round": 2,
               "params": {
-                "attr_key": "lingqi_huifu",
-                "value": 3,
-                "apply_type": "flat"
+                "attr_key": "kongzhi_kangxing",
+                "value": 0.02,
+                "apply_type": "flat",
+                "chance": 0.25
               }
             }
           ],
@@ -1081,21 +1097,23 @@
               "effect_type": "damage",
               "element": "shui",
               "params": {
-                "value": 90,
+                "value": 95,
                 "damage_type": "magic",
                 "scale_key": "fagong",
-                "scale_rate": 0.35,
-                "chance": 0.1
+                "scale_rate": 0.42,
+                "chance": 0.18
               }
             },
             {
               "trigger": "on_skill",
-              "target": "self",
-              "effect_type": "resource",
+              "target": "enemy",
+              "effect_type": "debuff",
+              "duration_round": 1,
               "params": {
-                "resource_type": "lingqi",
-                "value": 18,
-                "chance": 0.1
+                "attr_key": "sudu",
+                "value": 40,
+                "apply_type": "flat",
+                "chance": 0.35
               }
             }
           ],
@@ -1466,7 +1484,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "fagong",
-                "value": 30,
+                "value": 16,
                 "apply_type": "flat"
               }
             },
@@ -1476,7 +1494,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "lengque",
-                "value": 0.02,
+                "value": 0.022,
                 "apply_type": "flat"
               }
             }
@@ -1492,7 +1510,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "max_lingqi",
-                "value": 180,
+                "value": 60,
                 "apply_type": "flat"
               }
             },
@@ -1503,6 +1521,16 @@
               "params": {
                 "attr_key": "kongzhi_kangxing",
                 "value": 0.03,
+                "apply_type": "flat"
+              }
+            },
+            {
+              "trigger": "equip",
+              "target": "self",
+              "effect_type": "buff",
+              "params": {
+                "attr_key": "baoji",
+                "value": 0.018,
                 "apply_type": "flat"
               }
             }
@@ -1518,7 +1546,7 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "zengshang",
-                "value": 0.045,
+                "value": 0.047,
                 "apply_type": "flat"
               }
             },
@@ -1548,7 +1576,7 @@
                 "damage_type": "magic",
                 "scale_key": "fagong",
                 "scale_rate": 0.52,
-                "chance": 0.06
+                "chance": 0.1
               }
             }
           ],
@@ -1559,7 +1587,7 @@
     {
       "id": "set-guiyuan",
       "name": "归元套装",
-      "description": "归元守势，重在承伤、恢复与长线作战。",
+      "description": "归元以守转攻，靠受击回转与反震压制把战线拖入己方节奏。",
       "quality_rank": 4,
       "min_realm": "炼炁化神·结胎期",
       "pieces": [
@@ -1614,18 +1642,19 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "wufang",
-                "value": 22,
+                "value": 14,
                 "apply_type": "flat"
               }
             },
             {
-              "trigger": "equip",
+              "trigger": "on_be_hit",
               "target": "self",
-              "effect_type": "buff",
+              "effect_type": "heal",
               "params": {
-                "attr_key": "fafang",
-                "value": 22,
-                "apply_type": "flat"
+                "value": 0,
+                "scale_key": "max_qixue",
+                "scale_rate": 0.008,
+                "chance": 0.35
               }
             }
           ],
@@ -1640,18 +1669,18 @@
               "effect_type": "buff",
               "params": {
                 "attr_key": "max_qixue",
-                "value": 420,
+                "value": 260,
                 "apply_type": "flat"
               }
             },
             {
-              "trigger": "equip",
-              "target": "self",
-              "effect_type": "buff",
+              "trigger": "on_be_hit",
+              "target": "enemy",
+              "effect_type": "damage",
               "params": {
-                "attr_key": "zhaojia",
-                "value": 0.03,
-                "apply_type": "flat"
+                "value": 0.22,
+                "damage_type": "reflect",
+                "chance": 0.3
               }
             }
           ],
@@ -1665,19 +1694,33 @@
               "target": "self",
               "effect_type": "buff",
               "params": {
-                "attr_key": "kongzhi_kangxing",
-                "value": 0.04,
+                "attr_key": "zhaojia",
+                "value": 0.018,
                 "apply_type": "flat"
               }
             },
             {
-              "trigger": "equip",
-              "target": "self",
-              "effect_type": "buff",
+              "trigger": "on_be_hit",
+              "target": "enemy",
+              "effect_type": "debuff",
+              "duration_round": 1,
               "params": {
-                "attr_key": "kangbao",
-                "value": 0.04,
-                "apply_type": "flat"
+                "attr_key": "wugong",
+                "value": 20,
+                "apply_type": "flat",
+                "chance": 0.25
+              }
+            },
+            {
+              "trigger": "on_be_hit",
+              "target": "enemy",
+              "effect_type": "debuff",
+              "duration_round": 1,
+              "params": {
+                "attr_key": "sudu",
+                "value": 30,
+                "apply_type": "flat",
+                "chance": 0.3
               }
             }
           ],
@@ -1693,7 +1736,7 @@
               "params": {
                 "value": 0,
                 "scale_key": "max_qixue",
-                "scale_rate": 0.035
+                "scale_rate": 0.03
               }
             },
             {
@@ -1703,9 +1746,9 @@
               "duration_round": 1,
               "params": {
                 "attr_key": "wufang",
-                "value": 0.22,
+                "value": 0.18,
                 "apply_type": "percent",
-                "chance": 0.1
+                "chance": 0.18
               }
             }
           ],
