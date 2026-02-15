@@ -83,6 +83,18 @@ const asArray = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 const asObject = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 
+const asStringArray = (v: unknown): string[] => {
+  const values: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of asArray<unknown>(v)) {
+    const value = asString(raw).trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+  return values;
+};
+
 const isMainQuestChapterEnabled = (chapter: MainQuestChapterConfig | null): boolean => {
   return !!chapter && chapter.enabled !== false;
 };
@@ -294,6 +306,127 @@ const getFirstSection = async (): Promise<{ id: string; chapter_id: string } | n
   return { id: first.id, chapter_id: first.chapter_id };
 };
 
+/**
+ * 修复“历史角色在新章节上线后仍停留在 completed 状态”的问题。
+ * 输入：characterId（角色ID）
+ * 输出：无返回值；若满足条件则原子地把进度推进到下一章首节。
+ * 约束：
+ * 1. 仅在 section_status = completed 时触发，避免干扰正常进行中的主线流程。
+ * 2. 以“当前章节 + 已完成章节 + 已完成任务节反推章节”中的最大章节号为基线。
+ * 3. 找到基线之后的第一条可用任务节并切换为 not_started，函数可重复调用且幂等。
+ */
+export const ensureMainQuestProgressForNewChapters = async (characterId: number): Promise<void> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const progressRes = await client.query(
+      `SELECT current_chapter_id, current_section_id, section_status, completed_chapters, completed_sections
+       FROM character_main_quest_progress
+       WHERE character_id = $1 FOR UPDATE`,
+      [cid],
+    );
+
+    if (!progressRes.rows?.[0]) {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    const progress = progressRes.rows[0] as {
+      current_chapter_id?: unknown;
+      current_section_id?: unknown;
+      section_status?: unknown;
+      completed_chapters?: unknown;
+      completed_sections?: unknown;
+    };
+
+    if (asString(progress.section_status) !== 'completed') {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    const completedChapters = asStringArray(progress.completed_chapters);
+    const completedSections = asStringArray(progress.completed_sections);
+
+    const chapterIdSet = new Set<string>();
+    for (const chapterId of completedChapters) {
+      chapterIdSet.add(chapterId);
+    }
+
+    const currentChapterId = asString(progress.current_chapter_id).trim();
+    if (currentChapterId) {
+      chapterIdSet.add(currentChapterId);
+    }
+
+    const currentSectionId = asString(progress.current_section_id).trim();
+    if (currentSectionId) {
+      const currentSection = getMainQuestSectionById(currentSectionId);
+      const chapterIdFromCurrentSection = asString(currentSection?.chapter_id).trim();
+      if (chapterIdFromCurrentSection) {
+        chapterIdSet.add(chapterIdFromCurrentSection);
+      }
+    }
+
+    for (const sectionId of completedSections) {
+      const section = getMainQuestSectionById(sectionId);
+      const chapterIdFromSection = asString(section?.chapter_id).trim();
+      if (!chapterIdFromSection) continue;
+      chapterIdSet.add(chapterIdFromSection);
+    }
+
+    let latestCompletedChapterNum = 0;
+    for (const chapterId of chapterIdSet) {
+      const chapterNum = asNumber(getMainQuestChapterById(chapterId)?.chapter_num, 0);
+      if (chapterNum > latestCompletedChapterNum) latestCompletedChapterNum = chapterNum;
+    }
+
+    if (latestCompletedChapterNum <= 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    const nextSection = getEnabledMainQuestSectionsSorted().find((entry) => {
+      const chapterNum = asNumber(getMainQuestChapterById(entry.chapter_id)?.chapter_num, 0);
+      return chapterNum > latestCompletedChapterNum;
+    });
+
+    if (!nextSection) {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    const nextChapterId = asString(nextSection.chapter_id).trim();
+    const nextSectionId = asString(nextSection.id).trim();
+    if (!nextChapterId || !nextSectionId) {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    await client.query(
+      `UPDATE character_main_quest_progress
+       SET current_chapter_id = $2,
+           current_section_id = $3,
+           section_status = 'not_started',
+           objectives_progress = '{}'::jsonb,
+           dialogue_state = '{}'::jsonb,
+           completed_chapters = $4::jsonb,
+           completed_sections = $5::jsonb,
+           updated_at = NOW()
+       WHERE character_id = $1`,
+      [cid, nextChapterId, nextSectionId, JSON.stringify(completedChapters), JSON.stringify(completedSections)],
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('修复主线新增章节进度失败:', error);
+  } finally {
+    client.release();
+  }
+};
+
 type DbQueryLike = {
   query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
 };
@@ -371,8 +504,6 @@ export const getMainQuestProgress = async (characterId: number): Promise<MainQue
     };
   }
 
-  await syncCurrentSectionStaticProgress(cid);
-
   let progressRes = await query(`SELECT * FROM character_main_quest_progress WHERE character_id = $1`, [cid]);
   if (!progressRes.rows?.[0]) {
     const firstSection = await getFirstSection();
@@ -386,6 +517,11 @@ export const getMainQuestProgress = async (characterId: number): Promise<MainQue
       progressRes = await query(`SELECT * FROM character_main_quest_progress WHERE character_id = $1`, [cid]);
     }
   }
+
+  // 兼容历史数据：玩家曾“全章节完结”后，后续新章节上线时自动补推进到新章节首节。
+  await ensureMainQuestProgressForNewChapters(cid);
+  await syncCurrentSectionStaticProgress(cid);
+  progressRes = await query(`SELECT * FROM character_main_quest_progress WHERE character_id = $1`, [cid]);
 
   const progress = progressRes.rows?.[0] as
     | {
@@ -505,6 +641,8 @@ export const startDialogue = async (
 ): Promise<{ success: boolean; message: string; data?: { dialogueState: DialogueState } }> => {
   const cid = Number(characterId);
   if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+
+  await ensureMainQuestProgressForNewChapters(cid);
 
   const progressRes = await query(
     `SELECT current_section_id, section_status

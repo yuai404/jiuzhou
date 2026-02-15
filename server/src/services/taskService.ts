@@ -1,7 +1,7 @@
 import { pool, query } from '../config/database.js';
 import { createItem } from './itemService.js';
 import type { PoolClient } from 'pg';
-import { updateSectionProgress } from './mainQuestService.js';
+import { ensureMainQuestProgressForNewChapters, updateSectionProgress } from './mainQuestService.js';
 import { updateAchievementProgress } from './achievementService.js';
 import {
   getItemDefinitionById,
@@ -1307,6 +1307,7 @@ export const npcTalk = async (
   const nid = asNonEmptyString(npcId);
   if (!nid) return { success: false, message: 'NPC不存在' };
   await resetRecurringTaskProgressIfNeeded(cid);
+  await ensureMainQuestProgressForNewChapters(cid);
 
   const npcDef = getNpcDefinitions().find((entry) => entry.enabled !== false && entry.id === nid);
   if (!npcDef) return { success: false, message: 'NPC不存在' };
