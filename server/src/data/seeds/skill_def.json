@@ -3006,6 +3006,145 @@
       ],
       "sort_weight": 338,
       "enabled": true
+    },
+    {
+      "id": "sk-rift-crush",
+      "code": "sk_rift_crush",
+      "name": "裂壤崩拳",
+      "description": "高难胎元魇兽专属重击，撕裂单体并削弱护体。",
+      "icon": "/assets/skills/icon_skill_04.png",
+      "source_type": "innate",
+      "cost_lingqi": 22,
+      "cost_qixue": 0,
+      "cooldown": 3,
+      "target_type": "single_enemy",
+      "target_count": 1,
+      "damage_type": "physical",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "wugong",
+          "scaleRate": 1.7
+        },
+        {
+          "type": "debuff",
+          "buffId": "debuff-wufang-down",
+          "duration": 2,
+          "value": 0.28
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 84,
+      "sort_weight": 361,
+      "enabled": true
+    },
+    {
+      "id": "sk-quake-spines",
+      "code": "sk_quake_spines",
+      "name": "地棘骤雨",
+      "description": "高难胎元魇兽专属群攻，连续轰击并压低敌方速度。",
+      "icon": "/assets/skills/icon_skill_04.png",
+      "source_type": "innate",
+      "cost_lingqi": 26,
+      "cost_qixue": 0,
+      "cooldown": 5,
+      "target_type": "all_enemy",
+      "target_count": 1,
+      "damage_type": "magic",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "fagong",
+          "scaleRate": 0.64,
+          "hit_count": 2
+        },
+        {
+          "type": "debuff",
+          "buffId": "debuff-sudu-down",
+          "duration": 1,
+          "value": 2
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 80,
+      "sort_weight": 362,
+      "enabled": true
+    },
+    {
+      "id": "sk-core-lockdown",
+      "code": "sk_core_lockdown",
+      "name": "地核禁锢",
+      "description": "高难胎元魇兽专属脉冲，震伤全体并附带短暂定身。",
+      "icon": "/assets/skills/icon_skill_04.png",
+      "source_type": "innate",
+      "cost_lingqi": 28,
+      "cost_qixue": 0,
+      "cooldown": 6,
+      "target_type": "all_enemy",
+      "target_count": 1,
+      "damage_type": "magic",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "fagong",
+          "scaleRate": 0.92
+        },
+        {
+          "type": "control",
+          "controlType": "root",
+          "duration": 1,
+          "chance": 0.3
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 82,
+      "sort_weight": 363,
+      "enabled": true
+    },
+    {
+      "id": "sk-abyss-regen",
+      "code": "sk_abyss_regen",
+      "name": "魇核回生",
+      "description": "高难胎元魇兽专属续航，回补生命并短时强化攻防。",
+      "icon": "/assets/skills/icon_skill_04.png",
+      "source_type": "innate",
+      "cost_lingqi": 24,
+      "cost_qixue": 0,
+      "cooldown": 5,
+      "target_type": "self",
+      "target_count": 1,
+      "damage_type": "none",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "heal",
+          "valueType": "scale",
+          "scaleAttr": "max_qixue",
+          "scaleRate": 0.12
+        },
+        {
+          "type": "buff",
+          "buffId": "buff-zengshang-up",
+          "duration": 2,
+          "value": 0.18
+        },
+        {
+          "type": "buff",
+          "buffId": "buff-wufang-up",
+          "duration": 2,
+          "value": 0.2
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 73,
+      "sort_weight": 364,
+      "enabled": true
     }
   ]
 }

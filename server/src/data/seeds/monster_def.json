@@ -2873,16 +2873,16 @@
       ],
       "ai_profile": {
         "skills": [
-          "sk-earth-crush",
-          "sk-crystal-rain",
-          "sk-core-pulse",
-          "sk-dark-heal"
+          "sk-rift-crush",
+          "sk-quake-spines",
+          "sk-core-lockdown",
+          "sk-abyss-regen"
         ],
         "skill_weights": {
-          "sk-earth-crush": 34,
-          "sk-crystal-rain": 24,
-          "sk-core-pulse": 22,
-          "sk-dark-heal": 20
+          "sk-rift-crush": 34,
+          "sk-quake-spines": 24,
+          "sk-core-lockdown": 22,
+          "sk-abyss-regen": 20
         },
         "phase_triggers": [
           {
