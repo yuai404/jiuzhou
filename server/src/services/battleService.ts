@@ -53,6 +53,7 @@ import {
   type MonsterPhaseTriggerConfig,
   type SkillDefConfig,
 } from './staticConfigLoader.js';
+import { normalizeRealmKeepingUnknown } from './shared/realmOrder.js';
 
 // 活跃战斗缓存
 const activeBattles = new Map<string, BattleEngine>();
@@ -1778,6 +1779,7 @@ async function finishBattle(
       userId: participantUserId,
       characterId: computed.id,
       nickname: computed.nickname,
+      realm: normalizeRealmKeepingUnknown(computed.realm, computed.sub_realm),
       fuyuan: Number(computed.fuyuan ?? 1),
     });
   }

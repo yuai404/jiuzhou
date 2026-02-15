@@ -32,6 +32,7 @@ import {
 } from './shared/dropQuantityMultiplier.js';
 import { lockCharacterInventoryMutexesTx } from './inventoryMutex.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { getRealmOrderIndex } from './shared/realmOrder.js';
 
 // ============================================
 // 类型定义
@@ -67,6 +68,7 @@ type RollDropsOptions = {
   isDungeonBattle?: boolean;
   monsterKind?: MonsterKind;
   monsterRealm?: string | null;
+  playerRealm?: string | null;
 };
 
 type DistributeBattleRewardsOptions = {
@@ -115,8 +117,36 @@ export interface BattleParticipant {
   userId: number;
   characterId: number;
   nickname: string;
+  realm: string;
   fuyuan?: number;
 }
+
+const clamp01 = (value: number): number => {
+  return Math.max(0, Math.min(1, value));
+};
+
+/**
+ * 统一境界压制倍率：
+ * - 玩家境界 <= 怪物境界+1：不压制（1）
+ * - 每多超出 1 级：倍率乘 0.5
+ * - 任一方境界无法识别：不压制（1）
+ */
+const getRealmSuppressionMultiplier = (
+  playerRealmRaw: string | null | undefined,
+  monsterRealmRaw: string | null | undefined,
+): number => {
+  const playerRealm = typeof playerRealmRaw === 'string' ? playerRealmRaw.trim() : '';
+  const monsterRealm = typeof monsterRealmRaw === 'string' ? monsterRealmRaw.trim() : '';
+  if (!playerRealm || !monsterRealm) return 1;
+
+  const playerRank = getRealmOrderIndex(playerRealm);
+  const monsterRank = getRealmOrderIndex(monsterRealm);
+  if (playerRank < 0 || monsterRank < 0) return 1;
+
+  const extraLevels = playerRank - (monsterRank + 1);
+  if (extraLevels <= 0) return 1;
+  return 0.5 ** extraLevels;
+};
 
 // ============================================
 // 掉落池查询
@@ -166,14 +196,18 @@ export const rollDrops = (
   const isDungeonBattle = options.isDungeonBattle === true;
   const monsterKind = normalizeMonsterKind(options.monsterKind);
   const monsterRealm = typeof options.monsterRealm === 'string' ? options.monsterRealm : null;
+  const playerRealm = typeof options.playerRealm === 'string' ? options.playerRealm : null;
+  const realmSuppressionMultiplier = getRealmSuppressionMultiplier(playerRealm, monsterRealm);
   
   if (dropPool.mode === 'prob') {
     // 概率模式：每个条目独立判定
     for (const entry of dropPool.entries) {
-      const effectiveChance = getAdjustedChance(entry.chance * chanceMultiplier, entry.sourceType, entry.sourcePoolId, {
-        isDungeonBattle,
-        monsterKind,
-      });
+      const effectiveChance = clamp01(
+        getAdjustedChance(entry.chance * chanceMultiplier, entry.sourceType, entry.sourcePoolId, {
+          isDungeonBattle,
+          monsterKind,
+        }) * realmSuppressionMultiplier,
+      );
       if (Math.random() < effectiveChance) {
         const adjustedQuantity = getAdjustedQuantity(
           randomInt(entry.qty_min, entry.qty_max),
@@ -204,6 +238,8 @@ export const rollDrops = (
       });
     }, 0);
     if (totalWeight > 0) {
+      // 权重池原逻辑是“必出其一”，这里先做一次整体触发判定，再进入选条目流程。
+      if (Math.random() >= realmSuppressionMultiplier) return results;
       let roll = Math.random() * totalWeight;
       for (const entry of dropPool.entries) {
         roll -= getAdjustedWeight(entry.weight, entry.sourceType, entry.sourcePoolId, {
@@ -344,17 +380,6 @@ export const distributeBattleRewards = async (
       );
     }
     
-    // 1. 计算总经验和银两
-    let totalExp = 0;
-    let totalSilver = 0;
-    
-    for (const monster of monsters) {
-      totalExp += monster.exp_reward || 0;
-      const silverMin = monster.silver_reward_min || 0;
-      const silverMax = monster.silver_reward_max || 0;
-      totalSilver += randomInt(silverMin, silverMax);
-    }
-    
     const stableQualityWeightsKey = (weights?: Record<string, number>): string => {
       if (!weights) return '';
       return JSON.stringify(
@@ -369,6 +394,32 @@ export const distributeBattleRewards = async (
 
     const participantCount = participants.length;
     const isDungeonBattle = options.isDungeonBattle === true;
+    const baseExpAcc = new Map<number, number>();
+    const baseSilverAcc = new Map<number, number>();
+    for (const participant of participants) {
+      baseExpAcc.set(participant.characterId, 0);
+      baseSilverAcc.set(participant.characterId, 0);
+    }
+
+    // 1. 先按“怪物逐条 + 个人境界压制”累加经验与基础银两。
+    for (const monster of monsters) {
+      const monsterExp = Math.max(0, Number(monster.exp_reward) || 0);
+      const silverMin = Math.max(0, Number(monster.silver_reward_min) || 0);
+      const silverMax = Math.max(silverMin, Number(monster.silver_reward_max) || silverMin);
+      const silverRoll = randomInt(silverMin, silverMax);
+      const expShare = monsterExp / participantCount;
+      const silverShare = silverRoll / participantCount;
+
+      for (const participant of participants) {
+        const penalty = getRealmSuppressionMultiplier(participant.realm, monster.realm);
+        baseExpAcc.set(participant.characterId, (baseExpAcc.get(participant.characterId) ?? 0) + expShare * penalty);
+        baseSilverAcc.set(
+          participant.characterId,
+          (baseSilverAcc.get(participant.characterId) ?? 0) + silverShare * penalty,
+        );
+      }
+    }
+
     const mergedDropsByReceiver = new Map<
       string,
       { receiver: BattleParticipant; drop: DropResult; receiverFuyuan: number }
@@ -388,6 +439,7 @@ export const distributeBattleRewards = async (
         isDungeonBattle,
         monsterKind: normalizeMonsterKind(monster.kind),
         monsterRealm: monster.realm,
+        playerRealm: receiver.realm,
       });
       for (const drop of drops) {
         const key = `${receiver.characterId}|${drop.itemDefId}|${drop.bindType}|${stableQualityWeightsKey(drop.qualityWeights)}`;
@@ -400,27 +452,32 @@ export const distributeBattleRewards = async (
       }
     }
     
-    // 3. 分发经验和银两（平分）
-    const expPerPlayer = Math.floor(totalExp / participantCount);
-    const silverPerPlayer = Math.floor(totalSilver / participantCount);
+    // 3. 分发经验和银两（按个人境界压制后的累计值结算）
+    let totalExp = 0;
+    let totalSilver = 0;
     
     const perPlayerRewards: DistributeResult['perPlayerRewards'] = [];
     
     for (const participant of participants) {
+      const expGain = Math.max(0, Math.floor(baseExpAcc.get(participant.characterId) ?? 0));
+      const silverGain = Math.max(0, Math.floor(baseSilverAcc.get(participant.characterId) ?? 0));
+
       // 更新角色经验和银两
       await client.query(`
         UPDATE characters 
         SET exp = exp + $1, silver = silver + $2, updated_at = NOW()
         WHERE id = $3
-      `, [expPerPlayer, silverPerPlayer, participant.characterId]);
+      `, [expGain, silverGain, participant.characterId]);
       
       perPlayerRewards.push({
         characterId: participant.characterId,
         userId: participant.userId,
-        exp: expPerPlayer,
-        silver: silverPerPlayer,
+        exp: expGain,
+        silver: silverGain,
         items: [],
       });
+      totalExp += expGain;
+      totalSilver += silverGain;
     }
     
     // 4. 分发物品（组队随机分配，单人全部获得）
@@ -705,9 +762,13 @@ export const quickDistributeRewards = async (
     .map((entry) => ({
       id: entry.id,
       name: entry.name,
+      realm: entry.realm ?? '凡人',
+      element: entry.element ?? 'none',
+      base_attrs: entry.base_attrs ?? {},
       exp_reward: Number(entry.exp_reward ?? 0),
       silver_reward_min: Number(entry.silver_reward_min ?? 0),
       silver_reward_max: Number(entry.silver_reward_max ?? 0),
+      kind: entry.kind,
       drop_pool_id: entry.drop_pool_id ?? null,
     })) as MonsterData[];
   
