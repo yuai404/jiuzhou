@@ -4,16 +4,20 @@ import { withRouteError } from '../middleware/routeError.js';
  * 九州修仙录 - 背包路由
  */
 import { requireCharacter } from '../middleware/auth.js';
-import inventoryService, { InventoryLocation } from '../services/inventoryService.js';
-import itemService from '../services/itemService.js';
-import craftService from '../services/craftService.js';
-import gemSynthesisService from '../services/gemSynthesisService.js';
+import {
+  craftService,
+  gemSynthesisService,
+  inventoryService,
+  type InventoryLocation,
+  itemService,
+} from '../domains/inventory/index.js';
 import { query } from '../config/database.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import {
   buildEquipmentDisplayBaseAttrs,
 } from '../services/equipmentGrowthRules.js';
 import { resolveQualityRankFromName } from '../services/shared/itemQuality.js';
+import { parsePositiveInt } from '../services/shared/httpParam.js';
 import { getCharacterComputedByCharacterId } from '../services/characterComputedService.js';
 import { getItemDefinitionById, getItemDefinitionsByIds, getItemSetDefinitions } from '../services/staticConfigLoader.js';
 
@@ -28,13 +32,6 @@ const isAllowedLocation = (value: unknown): value is InventoryLocation =>
 
 const isAllowedSlottedLocation = (value: unknown): value is (typeof allowedSlottedLocations)[number] =>
   typeof value === 'string' && (allowedSlottedLocations as readonly string[]).includes(value);
-
-const parsePositiveInt = (value: unknown): number | null => {
-  if (value === undefined || value === null) return null;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) return null;
-  return parsed;
-};
 
 const parseOptionalPositiveInt = (value: unknown): number | undefined => {
   if (value === undefined || value === null || value === '') return undefined;

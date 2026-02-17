@@ -20,6 +20,7 @@ import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getItemDefinitionsByIds, getItemSetDefinitions, getTechniqueLayerDefinitions, getTitleDefinitions } from './staticConfigLoader.js';
 import { extractFlatAffixDeltas } from './shared/affixModifier.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { CHARACTER_BASE_COLUMNS_SQL } from './shared/sqlFragments.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -831,29 +832,7 @@ const selectBaseCharacterByUserId = async (userId: number): Promise<CharacterBas
   const result = await query(
     `
       SELECT
-        id,
-        user_id,
-        nickname,
-        title,
-        gender,
-        avatar,
-        auto_cast_skills,
-        auto_disassemble_enabled,
-        auto_disassemble_rules,
-        spirit_stones,
-        silver,
-        stamina,
-        realm,
-        sub_realm,
-        exp,
-        attribute_points,
-        jing,
-        qi,
-        shen,
-        attribute_type,
-        attribute_element,
-        current_map_id,
-        current_room_id
+        ${CHARACTER_BASE_COLUMNS_SQL}
       FROM characters
       WHERE user_id = $1
       LIMIT 1
@@ -868,29 +847,7 @@ const selectBaseCharacterByCharacterId = async (characterId: number): Promise<Ch
   const result = await query(
     `
       SELECT
-        id,
-        user_id,
-        nickname,
-        title,
-        gender,
-        avatar,
-        auto_cast_skills,
-        auto_disassemble_enabled,
-        auto_disassemble_rules,
-        spirit_stones,
-        silver,
-        stamina,
-        realm,
-        sub_realm,
-        exp,
-        attribute_points,
-        jing,
-        qi,
-        shen,
-        attribute_type,
-        attribute_element,
-        current_map_id,
-        current_room_id
+        ${CHARACTER_BASE_COLUMNS_SQL}
       FROM characters
       WHERE id = $1
       LIMIT 1
@@ -986,29 +943,7 @@ export const getCharacterComputedBatchByCharacterIds = async (
   const result = await query(
     `
       SELECT
-        id,
-        user_id,
-        nickname,
-        title,
-        gender,
-        avatar,
-        auto_cast_skills,
-        auto_disassemble_enabled,
-        auto_disassemble_rules,
-        spirit_stones,
-        silver,
-        stamina,
-        realm,
-        sub_realm,
-        exp,
-        attribute_points,
-        jing,
-        qi,
-        shen,
-        attribute_type,
-        attribute_element,
-        current_map_id,
-        current_room_id
+        ${CHARACTER_BASE_COLUMNS_SQL}
       FROM characters
       WHERE id = ANY($1)
     `,

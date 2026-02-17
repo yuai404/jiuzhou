@@ -4,6 +4,7 @@ import { requireCharacter, getOptionalUserId } from '../middleware/auth.js';
 import { getEnabledMaps, getMapDefById, getRoomInMap, getRoomsInMap, getWorldMap } from '../services/mapService.js';
 import { getAreaObjects, getRoomObjects, gatherRoomResource, pickupRoomItem } from '../services/roomObjectService.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
+import { getSingleParam } from '../services/shared/httpParam.js';
 
 const router = Router();
 
@@ -18,8 +19,7 @@ router.get('/world', async (_req: Request, res: Response) => {
 
 router.get('/area/:area/objects', async (req: Request, res: Response) => {
   try {
-    const areaParam = req.params.area;
-    const area = (Array.isArray(areaParam) ? areaParam[0] : areaParam) as Parameters<typeof getAreaObjects>[0];
+    const area = getSingleParam(req.params.area) as Parameters<typeof getAreaObjects>[0];
     const objects = await getAreaObjects(area);
     res.json({ success: true, data: { area, objects } });
   } catch (error) {
@@ -38,8 +38,7 @@ router.get('/maps', async (_req: Request, res: Response) => {
 
 router.get('/:mapId', async (req: Request, res: Response) => {
   try {
-    const mapIdParam = req.params.mapId;
-    const mapId = Array.isArray(mapIdParam) ? mapIdParam[0] : mapIdParam;
+    const mapId = getSingleParam(req.params.mapId);
     const map = await getMapDefById(mapId);
     if (!map || map.enabled !== true) {
       res.status(404).json({ success: false, message: '地图不存在' });
@@ -54,10 +53,8 @@ router.get('/:mapId', async (req: Request, res: Response) => {
 
 router.get('/:mapId/rooms/:roomId', async (req: Request, res: Response) => {
   try {
-    const mapIdParam = req.params.mapId;
-    const roomIdParam = req.params.roomId;
-    const mapId = Array.isArray(mapIdParam) ? mapIdParam[0] : mapIdParam;
-    const roomId = Array.isArray(roomIdParam) ? roomIdParam[0] : roomIdParam;
+    const mapId = getSingleParam(req.params.mapId);
+    const roomId = getSingleParam(req.params.roomId);
     const room = await getRoomInMap(mapId, roomId);
     if (!room) {
       res.status(404).json({ success: false, message: '房间不存在' });
@@ -71,10 +68,8 @@ router.get('/:mapId/rooms/:roomId', async (req: Request, res: Response) => {
 
 router.get('/:mapId/rooms/:roomId/objects', async (req: Request, res: Response) => {
   try {
-    const mapIdParam = req.params.mapId;
-    const roomIdParam = req.params.roomId;
-    const mapId = Array.isArray(mapIdParam) ? mapIdParam[0] : mapIdParam;
-    const roomId = Array.isArray(roomIdParam) ? roomIdParam[0] : roomIdParam;
+    const mapId = getSingleParam(req.params.mapId);
+    const roomId = getSingleParam(req.params.roomId);
     const userId = getOptionalUserId(req);
     const objects = await getRoomObjects(mapId, roomId, userId);
     res.json({ success: true, data: { mapId, roomId, objects } });
@@ -85,12 +80,9 @@ router.get('/:mapId/rooms/:roomId/objects', async (req: Request, res: Response) 
 
 router.post('/:mapId/rooms/:roomId/resources/:resourceId/gather', requireCharacter, async (req: Request, res: Response) => {
   try {
-    const mapIdParam = req.params.mapId;
-    const roomIdParam = req.params.roomId;
-    const resourceIdParam = req.params.resourceId;
-    const mapId = Array.isArray(mapIdParam) ? mapIdParam[0] : mapIdParam;
-    const roomId = Array.isArray(roomIdParam) ? roomIdParam[0] : roomIdParam;
-    const resourceId = Array.isArray(resourceIdParam) ? resourceIdParam[0] : resourceIdParam;
+    const mapId = getSingleParam(req.params.mapId);
+    const roomId = getSingleParam(req.params.roomId);
+    const resourceId = getSingleParam(req.params.resourceId);
     const userId = req.userId!;
     const characterId = req.characterId!;
 
@@ -109,12 +101,9 @@ router.post('/:mapId/rooms/:roomId/resources/:resourceId/gather', requireCharact
 
 router.post('/:mapId/rooms/:roomId/items/:itemDefId/pickup', requireCharacter, async (req: Request, res: Response) => {
   try {
-    const mapIdParam = req.params.mapId;
-    const roomIdParam = req.params.roomId;
-    const itemDefIdParam = req.params.itemDefId;
-    const mapId = Array.isArray(mapIdParam) ? mapIdParam[0] : mapIdParam;
-    const roomId = Array.isArray(roomIdParam) ? roomIdParam[0] : roomIdParam;
-    const itemDefId = Array.isArray(itemDefIdParam) ? itemDefIdParam[0] : itemDefIdParam;
+    const mapId = getSingleParam(req.params.mapId);
+    const roomId = getSingleParam(req.params.roomId);
+    const itemDefId = getSingleParam(req.params.itemDefId);
     const userId = req.userId!;
     const characterId = req.characterId!;
 

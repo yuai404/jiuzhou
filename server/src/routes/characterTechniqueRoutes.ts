@@ -19,9 +19,10 @@ import {
   unequipSkill,
   calculateTechniquePassives,
   getCharacterTechniqueStatus
-} from '../services/characterTechniqueService.js';
+} from '../domains/character/index.js';
 import { query } from '../config/database.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
+import { getSingleParam, parsePositiveInt } from '../services/shared/httpParam.js';
 
 const router = Router();
 
@@ -30,16 +31,14 @@ interface AuthRequest extends Request<{ characterId: string; techniqueId?: strin
   userId?: number;
 }
 
-// 辅助函数：安全获取字符串参数
-const getStringParam = (param: string | string[] | undefined): string => {
-  if (Array.isArray(param)) return param[0] || '';
-  return param || '';
+const parseCharacterIdParam = (req: Request): number | null => {
+  return parsePositiveInt(getSingleParam(req.params.characterId));
 };
 
 
 const characterOwnershipMiddleware = async (req: Request, res: Response, next: () => void) => {
-  const characterId = parseInt(getStringParam(req.params.characterId));
-  if (isNaN(characterId)) {
+  const characterId = parseCharacterIdParam(req);
+  if (characterId === null) {
     res.status(400).json({ success: false, message: '无效的角色ID' });
     return;
   }
@@ -68,8 +67,8 @@ router.use('/:characterId', requireAuth, characterOwnershipMiddleware);
 // ============================================
 router.get('/:characterId/technique/status', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -87,8 +86,8 @@ router.get('/:characterId/technique/status', async (req: Request, res: Response)
 // ============================================
 router.get('/:characterId/techniques', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -106,8 +105,8 @@ router.get('/:characterId/techniques', async (req: Request, res: Response) => {
 // ============================================
 router.get('/:characterId/techniques/equipped', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -126,8 +125,8 @@ router.get('/:characterId/techniques/equipped', async (req: Request, res: Respon
 // ============================================
 router.post('/:characterId/technique/learn', async (req: AuthRequest, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -158,10 +157,10 @@ router.post('/:characterId/technique/learn', async (req: AuthRequest, res: Respo
 // ============================================
 router.get('/:characterId/technique/:techniqueId/upgrade-cost', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    const techniqueId = getStringParam(req.params.techniqueId);
+    const characterId = parseCharacterIdParam(req);
+    const techniqueId = getSingleParam(req.params.techniqueId);
     
-    if (isNaN(characterId)) {
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -180,10 +179,10 @@ router.get('/:characterId/technique/:techniqueId/upgrade-cost', async (req: Requ
 // ============================================
 router.post('/:characterId/technique/:techniqueId/upgrade', async (req: AuthRequest, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    const techniqueId = getStringParam(req.params.techniqueId);
+    const characterId = parseCharacterIdParam(req);
+    const techniqueId = getSingleParam(req.params.techniqueId);
     
-    if (isNaN(characterId)) {
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -212,8 +211,8 @@ router.post('/:characterId/technique/:techniqueId/upgrade', async (req: AuthRequ
 // ============================================
 router.post('/:characterId/technique/equip', async (req: AuthRequest, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -250,8 +249,8 @@ router.post('/:characterId/technique/equip', async (req: AuthRequest, res: Respo
 // ============================================
 router.post('/:characterId/technique/unequip', async (req: AuthRequest, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -282,8 +281,8 @@ router.post('/:characterId/technique/unequip', async (req: AuthRequest, res: Res
 // ============================================
 router.get('/:characterId/skills/available', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -301,8 +300,8 @@ router.get('/:characterId/skills/available', async (req: Request, res: Response)
 // ============================================
 router.get('/:characterId/skills/equipped', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -322,8 +321,8 @@ router.get('/:characterId/skills/equipped', async (req: Request, res: Response) 
 // ============================================
 router.post('/:characterId/skill/equip', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -348,8 +347,8 @@ router.post('/:characterId/skill/equip', async (req: Request, res: Response) => 
 // ============================================
 router.post('/:characterId/skill/unequip', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }
@@ -373,8 +372,8 @@ router.post('/:characterId/skill/unequip', async (req: Request, res: Response) =
 // ============================================
 router.get('/:characterId/technique/passives', async (req: Request, res: Response) => {
   try {
-    const characterId = parseInt(getStringParam(req.params.characterId));
-    if (isNaN(characterId)) {
+    const characterId = parseCharacterIdParam(req);
+    if (characterId === null) {
       res.status(400).json({ success: false, message: '无效的角色ID' });
       return;
     }

@@ -12,7 +12,8 @@ import {
   nextDungeonInstance,
   startDungeonInstance,
   type DungeonType,
-} from '../services/dungeonService.js';
+} from '../domains/dungeon/index.js';
+import { getSingleParam, getSingleQueryValue } from '../services/shared/httpParam.js';
 
 const router = Router();
 
@@ -34,9 +35,11 @@ router.get('/categories', async (_req: Request, res: Response) => {
 
 router.get('/list', async (req: Request, res: Response) => {
   try {
-    const type = toType(req.query.type);
-    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
-    const realm = typeof req.query.realm === 'string' ? req.query.realm : undefined;
+    const type = toType(getSingleQueryValue(req.query.type));
+    const qValue = getSingleQueryValue(req.query.q).trim();
+    const realmValue = getSingleQueryValue(req.query.realm).trim();
+    const q = qValue || undefined;
+    const realm = realmValue || undefined;
     const dungeons = await getDungeonList({ type, q, realm });
     res.json({ success: true, data: { dungeons } });
   } catch (error) {
@@ -46,12 +49,12 @@ router.get('/list', async (req: Request, res: Response) => {
 
 router.get('/preview/:id', async (req: Request, res: Response) => {
   try {
-    const idParam = req.params.id;
-    const id = Array.isArray(idParam) ? idParam[0] : idParam;
-    const rankRaw = typeof req.query.rank === 'string' ? req.query.rank : Array.isArray(req.query.rank) ? req.query.rank[0] : '';
-    const rank = rankRaw ? Number(rankRaw) : 1;
+    const id = getSingleParam(req.params.id);
+    const rankRaw = getSingleQueryValue(req.query.rank).trim();
+    const rankCandidate = rankRaw ? Number(rankRaw) : 1;
+    const rank = Number.isFinite(rankCandidate) ? rankCandidate : 1;
     const userId = getOptionalUserId(req);
-    const preview = await getDungeonPreview(id, Number.isFinite(rank) ? rank : 1, userId);
+    const preview = await getDungeonPreview(id, rank, userId);
     if (!preview) {
       res.status(404).json({ success: false, message: '秘境不存在' });
       return;
@@ -137,8 +140,7 @@ router.post('/instance/next', requireAuth, async (req: Request, res: Response) =
 router.get('/instance/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const idParam = req.params.id;
-    const id = Array.isArray(idParam) ? idParam[0] : idParam;
+    const id = getSingleParam(req.params.id);
     if (!id) {
       res.status(400).json({ success: false, message: '缺少实例ID' });
       return;

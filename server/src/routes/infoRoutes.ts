@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { withRouteError } from '../middleware/routeError.js';
 import { getInfoTargetDetail } from '../services/infoTargetService.js';
+import { getSingleParam } from '../services/shared/httpParam.js';
 
 const router = Router();
 
@@ -10,10 +11,8 @@ const isAllowedType = (value: string): value is 'npc' | 'monster' | 'item' | 'pl
 
 router.get('/:type/:id', async (req: Request, res: Response) => {
   try {
-    const typeParam = req.params.type;
-    const idParam = req.params.id;
-    const type = Array.isArray(typeParam) ? typeParam[0] : typeParam;
-    const id = Array.isArray(idParam) ? idParam[0] : idParam;
+    const type = getSingleParam(req.params.type);
+    const id = getSingleParam(req.params.id);
 
     if (!type || !id || !isAllowedType(type)) {
       res.status(400).json({ success: false, message: '参数错误' });
@@ -33,4 +32,3 @@ router.get('/:type/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
-

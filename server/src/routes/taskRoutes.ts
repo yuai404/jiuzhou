@@ -10,8 +10,9 @@ import {
   setTaskTracked,
   submitTask,
   type TaskCategory,
-} from '../services/taskService.js';
+} from '../domains/task/index.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
+import { getSingleQueryValue } from '../services/shared/httpParam.js';
 
 const router = Router();
 
@@ -21,7 +22,8 @@ router.get('/overview', requireCharacter, async (req: Request, res: Response) =>
     const userId = req.userId!;
     const characterId = req.characterId!;
 
-    const category = typeof req.query.category === 'string' ? (req.query.category as TaskCategory) : undefined;
+    const categoryValue = getSingleQueryValue(req.query.category);
+    const category = categoryValue ? (categoryValue as TaskCategory) : undefined;
     const data = await getTaskOverview(characterId, category);
     return res.json({ success: true, message: 'ok', data });
   } catch (error) {

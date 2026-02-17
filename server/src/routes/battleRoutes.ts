@@ -5,7 +5,7 @@ import { Router, Request, Response } from 'express';
 
 import { withRouteError } from '../middleware/routeError.js';
 import { requireAuth } from '../middleware/auth.js';
-import battleService from '../services/battleService.js';
+import { battleService } from '../domains/battle/index.js';
 
 const router = Router();
 

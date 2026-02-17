@@ -8,7 +8,7 @@ import {
   updateCharacterAutoCastSkills,
   updateCharacterAutoDisassembleSettings,
   updateCharacterPosition,
-} from '../services/characterService.js';
+} from '../domains/character/index.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 
 const router = Router();

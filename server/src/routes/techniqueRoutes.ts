@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { withRouteError } from '../middleware/routeError.js';
 import { getEnabledTechniqueDefs, getTechniqueDetailById } from '../services/techniqueService.js';
+import { getSingleParam } from '../services/shared/httpParam.js';
 
 const router = Router();
 
@@ -15,8 +16,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.get('/:techniqueId', async (req: Request, res: Response) => {
   try {
-    const techniqueIdParam = req.params.techniqueId;
-    const techniqueId = Array.isArray(techniqueIdParam) ? techniqueIdParam[0] : techniqueIdParam;
+    const techniqueId = getSingleParam(req.params.techniqueId);
     const detail = await getTechniqueDetailById(techniqueId);
     if (!detail) {
       res.status(404).json({ success: false, message: '未找到功法' });
