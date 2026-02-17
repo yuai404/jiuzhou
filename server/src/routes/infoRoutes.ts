@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { withRouteError } from '../middleware/routeError.js';
-import { getInfoTargetDetail } from '../services/infoModalService.js';
+import { getInfoTargetDetail } from '../services/infoTargetService.js';
 
 const router = Router();
 

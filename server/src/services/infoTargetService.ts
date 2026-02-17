@@ -1,3 +1,16 @@
+/**
+ * 信息目标详情服务
+ *
+ * 作用：
+ * - 聚合 NPC / 怪物 / 物品 / 玩家 的信息面板数据
+ *
+ * 输入：
+ * - type: 目标类型（npc | monster | item | player）
+ * - id: 目标唯一标识（玩家为角色ID字符串）
+ *
+ * 输出：
+ * - MapObjectDto | null（找不到目标时返回 null）
+ */
 import { query } from '../config/database.js';
 import type { MapObjectDto } from './roomObjectService.js';
 import {
