@@ -24,9 +24,9 @@ import {
   type DropPoolEntryConfig,
 } from './staticConfigLoader.js';
 
-export type ResolvedDropPoolMode = 'prob' | 'weight';
+type ResolvedDropPoolMode = 'prob' | 'weight';
 
-export type ResolvedDropPoolEntry = {
+type ResolvedDropPoolEntry = {
   item_def_id: string;
   chance: number;
   weight: number;
@@ -41,7 +41,7 @@ export type ResolvedDropPoolEntry = {
   sourcePoolId: string;
 };
 
-export type ResolvedDropPool = {
+type ResolvedDropPool = {
   id: string;
   name: string;
   mode: ResolvedDropPoolMode;

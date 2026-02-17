@@ -92,7 +92,7 @@ export const getActiveBattlePassSeasonId = async (now: Date = new Date()): Promi
   return startAt.getTime() <= now.getTime() && endAt.getTime() > now.getTime() ? season.id : null;
 };
 
-export const getFallbackBattlePassSeasonId = async (): Promise<string | null> => {
+const getFallbackBattlePassSeasonId = async (): Promise<string | null> => {
   return getBattlePassStaticConfig()?.season?.enabled === false ? null : getBattlePassStaticConfig()?.season?.id ?? null;
 };
 

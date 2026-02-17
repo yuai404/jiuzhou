@@ -4,8 +4,6 @@ import { initItemTables } from './itemTables.js';
 import { initInventoryTable } from './inventoryTable.js';
 import { initSignInTable } from './signInTable.js';
 import { initMailTable } from './mailTable.js';
-import { initNpcTable } from './npcTable.js';
-import { initMonsterTables } from './monsterTable.js';
 import { initMapTable } from './mapTable.js';
 import { initTechniqueTables } from './techniqueTable.js';
 import { initTeamTables } from './teamTable.js';
@@ -110,12 +108,6 @@ export const initTables = async (): Promise<void> => {
     
     // 初始化邮件系统表
     await initMailTable();
-    
-    // 初始化NPC表
-    await initNpcTable();
-    
-    // 初始化怪物系统表（怪物定义、刷新规则、掉落池）
-    await initMonsterTables();
     
     // 初始化地图表
     await initMapTable();

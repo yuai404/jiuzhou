@@ -49,7 +49,7 @@ const clampInt = (value: unknown, min: number, max: number): number => {
   return floored;
 };
 
-export const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
+const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
   if (!Array.isArray(effectDefs)) return false;
   return effectDefs.some((raw) => {
     if (!raw || typeof raw !== 'object') return false;
@@ -58,7 +58,7 @@ export const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
   });
 };
 
-export const isTechniqueBookItem = (item: { subCategory: string | null; effectDefs: unknown }): boolean => {
+const isTechniqueBookItem = (item: { subCategory: string | null; effectDefs: unknown }): boolean => {
   const subCategory = String(item.subCategory || '').trim();
   if (subCategory === 'technique_book') return true;
   return hasLearnTechniqueEffect(item.effectDefs);
