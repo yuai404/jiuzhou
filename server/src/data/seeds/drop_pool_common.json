@@ -9,21 +9,21 @@
       "entries": [
         {
           "item_def_id": "box-001",
-          "chance": 0.02,
+          "chance": 0.01,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
         },
         {
           "item_def_id": "enhance-001",
-          "chance": 0.02,
+          "chance": 0.01,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
         },
         {
           "item_def_id": "enhance-002",
-          "chance": 0.02,
+          "chance": 0.01,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
