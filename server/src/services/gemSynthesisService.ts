@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import { pool, query } from '../config/database.js';
 import { randomInt } from 'crypto';
-import { addItemToInventoryTx } from './inventoryService.js';
+import { addItemToInventoryTx } from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { getCharacterComputedByCharacterId } from './characterComputedService.js';
 import { getItemDefinitionsByIds, getItemRecipeDefinitionsByType } from './staticConfigLoader.js';

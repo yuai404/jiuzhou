@@ -11,7 +11,7 @@
  */
 import { query, pool } from '../config/database.js';
 import { createItem } from './itemService.js';
-import { getInventoryInfoWithClient } from './inventoryService.js';
+import { getInventoryInfoWithClient } from './inventory/index.js';
 import { recordCollectItemEvent } from './taskService.js';
 import { getItemDefinitionsByIds } from './staticConfigLoader.js';
 

@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg';
 import { pool, query } from '../config/database.js';
-import { addItemToInventoryTx } from './inventoryService.js';
+import { addItemToInventoryTx } from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { recordCraftItemEvent } from './taskService.js';
 import { REALM_ORDER } from './shared/realmRules.js';

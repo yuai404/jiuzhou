@@ -1,5 +1,5 @@
 import { query, pool } from '../config/database.js';
-import { addItemToInventoryTx } from './inventoryService.js';
+import { addItemToInventoryTx } from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { getBattlePassStaticConfig } from './staticConfigLoader.js';
 import { getCharacterIdByUserId as getCharacterIdByUserIdShared } from './shared/characterId.js';

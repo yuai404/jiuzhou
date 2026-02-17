@@ -10,7 +10,7 @@ import {
   getChapterList,
   getSectionList,
   setMainQuestTracked
-} from '../services/mainQuestService.js';
+} from '../domains/mainQuest/index.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 
 const router = Router();

@@ -10,7 +10,7 @@
  */
 import { query, pool } from '../config/database.js';
 import type { PoolClient } from 'pg';
-import { findEmptySlotsWithClient } from './inventoryService.js';
+import { findEmptySlotsWithClient } from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import {
   QUALITY_MULTIPLIER_BY_RANK,

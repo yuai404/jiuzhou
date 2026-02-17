@@ -12,7 +12,7 @@ import {
   addItemToInventoryTx,
   expandInventoryWithClient,
   SlottedInventoryLocation,
-} from './inventoryService.js';
+} from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';

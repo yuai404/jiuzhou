@@ -1,7 +1,7 @@
 import { query } from '../config/database.js';
 import crypto from 'crypto';
 import { getGameServer } from '../game/gameServer.js';
-import { onUserJoinTeam, onUserLeaveTeam } from './battleService.js';
+import { onUserJoinTeam, onUserLeaveTeam } from './battle/index.js';
 import { updateAchievementProgress } from './achievementService.js';
 import { REALM_ORDER } from './shared/realmRules.js';
 

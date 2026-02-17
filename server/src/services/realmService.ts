@@ -2,7 +2,7 @@ import { query, pool } from '../config/database.js';
 import type { PoolClient } from 'pg';
 import { readFile, stat } from 'fs/promises';
 import path from 'path';
-import { updateSectionProgress } from './mainQuestService.js';
+import { updateSectionProgress } from './mainQuest/index.js';
 import { updateAchievementProgress } from './achievementService.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
 import { getCharacterIdByUserId } from './shared/characterId.js';

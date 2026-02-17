@@ -1,7 +1,7 @@
 import { pool, query } from '../config/database.js';
 import { createItem } from './itemService.js';
 import type { PoolClient } from 'pg';
-import { ensureMainQuestProgressForNewChapters, updateSectionProgress } from './mainQuestService.js';
+import { ensureMainQuestProgressForNewChapters, updateSectionProgress } from './mainQuest/index.js';
 import { updateAchievementProgress } from './achievementService.js';
 import {
   getItemDefinitionById,

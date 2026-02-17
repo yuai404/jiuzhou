@@ -3,7 +3,7 @@ import { withRouteError } from '../middleware/routeError.js';
 import { requireCharacter } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { canChallengeToday, getArenaOpponents, getArenaRecords, getArenaStatus } from '../services/arenaService.js';
-import { startPVPBattle } from '../services/battleService.js';
+import { startPVPBattle } from '../domains/battle/index.js';
 
 const router = Router();
 

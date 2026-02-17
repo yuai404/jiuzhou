@@ -3,7 +3,7 @@ import { testConnection, pool } from '../config/database.js';
 import { closeRedis, testRedisConnection } from '../config/redis.js';
 import { initTables } from '../models/initTables.js';
 import { initGameTimeService } from '../services/gameTimeService.js';
-import { recoverBattlesFromRedis } from '../services/battleService.js';
+import { recoverBattlesFromRedis } from '../domains/battle/index.js';
 import { cleanupUndefinedItemDataOnStartup } from '../services/itemDataCleanupService.js';
 
 export interface StartServerOptions {

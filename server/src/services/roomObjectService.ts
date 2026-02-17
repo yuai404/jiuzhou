@@ -2,7 +2,7 @@ import { pool, query } from '../config/database.js';
 import type { GridPosition, MapRoom } from './mapService.js';
 import { getRoomInMap } from './mapService.js';
 import { getGameServer } from '../game/gameServer.js';
-import { addItemToInventoryTx } from './inventoryService.js';
+import { addItemToInventoryTx } from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { recordGatherResourceEvent } from './taskService.js';
 import {

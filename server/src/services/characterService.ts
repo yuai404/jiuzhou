@@ -1,6 +1,6 @@
 import { query } from '../config/database.js';
 import { createInventoryForCharacter } from '../models/inventoryTable.js';
-import { updateSectionProgress } from './mainQuestService.js';
+import { updateSectionProgress } from './mainQuest/index.js';
 import { initCharacterAchievements, updateAchievementProgress } from './achievementService.js';
 import { applyStaminaRecoveryByUserId } from './staminaService.js';
 import {

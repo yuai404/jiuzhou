@@ -3,9 +3,9 @@
  * 功能：学习功法、修炼升级、装备功法、技能配置、属性计算
  */
 import { query, pool } from '../config/database.js';
-import { updateSectionProgress } from './mainQuestService.js';
+import { updateSectionProgress } from './mainQuest/index.js';
 import { updateAchievementProgress } from './achievementService.js';
-import { isCharacterInBattle } from './battleService.js';
+import { isCharacterInBattle } from './battle/index.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
