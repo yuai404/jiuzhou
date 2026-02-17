@@ -176,6 +176,103 @@
       ]
     },
     {
+      "id": "equip-gloves-000",
+      "name": "布手套",
+      "category": "equipment",
+      "sub_category": "gloves",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/leng_gang_hu_tui.png",
+      "equip_slot": "gloves",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "wufang": 1
+      },
+      "implicit_attrs": {
+        "max_qixue": 8
+      },
+      "affix_pool_id": "ap-armor-common",
+      "tags": [
+        "防具",
+        "手部",
+        "新手"
+      ]
+    },
+    {
+      "id": "equip-pants-000",
+      "name": "布裤",
+      "category": "equipment",
+      "sub_category": "pants",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/icon_pants_1_02.png",
+      "equip_slot": "pants",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "wufang": 1,
+        "fafang": 1
+      },
+      "implicit_attrs": {
+        "max_qixue": 15
+      },
+      "affix_pool_id": "ap-armor-common",
+      "tags": [
+        "防具",
+        "腿部",
+        "新手"
+      ]
+    },
+    {
+      "id": "equip-accessory-000",
+      "name": "木戒",
+      "category": "equipment",
+      "sub_category": "ring",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/kun_lun_jie.png",
+      "equip_slot": "accessory",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "max_lingqi": 5
+      },
+      "implicit_attrs": {
+        "lingqi_huifu": 1
+      },
+      "affix_pool_id": "ap-accessory-common",
+      "tags": [
+        "饰品",
+        "戒指",
+        "新手"
+      ]
+    },
+    {
+      "id": "equip-artifact-000",
+      "name": "护身符",
+      "category": "equipment",
+      "sub_category": "talisman",
+      "stack_max": 1,
+      "bind_type": "equip",
+      "tradeable": true,
+      "icon": "/assets/items/guan_yin_yu_pai.png",
+      "equip_slot": "artifact",
+      "equip_req_realm": "凡人",
+      "base_attrs": {
+        "sudu": 1
+      },
+      "implicit_attrs": {
+        "shanbi": 0.005
+      },
+      "affix_pool_id": "ap-artifact-common",
+      "tags": [
+        "法宝",
+        "符箓",
+        "新手"
+      ]
+    },
+    {
       "id": "equip-artifact-001",
       "name": "御剑符",
       "category": "equipment",
