@@ -7,11 +7,18 @@ import {
 } from './shared/realmRules.js';
 import {
   buildAffixValueAndModifiers,
+  isRatioAttrKey,
   normalizeAffixValueByContext,
   normalizeGeneratedAffixModifiers,
   resolvePrimaryAffixAttrKey,
   type AffixParams,
 } from './shared/affixModifier.js';
+import {
+  convertPercentToRating,
+  getEffectiveLevelByRealmRank,
+  resolveRatingBaseAttrKey,
+  toRatingAttrKey,
+} from './shared/affixRating.js';
 
 export interface RerollAffixPool {
   rules: AffixPoolRules;
@@ -149,6 +156,14 @@ export const parseGeneratedAffixesForReroll = (raw: unknown): GeneratedAffix[] =
       is_legendary: Boolean(row.is_legendary),
       description: typeof row.description === 'string' ? row.description : undefined,
     };
+    const valueTypeRaw = typeof row.value_type === 'string' ? row.value_type.trim() : '';
+    if (valueTypeRaw === 'raw' || valueTypeRaw === 'rating') {
+      parsed.value_type = valueTypeRaw;
+    }
+    const ratingAttrKeyRaw = typeof row.rating_attr_key === 'string' ? row.rating_attr_key.trim() : '';
+    if (ratingAttrKeyRaw) {
+      parsed.rating_attr_key = ratingAttrKeyRaw;
+    }
     if (modifiers.length > 0) parsed.modifiers = modifiers;
 
     if (applyType === 'special') {
@@ -276,7 +291,58 @@ const rollAffixValue = (rng: SeededRandom, affix: AffixDef, realmRank: number, a
       result.params = { value: scaledValue };
     }
   }
-  return result;
+  return convertGeneratedAffixToRating(result, realmRank);
+};
+
+const convertGeneratedAffixToRating = (affix: GeneratedAffix, realmRank: number): GeneratedAffix => {
+  if (affix.apply_type === 'special') return affix;
+  const rows = Array.isArray(affix.modifiers) ? affix.modifiers : [];
+  if (rows.length <= 0) return { ...affix, value_type: affix.value_type ?? 'raw' };
+
+  const effectiveLevel = getEffectiveLevelByRealmRank(realmRank);
+  let hasRatingModifier = false;
+  let primaryRatingAttrKey: string | undefined;
+
+  const nextModifiers = rows.map((row) => {
+    const attrKey = String(row.attr_key || '').trim();
+    const rawValue = Number(row.value);
+    if (!attrKey || !Number.isFinite(rawValue)) return row;
+
+    const existingBaseAttr = resolveRatingBaseAttrKey(attrKey);
+    if (existingBaseAttr) {
+      hasRatingModifier = true;
+      if (!primaryRatingAttrKey) primaryRatingAttrKey = attrKey;
+      return { attr_key: attrKey, value: Math.round(rawValue) };
+    }
+
+    if (!isRatioAttrKey(attrKey)) return row;
+    const ratingAttrKey = toRatingAttrKey(attrKey);
+    if (!ratingAttrKey) return row;
+    const ratingValue = convertPercentToRating(attrKey, rawValue, effectiveLevel);
+    if (ratingValue === 0 && rawValue !== 0) return row;
+    hasRatingModifier = true;
+    if (!primaryRatingAttrKey) primaryRatingAttrKey = ratingAttrKey;
+    return { attr_key: ratingAttrKey, value: ratingValue };
+  });
+
+  if (!hasRatingModifier) {
+    return {
+      ...affix,
+      modifiers: nextModifiers,
+      value_type: 'raw',
+      rating_attr_key: undefined,
+    };
+  }
+
+  const primaryValue = Number(nextModifiers[0]?.value);
+  return {
+    ...affix,
+    apply_type: 'flat',
+    modifiers: nextModifiers,
+    value: Number.isFinite(primaryValue) ? primaryValue : 0,
+    value_type: 'rating',
+    rating_attr_key: primaryRatingAttrKey,
+  };
 };
 
 const buildMutexGroups = (rules: AffixPoolRules): string[][] => {

@@ -2256,7 +2256,13 @@ export const rerollEquipmentAffixes = async (
     }
 
     await client.query(
-      'UPDATE item_instance SET affixes = $1::jsonb, updated_at = NOW() WHERE id = $2 AND owner_character_id = $3',
+      `
+        UPDATE item_instance
+        SET affixes = $1::jsonb,
+            affix_gen_version = 3,
+            updated_at = NOW()
+        WHERE id = $2 AND owner_character_id = $3
+      `,
       [JSON.stringify(rerolledAffixes), itemInstanceId, characterId]
     );
 

@@ -32,6 +32,12 @@ import {
   type AffixParams,
   type GeneratedAffixModifier,
 } from './shared/affixModifier.js';
+import {
+  convertPercentToRating,
+  getEffectiveLevelByRealmRank,
+  resolveRatingBaseAttrKey,
+  toRatingAttrKey,
+} from './shared/affixRating.js';
 
 // ============================================
 // 类型定义
@@ -47,6 +53,7 @@ const DEFAULT_AFFIX_COUNT_BY_QUALITY: Record<Quality, { min: number; max: number
   '地': { min: 4, max: 5 },
   '天': { min: 6, max: 6 },
 };
+const AFFIX_GEN_VERSION = 3;
 
 const coerceQuality = (value: unknown): Quality | null => {
   if (!isQualityName(value)) return null;
@@ -132,6 +139,8 @@ export interface GeneratedAffix {
   effect_type?: AffixEffectType;
   duration_round?: number;
   params?: AffixParams;
+  value_type?: 'raw' | 'rating';
+  rating_attr_key?: string;
 }
 
 // 装备模板
@@ -168,6 +177,7 @@ export interface GeneratedEquipment {
   qualityRank: number;
   baseAttrs: Record<string, number>;
   affixes: GeneratedAffix[];
+  affixGenVersion: number;
   setId: string | null;
   seed: number;
 }
@@ -520,7 +530,79 @@ const rollAffixValue = (
     }
   }
 
-  return out;
+  return convertGeneratedAffixToRating(out, realmRank);
+};
+
+/**
+ * 将“比率类副属性”统一转换为 rating 存储。
+ *
+ * 规则：
+ * 1) 仅处理 special 以外词条；
+ * 2) 仅处理 modifiers 中可识别为比率属性的字段；
+ * 3) 转换后 attr_key 改为 `${attr}_rating`，并标记 value_type=rating；
+ * 4) 非比率词条保持原语义，标记 value_type=raw。
+ */
+const convertGeneratedAffixToRating = (
+  affix: GeneratedAffix,
+  realmRank: number,
+): GeneratedAffix => {
+  if (affix.apply_type === 'special') return affix;
+  const rows = Array.isArray(affix.modifiers) ? affix.modifiers : [];
+  if (rows.length <= 0) return { ...affix, value_type: affix.value_type ?? 'raw' };
+
+  const effectiveLevel = getEffectiveLevelByRealmRank(realmRank);
+  let hasRatingModifier = false;
+  let primaryRatingAttrKey: string | undefined;
+
+  const nextModifiers: GeneratedAffixModifier[] = rows.map((row) => {
+    const attrKey = String(row.attr_key || '').trim();
+    const rawValue = Number(row.value);
+    if (!attrKey || !Number.isFinite(rawValue)) {
+      return row;
+    }
+
+    const existingBaseAttr = resolveRatingBaseAttrKey(attrKey);
+    if (existingBaseAttr) {
+      hasRatingModifier = true;
+      if (!primaryRatingAttrKey) primaryRatingAttrKey = attrKey;
+      return { attr_key: attrKey, value: Math.round(rawValue) };
+    }
+
+    if (!isRatioAttrKey(attrKey)) {
+      return row;
+    }
+
+    const ratingAttrKey = toRatingAttrKey(attrKey);
+    if (!ratingAttrKey) {
+      return row;
+    }
+    const ratingValue = convertPercentToRating(attrKey, rawValue, effectiveLevel);
+    hasRatingModifier = true;
+    if (!primaryRatingAttrKey) primaryRatingAttrKey = ratingAttrKey;
+    return {
+      attr_key: ratingAttrKey,
+      value: ratingValue,
+    };
+  });
+
+  if (!hasRatingModifier) {
+    return {
+      ...affix,
+      modifiers: nextModifiers,
+      value_type: 'raw',
+      rating_attr_key: undefined,
+    };
+  }
+
+  const firstValue = Number(nextModifiers[0]?.value);
+  return {
+    ...affix,
+    apply_type: 'flat',
+    modifiers: nextModifiers,
+    value: Number.isFinite(firstValue) ? firstValue : 0,
+    value_type: 'rating',
+    rating_attr_key: primaryRatingAttrKey,
+  };
 };
 
 /**
@@ -585,6 +667,7 @@ export const generateEquipment = async (
     qualityRank,
     baseAttrs: scaledBaseAttrs,
     affixes,
+    affixGenVersion: AFFIX_GEN_VERSION,
     setId: def.set_id,
     seed: rng.getSeed()
   };
@@ -676,8 +759,9 @@ export const createEquipmentInstanceTx = async (
             quality, quality_rank,
             location, location_slot, bind_type, 
             random_seed, affixes, identified,
+            affix_gen_version,
             obtained_from
-          ) VALUES ($1, $2, $3, 1, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          ) VALUES ($1, $2, $3, 1, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING id
         `,
         [
@@ -692,6 +776,7 @@ export const createEquipmentInstanceTx = async (
           generated.seed,
           JSON.stringify(generated.affixes),
           options.identified !== false,
+          generated.affixGenVersion || AFFIX_GEN_VERSION,
           options.obtainedFrom || 'system',
         ]
       );

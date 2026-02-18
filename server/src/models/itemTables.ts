@@ -9,8 +9,16 @@ import { query } from '../config/database.js';
 import { runDbMigrationOnce } from './migrationHistoryTable.js';
 import {
   normalizeGeneratedAffixModifiers,
+  isRatioAttrKey,
 } from '../services/shared/affixModifier.js';
-import { getItemDefinitions } from '../services/staticConfigLoader.js';
+import {
+  convertPercentToRating,
+  getEffectiveLevelByRealmRank,
+  resolveRatingBaseAttrKey,
+  toRatingAttrKey,
+} from '../services/shared/affixRating.js';
+import { getRealmRankOneBasedForEquipment } from '../services/shared/realmRules.js';
+import { getItemDefinitionById, getItemDefinitions } from '../services/staticConfigLoader.js';
 
 // ============================================
 // 1. 物品实例表（动态）
@@ -44,6 +52,8 @@ CREATE TABLE IF NOT EXISTS item_instance (
   random_seed BIGINT,                                 -- 随机种子
   affixes JSONB,                                      -- 随机词条结果
   identified BOOLEAN NOT NULL DEFAULT true,           -- 是否已鉴定
+  affix_gen_version INTEGER NOT NULL DEFAULT 1,       -- 词条生成版本号
+  affix_roll_meta JSONB,                              -- 词条生成元信息
 
   -- 其他
   custom_name VARCHAR(64),                            -- 自定义名称
@@ -138,6 +148,8 @@ const itemInstanceColumnsToCheck = [
   { name: 'identified', type: 'BOOLEAN NOT NULL DEFAULT true', comment: '是否已鉴定' },
   { name: 'quality', type: 'CHAR(1)', comment: '实例品质（为空则按定义表）' },
   { name: 'quality_rank', type: 'INTEGER', comment: '实例品质排序值（为空则按定义表）' },
+  { name: 'affix_gen_version', type: 'INTEGER NOT NULL DEFAULT 1', comment: '词条生成版本号（用于规则升级）' },
+  { name: 'affix_roll_meta', type: 'JSONB', comment: '词条生成元信息（预算/参数快照）' },
 ];
 
 const checkAndAddItemInstanceColumns = async () => {
@@ -236,6 +248,120 @@ const normalizeItemInstanceAffixForModifiers = (affixRaw: unknown): {
   return { changed, normalized: affix };
 };
 
+const normalizeItemInstanceAffixToRating = (
+  affixRaw: unknown,
+  realmRank: number,
+): {
+  changed: boolean;
+  normalized: unknown;
+} => {
+  if (!affixRaw || typeof affixRaw !== 'object') {
+    return { changed: false, normalized: affixRaw };
+  }
+  const affix = { ...(affixRaw as Record<string, unknown>) };
+  const applyType = String(affix.apply_type || '').trim().toLowerCase();
+  if (applyType !== 'flat' && applyType !== 'percent') {
+    return { changed: false, normalized: affix };
+  }
+
+  const effectiveLevel = getEffectiveLevelByRealmRank(realmRank);
+  const modifiersRaw = Array.isArray(affix.modifiers) ? affix.modifiers : [];
+  if (modifiersRaw.length <= 0) {
+    if (affix.value_type === 'rating') {
+      affix.value_type = 'raw';
+      delete affix.rating_attr_key;
+      return { changed: true, normalized: affix };
+    }
+    return { changed: false, normalized: affix };
+  }
+
+  let changed = false;
+  let hasRatingModifier = false;
+  let primaryRatingAttrKey: string | undefined;
+
+  const normalizedModifiers = modifiersRaw
+    .map((modifierRaw) => {
+      if (!modifierRaw || typeof modifierRaw !== 'object') return null;
+      const row = modifierRaw as Record<string, unknown>;
+      const attrKey = typeof row.attr_key === 'string' ? row.attr_key.trim() : '';
+      const value =
+        typeof row.value === 'number'
+          ? row.value
+          : typeof row.value === 'string'
+            ? Number(row.value)
+            : NaN;
+      if (!attrKey || !Number.isFinite(value)) return null;
+
+      const existingBaseKey = resolveRatingBaseAttrKey(attrKey);
+      if (existingBaseKey) {
+        hasRatingModifier = true;
+        if (!primaryRatingAttrKey) primaryRatingAttrKey = attrKey;
+        const rounded = Math.round(value);
+        if (rounded !== value) changed = true;
+        return { attr_key: attrKey, value: rounded };
+      }
+
+      if (!isRatioAttrKey(attrKey)) {
+        return { attr_key: attrKey, value };
+      }
+      const ratingAttrKey = toRatingAttrKey(attrKey);
+      if (!ratingAttrKey) {
+        return { attr_key: attrKey, value };
+      }
+      const ratingValue = convertPercentToRating(attrKey, value, effectiveLevel);
+      if (ratingValue === 0 && value !== 0) {
+        return { attr_key: attrKey, value };
+      }
+
+      hasRatingModifier = true;
+      if (!primaryRatingAttrKey) primaryRatingAttrKey = ratingAttrKey;
+      changed = true;
+      return { attr_key: ratingAttrKey, value: ratingValue };
+    })
+    .filter((row): row is { attr_key: string; value: number } => Boolean(row));
+
+  if (normalizedModifiers.length <= 0) {
+    return { changed, normalized: affix };
+  }
+
+  const beforeModifiers = JSON.stringify(affix.modifiers ?? null);
+  const afterModifiers = JSON.stringify(normalizedModifiers);
+  if (beforeModifiers !== afterModifiers) changed = true;
+  affix.modifiers = normalizedModifiers;
+
+  const primaryValue = normalizedModifiers[0]?.value ?? 0;
+  if (typeof affix.value !== 'number' || !Number.isFinite(affix.value) || affix.value !== primaryValue) {
+    affix.value = primaryValue;
+    changed = true;
+  }
+
+  if (hasRatingModifier) {
+    if (affix.apply_type !== 'flat') {
+      affix.apply_type = 'flat';
+      changed = true;
+    }
+    if (affix.value_type !== 'rating') {
+      affix.value_type = 'rating';
+      changed = true;
+    }
+    if (primaryRatingAttrKey && affix.rating_attr_key !== primaryRatingAttrKey) {
+      affix.rating_attr_key = primaryRatingAttrKey;
+      changed = true;
+    }
+  } else {
+    if (affix.value_type !== 'raw' && affix.value_type !== undefined) {
+      changed = true;
+    }
+    affix.value_type = 'raw';
+    if ('rating_attr_key' in affix) {
+      delete affix.rating_attr_key;
+      changed = true;
+    }
+  }
+
+  return { changed, normalized: affix };
+};
+
 const migrateItemInstanceAffixesToModifiers = async (): Promise<void> => {
   const result = await query(
     `
@@ -270,6 +396,59 @@ const migrateItemInstanceAffixesToModifiers = async (): Promise<void> => {
   }
 
   console.log(`  → 词条复合结构迁移完成：扫描装备=${scannedCount}，更新装备=${updatedCount}`);
+};
+
+const migrateItemInstanceAffixesToRatingV3 = async (): Promise<void> => {
+  const result = await query(
+    `
+      SELECT id, item_def_id, affixes, affix_gen_version
+      FROM item_instance
+      WHERE affixes IS NOT NULL
+    `
+  );
+
+  let scannedCount = 0;
+  let updatedCount = 0;
+
+  for (const row of result.rows as Array<{
+    id: string | number;
+    item_def_id: string;
+    affixes: unknown;
+    affix_gen_version: unknown;
+  }>) {
+    const affixes = parseAffixArray(row.affixes);
+    if (affixes.length <= 0) continue;
+    scannedCount += 1;
+
+    const itemDef = getItemDefinitionById(String(row.item_def_id || '').trim());
+    const realmRank = getRealmRankOneBasedForEquipment(itemDef?.equip_req_realm);
+
+    let changed = false;
+    const normalizedAffixes: unknown[] = [];
+    for (const affixRaw of affixes) {
+      const normalized = normalizeItemInstanceAffixToRating(affixRaw, realmRank);
+      if (normalized.changed) changed = true;
+      normalizedAffixes.push(normalized.normalized);
+    }
+
+    const currentVersion = Number(row.affix_gen_version);
+    const needsVersionUpgrade = !Number.isFinite(currentVersion) || currentVersion < 3;
+    if (!changed && !needsVersionUpgrade) continue;
+
+    updatedCount += 1;
+    await query(
+      `
+        UPDATE item_instance
+        SET affixes = $1::jsonb,
+            affix_gen_version = 3,
+            updated_at = NOW()
+        WHERE id = $2
+      `,
+      [JSON.stringify(normalizedAffixes), row.id]
+    );
+  }
+
+  console.log(`  → 词条Rating迁移完成：扫描装备=${scannedCount}，更新装备=${updatedCount}`);
 };
 
 const migrateTechniqueBookBindTypeForMarket = async (): Promise<void> => {
@@ -321,6 +500,12 @@ export const initItemTables = async (): Promise<void> => {
     });
 
     await runDbMigrationOnce({
+      migrationKey: 'item_instance_affixes_rating_v3',
+      description: '将装备词条实例统一迁移为Rating语义（value_type=rating）',
+      execute: migrateItemInstanceAffixesToRatingV3,
+    });
+
+    await runDbMigrationOnce({
       migrationKey: 'item_instance_technique_book_tradeable_v1',
       description: '将历史功法书实例解绑为none以支持坊市交易',
       execute: migrateTechniqueBookBindTypeForMarket,
@@ -329,6 +514,8 @@ export const initItemTables = async (): Promise<void> => {
     await query("COMMENT ON COLUMN item_instance.identified IS '是否已鉴定';");
     await query("COMMENT ON COLUMN item_instance.quality IS '实例品质（为空则按定义表）';");
     await query("COMMENT ON COLUMN item_instance.quality_rank IS '实例品质排序值（为空则按定义表）';");
+    await query("COMMENT ON COLUMN item_instance.affix_gen_version IS '词条生成版本号（用于规则升级）';");
+    await query("COMMENT ON COLUMN item_instance.affix_roll_meta IS '词条生成元信息（预算/参数快照）';");
 
     console.log('✓ 物品系统表检测完成');
   } catch (error) {

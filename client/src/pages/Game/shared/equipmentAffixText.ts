@@ -15,6 +15,8 @@ export type EquipmentAffixTextInput = {
   apply_type?: string;
   tier?: number;
   value?: number;
+  value_type?: 'raw' | 'rating' | string;
+  rating_attr_key?: string;
   is_legendary?: boolean;
   description?: string;
 };
@@ -45,6 +47,7 @@ export type EquipmentAffixDisplayText = {
 };
 
 const hasLatinLetters = (value: string): boolean => /[A-Za-z]/.test(value);
+const RATING_SUFFIX = '_rating';
 
 const normalizeText = (value: string | undefined): string => {
   if (typeof value !== 'string') return '';
@@ -61,6 +64,15 @@ const pickPrimaryModifierAttrKey = (affix: EquipmentAffixTextInput): string => {
   return '';
 };
 
+const splitRatingKey = (attrKey: string): { isRating: boolean; baseKey: string } => {
+  if (!attrKey.endsWith(RATING_SUFFIX)) {
+    return { isRating: false, baseKey: attrKey };
+  }
+  const baseKey = attrKey.slice(0, -RATING_SUFFIX.length).trim();
+  if (!baseKey) return { isRating: false, baseKey: attrKey };
+  return { isRating: true, baseKey };
+};
+
 const tryPickLabel = (raw: string, rejectLatinLabel: boolean): string => {
   const text = raw.trim();
   if (!text) return '';
@@ -74,20 +86,24 @@ export const pickEquipmentAffixLabel = (
 ): string => {
   const rejectLatinLabel = options.rejectLatinLabel === true;
   const attrKey = pickPrimaryModifierAttrKey(affix);
+  const { isRating, baseKey } = splitRatingKey(attrKey);
+  const candidateKeys = isRating ? [attrKey, baseKey] : [attrKey];
 
-  if (attrKey) {
-    const mapped = options.keyLabelMap?.[attrKey];
+  for (const candidateKey of candidateKeys) {
+    if (!candidateKey) continue;
+    const mapped = options.keyLabelMap?.[candidateKey];
     if (typeof mapped === 'string') {
       const text = tryPickLabel(mapped, rejectLatinLabel);
-      if (text) return text;
+      if (text) return isRating && candidateKey === baseKey ? `${text}评级` : text;
     }
   }
 
-  if (attrKey && options.keyTranslator) {
-    const translated = options.keyTranslator(attrKey);
+  for (const candidateKey of candidateKeys) {
+    if (!candidateKey || !options.keyTranslator) continue;
+    const translated = options.keyTranslator(candidateKey);
     if (typeof translated === 'string') {
       const text = tryPickLabel(translated, rejectLatinLabel);
-      if (text) return text;
+      if (text) return isRating && candidateKey === baseKey ? `${text}评级` : text;
     }
   }
 
@@ -115,9 +131,10 @@ export const buildEquipmentAffixDisplayText = (
 
   let valueText = '';
   const attrKey = pickPrimaryModifierAttrKey(affix);
+  const { isRating } = splitRatingKey(attrKey);
   if (affix.apply_type !== 'special' && typeof affix.value === 'number') {
     const isPercent =
-      affix.apply_type === 'percent' ||
+      (!isRating && affix.apply_type === 'percent') ||
       (attrKey ? options.percentKeys.has(attrKey) : false);
     valueText = isPercent
       ? options.formatSignedPercent(affix.value)

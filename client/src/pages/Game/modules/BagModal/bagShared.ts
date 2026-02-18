@@ -52,6 +52,8 @@ export type EquipmentAffix = {
   params?: Record<string, string | number | boolean>;
   tier?: number;
   value?: number;
+  value_type?: "raw" | "rating" | string;
+  rating_attr_key?: string;
   is_legendary?: boolean;
   description?: string;
 };
@@ -346,6 +348,8 @@ export const coerceAffixes = (value: unknown): EquipmentAffix[] => {
       apply_type: row.apply_type,
       tier: row.tier,
       value: row.value,
+      value_type: row.value_type,
+      rating_attr_key: row.rating_attr_key,
       is_legendary: row.is_legendary,
       description: row.description,
     };

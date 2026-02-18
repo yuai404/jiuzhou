@@ -436,7 +436,7 @@ export const createMarketListing = async (params: {
             bind_type, bind_owner_user_id, bind_owner_character_id,
             location, location_slot, equipped_slot,
             strengthen_level, refine_level,
-            socketed_gems, random_seed, affixes, identified,
+            socketed_gems, random_seed, affixes, identified, affix_gen_version, affix_roll_meta,
             custom_name, locked, expire_at,
             obtained_from, obtained_ref_id, metadata,
             created_at, updated_at
@@ -446,7 +446,7 @@ export const createMarketListing = async (params: {
             bind_type, bind_owner_user_id, bind_owner_character_id,
             'auction', NULL, NULL,
             strengthen_level, refine_level,
-            socketed_gems, random_seed, affixes, identified,
+            socketed_gems, random_seed, affixes, identified, affix_gen_version, affix_roll_meta,
             custom_name, locked, expire_at,
             obtained_from, obtained_ref_id, metadata,
             NOW(), NOW()

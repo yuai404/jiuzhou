@@ -19,6 +19,7 @@ import { redis } from '../config/redis.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getItemDefinitionsByIds, getItemSetDefinitions, getTechniqueLayerDefinitions, getTitleDefinitions } from './staticConfigLoader.js';
 import { extractFlatAffixDeltas } from './shared/affixModifier.js';
+import { convertRatingToPercent, getEffectiveLevelByRealm, resolveRatingBaseAttrKey } from './shared/affixRating.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { CHARACTER_BASE_COLUMNS_SQL } from './shared/sqlFragments.js';
 
@@ -156,7 +157,7 @@ type CharacterAttrKey =
   | 'qixue_huifu'
   | 'lingqi_huifu';
 
-const STATIC_ATTR_CACHE_KEY_PREFIX = 'character:computed:static:v2:';
+const STATIC_ATTR_CACHE_KEY_PREFIX = 'character:computed:static:v3:';
 const RESOURCE_CACHE_KEY_PREFIX = 'character:runtime:resource:v1:';
 const STATIC_ATTR_CACHE_TTL_SECONDS = 60;
 const STATIC_ATTR_MEMORY_TTL_MS = 20_000;
@@ -580,11 +581,12 @@ const applyRealmRewardsToStats = async (
   }
 };
 
-const loadEquippedAttrBonuses = async (characterId: number): Promise<CharacterComputedStats> => {
+const loadEquippedAttrBonuses = async (characterId: number, effectiveLevel: number): Promise<CharacterComputedStats> => {
   const stats = emptyStats();
   for (const key of Object.keys(stats) as Array<keyof CharacterComputedStats>) {
     stats[key] = 0;
   }
+  const ratingTotals: Partial<Record<CharacterAttrKey, number>> = {};
 
   const equippedResult = await query(
     `
@@ -636,6 +638,12 @@ const loadEquippedAttrBonuses = async (characterId: number): Promise<CharacterCo
     for (const affixRaw of affixes) {
       const rows = extractFlatAffixDeltas(affixRaw);
       for (const rowValue of rows) {
+        const ratingBaseAttrKey = resolveRatingBaseAttrKey(rowValue.attrKey);
+        if (ratingBaseAttrKey && Object.prototype.hasOwnProperty.call(stats, ratingBaseAttrKey)) {
+          const mappedKey = ratingBaseAttrKey as CharacterAttrKey;
+          ratingTotals[mappedKey] = (ratingTotals[mappedKey] || 0) + rowValue.value;
+          continue;
+        }
         applyAttrDelta(stats, rowValue.attrKey, rowValue.value);
       }
     }
@@ -686,6 +694,14 @@ const loadEquippedAttrBonuses = async (characterId: number): Promise<CharacterCo
     }
   }
 
+  for (const [attrKey, ratingValue] of Object.entries(ratingTotals)) {
+    const rating = safeNumber(ratingValue);
+    if (!Number.isFinite(rating) || rating === 0) continue;
+    const projectedValue = convertRatingToPercent(attrKey, rating, effectiveLevel);
+    if (!Number.isFinite(projectedValue) || projectedValue === 0) continue;
+    applyAttrDelta(stats, attrKey, projectedValue);
+  }
+
   return stats;
 };
 
@@ -726,9 +742,10 @@ const computeStaticAttrs = async (base: CharacterBaseRow): Promise<CharacterComp
   stats.baoji = roundRatio(DEFAULT_ATTRS.baoji + base.shen * 0.001);
 
   await applyRealmRewardsToStats(base, stats);
+  const effectiveLevel = getEffectiveLevelByRealm(base.realm, base.sub_realm);
 
   const [equipBonus, titleEffects, techniquePassives] = await Promise.all([
-    loadEquippedAttrBonuses(base.id),
+    loadEquippedAttrBonuses(base.id, effectiveLevel),
     loadEquippedTitleEffects(base.id),
     loadTechniquePassives(base.id),
   ]);

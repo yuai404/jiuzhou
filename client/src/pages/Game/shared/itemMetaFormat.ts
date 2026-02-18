@@ -140,6 +140,12 @@ export const coerceAffixes = (value: unknown): EquipmentAffixTextInput[] => {
           typeof raw.apply_type === 'string' ? raw.apply_type : undefined,
         tier: Number.isFinite(tier ?? NaN) ? tier : undefined,
         value: Number.isFinite(parsedValue ?? NaN) ? parsedValue : undefined,
+        value_type:
+          typeof raw.value_type === 'string' ? raw.value_type : undefined,
+        rating_attr_key:
+          typeof raw.rating_attr_key === 'string'
+            ? raw.rating_attr_key
+            : undefined,
         is_legendary:
           typeof raw.is_legendary === 'boolean' ? raw.is_legendary : undefined,
         description:
