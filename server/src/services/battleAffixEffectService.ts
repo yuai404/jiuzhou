@@ -142,6 +142,8 @@ export const extractBattleAffixEffectsFromEquippedItems = (
       const durationRound =
         durationRaw === null ? undefined : Math.max(1, Math.floor(durationRaw));
       const key = toText(affix.key) || `special-${i + 1}`;
+      // 统一写入词条key，供战斗期做“同词条聚合判定”。
+      params.affix_key = key;
       const affixName = toText(affix.name) || key;
       const element = toText(params.element);
 

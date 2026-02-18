@@ -64,6 +64,7 @@ test('special词条应转换为战斗触发效果并注入params.value', () => {
   assert.equal(effect.setName, '赤焰枪·追魂斩');
   assert.equal(effect.pieceCount, 1);
   assert.equal(Number(effect.params.value), 28);
+  assert.equal(String(effect.params.affix_key), 'proc_zhuihun');
   assert.equal(String(effect.params.scale_key), 'wugong');
 });
 

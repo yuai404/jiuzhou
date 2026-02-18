@@ -160,6 +160,47 @@ test('灵气触发词条应在独立action日志中记录资源变化', () => {
   assert.equal(owner.lingqi, 68);
 });
 
+test('同词条多件装备应合并概率且单次触发（不重复生效）', () => {
+  const lowTier: BattleSetBonusEffect = {
+    setId: 'affix-301-proc_hushen',
+    setName: '青藤甲·护心诀',
+    pieceCount: 1,
+    trigger: 'on_be_hit',
+    target: 'self',
+    effectType: 'heal',
+    params: {
+      affix_key: 'proc_hushen',
+      chance: 1,
+      value: 80,
+    },
+  };
+  const highTier: BattleSetBonusEffect = {
+    setId: 'affix-302-proc_hushen',
+    setName: '玄鳞甲·护心诀',
+    pieceCount: 1,
+    trigger: 'on_be_hit',
+    target: 'self',
+    effectType: 'heal',
+    params: {
+      affix_key: 'proc_hushen',
+      chance: 1,
+      value: 120,
+    },
+  };
+
+  const owner = createUnit('player-4', '测试体修', [lowTier, highTier]);
+  owner.qixue = 600;
+  const target = createUnit('monster-4', '木桩妖', []);
+  const state = createState(owner, target);
+
+  const logs = triggerSetBonusEffects(state, 'on_be_hit', owner, { target });
+  assert.equal(logs.length, 1, '同词条只应产出一次action日志');
+
+  const actionLog = assertActionLog(logs[0]);
+  assert.equal(actionLog.targets[0]?.heal, 120, '同词条不重复触发，应按单次效果结算');
+  assert.equal(owner.qixue, 720, '护心诀应只治疗一次');
+});
+
 test('技能与词条触发日志应按时机排序（主动作在前，on_skill触发在后）', () => {
   const onSkillEffect: BattleSetBonusEffect = {
     setId: 'affix-201-proc_lingchao',

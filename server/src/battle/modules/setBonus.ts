@@ -28,6 +28,12 @@ interface SetBonusApplyResult {
   extraLogs?: BattleLogEntry[];
 }
 
+interface PreparedTriggerEffect {
+  effect: BattleSetBonusEffect;
+  params: Record<string, unknown>;
+  chance: number;
+}
+
 export function triggerSetBonusEffects(
   state: BattleState,
   trigger: BattleSetBonusTrigger,
@@ -38,36 +44,35 @@ export function triggerSetBonusEffects(
   if (effects.length === 0) return [];
 
   const logs: BattleLogEntry[] = [];
-    for (const effect of effects) {
-      if (effect.trigger !== trigger) continue;
-
-      const params = toObject(effect.params);
-      if (!passChance(state, params)) continue;
+  const preparedEffects = buildPreparedTriggerEffects(effects, trigger);
+  for (const prepared of preparedEffects) {
+    const { effect, params, chance } = prepared;
+    if (!passChance(state, chance)) continue;
 
     const target = effect.target === 'enemy' ? context.target : owner;
     if (!target || !target.isAlive) continue;
 
     let applyResult: SetBonusApplyResult | null = null;
-      switch (effect.effectType) {
-        case 'buff':
-        case 'debuff':
-          applyResult = applySetBuffOrDebuff(effect, owner, target, params);
-          break;
-        case 'damage':
-          applyResult = applySetDamage(state, owner, target, params, context.damage);
-          break;
-        case 'heal':
-          applyResult = applySetHeal(owner, target, params);
-          break;
-        case 'resource':
-          applyResult = applySetResource(owner, target, params);
-          break;
-        case 'shield':
-          applyResult = applySetShield(effect, owner, target, params);
-          break;
-        default:
-          break;
-      }
+    switch (effect.effectType) {
+      case 'buff':
+      case 'debuff':
+        applyResult = applySetBuffOrDebuff(effect, owner, target, params);
+        break;
+      case 'damage':
+        applyResult = applySetDamage(state, owner, target, params, context.damage);
+        break;
+      case 'heal':
+        applyResult = applySetHeal(owner, target, params);
+        break;
+      case 'resource':
+        applyResult = applySetResource(owner, target, params);
+        break;
+      case 'shield':
+        applyResult = applySetShield(effect, owner, target, params);
+        break;
+      default:
+        break;
+    }
 
     if (!applyResult) continue;
     logs.push(buildSetBonusActionLog(state, owner, effect, applyResult.targetResult));
@@ -342,11 +347,133 @@ function applySetShield(
   };
 }
 
-function passChance(state: BattleState, params: Record<string, unknown>): boolean {
-  const chanceRaw = asFiniteNumber(params.chance);
-  if (chanceRaw === null) return true;
-  const chance = Math.max(0, Math.min(1, chanceRaw));
+function buildPreparedTriggerEffects(
+  effects: BattleSetBonusEffect[],
+  trigger: BattleSetBonusTrigger
+): PreparedTriggerEffect[] {
+  type OrderedPreparedTriggerEffect = PreparedTriggerEffect & { order: number };
+  type PreparedTriggerGroup = { order: number; entries: PreparedTriggerEffect[] };
+
+  const singles: OrderedPreparedTriggerEffect[] = [];
+  const groups = new Map<string, PreparedTriggerGroup>();
+  let order = 0;
+
+  for (const effect of effects) {
+    if (effect.trigger !== trigger) continue;
+
+    const params = toObject(effect.params);
+    const prepared: PreparedTriggerEffect = {
+      effect,
+      params,
+      chance: normalizeChance(params.chance),
+    };
+    const groupKey = buildAffixGroupKey(effect, params);
+    if (!groupKey) {
+      singles.push({ ...prepared, order });
+      order += 1;
+      continue;
+    }
+
+    const existed = groups.get(groupKey);
+    if (existed) {
+      existed.entries.push(prepared);
+      continue;
+    }
+    groups.set(groupKey, {
+      order,
+      entries: [prepared],
+    });
+    order += 1;
+  }
+
+  const mergedGroups: OrderedPreparedTriggerEffect[] = [];
+  for (const group of groups.values()) {
+    mergedGroups.push({
+      ...mergePreparedTriggerGroup(group.entries),
+      order: group.order,
+    });
+  }
+
+  return [...singles, ...mergedGroups]
+    .sort((a, b) => a.order - b.order)
+    .map(({ order: _, ...rest }) => rest);
+}
+
+function mergePreparedTriggerGroup(entries: PreparedTriggerEffect[]): PreparedTriggerEffect {
+  if (entries.length === 0) {
+    throw new Error('mergePreparedTriggerGroup: entries 不能为空');
+  }
+  if (entries.length === 1) return entries[0];
+
+  // 同词条多件装备：概率按“至少触发一次”合并，避免直接加算与重复触发。
+  const combinedChance = mergeIndependentChances(entries.map((entry) => entry.chance));
+  const representative = pickRepresentativeEntry(entries);
+  return {
+    effect: representative.effect,
+    params: representative.params,
+    chance: combinedChance,
+  };
+}
+
+function pickRepresentativeEntry(entries: PreparedTriggerEffect[]): PreparedTriggerEffect {
+  if (entries.length === 0) {
+    throw new Error('pickRepresentativeEntry: entries 不能为空');
+  }
+
+  let picked = entries[0];
+  let pickedScore = getEntryStrengthScore(picked.params);
+
+  for (let i = 1; i < entries.length; i += 1) {
+    const current = entries[i];
+    if (!current) continue;
+    const score = getEntryStrengthScore(current.params);
+    if (score > pickedScore) {
+      picked = current;
+      pickedScore = score;
+    }
+  }
+
+  return picked;
+}
+
+function getEntryStrengthScore(params: Record<string, unknown>): number {
+  const value = asFiniteNumber(params.value) ?? 0;
+  const scaleRate = asFiniteNumber(params.scale_rate) ?? 0;
+  return value + scaleRate;
+}
+
+function buildAffixGroupKey(
+  effect: BattleSetBonusEffect,
+  params: Record<string, unknown>
+): string | null {
+  const explicitKey = asNonEmptyString(params.affix_key);
+  if (explicitKey) return `affix:${explicitKey}`;
+
+  if (!effect.setId.startsWith('affix-')) return null;
+  const parts = effect.setId.split('-');
+  if (parts.length < 3) return null;
+  const fallbackKey = parts.slice(2).join('-').trim();
+  if (!fallbackKey) return null;
+  return `affix:${fallbackKey}`;
+}
+
+function normalizeChance(value: unknown): number {
+  const chanceRaw = asFiniteNumber(value);
+  if (chanceRaw === null) return 1;
+  return Math.max(0, Math.min(1, chanceRaw));
+}
+
+function mergeIndependentChances(chances: number[]): number {
+  let missChance = 1;
+  for (const chance of chances) {
+    missChance *= 1 - Math.max(0, Math.min(1, chance));
+  }
+  return 1 - missChance;
+}
+
+function passChance(state: BattleState, chance: number): boolean {
   if (chance >= 1) return true;
+  if (chance <= 0) return false;
   return rollChance(state, chance);
 }
 

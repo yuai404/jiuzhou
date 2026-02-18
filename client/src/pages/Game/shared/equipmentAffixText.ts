@@ -94,7 +94,7 @@ export const pickEquipmentAffixLabel = (
     const mapped = options.keyLabelMap?.[candidateKey];
     if (typeof mapped === 'string') {
       const text = tryPickLabel(mapped, rejectLatinLabel);
-      if (text) return isRating && candidateKey === baseKey ? `${text}评级` : text;
+      if (text) return isRating && candidateKey === baseKey ? `${text}等级` : text;
     }
   }
 
@@ -103,7 +103,7 @@ export const pickEquipmentAffixLabel = (
     const translated = options.keyTranslator(candidateKey);
     if (typeof translated === 'string') {
       const text = tryPickLabel(translated, rejectLatinLabel);
-      if (text) return isRating && candidateKey === baseKey ? `${text}评级` : text;
+      if (text) return isRating && candidateKey === baseKey ? `${text}等级` : text;
     }
   }
 
