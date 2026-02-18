@@ -17,7 +17,7 @@ import {
 import type { InventoryItemDto, ItemDefLite, MarketListingDto, MarketTradeRecordDto } from '../../../../services/api';
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
 import { useIsMobile } from '../../shared/responsive';
-import { buildEquipmentAffixDisplayText } from '../../shared/equipmentAffixText';
+import EquipmentAffixTooltipList from '../../shared/EquipmentAffixTooltipList';
 import './index.scss';
 
 type MarketPanel = 'market' | 'my' | 'list' | 'records';
@@ -329,27 +329,6 @@ const MarketItemTooltipContent: React.FC<{ row: ListingItem }> = ({ row }) => {
   }, [isEquip, row.baseAttrs]);
 
   const affixes = useMemo(() => coerceAffixes(row.affixes), [row.affixes]);
-  const affixLines = useMemo(() => {
-    if (!isEquip) return [];
-    if (!row.identified) return ['未鉴定'];
-    const sorted = [...affixes].sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0));
-
-    const out: string[] = [];
-    for (const a of sorted) {
-      const displayText = buildEquipmentAffixDisplayText(a, {
-        normalPrefix: '词条',
-        legendaryPrefix: '传奇词条',
-        keyTranslator: translateKey,
-        rejectLatinLabel: true,
-        percentKeys: PERCENT_ATTR_KEYS,
-        formatSignedNumber,
-        formatSignedPercent,
-      });
-      if (!displayText) continue;
-      out.push(displayText.fullText);
-    }
-    return out.length > 0 ? limitLines(out, 10) : ['无'];
-  }, [affixes, isEquip, row.identified]);
 
   const effectLines = useMemo(() => limitLines(formatLines(row.effectDefs), 10), [row.effectDefs]);
 
@@ -386,15 +365,24 @@ const MarketItemTooltipContent: React.FC<{ row: ListingItem }> = ({ row }) => {
         </div>
       ) : null}
 
-      {affixLines.length > 0 ? (
+      {isEquip ? (
         <div className="market-tooltip-section">
           <div className="market-tooltip-section-title">词条</div>
           <div className="market-tooltip-lines">
-            {affixLines.map((x, idx) => (
-              <div key={`${idx}-${x}`} className="market-tooltip-line">
-                {x}
-              </div>
-            ))}
+            <EquipmentAffixTooltipList
+              affixes={affixes}
+              identified={Boolean(row.identified)}
+              maxLines={10}
+              displayOptions={{
+                normalPrefix: '词条',
+                legendaryPrefix: '传奇词条',
+                keyTranslator: translateKey,
+                rejectLatinLabel: true,
+                percentKeys: PERCENT_ATTR_KEYS,
+                formatSignedNumber,
+                formatSignedPercent,
+              }}
+            />
           </div>
         </div>
       ) : null}

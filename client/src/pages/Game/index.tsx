@@ -63,7 +63,8 @@ import equipFemale from '../../assets/images/ui/ep.png';
 import coin01 from '../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import './index.scss';
 import { useIsMobile } from './shared/responsive';
-import { buildEquipmentAffixDisplayText, type EquipmentAffixTextInput } from './shared/equipmentAffixText';
+import { coerceAffixes } from './shared/itemMetaFormat';
+import EquipmentAffixTooltipList from './shared/EquipmentAffixTooltipList';
 
 interface GameProps {
   onLogout?: () => void;
@@ -108,8 +109,6 @@ const EQUIPPED_SLOT_TO_UI_LABEL: Record<string, string> = {
   accessory: '饰品',
   artifact: '法宝',
 };
-
-type EquipmentAffix = EquipmentAffixTextInput;
 
 const EQUIP_QUALITY_COLOR: Record<string, string> = {
   天: 'var(--rarity-tian)',
@@ -273,56 +272,6 @@ const coerceAttrRecord = (value: unknown): Record<string, number> => {
   return out;
 };
 
-const coerceAffixes = (value: unknown): EquipmentAffix[] => {
-  if (!value) return [];
-  let arr: unknown = value;
-  if (typeof arr === 'string') {
-    try {
-      arr = JSON.parse(arr) as unknown;
-    } catch {
-      return [];
-    }
-  }
-  if (!Array.isArray(arr)) return [];
-  return arr
-    .map<EquipmentAffix | null>((x) => {
-      if (!x || typeof x !== 'object') return null;
-      const a = x as Record<string, unknown>;
-      const tierNum = typeof a.tier === 'number' ? a.tier : typeof a.tier === 'string' ? Number(a.tier) : undefined;
-      const valueNum = typeof a.value === 'number' ? a.value : typeof a.value === 'string' ? Number(a.value) : undefined;
-      const modifiersRaw = Array.isArray(a.modifiers) ? a.modifiers : [];
-      const modifiers: Array<{ attr_key: string; value: number }> = [];
-      const seenModifierKeys = new Set<string>();
-      for (const row of modifiersRaw) {
-        if (!row || typeof row !== 'object') continue;
-        const modifier = row as Record<string, unknown>;
-        const attrKey = typeof modifier.attr_key === 'string' ? modifier.attr_key.trim() : '';
-        const modifierValue =
-          typeof modifier.value === 'number'
-            ? modifier.value
-            : typeof modifier.value === 'string'
-              ? Number(modifier.value)
-              : NaN;
-        if (!attrKey || seenModifierKeys.has(attrKey) || !Number.isFinite(modifierValue)) continue;
-        seenModifierKeys.add(attrKey);
-        modifiers.push({ attr_key: attrKey, value: modifierValue });
-      }
-
-      const out: EquipmentAffix = {
-        key: typeof a.key === 'string' ? a.key : undefined,
-        name: typeof a.name === 'string' ? a.name : undefined,
-        modifiers: modifiers.length > 0 ? modifiers : undefined,
-        apply_type: typeof a.apply_type === 'string' ? a.apply_type : undefined,
-        tier: Number.isFinite(tierNum ?? NaN) ? tierNum : undefined,
-        value: Number.isFinite(valueNum ?? NaN) ? valueNum : undefined,
-        is_legendary: typeof a.is_legendary === 'boolean' ? a.is_legendary : undefined,
-        description: typeof a.description === 'string' ? a.description : undefined,
-      };
-      return out;
-    })
-    .filter((v): v is EquipmentAffix => !!v);
-};
-
 const renderEquipTooltip = (uiSlot: string, it: InventoryItemDto) => {
   const def = it.def;
   if (!def) return null;
@@ -373,36 +322,21 @@ const renderEquipTooltip = (uiSlot: string, it: InventoryItemDto) => {
 
       <div className="equip-tooltip-section">
         <div className="equip-tooltip-section-title">词条</div>
-        {it.identified ? (
-          affixes.length ? (
-            <div className="equip-tooltip-lines">
-              {affixes.map((a, idx) => {
-                const displayText = buildEquipmentAffixDisplayText(a, {
-                  normalPrefix: '词条',
-                  legendaryPrefix: '传奇',
-                  keyLabelMap: attrLabel,
-                  fallbackLabel: '未知',
-                  percentKeys: percentAttrKeys,
-                  formatSignedNumber,
-                  formatSignedPercent,
-                });
-                if (!displayText) return null;
-                return (
-                  <div key={`${a.key ?? displayText.label}-${idx}`} className="equip-tooltip-affix">
-                    <span className="equip-tooltip-affix-k">
-                      {displayText.titleText}
-                    </span>
-                    {displayText.valueText ? <span className="equip-tooltip-affix-v">{displayText.valueText}</span> : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="equip-tooltip-empty">无</div>
-          )
-        ) : (
-          <div className="equip-tooltip-empty">未鉴定</div>
-        )}
+        <div className="equip-tooltip-lines">
+          <EquipmentAffixTooltipList
+            affixes={affixes}
+            identified={Boolean(it.identified)}
+            displayOptions={{
+              normalPrefix: '词条',
+              legendaryPrefix: '传奇',
+              keyLabelMap: attrLabel,
+              fallbackLabel: '未知',
+              percentKeys: percentAttrKeys,
+              formatSignedNumber,
+              formatSignedPercent,
+            }}
+          />
+        </div>
       </div>
 
       {desc ? <div className="equip-tooltip-desc">{desc}</div> : null}

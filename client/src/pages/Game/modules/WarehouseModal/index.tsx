@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import { SERVER_BASE, getInventoryInfo, getInventoryItems, moveInventoryItem, type InventoryItemDto, type ItemDefLite } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
-import { buildEquipmentAffixDisplayText } from '../../shared/equipmentAffixText';
+import EquipmentAffixTooltipList from '../../shared/EquipmentAffixTooltipList';
 import { formatSignedNumber, formatSignedPercent } from '../../shared/formatAttr';
 import { PERCENT_ATTR_KEYS, coerceAffixes, formatScalar, limitLines, normalizeText } from '../../shared/itemMetaFormat';
 import './index.scss';
@@ -406,27 +406,6 @@ const WarehouseItemTooltip: React.FC<{ it: InventoryItemDto }> = ({ it }) => {
   }, [isEquip, it.refine_level, it.strengthen_level]);
 
   const affixes = useMemo(() => coerceAffixes(it.affixes), [it.affixes]);
-  const affixLines = useMemo(() => {
-    if (!isEquip) return [];
-    if (!it.identified) return ['未鉴定'];
-    const sorted = [...affixes].sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0));
-
-    const out: string[] = [];
-    for (const a of sorted) {
-      const displayText = buildEquipmentAffixDisplayText(a, {
-        normalPrefix: '词条',
-        legendaryPrefix: '传奇词条',
-        keyTranslator: translateKey,
-        rejectLatinLabel: true,
-        percentKeys: PERCENT_ATTR_KEYS,
-        formatSignedNumber,
-        formatSignedPercent,
-      });
-      if (!displayText) continue;
-      out.push(displayText.fullText);
-    }
-    return out.length > 0 ? limitLines(out, 10) : ['无'];
-  }, [affixes, isEquip, it.identified]);
 
   return (
     <div className="warehouse-tooltip">
@@ -461,15 +440,24 @@ const WarehouseItemTooltip: React.FC<{ it: InventoryItemDto }> = ({ it }) => {
         </div>
       ) : null}
 
-      {affixLines.length > 0 ? (
+      {isEquip ? (
         <div className="warehouse-tooltip-section">
           <div className="warehouse-tooltip-section-title">词条</div>
           <div className="warehouse-tooltip-lines">
-            {affixLines.map((x, idx) => (
-              <div key={`${idx}-${x}`} className="warehouse-tooltip-line">
-                {x}
-              </div>
-            ))}
+            <EquipmentAffixTooltipList
+              affixes={affixes}
+              identified={Boolean(it.identified)}
+              maxLines={10}
+              displayOptions={{
+                normalPrefix: '词条',
+                legendaryPrefix: '传奇词条',
+                keyTranslator: translateKey,
+                rejectLatinLabel: true,
+                percentKeys: PERCENT_ATTR_KEYS,
+                formatSignedNumber,
+                formatSignedPercent,
+              }}
+            />
           </div>
         </div>
       ) : null}

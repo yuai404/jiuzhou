@@ -34,8 +34,8 @@ import {
   buildAffixRerollCostPlan,
   buildBagItem,
   buildBatchDisassemblePayloadItems,
+  buildEquipmentDetailLines,
   buildEnhanceCostPlan,
-  buildEquipmentLines,
   buildGrowthPreviewAttrs,
   buildRefineCostPlan,
   calcUseEffectDelta,
@@ -63,6 +63,7 @@ import {
 import type { BagAction, BagCategory, BagItem, BagQuality, BagSort, BatchMode } from './bagShared';
 import { buildAutoDisassembleSubCategoryOptionsByCategory } from '../../shared/autoDisassembleFilters';
 import { formatPercent, formatSignedNumber, formatSignedPercent } from '../../shared/formatAttr';
+import { EquipmentAffixTagRow } from '../../shared/EquipmentAffixTooltipList';
 import DisassembleModal from './DisassembleModal';
 import CraftModal from './CraftModal';
 import GemSynthesisModal from './GemSynthesisModal';
@@ -313,7 +314,7 @@ const ItemSheet: React.FC<SheetProps> = ({
   onSocket,
   onToggleLock,
 }) => {
-  const equipLines = useMemo(() => buildEquipmentLines(item), [item]);
+  const equipLines = useMemo(() => buildEquipmentDetailLines(item), [item]);
   const hasDesc = item.category !== 'equipment' && Boolean(item.desc?.trim());
   const hasEquipAttrs = item.category === 'equipment' && equipLines.length > 0;
   const hasSetInfo = Boolean(item.setInfo && item.setInfo.bonuses.length > 0);
@@ -382,20 +383,31 @@ const ItemSheet: React.FC<SheetProps> = ({
               <div className="mbag-sheet-section-title">装备属性</div>
               <div className="mbag-sheet-attr-list">
                 {equipLines.map((line, idx) => {
-                  const colonIdx = line.indexOf('：');
-                  if (colonIdx > 0) {
-                    const label = line.slice(0, colonIdx);
-                    const value = line.slice(colonIdx + 1).trim();
+                  if (line.affix) {
                     return (
-                      <div key={`${idx}-${line}`} className="mbag-sheet-attr-row">
+                      <div key={`${idx}-${line.text}`} className="mbag-sheet-attr-row mbag-sheet-attr-row--affix">
+                        <EquipmentAffixTagRow
+                          tierText={line.affix.tierText}
+                          bodyText={line.affix.bodyText}
+                          rollPercent={line.affix.rollPercent}
+                        />
+                      </div>
+                    );
+                  }
+                  const colonIdx = line.text.indexOf('：');
+                  if (colonIdx > 0) {
+                    const label = line.text.slice(0, colonIdx);
+                    const value = line.text.slice(colonIdx + 1).trim();
+                    return (
+                      <div key={`${idx}-${line.text}`} className="mbag-sheet-attr-row">
                         <span>{label}</span>
                         <span>{value}</span>
                       </div>
                     );
                   }
                   return (
-                    <div key={`${idx}-${line}`} className="mbag-sheet-attr-row">
-                      <span>{line}</span>
+                    <div key={`${idx}-${line.text}`} className="mbag-sheet-attr-row">
+                      <span>{line.text}</span>
                     </div>
                   );
                 })}

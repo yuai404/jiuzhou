@@ -1,0 +1,92 @@
+/**
+ * 作用：统一 tooltip 中词条行的视觉样式，避免在多个模块重复写一套。
+ * 约束：T级与百分比 Tag 尺寸一致，百分比 Tag 固定宽度，文本颜色继承父容器。
+ */
+
+:root {
+  --affix-tier-tag-text: #7a562c;
+  --affix-tier-tag-border: rgba(171, 126, 69, 0.55);
+  --affix-tier-tag-bg: linear-gradient(135deg, rgba(245, 233, 204, 0.88), rgba(228, 208, 165, 0.78));
+  --affix-roll-neutral-bg: linear-gradient(135deg, rgba(210, 217, 225, 0.28), rgba(193, 202, 212, 0.2));
+  --affix-roll-neutral-border: rgba(147, 162, 178, 0.42);
+  --affix-roll-alpha-strong: 0.18;
+  --affix-roll-alpha-soft: 0.08;
+  --affix-roll-ring-alpha: 0.24;
+}
+
+body.theme-dark {
+  --affix-tier-tag-text: #e6cb98;
+  --affix-tier-tag-border: rgba(205, 161, 90, 0.5);
+  --affix-tier-tag-bg: linear-gradient(135deg, rgba(87, 70, 39, 0.48), rgba(66, 52, 30, 0.42));
+  --affix-roll-neutral-bg: linear-gradient(135deg, rgba(129, 142, 157, 0.22), rgba(104, 116, 128, 0.16));
+  --affix-roll-neutral-border: rgba(166, 182, 199, 0.34);
+  --affix-roll-alpha-strong: 0.32;
+  --affix-roll-alpha-soft: 0.14;
+  --affix-roll-ring-alpha: 0.36;
+}
+
+.affix-tooltip-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.affix-tooltip-row {
+  display: grid;
+  grid-template-columns: auto 60px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: inherit;
+}
+
+.affix-tooltip-row .ant-tag.affix-tooltip-tag {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.affix-tooltip-tier-tag {
+  min-width: 32px;
+  color: var(--affix-tier-tag-text);
+  border-color: var(--affix-tier-tag-border);
+  background: var(--affix-tier-tag-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 1px 4px rgba(120, 83, 39, 0.14);
+}
+
+.affix-tooltip-roll-tag {
+  width: 60px;
+  text-align: center;
+  border-color: var(--affix-roll-neutral-border);
+  background: var(--affix-roll-neutral-bg);
+}
+
+.affix-tooltip-roll-tag.is-colored {
+  background: linear-gradient(
+    135deg,
+    rgb(var(--affix-roll-rgb, 126 190 228) / var(--affix-roll-alpha-strong)),
+    rgb(var(--affix-roll-rgb, 126 190 228) / var(--affix-roll-alpha-soft))
+  );
+  box-shadow: inset 0 0 0 1px rgb(var(--affix-roll-rgb, 126 190 228) / var(--affix-roll-ring-alpha));
+}
+
+.affix-tooltip-text {
+  min-width: 0;
+  color: inherit;
+  opacity: 0.92;
+  word-break: break-word;
+}
+
+.affix-tooltip-empty {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.58;
+}

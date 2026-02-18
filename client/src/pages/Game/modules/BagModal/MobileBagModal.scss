@@ -630,9 +630,17 @@
   color: var(--text-tertiary);
 }
 
-.mbag-sheet-attr-row span:last-child {
+.mbag-sheet-attr-row > span:last-child {
   font-weight: 700;
   color: var(--text-color);
+}
+
+.mbag-sheet-attr-row--affix {
+  display: block;
+}
+
+.mbag-sheet-attr-row--affix .affix-tooltip-row {
+  font-size: 12px;
 }
 
 .mbag-sheet-effect-list {
@@ -653,7 +661,7 @@
 .mbag-sheet-reroll-lock {
   width: 100%;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) 64px;
   gap: 8px;
   align-items: center;
   border: 1px solid var(--border-color);
@@ -706,6 +714,9 @@
 );
 
 .mbag-sheet-reroll-lock-tag {
+  display: inline-flex;
+  justify-content: flex-end;
+  width: 100%;
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;

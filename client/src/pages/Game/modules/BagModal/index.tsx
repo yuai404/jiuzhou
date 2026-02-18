@@ -25,8 +25,8 @@ import {
   buildAffixRerollCostPlan,
   buildBagItem,
   buildBatchDisassemblePayloadItems,
+  buildEquipmentDetailLines,
   buildEnhanceCostPlan,
-  buildEquipmentLines,
   buildGrowthPreviewAttrs,
   buildRefineCostPlan,
   calcUseEffectDelta,
@@ -59,6 +59,7 @@ import GemSynthesisModal from './GemSynthesisModal';
 import { formatPercent, formatSignedNumber, formatSignedPercent } from '../../shared/formatAttr';
 import { buildAutoDisassembleSubCategoryOptionsByCategory } from '../../shared/autoDisassembleFilters';
 import { useIsMobile } from '../../shared/responsive';
+import { EquipmentAffixTagRow } from '../../shared/EquipmentAffixTooltipList';
 import './index.scss';
 
 interface BagModalProps {
@@ -269,7 +270,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     [clampUseQty]
   );
 
-  const equipLines = useMemo(() => buildEquipmentLines(activeItem), [activeItem]);
+  const equipLines = useMemo(() => buildEquipmentDetailLines(activeItem), [activeItem]);
   const hasDesc = useMemo(() => {
     if (!activeItem) return false;
     if (activeItem.category === 'equipment') return false;
@@ -1017,11 +1018,26 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                       <div className="bag-detail-section">
                         <div className="bag-detail-title">装备属性</div>
                         <div className="bag-detail-attr-grid">
-                          {equipLines.map((line, idx) => (
-                            <div key={`${idx}-${line}`} className="bag-detail-attr-item">
-                              {line}
-                            </div>
-                          ))}
+                          {equipLines.map((line, idx) => {
+                            if (!line.affix) {
+                              return (
+                                <div key={`${idx}-${line.text}`} className="bag-detail-attr-item">
+                                  {line.text}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div key={`${idx}-${line.text}`} className="bag-detail-attr-item">
+                                <EquipmentAffixTagRow
+                                  tierText={line.affix.tierText}
+                                  bodyText={line.affix.bodyText}
+                                  rollPercent={line.affix.rollPercent}
+                                  className="affix-tooltip-row bag-detail-affix-row"
+                                  textClassName="affix-tooltip-text bag-detail-affix-text"
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ) : null}

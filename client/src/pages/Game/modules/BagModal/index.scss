@@ -265,7 +265,7 @@
     width: 100%;
     text-align: left;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) 68px;
     align-items: center;
     gap: 8px;
     padding: 10px 12px;
@@ -323,6 +323,9 @@
   );
 
   .bag-reroll-affix-lock {
+    display: inline-flex;
+    justify-content: flex-end;
+    width: 100%;
     font-size: 11px;
     color: var(--text-secondary);
     font-weight: 700;
@@ -745,6 +748,15 @@
   font-size: 11px;
   line-height: 1.6;
   word-break: break-word;
+}
+
+.bag-detail-affix-row {
+  font-size: 11px;
+}
+
+.bag-detail-affix-text {
+  color: var(--text-tertiary);
+  opacity: 1;
 }
 
 .bag-actions {

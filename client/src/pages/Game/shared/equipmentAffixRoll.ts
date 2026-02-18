@@ -1,0 +1,90 @@
+/**
+ * 作用：统一装备词条 ROLL 的解析、格式化与颜色渐变算法。
+ * 输入：词条中的 roll_ratio(0~1) 或 roll_percent(0~100)。
+ * 输出：可直接给 UI 使用的百分比与颜色。
+ * 关键约束：颜色分段固定为 0~25 绿、25~50 蓝、50~75 紫、75~100 红。
+ */
+
+export type AffixRollLike = {
+  roll_ratio?: number;
+  roll_percent?: number;
+};
+
+const clampPercent = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+};
+
+/**
+ * 读取词条 roll 百分比，兼容后端返回的 ratio(0~1) 与 percent(0~100)。
+ */
+export const getAffixRollPercent = (affix: AffixRollLike): number | null => {
+  if (typeof affix.roll_percent === 'number' && Number.isFinite(affix.roll_percent)) {
+    return clampPercent(affix.roll_percent);
+  }
+  if (typeof affix.roll_ratio === 'number' && Number.isFinite(affix.roll_ratio)) {
+    return clampPercent(affix.roll_ratio * 100);
+  }
+  return null;
+};
+
+export const formatAffixRollPercent = (rollPercent: number | null): string => {
+  if (rollPercent === null || !Number.isFinite(rollPercent)) return '--';
+  const normalized = clampPercent(rollPercent);
+  if (Math.abs(normalized - Math.round(normalized)) <= 1e-6) {
+    return `${Math.round(normalized)}%`;
+  }
+  return `${Number(normalized.toFixed(2))}%`;
+};
+
+type Rgb = readonly [number, number, number];
+
+const lerpChannel = (start: number, end: number, progress: number): number => {
+  return Math.round(start + (end - start) * progress);
+};
+
+const mixRgb = (start: Rgb, end: Rgb, progress: number): Rgb => {
+  const t = Math.max(0, Math.min(1, progress));
+  return [
+    lerpChannel(start[0], end[0], t),
+    lerpChannel(start[1], end[1], t),
+    lerpChannel(start[2], end[2], t),
+  ] as const;
+};
+
+const rgbToCss = (rgb: Rgb): string => {
+  return `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
+};
+
+type RollColorSegment = {
+  start: number;
+  end: number;
+  from: Rgb;
+  to: Rgb;
+};
+
+const ROLL_COLOR_SEGMENTS: ReadonlyArray<RollColorSegment> = [
+  { start: 0, end: 25, from: [111, 195, 145], to: [45, 138, 94] }, // 青玉
+  { start: 25, end: 50, from: [126, 190, 228], to: [54, 116, 185] }, // 霁青
+  { start: 50, end: 75, from: [191, 165, 228], to: [111, 73, 174] }, // 灵紫
+  { start: 75, end: 100, from: [227, 128, 116], to: [155, 52, 47] }, // 朱砂
+];
+
+/**
+ * ROLL 颜色分段规则：
+ * 1) 0~25% 绿渐变
+ * 2) 25~50% 蓝渐变
+ * 3) 50~75% 紫渐变
+ * 4) 75~100% 红渐变（80% 与 100% 明显不同）
+ */
+export const getAffixRollColor = (rollPercent: number | null): string | null => {
+  if (rollPercent === null || !Number.isFinite(rollPercent)) return null;
+  const normalized = clampPercent(rollPercent);
+  const segment =
+    ROLL_COLOR_SEGMENTS.find((item) => normalized >= item.start && normalized <= item.end) ??
+    ROLL_COLOR_SEGMENTS[ROLL_COLOR_SEGMENTS.length - 1];
+  if (!segment) return null;
+  const span = Math.max(1, segment.end - segment.start);
+  const progress = (normalized - segment.start) / span;
+  return rgbToCss(mixRgb(segment.from, segment.to, progress));
+};

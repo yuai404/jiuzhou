@@ -11,6 +11,7 @@ import type {
 } from "../../../../services/api";
 import { getEquipRealmRankForReroll as getEquipRealmRankForRerollShared } from "../../shared/realm";
 import { buildEquipmentAffixDisplayText } from "../../shared/equipmentAffixText";
+import { formatAffixRollPercent, getAffixRollColor, getAffixRollPercent } from "../../shared/equipmentAffixRoll";
 import { formatSignedNumber, formatSignedPercent, formatPercent } from "../../shared/formatAttr";
 import { coerceAffixes as coerceItemMetaAffixes } from "../../shared/itemMetaFormat";
 
@@ -475,88 +476,7 @@ export const formatEquipmentAffixLine = (affix: EquipmentAffix): string => {
   });
   return displayText ? displayText.fullText : "词条 T-：未知";
 };
-
-const clampPercent = (value: number): number => {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, value));
-};
-
-/**
- * 读取词条 roll 百分比，兼容后端返回的 ratio(0~1) 与 percent(0~100) 两种格式。
- */
-export const getAffixRollPercent = (affix: EquipmentAffix): number | null => {
-  if (typeof affix.roll_percent === "number" && Number.isFinite(affix.roll_percent)) {
-    return clampPercent(affix.roll_percent);
-  }
-  if (typeof affix.roll_ratio === "number" && Number.isFinite(affix.roll_ratio)) {
-    return clampPercent(affix.roll_ratio * 100);
-  }
-  return null;
-};
-
-export const formatAffixRollPercent = (rollPercent: number | null): string => {
-  if (rollPercent === null || !Number.isFinite(rollPercent)) return "--";
-  const normalized = clampPercent(rollPercent);
-  if (Math.abs(normalized - Math.round(normalized)) <= 1e-6) {
-    return `${Math.round(normalized)}%`;
-  }
-  return `${Number(normalized.toFixed(2))}%`;
-};
-
-/**
- * 线性插值计算 RGB 颜色（用于分段渐变）。
- */
-type Rgb = readonly [number, number, number];
-
-const lerpChannel = (start: number, end: number, progress: number): number => {
-  return Math.round(start + (end - start) * progress);
-};
-
-const mixRgb = (start: Rgb, end: Rgb, progress: number): Rgb => {
-  const t = Math.max(0, Math.min(1, progress));
-  return [
-    lerpChannel(start[0], end[0], t),
-    lerpChannel(start[1], end[1], t),
-    lerpChannel(start[2], end[2], t),
-  ] as const;
-};
-
-const rgbToCss = (rgb: Rgb): string => {
-  return `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
-};
-
-type RollColorSegment = {
-  start: number;
-  end: number;
-  from: Rgb;
-  to: Rgb;
-};
-
-const ROLL_COLOR_SEGMENTS: ReadonlyArray<RollColorSegment> = [
-  { start: 0, end: 25, from: [56, 214, 124], to: [22, 163, 74] }, // 绿
-  { start: 25, end: 50, from: [96, 165, 250], to: [37, 99, 235] }, // 蓝
-  { start: 50, end: 75, from: [196, 181, 253], to: [126, 34, 206] }, // 紫
-  { start: 75, end: 100, from: [248, 113, 113], to: [153, 27, 27] }, // 红
-];
-
-/**
- * ROLL 颜色分段规则（按你的要求）：
- * 1) 0~25% 绿渐变
- * 2) 25~50% 蓝渐变
- * 3) 50~75% 紫渐变
- * 4) 75~100% 红渐变（80% 与 100% 明显不同）
- */
-export const getAffixRollColor = (rollPercent: number | null): string | null => {
-  if (rollPercent === null || !Number.isFinite(rollPercent)) return null;
-  const normalized = clampPercent(rollPercent);
-  const segment =
-    ROLL_COLOR_SEGMENTS.find((item) => normalized >= item.start && normalized <= item.end) ??
-    ROLL_COLOR_SEGMENTS[ROLL_COLOR_SEGMENTS.length - 1];
-  if (!segment) return null;
-  const span = Math.max(1, segment.end - segment.start);
-  const progress = (normalized - segment.start) / span;
-  return rgbToCss(mixRgb(segment.from, segment.to, progress));
-};
+export { formatAffixRollPercent, getAffixRollColor, getAffixRollPercent };
 
 const toFiniteNumber = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -892,7 +812,17 @@ export const collectGemCandidates = (items: BagItem[]): BagItem[] => {
 
 /* ───────── 构建装备详情行 ───────── */
 
-export const buildEquipmentLines = (item: BagItem | null): string[] => {
+export type EquipmentDetailLine = {
+  text: string;
+  affix?: {
+    tierText: string;
+    tagText: string;
+    bodyText: string;
+    rollPercent: number | null;
+  };
+};
+
+export const buildEquipmentDetailLines = (item: BagItem | null): EquipmentDetailLine[] => {
   if (!item?.equip) return [];
   const {
     strengthenLevel,
@@ -904,11 +834,11 @@ export const buildEquipmentLines = (item: BagItem | null): string[] => {
     socketedGems,
   } = item.equip;
 
-  const lines: string[] = [];
-  lines.push(
-    `强化：${strengthenLevel > 0 ? `+${strengthenLevel}` : strengthenLevel}`,
-  );
-  lines.push(`精炼：${refineLevel > 0 ? `+${refineLevel}` : refineLevel}`);
+  const lines: EquipmentDetailLine[] = [];
+  lines.push({
+    text: `强化：${strengthenLevel > 0 ? `+${strengthenLevel}` : strengthenLevel}`,
+  });
+  lines.push({ text: `精炼：${refineLevel > 0 ? `+${refineLevel}` : refineLevel}` });
 
   const toSortedEntries = (rec: Record<string, number>) =>
     Object.entries(rec).sort(
@@ -921,36 +851,65 @@ export const buildEquipmentLines = (item: BagItem | null): string[] => {
     const valText = percentAttrKeys.has(k)
       ? formatSignedPercent(v)
       : formatSignedNumber(v);
-    lines.push(`基础：${label} ${valText}`);
+    lines.push({ text: `基础：${label} ${valText}` });
   }
 
-  lines.push(`孔位：${socketedGems.length}/${socketMax}`);
+  lines.push({ text: `孔位：${socketedGems.length}/${socketMax}` });
   for (const gem of socketedGems) {
     const gemName = gem.name || gem.itemDefId;
     const displaySlot = gem.slot + 1;
-    lines.push(`宝石[${displaySlot}]：${gemName}`);
+    lines.push({ text: `宝石[${displaySlot}]：${gemName}` });
     for (const effect of gem.effects) {
       const label = attrLabel[effect.attrKey] ?? effect.attrKey;
       const valText =
         effect.applyType === "percent"
           ? formatSignedPercent(effect.value)
           : formatSignedNumber(effect.value);
-      lines.push(`  - ${label} ${valText}`);
+      lines.push({ text: `  - ${label} ${valText}` });
     }
   }
 
   if (!identified) {
-    lines.push("词条：未鉴定");
+    lines.push({ text: "词条：未鉴定" });
     return lines;
   }
 
   const sortedAffixes = [...affixes].sort(
     (a, b) => (b.tier ?? 0) - (a.tier ?? 0),
   );
-  for (const a of sortedAffixes) {
-    lines.push(formatEquipmentAffixLine(a));
+  for (const affix of sortedAffixes) {
+    const displayText = buildEquipmentAffixDisplayText(affix, {
+      normalPrefix: "词条",
+      legendaryPrefix: "传奇词条",
+      keyLabelMap: attrLabel,
+      fallbackLabel: "未知",
+      percentKeys: percentAttrKeys,
+      formatSignedNumber,
+      formatSignedPercent,
+    });
+    if (!displayText) {
+      lines.push({ text: "词条 T-：未知" });
+      continue;
+    }
+    const rollPercent = getAffixRollPercent(affix);
+    const bodyText = `${displayText.label}${displayText.valueText ? ` ${displayText.valueText}` : ""}`;
+
+    lines.push({
+      text: `${displayText.tierText}(${displayText.prefixText}) ${formatAffixRollPercent(rollPercent)}（ROLL）：${bodyText}`,
+      affix: {
+        tierText: displayText.tierText,
+        tagText: displayText.prefixText,
+        bodyText,
+        rollPercent,
+      },
+    });
   }
+
   return lines;
+};
+
+export const buildEquipmentLines = (item: BagItem | null): string[] => {
+  return buildEquipmentDetailLines(item).map((line) => line.text);
 };
 
 /* ───────── 效果 / 分类映射 ───────── */
