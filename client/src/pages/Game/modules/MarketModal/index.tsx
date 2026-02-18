@@ -12,7 +12,7 @@ import {
   getMyMarketListings,
   SERVER_BASE,
 } from '../../../../services/api';
-import type { InventoryItemDto, ItemDefLite, MarketListingDto, MarketTradeRecordDto } from '../../../../services/api';
+import type { MarketListingDto, MarketTradeRecordDto } from '../../../../services/api';
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
 import { useIsMobile } from '../../shared/responsive';
 import { getItemQualityMeta, normalizeItemQualityName } from '../../shared/itemQuality';
@@ -22,6 +22,17 @@ import MarketItemTooltipContent, {
   normalizeMarketTooltipCategory,
   type MarketTooltipCategory,
 } from '../../shared/MarketItemTooltipContent';
+import {
+  buildBagItem,
+  buildEquipmentDetailLines,
+  categoryLabels as bagCategoryLabels,
+  qualityClass,
+  qualityColor,
+  qualityLabelText,
+  type BagItem,
+} from '../BagModal/bagShared';
+import { EquipmentDetailAttrList } from '../BagModal/EquipmentDetailAttrList';
+import { SetBonusDisplay } from '../BagModal/SetBonusDisplay';
 import './index.scss';
 
 type MarketPanel = 'market' | 'my' | 'list' | 'records';
@@ -32,17 +43,147 @@ type MarketCategory = 'all' | MarketTooltipCategory;
 
 type MarketSort = 'timeDesc' | 'priceAsc' | 'priceDesc' | 'qtyDesc';
 
-type BagItem = {
-  id: number;
-  itemDefId: string;
-  name: string;
-  icon: string;
-  quality: ItemQuality;
-  category: Exclude<MarketCategory, 'all'>;
-  qty: number;
-  locked: boolean;
-  desc: string;
-  stackMax: number;
+/* ─── 移动端 Bottom Sheet 组件 ─── */
+
+interface ListSheetProps {
+  item: BagItem | null;
+  listPrice: string;
+  listQty: string;
+  canList: boolean;
+  equipDetailLines: ReturnType<typeof buildEquipmentDetailLines>;
+  setInfo: BagItem['setInfo'];
+  effects: string[];
+  onClose: () => void;
+  onPriceChange: (v: string) => void;
+  onQtyChange: (v: string) => void;
+  onList: () => void;
+}
+
+const ListSheet: React.FC<ListSheetProps> = ({
+  item,
+  listPrice,
+  listQty,
+  canList,
+  equipDetailLines,
+  setInfo,
+  effects,
+  onClose,
+  onPriceChange,
+  onQtyChange,
+  onList,
+}) => {
+  if (!item) return null;
+
+  const hasEquipDetail = equipDetailLines.length > 0;
+  const hasSetInfo = setInfo && setInfo.bonuses.length > 0;
+  const hasEffects = effects.length > 0;
+
+  return (
+    <>
+      <div className="market-list-sheet-mask" onClick={onClose} />
+      <div className="market-list-sheet">
+        <div className="market-list-sheet-handle">
+          <div className="market-list-sheet-bar" />
+        </div>
+
+        {/* 头部 */}
+        <div className="market-list-sheet-head">
+          <div className={`market-list-sheet-icon-box ${qualityClass[item.quality]}`}>
+            <img className="market-list-sheet-icon-img" src={item.icon} alt={item.name} />
+          </div>
+          <div className="market-list-sheet-meta">
+            <div className="market-list-sheet-name" style={{ color: qualityColor[item.quality] }}>
+              {item.name}
+            </div>
+            <div className="market-list-sheet-tags">
+              <span className="market-list-sheet-tag market-list-sheet-tag--cat">
+                {bagCategoryLabels[item.category]}
+              </span>
+              <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${qualityClass[item.quality]}`}>
+                {qualityLabelText[item.quality]}
+              </span>
+              {item.locked ? <span className="market-list-sheet-tag market-list-sheet-tag--locked">已锁定</span> : null}
+            </div>
+            {item.stackMax > 1 && (
+              <div className="market-list-sheet-qty">数量 {item.qty} / {item.stackMax}</div>
+            )}
+          </div>
+        </div>
+
+        {/* 详情 */}
+        <div className="market-list-sheet-body">
+          {item.category !== 'equipment' && item.desc ? (
+            <div className="market-list-sheet-section">
+              <div className="market-list-sheet-section-title">物品描述</div>
+              <div className="market-list-sheet-section-text">{item.desc}</div>
+            </div>
+          ) : null}
+
+          {hasEquipDetail ? (
+            <div className="market-list-sheet-section">
+              <div className="market-list-sheet-section-title">装备属性</div>
+              <EquipmentDetailAttrList lines={equipDetailLines} variant="mobile" className="market-list-sheet-attr-list" />
+            </div>
+          ) : null}
+
+          {hasSetInfo ? (
+            <div className="market-list-sheet-section">
+              <div className="market-list-sheet-section-title">套装效果</div>
+              <SetBonusDisplay setInfo={setInfo!} variant="mobile" />
+            </div>
+          ) : null}
+
+          {hasEffects ? (
+            <div className="market-list-sheet-section">
+              <div className="market-list-sheet-section-title">效果</div>
+              <div className="market-list-sheet-effect-list">
+                {effects.map((line) => (
+                  <div key={line} className="market-list-sheet-effect-chip">{line}</div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {item.locked ? (
+            <div className="market-list-sheet-locked-tip">物品已锁定，无法上架交易。</div>
+          ) : null}
+        </div>
+
+        {/* 上架表单 */}
+        <div className="market-list-sheet-form">
+          <div className="market-list-sheet-row">
+            <span className="market-list-sheet-label">单价（灵石）</span>
+            <input
+              className="market-list-sheet-input"
+              value={listPrice}
+              onChange={(e) => onPriceChange(e.target.value)}
+              inputMode="numeric"
+              placeholder="请输入单价"
+            />
+          </div>
+          <div className="market-list-sheet-row">
+            <span className="market-list-sheet-label">数量</span>
+            <input
+              className="market-list-sheet-input"
+              value={listQty}
+              onChange={(e) => onQtyChange(e.target.value)}
+              inputMode="numeric"
+              placeholder="请输入数量"
+            />
+          </div>
+          <div className="market-list-sheet-actions">
+            <button
+              className="market-list-sheet-btn is-primary"
+              disabled={!canList}
+              onClick={onList}
+            >
+              确认上架
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 };
 
 type ListingItem = {
@@ -139,38 +280,6 @@ const toNonNegativeIntegerOrUndefined = (value: string): number | undefined => {
   const parsed = parseMaybeNumber(value);
   if (parsed === null) return undefined;
   return Math.max(0, Math.floor(parsed));
-};
-
-const buildBagItem = (it: InventoryItemDto): BagItem | null => {
-  const def: ItemDefLite | undefined = it.def;
-  if (!def) return null;
-
-  const name = String(def.name ?? '').trim();
-  if (!name) return null;
-
-  const icon = resolveIcon(def.icon);
-  const rawQuality =
-    typeof it.quality === 'string' && it.quality.trim().length > 0
-      ? it.quality.trim()
-      : def.quality;
-  const quality = normalizeQuality(rawQuality);
-  const category = normalizeMarketCategory(def.category);
-  const desc = category === 'equipment' ? '' : String(def.description ?? def.long_desc ?? '').trim();
-  const qty = Number(it.qty) || 0;
-  const stackMax = Number(def.stack_max) || 1;
-
-  return {
-    id: Number(it.id),
-    itemDefId: String(def.id ?? it.item_def_id ?? ''),
-    name,
-    icon,
-    quality,
-    category,
-    qty,
-    locked: Boolean(it.locked),
-    desc,
-    stackMax,
-  };
 };
 
 const buildListingItem = (dto: MarketListingDto): ListingItem => {
@@ -358,7 +467,10 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
         .filter((v): v is BagItem => !!v)
         .filter((v) => v.qty > 0);
       setBagItems(next);
-      setSelectedBagId((prev) => (prev !== null && next.some((b) => b.id === prev) ? prev : next[0]?.id ?? null));
+      // 移动端不自动选中第一个物品
+      if (!isMobile) {
+        setSelectedBagId((prev) => (prev !== null && next.some((b) => b.id === prev) ? prev : next[0]?.id ?? null));
+      }
     } catch (error: unknown) {
       const err = error as { message?: string };
       messageRef.current.error(err.message || '获取背包物品失败');
@@ -367,7 +479,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     } finally {
       setBagLoading(false);
     }
-  }, [messageRef]);
+  }, [messageRef, isMobile]);
 
   const refreshMarket = useCallback(
     async (page: number) => {
@@ -982,15 +1094,24 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
       !!safePrice &&
       safePrice > 0;
 
-    return (
-      <div className="market-pane">
-        <div className="market-pane-top">
-          <div className="market-title">物品上架</div>
-        </div>
-        <div className="market-pane-body">
-          <div className="market-list-shell">
-            <div className="market-bag">
-              <div className="market-bag-title">背包</div>
+    // 装备属性行（用于 EquipmentDetailAttrList）
+    const equipDetailLines = selectedBagItem ? buildEquipmentDetailLines(selectedBagItem) : [];
+    const hasEquipDetail = equipDetailLines.length > 0;
+
+    // 套装效果
+    const setInfo = selectedBagItem?.setInfo ?? null;
+    const hasSetInfo = setInfo && setInfo.bonuses.length > 0;
+
+    // 效果/说明
+    const effects = selectedBagItem?.effects ?? [];
+    const hasEffects = effects.length > 0;
+
+    // 移动端：只显示背包格子 + Bottom Sheet
+    if (isMobile) {
+      return (
+        <div className="market-pane">
+          <div className="market-pane-body market-pane-body--mobile-list">
+            <div className="market-bag market-bag--mobile">
               <div className="market-bag-grid">
                 {bagLoading && bagItems.length === 0 ? <div className="market-empty">加载中...</div> : null}
                 {bagItems.map((b) => (
@@ -999,12 +1120,62 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                     className="market-bag-cell"
                     qualityClassName={getQualityClassName(b.quality)}
                     active={selectedBagId === b.id}
-                    empty={b.qty <= 0}
                     icon={b.icon}
                     name={b.name}
                     quantity={b.qty}
-                    showQuantity={b.qty > 1}
-                    lockedLabel={b.locked ? '锁' : undefined}
+                    showQuantity={b.stackMax > 1}
+                    equippedLabel={b.location === 'equipped' ? '已穿戴' : undefined}
+                    lockedLabel={b.locked ? '已锁' : undefined}
+                    onClick={() => setSelectedBagId(b.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 移动端 Bottom Sheet */}
+          {selectedBagItem && (
+            <ListSheet
+              item={selectedBagItem}
+              listPrice={listPrice}
+              listQty={listQty}
+              canList={canList}
+              equipDetailLines={equipDetailLines}
+              setInfo={setInfo}
+              effects={effects}
+              onClose={() => setSelectedBagId(null)}
+              onPriceChange={setListPrice}
+              onQtyChange={setListQty}
+              onList={doList}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // 桌面端：左右分栏布局
+    return (
+      <div className="market-pane">
+        <div className="market-pane-top">
+          <div className="market-title">物品上架</div>
+        </div>
+        <div className="market-pane-body">
+          <div className="market-list-shell">
+            <div className="market-bag">
+              <div className="market-bag-grid">
+                {bagLoading && bagItems.length === 0 ? <div className="market-empty">加载中...</div> : null}
+                {bagItems.map((b) => (
+                  <InventoryItemCell
+                    key={b.id}
+                    className="market-bag-cell"
+                    qualityClassName={getQualityClassName(b.quality)}
+                    active={selectedBagId === b.id}
+                    icon={b.icon}
+                    name={b.name}
+                    quantity={b.qty}
+                    showQuantity={b.stackMax > 1}
+                    equippedLabel={b.location === 'equipped' ? '已穿戴' : undefined}
+                    lockedLabel={b.locked ? '已锁' : undefined}
                     onClick={() => setSelectedBagId(b.id)}
                   />
                 ))}
@@ -1020,18 +1191,55 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                         <div className="market-list-detail-name">{selectedBagItem.name}</div>
                         <div className="market-list-detail-tags">
                           <Tag className={`market-tag market-tag-quality ${getQualityClassName(selectedBagItem.quality)}`}>{selectedBagItem.quality}</Tag>
-                          <Tag className="market-tag">{categoryText[selectedBagItem.category]}</Tag>
+                          <Tag className="market-tag">{bagCategoryLabels[selectedBagItem.category]}</Tag>
                           <Tag className="market-tag">数量 {selectedBagItem.qty}</Tag>
                           {selectedBagItem.locked ? <Tag color="red">已锁定</Tag> : null}
                         </div>
                       </div>
                     </div>
-                    {selectedBagItem.category !== 'equipment' && selectedBagItem.desc ? (
-                      <div className="market-list-detail-desc">{selectedBagItem.desc}</div>
-                    ) : null}
-                    {selectedBagItem.locked ? (
-                      <div className="market-list-locked-tip">物品已锁定，无法上架交易。</div>
-                    ) : null}
+
+                    <div className="market-list-detail-scroll">
+                      {/* 物品描述 */}
+                      {selectedBagItem.category !== 'equipment' && selectedBagItem.desc ? (
+                        <div className="market-list-detail-section">
+                          <div className="market-list-detail-title">物品描述</div>
+                          <div className="market-list-detail-text">{selectedBagItem.desc}</div>
+                        </div>
+                      ) : null}
+
+                      {/* 装备属性 */}
+                      {hasEquipDetail ? (
+                        <div className="market-list-detail-section">
+                          <div className="market-list-detail-title">装备属性</div>
+                          <EquipmentDetailAttrList lines={equipDetailLines} variant="desktop" className="market-list-detail-attr-grid" />
+                        </div>
+                      ) : null}
+
+                      {/* 套装效果 */}
+                      {hasSetInfo && setInfo ? (
+                        <div className="market-list-detail-section">
+                          <div className="market-list-detail-title">套装效果</div>
+                          <SetBonusDisplay setInfo={setInfo} variant="desktop" />
+                        </div>
+                      ) : null}
+
+                      {/* 效果/说明 */}
+                      {hasEffects ? (
+                        <div className="market-list-detail-section">
+                          <div className="market-list-detail-title">效果 / 说明</div>
+                          <div className="market-list-detail-lines">
+                            {effects.map((line) => (
+                              <div key={line} className="market-list-detail-line">{line}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {selectedBagItem.locked ? (
+                        <div className="market-list-locked-tip">物品已锁定，无法上架交易。</div>
+                      ) : null}
+                    </div>
+
                     <div className="market-list-form">
                       <div className="market-list-row">
                         <div className="market-list-k">单价（灵石）</div>
