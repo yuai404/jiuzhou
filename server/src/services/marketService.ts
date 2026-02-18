@@ -5,6 +5,13 @@ import { lockCharacterInventoryMutexTx, lockCharacterInventoryMutexesTx } from '
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getItemDefinitionById, getItemDefinitions } from './staticConfigLoader.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import {
+  enrichAffixesWithRollMeta,
+  getEquipRealmRankForReroll,
+  getQualityMultiplierForReroll,
+  loadAffixPoolForReroll,
+  parseGeneratedAffixesForReroll,
+} from './equipmentAffixRerollService.js';
 
 export type MarketSort = 'timeDesc' | 'priceAsc' | 'priceDesc' | 'qtyDesc';
 
@@ -76,7 +83,10 @@ const requireBuyerBagSlot = async (client: PoolClient, buyerCharacterId: number)
   return slots[0];
 };
 
-const toListingDto = (row: Record<string, unknown>): MarketListingDto | null => {
+const toListingDto = (
+  row: Record<string, unknown>,
+  affixPoolCache: Map<string, ReturnType<typeof loadAffixPoolForReroll>>,
+): MarketListingDto | null => {
   const itemDefId = String(row.item_def_id || '').trim();
   if (!itemDefId) return null;
   const itemDef = getItemDefinitionById(itemDefId);
@@ -101,6 +111,31 @@ const toListingDto = (row: Record<string, unknown>): MarketListingDto | null => 
           socketedGemsRaw: row.socketed_gems,
         })
       : baseAttrsRaw;
+  let normalizedAffixes = parseGeneratedAffixesForReroll(row.affixes);
+  if (category === 'equipment' && normalizedAffixes.length > 0) {
+    const affixPoolId = typeof itemDef.affix_pool_id === 'string' ? itemDef.affix_pool_id.trim() : '';
+    if (affixPoolId) {
+      if (!affixPoolCache.has(affixPoolId)) {
+        affixPoolCache.set(affixPoolId, loadAffixPoolForReroll(affixPoolId));
+      }
+      const affixPool = affixPoolCache.get(affixPoolId);
+      if (affixPool) {
+        const realmRank = getEquipRealmRankForReroll(itemDef.equip_req_realm);
+        const resolvedQualityMultiplier = getQualityMultiplierForReroll(resolvedQualityRank);
+        const defQualityMultiplier = getQualityMultiplierForReroll(defQualityRank);
+        const attrFactor =
+          Number.isFinite(defQualityMultiplier) && defQualityMultiplier > 0
+            ? resolvedQualityMultiplier / defQualityMultiplier
+            : 1;
+        normalizedAffixes = enrichAffixesWithRollMeta({
+          affixes: normalizedAffixes,
+          affixDefs: affixPool.affixes,
+          realmRank,
+          attrFactor,
+        });
+      }
+    }
+  }
 
   return {
     id: Number(row.id),
@@ -126,7 +161,7 @@ const toListingDto = (row: Record<string, unknown>): MarketListingDto | null => 
     strengthenLevel: Math.max(0, Math.floor(Number(row.strengthen_level) || 0)),
     refineLevel: Math.max(0, Math.floor(Number(row.refine_level) || 0)),
     identified: Boolean(row.identified),
-    affixes: row.affixes ?? [],
+    affixes: normalizedAffixes.length > 0 ? normalizedAffixes : row.affixes ?? [],
     qty: Number(row.qty),
     unitPriceSpiritStones: Number(row.unit_price_spirit_stones),
     sellerCharacterId: Number(row.seller_character_id),
@@ -263,8 +298,9 @@ export const getMarketListings = async (params: {
   try {
     const [listResult, countResult] = await Promise.all([query(listSql, values), query(countSql, values.slice(0, values.length - 2))]);
     const total = Number(countResult.rows[0]?.cnt ?? 0);
+    const affixPoolCache = new Map<string, ReturnType<typeof loadAffixPoolForReroll>>();
     const listings: MarketListingDto[] = listResult.rows
-      .map((row) => toListingDto(row as Record<string, unknown>))
+      .map((row) => toListingDto(row as Record<string, unknown>, affixPoolCache))
       .filter((entry): entry is MarketListingDto => entry !== null);
     return { success: true, message: 'ok', data: { listings, total } };
   } catch (error) {
@@ -323,8 +359,9 @@ export const getMyMarketListings = async (params: {
     );
 
     const total = Number(countResult.rows[0]?.cnt ?? 0);
+    const affixPoolCache = new Map<string, ReturnType<typeof loadAffixPoolForReroll>>();
     const listings: MarketListingDto[] = listResult.rows
-      .map((row) => toListingDto(row as Record<string, unknown>))
+      .map((row) => toListingDto(row as Record<string, unknown>, affixPoolCache))
       .filter((entry): entry is MarketListingDto => entry !== null);
 
     return { success: true, message: 'ok', data: { listings, total } };
