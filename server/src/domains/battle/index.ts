@@ -4,7 +4,6 @@
  */
 import {
   abandonBattle,
-  autoBattle,
   getBattleState,
   recoverBattlesFromRedis,
   startDungeonPVEBattle,
@@ -19,7 +18,6 @@ export const battleService = {
   startDungeonPVEBattle,
   startPVPBattle,
   playerAction,
-  autoBattle,
   getBattleState,
   abandonBattle,
   isCharacterInBattle,

@@ -45,6 +45,24 @@ interface BattleAreaProps {
 }
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const DEFAULT_BATTLE_START_COOLDOWN_MS = 2000;
+
+const toPositiveInt = (value: unknown): number | null => {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+};
+
+type BattleCooldownMetaLike = {
+  battleStartCooldownMs?: unknown;
+  retryAfterMs?: unknown;
+  nextBattleAvailableAt?: unknown;
+};
+
+type StartBattleOptions = {
+  retryOnCooldown?: boolean;
+  silentCooldown?: boolean;
+};
 
 const toPercent = (value: number, total: number) => {
   if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return 0;
@@ -254,6 +272,8 @@ const BattleArea: React.FC<BattleAreaProps> = ({
   const startingBattleRef = useRef(false);
   const lastSocketBattleUpdateAtRef = useRef(0);
   const pollInFlightRef = useRef(false);
+  const battleStartCooldownMsRef = useRef(DEFAULT_BATTLE_START_COOLDOWN_MS);
+  const nextBattleAvailableAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     onAppendBattleLinesRef.current = onAppendBattleLines ?? null;
@@ -269,6 +289,36 @@ const BattleArea: React.FC<BattleAreaProps> = ({
       window.clearTimeout(autoNextTimerRef.current);
       autoNextTimerRef.current = null;
     }
+  }, []);
+
+  const syncBattleCooldownMeta = useCallback((raw: BattleCooldownMetaLike | null | undefined) => {
+    if (!raw || typeof raw !== 'object') return;
+    const cooldownMs = toPositiveInt(raw.battleStartCooldownMs);
+    if (cooldownMs != null) {
+      battleStartCooldownMsRef.current = cooldownMs;
+    }
+
+    const nextAvailableAt = toPositiveInt(raw.nextBattleAvailableAt);
+    if (nextAvailableAt != null) {
+      nextBattleAvailableAtRef.current = nextAvailableAt;
+      return;
+    }
+
+    const retryAfterMs = toPositiveInt(raw.retryAfterMs);
+    if (retryAfterMs != null) {
+      nextBattleAvailableAtRef.current = Date.now() + retryAfterMs;
+    }
+  }, []);
+
+  const getAutoNextDelayMs = useCallback((): number => {
+    const nextAvailableAt = nextBattleAvailableAtRef.current;
+    if (nextAvailableAt != null) {
+      const remaining = nextAvailableAt - Date.now();
+      if (remaining > 0) return remaining;
+      nextBattleAvailableAtRef.current = null;
+      return 0;
+    }
+    return Math.max(DEFAULT_BATTLE_START_COOLDOWN_MS, battleStartCooldownMsRef.current);
   }, []);
 
   useEffect(() => {
@@ -381,10 +431,12 @@ const BattleArea: React.FC<BattleAreaProps> = ({
   );
 
   const startBattle = useCallback(
-    async (monsterIds: string[]): Promise<void> => {
+    async (monsterIds: string[], options?: StartBattleOptions): Promise<void> => {
       if (startingBattleRef.current) return;
       startingBattleRef.current = true;
       clearAutoNextTimer();
+      const shouldRetryOnCooldown = options?.retryOnCooldown ?? false;
+      const isSilentCooldown = options?.silentCooldown ?? false;
 
       setSelectedEnemyId(null);
       clearFloatTimers();
@@ -410,6 +462,23 @@ const BattleArea: React.FC<BattleAreaProps> = ({
 
       try {
         const res = await startPVEBattle(monsterIds);
+        syncBattleCooldownMeta(res?.data);
+        const reason = String(res?.data?.reason ?? '').trim();
+        const retryAfterMs = toPositiveInt(res?.data?.retryAfterMs);
+        const isStartCooldown = reason === 'battle_start_cooldown';
+        if (!res?.success && shouldRetryOnCooldown && isStartCooldown && retryAfterMs != null) {
+          autoNextTimerRef.current = window.setTimeout(() => {
+            void startBattle(monsterIds, { retryOnCooldown: true, silentCooldown: true });
+          }, Math.max(0, retryAfterMs));
+          if (!isSilentCooldown) {
+            message.info(`冷却中，${(retryAfterMs / 1000).toFixed(2)}秒后自动重试`, Math.max(1, Math.ceil(retryAfterMs / 1000)));
+          }
+          setBattleId(null);
+          setBattleState(null);
+          setResult('idle');
+          startingBattleRef.current = false;
+          return;
+        }
         if (!res?.success || !res.data?.battleId || !res.data?.state) {
           message.error(res?.message || '战斗发起失败');
           setBattleId(null);
@@ -447,7 +516,16 @@ const BattleArea: React.FC<BattleAreaProps> = ({
         startingBattleRef.current = false;
       }
     },
-    [clearAutoNextTimer, clearFloatTimers, ensureBattleEndAnnounced, ensureBattleStartAnnounced, formatNewLogs, message, pushBattleLines],
+    [
+      clearAutoNextTimer,
+      clearFloatTimers,
+      ensureBattleEndAnnounced,
+      ensureBattleStartAnnounced,
+      formatNewLogs,
+      message,
+      pushBattleLines,
+      syncBattleCooldownMeta,
+    ],
   );
 
   useEffect(() => {
@@ -457,7 +535,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     const baseMonsterId = rawMonsterId.split('-敌')[0]?.trim() ?? '';
     const monsterIds = baseMonsterId ? [baseMonsterId] : [];
     lastMonsterIdsRef.current = monsterIds;
-    void startBattle(monsterIds);
+    void startBattle(monsterIds, { retryOnCooldown: true, silentCooldown: true });
   }, [enemies, resolvedExternalBattleId, startBattle]);
 
   useEffect(() => {
@@ -531,8 +609,10 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     if (announcedAutoNextBattleIdRef.current === currentBattleId) return;
     announcedAutoNextBattleIdRef.current = currentBattleId;
     clearAutoNextTimer();
+    const delayMs = getAutoNextDelayMs();
+    const delaySec = (delayMs / 1000).toFixed(2);
     if (onNext) {
-      message.info('战斗结束，等待2秒后继续推进', 2);
+      message.info(`战斗结束，等待${delaySec}秒后继续推进`, Math.max(1, Math.ceil(delayMs / 1000)));
       autoNextTimerRef.current = window.setTimeout(() => {
         if (battleIdRef.current !== currentBattleId) return;
         if (nextingRef.current) return;
@@ -544,18 +624,28 @@ const BattleArea: React.FC<BattleAreaProps> = ({
             nextingRef.current = false;
             setNexting(false);
           });
-      }, 2000);
+      }, delayMs);
       return;
     }
 
     if (resolvedExternalBattleId) return;
 
-    message.info('战斗结束，等待3秒后开启下一场', 3);
+    message.info(`战斗结束，等待${delaySec}秒后开启下一场`, Math.max(1, Math.ceil(delayMs / 1000)));
     autoNextTimerRef.current = window.setTimeout(() => {
       if (battleIdRef.current !== currentBattleId) return;
-      void startBattle(lastMonsterIdsRef.current);
-    }, 3000);
-  }, [battleId, battleState, clearAutoNextTimer, message, onNext, resolvedAllowAutoNext, resolvedExternalBattleId, startBattle]);
+      void startBattle(lastMonsterIdsRef.current, { retryOnCooldown: true, silentCooldown: true });
+    }, delayMs);
+  }, [
+    battleId,
+    battleState,
+    clearAutoNextTimer,
+    getAutoNextDelayMs,
+    message,
+    onNext,
+    resolvedAllowAutoNext,
+    resolvedExternalBattleId,
+    startBattle,
+  ]);
 
   const pollBattleState = useCallback(async () => {
     const id = battleIdRef.current;
@@ -675,6 +765,8 @@ const BattleArea: React.FC<BattleAreaProps> = ({
       }
 
       if (kind === 'battle_finished') {
+        syncBattleCooldownMeta(data as BattleCooldownMetaLike);
+        syncBattleCooldownMeta(data?.data as BattleCooldownMetaLike | null | undefined);
         const rewards = data?.data?.rewards ?? data?.rewards ?? null;
         const next = (data?.data?.state || data?.state) as BattleStateDto | undefined;
         if (next) {
@@ -696,6 +788,8 @@ const BattleArea: React.FC<BattleAreaProps> = ({
       }
 
       if (kind === 'battle_abandoned') {
+        syncBattleCooldownMeta(data as BattleCooldownMetaLike);
+        syncBattleCooldownMeta(data?.data as BattleCooldownMetaLike | null | undefined);
         if (announcedBattleEndIdRef.current !== incomingBattleId) {
           announcedBattleEndIdRef.current = incomingBattleId;
           pushBattleLines([FAST_BATTLE_LOG_SYSTEM_LINES.abandoned]);
@@ -707,7 +801,15 @@ const BattleArea: React.FC<BattleAreaProps> = ({
       }
     });
     return () => unsub();
-  }, [applyLogsToFloats, ensureBattleDropsAnnounced, ensureBattleEndAnnounced, ensureBattleStartAnnounced, formatNewLogs, pushBattleLines]);
+  }, [
+    applyLogsToFloats,
+    ensureBattleDropsAnnounced,
+    ensureBattleEndAnnounced,
+    ensureBattleStartAnnounced,
+    formatNewLogs,
+    pushBattleLines,
+    syncBattleCooldownMeta,
+  ]);
 
   const activeUnitId = useMemo(() => getCurrentUnitId(battleState), [battleState]);
   const turnCount = battleState?.roundCount ?? 0;
@@ -827,6 +929,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
         message.error(res?.message || '释放失败');
         return false;
       }
+      syncBattleCooldownMeta(res.data);
       const next = res.data.state;
       const prevIndex = lastLogIndexRef.current;
       applyLogsToFloats(prevIndex, next.logs ?? []);

@@ -68,6 +68,8 @@ const battleTickLocks = new Set<string>();
 const characterOwnerCache = new Map<number, { userId: number; at: number }>();
 const CHARACTER_OWNER_CACHE_TTL_MS = 60000;
 const BATTLE_TICK_MS = 650;
+const BATTLE_START_COOLDOWN_MS = 2000;
+const characterBattleStartCooldownUntil = new Map<number, number>();
 const battleLastEmittedLogLen = new Map<string, number>();
 const battleLastRedisSavedAt = new Map<string, number>();
 const BATTLE_REDIS_SAVE_INTERVAL_MS = 2000;
@@ -258,6 +260,72 @@ type QueryExecutor = Pick<PoolClient, 'query'>;
 async function restoreBattleStartResourcesInDb(userIds: number[], queryExecutor?: QueryExecutor): Promise<void> {
   void queryExecutor;
   await recoverBattleStartResourcesByUserIds(userIds);
+}
+
+function cleanupBattleStartCooldownCache(now: number): void {
+  for (const [characterId, cooldownUntil] of characterBattleStartCooldownUntil.entries()) {
+    if (!Number.isFinite(characterId) || characterId <= 0 || cooldownUntil <= now) {
+      characterBattleStartCooldownUntil.delete(characterId);
+    }
+  }
+}
+
+function getBattleStartCooldownRemainingMs(characterId: number, now: number = Date.now()): number {
+  if (!Number.isFinite(characterId) || characterId <= 0) return 0;
+  const cooldownUntilRaw = characterBattleStartCooldownUntil.get(characterId);
+  if (typeof cooldownUntilRaw !== 'number' || !Number.isFinite(cooldownUntilRaw)) return 0;
+  const remainingMs = cooldownUntilRaw - now;
+  if (remainingMs <= 0) {
+    characterBattleStartCooldownUntil.delete(characterId);
+    return 0;
+  }
+  return remainingMs;
+}
+
+function setBattleStartCooldownByCharacterIds(characterIds: number[], now: number = Date.now()): number {
+  const cooldownUntil = now + BATTLE_START_COOLDOWN_MS;
+  for (const raw of characterIds) {
+    const characterId = Math.floor(Number(raw));
+    if (!Number.isFinite(characterId) || characterId <= 0) continue;
+    characterBattleStartCooldownUntil.set(characterId, cooldownUntil);
+  }
+  cleanupBattleStartCooldownCache(now);
+  return cooldownUntil;
+}
+
+function formatBattleStartCooldownMessage(remainingMs: number): string {
+  const remainSec = Math.max(0.1, Math.ceil(remainingMs / 100) / 10);
+  return `战斗间隔冷却中，请 ${remainSec.toFixed(1)} 秒后再试`;
+}
+
+type BattleStartCooldownValidation = {
+  message: string;
+  retryAfterMs: number;
+  cooldownMs: number;
+  nextBattleAvailableAt: number;
+};
+
+function validateBattleStartCooldown(characterId: number, now: number = Date.now()): BattleStartCooldownValidation | null {
+  const remainingMs = getBattleStartCooldownRemainingMs(characterId, now);
+  if (remainingMs <= 0) return null;
+  return {
+    message: formatBattleStartCooldownMessage(remainingMs),
+    retryAfterMs: remainingMs,
+    cooldownMs: BATTLE_START_COOLDOWN_MS,
+    nextBattleAvailableAt: now + remainingMs,
+  };
+}
+
+function collectPlayerCharacterIdsFromBattleState(state: BattleState): number[] {
+  const ids = new Set<number>();
+  const units = [...state.teams.attacker.units, ...state.teams.defender.units];
+  for (const unit of units) {
+    if (unit.type !== 'player') continue;
+    const characterId = Math.floor(Number(unit.sourceId));
+    if (!Number.isFinite(characterId) || characterId <= 0) continue;
+    ids.add(characterId);
+  }
+  return [...ids];
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -1229,6 +1297,19 @@ export async function startPVEBattle(
     if (isCharacterInBattle(characterId)) {
       return { success: false, message: '角色正在战斗中' };
     }
+    const selfCooldown = validateBattleStartCooldown(characterId);
+    if (selfCooldown) {
+      return {
+        success: false,
+        message: selfCooldown.message,
+        data: {
+          reason: 'battle_start_cooldown',
+          retryAfterMs: selfCooldown.retryAfterMs,
+          battleStartCooldownMs: selfCooldown.cooldownMs,
+          nextBattleAvailableAt: selfCooldown.nextBattleAvailableAt,
+        },
+      };
+    }
     const character = withBattleStartResources(characterWithSetBonus);
 
     const requestedMonsterIds = monsterIds.filter((x) => typeof x === 'string' && x.length > 0);
@@ -1277,6 +1358,9 @@ export async function startPVEBattle(
       for (const member of teamInfo.members) {
         const memberCharacterId = Number((member.data as any)?.id);
         if (Number.isFinite(memberCharacterId) && memberCharacterId > 0 && isCharacterInBattle(memberCharacterId)) {
+          continue;
+        }
+        if (Number.isFinite(memberCharacterId) && memberCharacterId > 0 && getBattleStartCooldownRemainingMs(memberCharacterId) > 0) {
           continue;
         }
         // 检查队友气血
@@ -1354,6 +1438,7 @@ export async function startPVEBattle(
         state: engine.getState(),
         isTeamBattle: playerCount > 1,
         teamMemberCount: playerCount,
+        battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
       },
     };
   } catch (error) {
@@ -1458,6 +1543,19 @@ export async function startDungeonPVEBattle(
     if (isCharacterInBattle(characterId)) {
       return { success: false, message: '角色正在战斗中' };
     }
+    const selfCooldown = validateBattleStartCooldown(characterId);
+    if (selfCooldown) {
+      return {
+        success: false,
+        message: selfCooldown.message,
+        data: {
+          reason: 'battle_start_cooldown',
+          retryAfterMs: selfCooldown.retryAfterMs,
+          battleStartCooldownMs: selfCooldown.cooldownMs,
+          nextBattleAvailableAt: selfCooldown.nextBattleAvailableAt,
+        },
+      };
+    }
     const character = withBattleStartResources(characterWithSetBonus);
 
     const requestedMonsterIds = monsterDefIds.filter((x) => typeof x === 'string' && x.length > 0);
@@ -1478,6 +1576,9 @@ export async function startDungeonPVEBattle(
       for (const member of teamInfo.members) {
         const memberCharacterId = Number((member.data as any)?.id);
         if (Number.isFinite(memberCharacterId) && memberCharacterId > 0 && isCharacterInBattle(memberCharacterId)) {
+          continue;
+        }
+        if (Number.isFinite(memberCharacterId) && memberCharacterId > 0 && getBattleStartCooldownRemainingMs(memberCharacterId) > 0) {
           continue;
         }
         if (member.data.qixue > 0) {
@@ -1533,6 +1634,7 @@ export async function startDungeonPVEBattle(
         state: engine.getState(),
         isTeamBattle: playerCount > 1,
         teamMemberCount: playerCount,
+        battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
       },
     };
   } catch (error) {
@@ -1578,6 +1680,34 @@ export async function startPVPBattle(
     if (isCharacterInBattle(challengerCharacterId) || (!isArenaBattle && isCharacterInBattle(oppId))) {
       return { success: false, message: '角色正在战斗中' };
     }
+    const challengerCooldown = validateBattleStartCooldown(challengerCharacterId);
+    if (challengerCooldown) {
+      return {
+        success: false,
+        message: challengerCooldown.message,
+        data: {
+          reason: 'battle_start_cooldown',
+          retryAfterMs: challengerCooldown.retryAfterMs,
+          battleStartCooldownMs: challengerCooldown.cooldownMs,
+          nextBattleAvailableAt: challengerCooldown.nextBattleAvailableAt,
+        },
+      };
+    }
+    if (!isArenaBattle) {
+      const opponentCooldown = validateBattleStartCooldown(oppId);
+      if (opponentCooldown) {
+        return {
+          success: false,
+          message: '对手刚结束战斗，暂时无法发起挑战',
+          data: {
+            reason: 'opponent_battle_start_cooldown',
+            retryAfterMs: opponentCooldown.retryAfterMs,
+            battleStartCooldownMs: opponentCooldown.cooldownMs,
+            nextBattleAvailableAt: opponentCooldown.nextBattleAvailableAt,
+          },
+        };
+      }
+    }
 
     const challenger = await attachSetBonusEffectsToCharacterData(challengerCharacterId, challengerBase as CharacterData);
     const opponent = await attachSetBonusEffectsToCharacterData(oppId, opponentBase as CharacterData);
@@ -1618,55 +1748,12 @@ export async function startPVPBattle(
       data: {
         battleId: finalBattleId,
         state: engine.getState(),
+        battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
       },
     };
   } catch (error) {
     console.error('发起PVP战斗失败:', error);
     return { success: false, message: '发起PVP战斗失败' };
-  }
-}
-
-/**
- * 自动战斗（快速结算）
- */
-export async function autoBattle(
-  userId: number,
-  monsterIds: string[]
-): Promise<BattleResult> {
-  try {
-    // 发起战斗
-    const startResult = await startPVEBattle(userId, monsterIds);
-    
-    if (!startResult.success) {
-      return startResult;
-    }
-    
-    const battleId = startResult.data.battleId;
-    const engine = activeBattles.get(battleId);
-    
-    if (!engine) {
-      return { success: false, message: '战斗创建失败' };
-    }
-
-    const participants = battleParticipants.get(battleId) || [];
-    if (participants.length > 1) {
-      activeBattles.delete(battleId);
-      battleParticipants.delete(battleId);
-      stopBattleTicker(battleId);
-      return { success: false, message: '组队中不支持快速战斗' };
-    }
-    
-    stopBattleTicker(battleId);
-    // 自动执行战斗
-    engine.autoExecute();
-    
-    const monsters = await getBattleMonsters(engine);
-    
-    // 结算战斗
-    return await finishBattle(battleId, engine, monsters);
-  } catch (error) {
-    console.error('自动战斗失败:', error);
-    return { success: false, message: '自动战斗失败' };
   }
 }
 
@@ -1844,6 +1931,15 @@ async function finishBattle(
     })),
     perPlayerRewards: dropResult.perPlayerRewards,
   } : null;
+
+  const participantCharacterIds = participants
+    .map((entry) => Math.floor(Number(entry.characterId)))
+    .filter((characterId) => Number.isFinite(characterId) && characterId > 0);
+  const cooldownCharacterIds = participantCharacterIds.length > 0
+    ? participantCharacterIds
+    : collectPlayerCharacterIdsFromBattleState(state);
+  // 先写服务端冷却，再推送结束事件，避免“结束事件先到达 -> 客户端立即开战”竞态。
+  const cooldownUntilMs = setBattleStartCooldownByCharacterIds(cooldownCharacterIds);
   
   const battleResult: BattleResult = {
     success: true,
@@ -1857,6 +1953,8 @@ async function finishBattle(
       logs: result.logs,
       state,
       isTeamBattle: participantCount > 1,
+      battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
+      nextBattleAvailableAt: cooldownUntilMs,
     },
   };
 
@@ -1942,6 +2040,7 @@ export async function abandonBattle(
   
   const state = engine.getState();
   const participants = (battleParticipants.get(battleId) || []).slice();
+  const participantCharacterIds: number[] = [];
   
   if (participants.length > 1 && state.teams.attacker.odwnerId !== userId) {
     return { success: false, message: '组队战斗只有队长可以逃跑' };
@@ -1954,9 +2053,16 @@ export async function abandonBattle(
   for (const participantUserId of participants) {
     const computed = await getCharacterComputedByUserId(participantUserId);
     if (!computed) continue;
+    participantCharacterIds.push(Math.floor(Number(computed.id)));
     const loss = Math.floor(computed.max_qixue * 0.1);
     await applyCharacterResourceDeltaByCharacterId(computed.id, { qixue: -loss }, { minQixue: 1 });
   }
+
+  const cooldownCharacterIds = participantCharacterIds
+    .filter((characterId) => Number.isFinite(characterId) && characterId > 0);
+  const cooldownUntilMs = setBattleStartCooldownByCharacterIds(
+    cooldownCharacterIds.length > 0 ? cooldownCharacterIds : collectPlayerCharacterIdsFromBattleState(state),
+  );
 
   try {
     if (state.battleType === 'pvp') {
@@ -1970,7 +2076,14 @@ export async function abandonBattle(
     const gameServer = getGameServer();
     for (const participantUserId of participants) {
       if (!Number.isFinite(participantUserId)) continue;
-      gameServer.emitToUser(participantUserId, 'battle:update', { kind: 'battle_abandoned', battleId, success: true, message: '已放弃战斗' });
+      gameServer.emitToUser(participantUserId, 'battle:update', {
+        kind: 'battle_abandoned',
+        battleId,
+        success: true,
+        message: '已放弃战斗',
+        battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
+        nextBattleAvailableAt: cooldownUntilMs,
+      });
       void gameServer.pushCharacterUpdate(participantUserId);
       if (state.battleType === 'pvp') {
         const computed = await getCharacterComputedByUserId(participantUserId);
@@ -1996,6 +2109,10 @@ export async function abandonBattle(
   return {
     success: true,
     message: '已放弃战斗',
+    data: {
+      battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
+      nextBattleAvailableAt: cooldownUntilMs,
+    },
   };
 }
 

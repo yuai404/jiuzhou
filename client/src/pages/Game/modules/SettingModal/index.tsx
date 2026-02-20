@@ -16,7 +16,7 @@ import {
 import { useIsMobile } from '../../shared/responsive';
 import './index.scss';
 
-type SettingKey = 'base' | 'battle' | 'disassemble' | 'cdk';
+type SettingKey = 'base' | 'disassemble' | 'cdk';
 
 interface SettingModalProps {
   open: boolean;
@@ -160,8 +160,6 @@ const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
   const { message } = App.useApp();
   const [activeKey, setActiveKey] = useState<SettingKey>('base');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredThemeMode());
-  const [autoBattle, setAutoBattle] = useState(false);
-  const [fastBattle, setFastBattle] = useState(false);
   const [autoDisassembleEnabled, setAutoDisassembleEnabled] = useState(false);
   const [autoDisassembleRules, setAutoDisassembleRules] = useState<AutoDisassembleRuleDraft[]>([
     createAutoDisassembleRuleDraft(1),
@@ -175,7 +173,6 @@ const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
   const menuItems = useMemo(
     () => [
       { key: 'base', label: '基础设置' },
-      { key: 'battle', label: '战斗设置' },
       { key: 'disassemble', label: '自动分解' },
       { key: 'cdk', label: 'CDK兑换' },
     ],
@@ -339,22 +336,6 @@ const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
               <div className="setting-row">
                 <Typography.Text>暗黑主题</Typography.Text>
                 <Switch checked={themeMode === 'dark'} onChange={toggleDarkTheme} />
-              </div>
-            </Space>
-          ) : null}
-
-          {activeKey === 'battle' ? (
-            <Space orientation="vertical" size={12} style={{ width: '100%' }}>
-              <Typography.Title level={5} style={{ margin: 0 }}>
-                战斗设置
-              </Typography.Title>
-              <div className="setting-row">
-                <Typography.Text>自动战斗</Typography.Text>
-                <Switch checked={autoBattle} onChange={setAutoBattle} />
-              </div>
-              <div className="setting-row">
-                <Typography.Text>快速战斗</Typography.Text>
-                <Switch checked={fastBattle} onChange={setFastBattle} />
               </div>
             </Space>
           ) : null}

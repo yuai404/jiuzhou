@@ -75,12 +75,19 @@ export type BattleLogEntryDto =
   | { type: 'death'; round: number; unitId: string; unitName: string; killerId?: string; killerName?: string }
   | { type: 'round_start' | 'round_end'; round: number };
 
+export interface BattleCooldownMetaDto {
+  battleStartCooldownMs?: number;
+  retryAfterMs?: number;
+  nextBattleAvailableAt?: number;
+}
+
 export interface BattleStartResponse {
   success: boolean;
   message: string;
-  data?: {
-    battleId: string;
-    state: BattleStateDto;
+  data?: BattleCooldownMetaDto & {
+    reason?: string;
+    battleId?: string;
+    state?: BattleStateDto;
     isTeamBattle?: boolean;
     teamMemberCount?: number;
   };
@@ -123,7 +130,7 @@ export interface BattleRewardsDto {
 export interface BattleActionResponse {
   success: boolean;
   message: string;
-  data?: {
+  data?: BattleCooldownMetaDto & {
     state: BattleStateDto;
     result?: 'attacker_win' | 'defender_win' | 'draw';
     rewards?: BattleRewardsDto;
@@ -145,7 +152,7 @@ export const getBattleState = (battleId: string): Promise<BattleStateResponse> =
   return api.get(`/battle/state/${battleId}`);
 };
 
-export const abandonBattle = (battleId: string): Promise<{ success: boolean; message: string }> => {
+export const abandonBattle = (battleId: string): Promise<{ success: boolean; message: string; data?: BattleCooldownMetaDto }> => {
   return api.post('/battle/abandon', { battleId });
 };
 

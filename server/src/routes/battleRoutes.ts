@@ -65,31 +65,6 @@ router.post('/action', requireAuth, async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/battle/auto
- * 自动战斗（快速结算）
- */
-router.post('/auto', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const { monsterIds } = req.body;
-    
-    if (!monsterIds || !Array.isArray(monsterIds) || monsterIds.length === 0) {
-      return res.status(400).json({ success: false, message: '请指定战斗目标' });
-    }
-    
-    if (monsterIds.length > 5) {
-      return res.status(400).json({ success: false, message: '战斗目标数量超限' });
-    }
-    
-    const result = await battleService.autoBattle(userId, monsterIds);
-    
-    return res.json(result);
-  } catch (error) {
-    return withRouteError(res, 'battleRoutes 路由异常', error);
-  }
-});
-
-/**
  * GET /api/battle/state/:battleId
  * 获取战斗状态
  */
