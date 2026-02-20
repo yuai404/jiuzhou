@@ -31,7 +31,7 @@ export type GameItemCategory = 'all' | GameItemPrimaryCategory;
 const ITEM_CATEGORY_ALL_OPTION_BASE: LabeledOption = { value: 'all', label: '全部' };
 
 const ITEM_CATEGORY_OPTIONS_BASE: LabeledOption[] = [
-  { value: 'consumable', label: '丹药' },
+  { value: 'consumable', label: '消耗品' },
   { value: 'material', label: '材料' },
   { value: 'gem', label: '宝石' },
   { value: 'equipment', label: '装备' },
@@ -41,7 +41,7 @@ const ITEM_CATEGORY_OPTIONS_BASE: LabeledOption[] = [
 
 const ITEM_CATEGORY_LABELS_BASE: Record<string, string> = {
   all: ITEM_CATEGORY_ALL_OPTION_BASE.label,
-  consumable: '丹药',
+  consumable: '消耗品',
   material: '材料',
   gem: '宝石',
   equipment: '装备',
