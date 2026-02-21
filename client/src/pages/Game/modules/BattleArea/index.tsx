@@ -618,7 +618,9 @@ const BattleArea: React.FC<BattleAreaProps> = ({
   useEffect(() => {
     if (!resolvedAllowAutoNext) return;
     if (!battleState || battleState.phase !== 'finished') {
-      clearAutoNextTimer();
+      if (startupStatus !== 'cooldown') {
+        clearAutoNextTimer();
+      }
       announcedAutoNextBattleIdRef.current = null;
       return;
     }
@@ -663,6 +665,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     onNext,
     resolvedAllowAutoNext,
     resolvedExternalBattleId,
+    startupStatus,
     startBattle,
   ]);
 
