@@ -381,15 +381,15 @@ type NpcDialogueEntry = { id: string; role: 'npc' | 'player'; text: string };
 type NpcTalkPhase = 'root' | 'taskDetail' | 'mainQuestDialogue';
 type GatherActionUi =
   | {
-      running: true;
-      mapId: string;
-      roomId: string;
-      resourceId: string;
-      resourceName: string;
-      actionSec: number;
-      gatherUntilMs: number;
-      remaining: number;
-    }
+    running: true;
+    mapId: string;
+    roomId: string;
+    resourceId: string;
+    resourceName: string;
+    actionSec: number;
+    gatherUntilMs: number;
+    remaining: number;
+  }
   | { running: false };
 
 type GatherProgressHeaderProps = {
@@ -688,6 +688,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const [battleTurnSide, setBattleTurnSide] = useState<'enemy' | 'ally'>('ally');
   const [battleActionKey, setBattleActionKey] = useState('idle');
   const [battleActiveUnitId, setBattleActiveUnitId] = useState<string | null>(null);
+  const [battlePhase, setBattlePhase] = useState<string | null>(null);
   const [teamBattleId, setTeamBattleId] = useState<string | null>(null);
   const [dungeonBattleId, setDungeonBattleId] = useState<string | null>(null);
   const [arenaBattleId, setArenaBattleId] = useState<string | null>(null);
@@ -917,6 +918,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         setViewMode('map');
         setTopTab('map');
         setBattleTurn(0);
+        setBattlePhase(null);
         setBattleActiveUnitId(null);
         return;
       }
@@ -937,6 +939,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     setViewMode('map');
     setTopTab('map');
     setBattleTurn(0);
+    setBattlePhase(null);
     setBattleActiveUnitId(null);
   }, []);
 
@@ -963,11 +966,12 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   }, []);
 
   const handleBattleTurnChange = useCallback(
-    (turnCount: number, turnSide: 'enemy' | 'ally', actionKey: string, activeUnitId: string | null) => {
+    (turnCount: number, turnSide: 'enemy' | 'ally', actionKey: string, activeUnitId: string | null, phase: string | null) => {
       setBattleTurn((prev) => (prev === turnCount ? prev : turnCount));
       setBattleTurnSide((prev) => (prev === turnSide ? prev : turnSide));
       setBattleActionKey((prev) => (prev === actionKey ? prev : actionKey));
       setBattleActiveUnitId((prev) => (prev === activeUnitId ? prev : activeUnitId));
+      setBattlePhase((prev) => (prev === phase ? prev : phase));
     },
     [],
   );
@@ -975,6 +979,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const handleBattleEscape = useCallback(() => {
     setViewMode('map');
     setBattleTurn(0);
+    setBattlePhase(null);
     setBattleActiveUnitId(null);
     setArenaBattleId(null);
     setDungeonBattleId(null);
@@ -1378,6 +1383,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       setViewMode('map');
       setTopTab('map');
       setBattleTurn(0);
+      setBattlePhase(null);
       setBattleActiveUnitId(null);
       void refreshTeamData();
     } catch {
@@ -1613,6 +1619,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         turnSide={viewMode === 'battle' ? battleTurnSide : undefined}
         isMyTurn={viewMode === 'battle' && myBattleUnitId != null && battleActiveUnitId === myBattleUnitId}
         isBattleRunning={viewMode === 'battle' && battleTurn > 0}
+        battlePhase={viewMode === 'battle' ? (battlePhase ?? undefined) : undefined}
         actionKey={viewMode === 'battle' ? battleActionKey : undefined}
         autoMode={autoMode}
         onAutoModeChange={handleAutoModeChange}
@@ -1867,9 +1874,8 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                           classNames={EQUIPMENT_TOOLTIP_CLASS_NAMES}
                         >
                           <div
-                            className={`equip-slot ${equipped ? 'has-item' : ''} ${
-                              unequippingId != null && equipped?.id === unequippingId ? 'is-busy' : ''
-                            }`}
+                            className={`equip-slot ${equipped ? 'has-item' : ''} ${unequippingId != null && equipped?.id === unequippingId ? 'is-busy' : ''
+                              }`}
                             onContextMenu={(e) => {
                               const it = equippedByUiSlot.get(slot);
                               if (!it) return;
@@ -1898,9 +1904,8 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                           classNames={EQUIPMENT_TOOLTIP_CLASS_NAMES}
                         >
                           <div
-                            className={`equip-slot ${equipped ? 'has-item' : ''} ${
-                              unequippingId != null && equipped?.id === unequippingId ? 'is-busy' : ''
-                            }`}
+                            className={`equip-slot ${equipped ? 'has-item' : ''} ${unequippingId != null && equipped?.id === unequippingId ? 'is-busy' : ''
+                              }`}
                             onContextMenu={(e) => {
                               const it = equippedByUiSlot.get(slot);
                               if (!it) return;
@@ -2075,9 +2080,9 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                       <span style={{ fontWeight: 600 }}>【主线】{npcTalkData.mainQuest.sectionName}</span>
                       <Tag color="gold" style={{ marginInlineEnd: 0 }}>
                         {npcTalkData.mainQuest.status === 'not_started' ? '可接取' :
-                         npcTalkData.mainQuest.status === 'dialogue' ? '对话中' :
-                         npcTalkData.mainQuest.status === 'objectives' ? '进行中' :
-                         npcTalkData.mainQuest.status === 'turnin' ? '可交付' : ''}
+                          npcTalkData.mainQuest.status === 'dialogue' ? '对话中' :
+                            npcTalkData.mainQuest.status === 'objectives' ? '进行中' :
+                              npcTalkData.mainQuest.status === 'turnin' ? '可交付' : ''}
                       </Tag>
                     </span>
                   </Button>
@@ -2240,7 +2245,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
             {npcTalkPhase === 'mainQuestDialogue' ? (
               (() => {
                 const node = mainQuestDialogueState?.currentNode;
-                
+
                 const handleAdvance = async () => {
                   setMainQuestDialogueLoading(true);
                   try {

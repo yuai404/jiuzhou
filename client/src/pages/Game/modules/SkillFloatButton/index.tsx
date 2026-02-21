@@ -283,6 +283,8 @@ type SkillFloatButtonProps = {
   turnSide?: 'enemy' | 'ally';
   isMyTurn?: boolean;
   isBattleRunning?: boolean;
+  /** 当前战斗阶段，用于 auto-release 在战斗结束后立即停止施法尝试 */
+  battlePhase?: string;
   actionKey?: string | number;
   autoMode?: boolean;
   onAutoModeChange?: (auto: boolean) => void;
@@ -294,6 +296,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   turnSide,
   isMyTurn = false,
   isBattleRunning = false,
+  battlePhase,
   actionKey,
   autoMode = false,
   onAutoModeChange,
@@ -569,6 +572,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   }, [autoRelease, expandDirection, open, pos.x, pos.y, skills, viewport.h, viewport.w]);
 
   // 自动战斗逻辑：当开启自动战斗且轮到玩家回合时，自动释放技能
+  // 边界：battlePhase === 'finished' 时立即停止，防止战斗结束瞬间的渲染时序窗口内
+  // isBattleRunning/isMyTurn 尚未更新导致无效施法尝试
   useEffect(() => {
     const key = String(actionKey ?? `${turn ?? localTurn}-${turnSide ?? ''}`);
     if (autoRetryTimerRef.current) {
@@ -576,7 +581,10 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       autoRetryTimerRef.current = null;
     }
 
-    if (!autoRelease || !isBattleRunning || !isMyTurn || isCasting) {
+    // 战斗结束后立即停止 auto-release，不产生任何多余提示
+    const isBattleFinished = battlePhase === 'finished';
+
+    if (!autoRelease || !isBattleRunning || !isMyTurn || isCasting || isBattleFinished) {
       lastAutoAttemptKeyRef.current = null;
       autoRetryCountRef.current = 0;
       return;
@@ -631,7 +639,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
         autoRetryTimerRef.current = null;
       }
     };
-  }, [actionKey, autoRelease, castSkill, isBattleRunning, isCasting, isMyTurn, localTurn, turn, turnSide]);
+  }, [actionKey, autoRelease, battlePhase, castSkill, isBattleRunning, isCasting, isMyTurn, localTurn, turn, turnSide]);
 
   const onMainPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     dragRef.current.pointerId = e.pointerId;

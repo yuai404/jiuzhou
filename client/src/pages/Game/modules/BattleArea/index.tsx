@@ -35,7 +35,7 @@ interface BattleAreaProps {
   enemies: BattleUnit[];
   allies: BattleUnit[];
   onEscape?: () => void;
-  onTurnChange?: (turnCount: number, turnSide: 'enemy' | 'ally', actionKey: string, activeUnitId: string | null) => void;
+  onTurnChange?: (turnCount: number, turnSide: 'enemy' | 'ally', actionKey: string, activeUnitId: string | null, phase: string | null) => void;
   onBindSkillCaster?: (caster: (skillId: string, targetType?: string) => Promise<boolean>) => void;
   externalBattleId?: string | null;
   allowAutoNext?: boolean;
@@ -46,6 +46,13 @@ interface BattleAreaProps {
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 const DEFAULT_BATTLE_START_COOLDOWN_MS = 2000;
+
+/**
+ * 低于此阈值的 retryAfterMs 视为"无意义冷却"，直接静默重试，不显示冷却提示。
+ * 场景：auto-next 定时器触发 startBattle 时，客户端计时精度/网络延迟导致服务端冷却
+ * 仅剩极小时间（如 50ms），此时显示"冷却中，0.05秒后自动重试"没有实际意义。
+ */
+const MINIMUM_MEANINGFUL_COOLDOWN_DISPLAY_MS = 200;
 
 const toPositiveInt = (value: unknown): number | null => {
   const n = Math.floor(Number(value));
@@ -473,11 +480,14 @@ const BattleArea: React.FC<BattleAreaProps> = ({
         const retryAfterMs = toPositiveInt(res?.data?.retryAfterMs);
         const isStartCooldown = reason === 'battle_start_cooldown';
         if (!res?.success && shouldRetryOnCooldown && isStartCooldown && retryAfterMs != null) {
+          // 极小 retryAfterMs（< 200ms）视为无意义冷却，强制静默重试
+          const effectivelySilent = isSilentCooldown || retryAfterMs < MINIMUM_MEANINGFUL_COOLDOWN_DISPLAY_MS;
           autoNextTimerRef.current = window.setTimeout(() => {
             void startBattle(monsterIds, { retryOnCooldown: true, silentCooldown: true });
           }, Math.max(0, retryAfterMs));
-          setStartupStatus('cooldown');
-          if (!isSilentCooldown) {
+          // 静默模式下不更新 startupStatus，避免触发 auto-next useEffect 重执行导致 UI 闪烁
+          if (!effectivelySilent) {
+            setStartupStatus('cooldown');
             message.info(`冷却中，${(retryAfterMs / 1000).toFixed(2)}秒后自动重试`, Math.max(1, Math.ceil(retryAfterMs / 1000)));
           }
           setBattleId(null);
@@ -632,8 +642,12 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     clearAutoNextTimer();
     const delayMs = getAutoNextDelayMs();
     const delaySec = (delayMs / 1000).toFixed(2);
+    // 延迟低于阈值时静默触发，不显示无意义的"等待0.00秒"提示
+    const isMeaningfulDelay = delayMs >= MINIMUM_MEANINGFUL_COOLDOWN_DISPLAY_MS;
     if (onNext) {
-      message.info(`战斗结束，等待${delaySec}秒后继续推进`, Math.max(1, Math.ceil(delayMs / 1000)));
+      if (isMeaningfulDelay) {
+        message.info(`战斗结束，等待${delaySec}秒后继续推进`, Math.max(1, Math.ceil(delayMs / 1000)));
+      }
       autoNextTimerRef.current = window.setTimeout(() => {
         if (battleIdRef.current !== currentBattleId) return;
         if (nextingRef.current) return;
@@ -651,7 +665,9 @@ const BattleArea: React.FC<BattleAreaProps> = ({
 
     if (resolvedExternalBattleId) return;
 
-    message.info(`战斗结束，等待${delaySec}秒后开启下一场`, Math.max(1, Math.ceil(delayMs / 1000)));
+    if (isMeaningfulDelay) {
+      message.info(`战斗结束，等待${delaySec}秒后开启下一场`, Math.max(1, Math.ceil(delayMs / 1000)));
+    }
     autoNextTimerRef.current = window.setTimeout(() => {
       if (battleIdRef.current !== currentBattleId) return;
       void startBattle(lastMonsterIdsRef.current, { retryOnCooldown: true, silentCooldown: true });
@@ -845,9 +861,11 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     return `${battleState.battleId}-${battleState.roundCount}-${battleState.currentTeam}-${battleState.currentUnitIndex}-${activeUnitId ?? ''}`;
   }, [activeUnitId, battleState]);
 
+  const battlePhase = battleState?.phase ?? null;
+
   useEffect(() => {
-    onTurnChange?.(turnCount, turnSide, actionKey, activeUnitId);
-  }, [actionKey, activeUnitId, onTurnChange, turnCount, turnSide]);
+    onTurnChange?.(turnCount, turnSide, actionKey, activeUnitId, battlePhase);
+  }, [actionKey, activeUnitId, battlePhase, onTurnChange, turnCount, turnSide]);
 
   const enemyUnits = useMemo<BattleUnit[]>(() => {
     const units = battleState?.teams?.defender?.units;
