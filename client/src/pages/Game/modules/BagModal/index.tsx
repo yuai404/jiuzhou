@@ -1274,6 +1274,10 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
           await refresh();
           window.dispatchEvent(new Event('inventory:changed'));
         }}
+        onOpenGemSynthesis={() => {
+          setCraftOpen(false);
+          setGemSynthesisOpen(true);
+        }}
       />
 
       <GemSynthesisModal

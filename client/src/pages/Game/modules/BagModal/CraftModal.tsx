@@ -14,6 +14,7 @@ interface CraftModalProps {
   onClose: () => void;
   onSuccess: () => Promise<void>;
   focusItemDefId?: string;
+  onOpenGemSynthesis?: () => void;
 }
 
 const kindLabel: Record<InventoryCraftKind, string> = {
@@ -28,7 +29,7 @@ const clampTimes = (value: number, maxCraftTimes: number): number => {
   return Math.min(safeMax, Math.max(1, Math.floor(value)));
 };
 
-const CraftModal: React.FC<CraftModalProps> = ({ open, onClose, onSuccess, focusItemDefId }) => {
+const CraftModal: React.FC<CraftModalProps> = ({ open, onClose, onSuccess, focusItemDefId, onOpenGemSynthesis }) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -158,14 +159,18 @@ const CraftModal: React.FC<CraftModalProps> = ({ open, onClose, onSuccess, focus
           <Segmented
             value={kind}
             options={[
-              { label: '全部', value: 'all' },
-              { label: '炼丹', value: 'alchemy' },
-              { label: '炼器', value: 'smithing' },
-              { label: '制作', value: 'craft' },
+              ...(onOpenGemSynthesis ? [{ label: '宝石合成', value: 'gem' as const }] : []),
+              { label: '全部', value: 'all' as const },
+              { label: '炼丹', value: 'alchemy' as const },
+              { label: '炼器', value: 'smithing' as const },
+              { label: '制作', value: 'craft' as const },
             ]}
             onChange={(value) => {
-              const next = (value as CraftKindFilter) || 'all';
-              setKind(next);
+              if (value === 'gem') {
+                onOpenGemSynthesis?.();
+                return;
+              }
+              setKind((value as CraftKindFilter) || 'all');
             }}
           />
           {character ? (

@@ -324,7 +324,7 @@ const getGemRecipeRows = async (
           : options.gemType === 'survival'
             ? 'sur'
             : 'all';
-    const idPrefix = `gem-${token}-`;
+    const idPrefix = `gem-synth-${token}-`;
     recipes = recipes.filter((entry) => String(entry.id || '').trim().startsWith(idPrefix));
   }
 

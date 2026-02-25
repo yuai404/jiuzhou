@@ -22,10 +22,31 @@ const gemTypeLabel: Record<GemType, string> = {
   all: '通用',
 };
 
+type SynthesisMode = 'quick' | 'single';
+
 const clampSynthesizeTimes = (value: number, maxValue: number): number => {
   const safeMax = Math.max(1, Math.floor(maxValue || 1));
   if (!Number.isFinite(value)) return 1;
   return Math.min(safeMax, Math.max(1, Math.floor(value)));
+};
+
+/**
+ * 从配方列表中提取系列选项
+ * 按 seriesKey 分组，取每组最低等级配方的输出名称去掉等级后缀作为系列显示名
+ *
+ * 输入：当前宝石类型下的配方列表
+ * 输出：[{ value: seriesKey, label: 系列显示名 }]
+ */
+const buildSeriesOptions = (recipes: GemSynthesisRecipeDto[]) => {
+  const map = new Map<string, string>();
+  for (const recipe of recipes) {
+    if (!map.has(recipe.seriesKey)) {
+      /* 从输出名称中去掉末尾的"·N级"得到系列名，如 "灵焰石·法攻·2级" → "灵焰石·法攻" */
+      const displayName = recipe.output.name.replace(/·\d+级$/, '') || recipe.seriesKey;
+      map.set(recipe.seriesKey, displayName);
+    }
+  }
+  return [...map.entries()].map(([value, label]) => ({ value, label }));
 };
 
 const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, onSuccess }) => {
@@ -35,22 +56,22 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
   const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [gemType, setGemType] = useState<GemType>('attack');
   const [recipes, setRecipes] = useState<GemSynthesisRecipeDto[]>([]);
+  const [wallet, setWallet] = useState<{ silver: number; spiritStones: number } | null>(null);
+  const [mode, setMode] = useState<SynthesisMode>('quick');
+
+  /* 单次合成状态 */
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const [times, setTimes] = useState(1);
-  const [sourceLevel, setSourceLevel] = useState(1);
-  const [targetLevel, setTargetLevel] = useState(2);
-  const [wallet, setWallet] = useState<{ silver: number; spiritStones: number } | null>(null);
   const selectedRecipeIdRef = useRef('');
-  const sourceLevelRef = useRef(1);
+
+  /* 快捷合成状态 */
+  const [batchSeriesKey, setBatchSeriesKey] = useState('');
+  const [targetLevel, setTargetLevel] = useState(2);
   const targetLevelRef = useRef(2);
 
   useEffect(() => {
     selectedRecipeIdRef.current = selectedRecipeId;
   }, [selectedRecipeId]);
-
-  useEffect(() => {
-    sourceLevelRef.current = sourceLevel;
-  }, [sourceLevel]);
 
   useEffect(() => {
     targetLevelRef.current = targetLevel;
@@ -68,6 +89,8 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
       const sameTypeRecipes = nextRecipes
         .filter((recipe) => recipe.gemType === gemType)
         .sort((a, b) => a.seriesKey.localeCompare(b.seriesKey) || a.fromLevel - b.fromLevel);
+
+      /* 单次合成：保持选中配方 */
       const currentSelectedRecipeId = selectedRecipeIdRef.current;
       const nextSelected = sameTypeRecipes.find((recipe) => recipe.recipeId === currentSelectedRecipeId)
         ? currentSelectedRecipeId
@@ -76,25 +99,17 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
       const selected = sameTypeRecipes.find((recipe) => recipe.recipeId === nextSelected) ?? sameTypeRecipes[0] ?? null;
       setTimes(clampSynthesizeTimes(1, selected?.maxSynthesizeTimes ?? 1));
 
-      const sameSeriesRecipes = selected
-        ? sameTypeRecipes.filter((recipe) => recipe.seriesKey === selected.seriesKey)
-        : [];
-      const levelList = [...new Set(sameSeriesRecipes.map((recipe) => recipe.fromLevel))].sort((a, b) => a - b);
-      const currentSourceLevel = sourceLevelRef.current;
+      /* 快捷合成：保持目标等级 */
       const currentTargetLevel = targetLevelRef.current;
-      const nextSource = levelList.includes(currentSourceLevel) ? currentSourceLevel : (levelList[0] ?? 1);
-      setSourceLevel(nextSource);
-      const maxLevel = sameSeriesRecipes.reduce((max, recipe) => Math.max(max, recipe.toLevel), nextSource + 1);
-      const minTarget = Math.min(10, Math.max(nextSource + 1, 2));
-      const nextTarget = Math.max(minTarget, Math.min(maxLevel, currentTargetLevel));
-      setTargetLevel(nextTarget);
+      const allToLevels = [...new Set(sameTypeRecipes.map((r) => r.toLevel))];
+      const maxLevel = allToLevels.length > 0 ? Math.max(...allToLevels) : 2;
+      setTargetLevel(Math.max(2, Math.min(maxLevel, currentTargetLevel)));
     } catch (error: unknown) {
       message.error((error as { message?: string }).message || '加载宝石配方失败');
       setRecipes([]);
       setWallet(null);
       setSelectedRecipeId('');
       setTimes(1);
-      setSourceLevel(1);
       setTargetLevel(2);
     } finally {
       setLoading(false);
@@ -106,24 +121,54 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
     void refresh();
   }, [open, refresh]);
 
+  /* ========== 通用派生数据 ========== */
+
   const filteredRecipes = useMemo(() => {
     return recipes
       .filter((recipe) => recipe.gemType === gemType)
       .sort((a, b) => a.seriesKey.localeCompare(b.seriesKey) || a.fromLevel - b.fromLevel);
   }, [gemType, recipes]);
 
+  /* ========== 快捷合成派生数据 ========== */
+
+  const seriesOptions = useMemo(() => buildSeriesOptions(filteredRecipes), [filteredRecipes]);
+
+  useEffect(() => {
+    if (seriesOptions.length === 0) {
+      setBatchSeriesKey('');
+      return;
+    }
+    if (!seriesOptions.some((opt) => opt.value === batchSeriesKey)) {
+      setBatchSeriesKey(seriesOptions[0].value);
+    }
+  }, [batchSeriesKey, seriesOptions]);
+
+  const batchTargetLevelOptions = useMemo(() => {
+    if (!batchSeriesKey) return [];
+    const seriesRecipes = filteredRecipes.filter((r) => r.seriesKey === batchSeriesKey);
+    const levels = [...new Set(seriesRecipes.map((r) => r.toLevel))]
+      .filter((lv) => lv > 1)
+      .sort((a, b) => a - b);
+    return levels.map((lv) => ({ value: lv, label: `${lv}级` }));
+  }, [batchSeriesKey, filteredRecipes]);
+
+  useEffect(() => {
+    if (batchTargetLevelOptions.length === 0) {
+      setTargetLevel(2);
+      return;
+    }
+    if (!batchTargetLevelOptions.some((opt) => opt.value === targetLevel)) {
+      setTargetLevel(batchTargetLevelOptions[0].value);
+    }
+  }, [targetLevel, batchTargetLevelOptions]);
+
+  /* ========== 单次合成派生数据 ========== */
+
   const selectedRecipe = useMemo(() => {
     if (filteredRecipes.length === 0) return null;
     const found = filteredRecipes.find((recipe) => recipe.recipeId === selectedRecipeId);
     return found ?? filteredRecipes[0];
   }, [filteredRecipes, selectedRecipeId]);
-
-  const selectedSeriesRecipes = useMemo(() => {
-    if (!selectedRecipe) return [] as GemSynthesisRecipeDto[];
-    return filteredRecipes
-      .filter((recipe) => recipe.seriesKey === selectedRecipe.seriesKey)
-      .sort((a, b) => a.fromLevel - b.fromLevel);
-  }, [filteredRecipes, selectedRecipe]);
 
   useEffect(() => {
     if (!selectedRecipe) {
@@ -133,39 +178,7 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
     setTimes((prev) => clampSynthesizeTimes(prev, selectedRecipe.maxSynthesizeTimes));
   }, [selectedRecipe]);
 
-  const sourceLevelOptions = useMemo(() => {
-    return [...new Set(selectedSeriesRecipes.map((recipe) => recipe.fromLevel))]
-      .sort((a, b) => a - b)
-      .map((lv) => ({ value: lv, label: `${lv}级` }));
-  }, [selectedSeriesRecipes]);
-
-  const targetLevelOptions = useMemo(() => {
-    const levels = [...new Set(selectedSeriesRecipes.map((recipe) => recipe.toLevel))]
-      .filter((lv) => lv > sourceLevel)
-      .sort((a, b) => a - b);
-    return levels.map((lv) => ({ value: lv, label: `${lv}级` }));
-  }, [selectedSeriesRecipes, sourceLevel]);
-
-  useEffect(() => {
-    if (sourceLevelOptions.length === 0) {
-      setSourceLevel(1);
-      setTargetLevel(2);
-      return;
-    }
-    if (!sourceLevelOptions.some((opt) => opt.value === sourceLevel)) {
-      setSourceLevel(sourceLevelOptions[0].value);
-    }
-  }, [sourceLevel, sourceLevelOptions]);
-
-  useEffect(() => {
-    if (targetLevelOptions.length === 0) {
-      setTargetLevel(Math.min(10, Math.max(2, sourceLevel + 1)));
-      return;
-    }
-    if (!targetLevelOptions.some((opt) => opt.value === targetLevel)) {
-      setTargetLevel(targetLevelOptions[0].value);
-    }
-  }, [sourceLevel, targetLevel, targetLevelOptions]);
+  /* ========== 操作回调 ========== */
 
   const handleExecute = useCallback(async () => {
     if (!selectedRecipe) return;
@@ -188,36 +201,39 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
     }
   }, [message, onSuccess, refresh, selectedRecipe, times]);
 
+  /**
+   * 快捷合成：使用独立的 batchSeriesKey + targetLevel
+   * 不传 sourceLevel，服务端默认从1级开始逐级合成
+   */
   const handleBatch = useCallback(async () => {
-    if (!selectedRecipe) return;
+    if (!batchSeriesKey) return;
     setBatchSubmitting(true);
     try {
       const res = await synthesizeInventoryGemBatch({
         gemType,
-        sourceLevel,
         targetLevel,
-        seriesKey: selectedRecipe.seriesKey,
+        seriesKey: batchSeriesKey,
       });
-      if (!res.success || !res.data) throw new Error(res.message || '批量宝石合成失败');
+      if (!res.success || !res.data) throw new Error(res.message || '快捷合成失败');
       const steps = res.data.steps ?? [];
       const successCount = steps.reduce((sum, step) => sum + (step.successCount || 0), 0);
       const failCount = steps.reduce((sum, step) => sum + (step.failCount || 0), 0);
       if (successCount > 0) {
-        message.success(`${res.message || '批量合成成功'}（成功${successCount}次，失败${failCount}次）`);
+        message.success(`${res.message || '快捷合成成功'}（成功${successCount}次，失败${failCount}次）`);
       } else {
-        message.warning(`${res.message || '批量合成失败'}（失败${failCount}次）`);
+        message.warning(`${res.message || '快捷合成失败'}（失败${failCount}次）`);
       }
       await onSuccess();
       await refresh();
     } catch (error: unknown) {
-      message.error((error as { message?: string }).message || '批量宝石合成失败');
+      message.error((error as { message?: string }).message || '快捷合成失败');
     } finally {
       setBatchSubmitting(false);
     }
-  }, [gemType, message, onSuccess, refresh, selectedRecipe, sourceLevel, targetLevel]);
+  }, [batchSeriesKey, gemType, message, onSuccess, refresh, targetLevel]);
 
   const canSynthesize = !!selectedRecipe && selectedRecipe.maxSynthesizeTimes > 0;
-  const canBatch = !!selectedRecipe && targetLevelOptions.length > 0 && !batchSubmitting;
+  const canBatch = !!batchSeriesKey && batchTargetLevelOptions.length > 0 && !batchSubmitting;
 
   return (
     <Modal
@@ -235,18 +251,30 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
       maskClosable={!(submitting || batchSubmitting)}
     >
       <div className="bag-gem-shell">
+        {/* 顶部：模式切换 + 宝石类型 + 钱包 */}
         <div className="bag-gem-top">
-          <Segmented
-            value={gemType}
-            options={(Object.keys(gemTypeLabel) as GemType[]).map((type) => ({
-              label: gemTypeLabel[type],
-              value: type,
-            }))}
-            onChange={(value) => {
-              setGemType(value as GemType);
-              setSelectedRecipeId('');
-            }}
-          />
+          <div className="bag-gem-top-left">
+            <Segmented
+              value={mode}
+              options={[
+                { label: '快捷合成', value: 'quick' },
+                { label: '单次合成', value: 'single' },
+              ]}
+              onChange={(value) => setMode(value as SynthesisMode)}
+            />
+            <Segmented
+              value={gemType}
+              options={(Object.keys(gemTypeLabel) as GemType[]).map((type) => ({
+                label: gemTypeLabel[type],
+                value: type,
+              }))}
+              onChange={(value) => {
+                setGemType(value as GemType);
+                setSelectedRecipeId('');
+                setBatchSeriesKey('');
+              }}
+            />
+          </div>
           {wallet ? (
             <div className="bag-gem-wallet">
               <Tag color="gold">银两：{wallet.silver.toLocaleString()}</Tag>
@@ -255,126 +283,144 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
           ) : null}
         </div>
 
-        <div className="bag-gem-body">
-          {loading && recipes.length === 0 ? (
-            <div className="bag-gem-loading">
-              <Spin />
-            </div>
-          ) : (
-            <>
-              <div className="bag-gem-list">
-                {filteredRecipes.length === 0 ? (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无可用宝石配方" />
-                ) : (
-                  filteredRecipes.map((recipe) => (
-                    <button
-                      key={recipe.recipeId}
-                      type="button"
-                      className={`bag-gem-item ${selectedRecipe?.recipeId === recipe.recipeId ? 'is-active' : ''}`}
-                      onClick={() => setSelectedRecipeId(recipe.recipeId)}
-                    >
-                      <div className="bag-gem-item-title">{recipe.name}</div>
-                      <div className="bag-gem-item-meta">
-                        <span>{recipe.fromLevel}级 → {recipe.toLevel}级</span>
-                        <span>成功率 {formatPercent(recipe.successRate)}</span>
-                      </div>
-                      <div className="bag-gem-item-meta">
-                        <span>可合成 {recipe.maxSynthesizeTimes} 次</span>
-                      </div>
-                    </button>
-                  ))
-                )}
+        {/* 快捷合成模式 */}
+        {mode === 'quick' ? (
+          <div className="bag-gem-quick">
+            {loading && recipes.length === 0 ? (
+              <div className="bag-gem-loading"><Spin /></div>
+            ) : seriesOptions.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无可用宝石配方" />
+            ) : (
+              <div className="bag-gem-quick-form">
+                <div className="bag-gem-quick-field">
+                  <span className="bag-gem-quick-label">宝石系列</span>
+                  <Select
+                    value={batchSeriesKey || undefined}
+                    options={seriesOptions}
+                    onChange={(value) => setBatchSeriesKey(String(value))}
+                    placeholder="选择系列"
+                    style={{ width: 200 }}
+                  />
+                </div>
+                <div className="bag-gem-quick-field">
+                  <span className="bag-gem-quick-label">目标等级</span>
+                  <Select
+                    value={targetLevel}
+                    options={batchTargetLevelOptions}
+                    onChange={(value) => setTargetLevel(Number(value) || 2)}
+                    placeholder="目标等级"
+                    style={{ width: 200 }}
+                  />
+                </div>
+                <div className="bag-gem-quick-field">
+                  <Button
+                    type="primary"
+                    disabled={!canBatch}
+                    loading={batchSubmitting}
+                    onClick={() => void handleBatch()}
+                  >
+                    快捷合成
+                  </Button>
+                </div>
+                <div className="bag-gem-quick-hint">
+                  自动使用低级宝石逐级合成到目标等级，6级以上存在失败率。
+                </div>
               </div>
-
-              <div className="bag-gem-detail">
-                {selectedRecipe ? (
-                  <div className="bag-gem-detail-content">
-                    <div className="bag-gem-detail-title">{selectedRecipe.name}</div>
-                    <div className="bag-gem-detail-meta">
-                      <Tag color="default">类型：{gemTypeLabel[selectedRecipe.gemType]}</Tag>
-                      <Tag color="blue">产出：{selectedRecipe.output.name} ×{selectedRecipe.output.qty}</Tag>
-                      <Tag color={selectedRecipe.successRate >= 1 ? 'green' : 'orange'}>
-                        成功率：{formatPercent(selectedRecipe.successRate)}
-                      </Tag>
-                    </div>
-
-                    <div className="bag-gem-costs">
-                      {selectedRecipe.input.qty > 0 ? (
-                        <div className={`bag-gem-cost-line ${selectedRecipe.input.owned < selectedRecipe.input.qty ? 'is-missing' : ''}`}>
-                          <span>{selectedRecipe.input.name}</span>
-                          <span>{selectedRecipe.input.qty} / {selectedRecipe.input.owned}</span>
-                        </div>
-                      ) : null}
-                      {selectedRecipe.costs.silver > 0 ? (
-                        <div className={`bag-gem-cost-line ${(wallet?.silver ?? 0) < selectedRecipe.costs.silver ? 'is-missing' : ''}`}>
-                          <span>银两</span>
-                          <span>{selectedRecipe.costs.silver.toLocaleString()} / {(wallet?.silver ?? 0).toLocaleString()}</span>
-                        </div>
-                      ) : null}
-                      {selectedRecipe.costs.spiritStones > 0 ? (
-                        <div className={`bag-gem-cost-line ${(wallet?.spiritStones ?? 0) < selectedRecipe.costs.spiritStones ? 'is-missing' : ''}`}>
-                          <span>灵石</span>
-                          <span>{selectedRecipe.costs.spiritStones.toLocaleString()} / {(wallet?.spiritStones ?? 0).toLocaleString()}</span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="bag-gem-submit">
-                      <div className="bag-gem-submit-input">
-                        <span>合成次数</span>
-                        <InputNumber
-                          min={1}
-                          max={Math.max(1, selectedRecipe.maxSynthesizeTimes)}
-                          value={times}
-                          onChange={(value) => setTimes(clampSynthesizeTimes(Number(value || 1), selectedRecipe.maxSynthesizeTimes))}
-                        />
-                        <span>最多 {selectedRecipe.maxSynthesizeTimes}</span>
-                      </div>
-                      <Button
-                        type="primary"
-                        disabled={!canSynthesize || submitting}
-                        loading={submitting}
-                        onClick={() => void handleExecute()}
+            )}
+          </div>
+        ) : (
+          /* 单次合成模式：左侧配方列表 + 右侧详情 */
+          <div className="bag-gem-body">
+            {loading && recipes.length === 0 ? (
+              <div className="bag-gem-loading"><Spin /></div>
+            ) : (
+              <>
+                <div className="bag-gem-list">
+                  {filteredRecipes.length === 0 ? (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无可用宝石配方" />
+                  ) : (
+                    filteredRecipes.map((recipe) => (
+                      <button
+                        key={recipe.recipeId}
+                        type="button"
+                        className={`bag-gem-item ${selectedRecipe?.recipeId === recipe.recipeId ? 'is-active' : ''}`}
+                        onClick={() => setSelectedRecipeId(recipe.recipeId)}
                       >
-                        {canSynthesize ? '执行合成' : '材料或货币不足'}
-                      </Button>
-                    </div>
+                        <div className="bag-gem-item-title">{recipe.name}</div>
+                        <div className="bag-gem-item-meta">
+                          <span>{recipe.fromLevel}级 → {recipe.toLevel}级</span>
+                          <span>成功率 {formatPercent(recipe.successRate)}</span>
+                        </div>
+                        <div className="bag-gem-item-meta">
+                          <span>可合成 {recipe.maxSynthesizeTimes} 次</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
 
-                    <div className="bag-gem-batch">
-                      <div className="bag-gem-batch-title">批量合成到目标等级</div>
-                      <div style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        6级以上合成存在失败率，失败会损失本次投入的全部宝石材料。
+                <div className="bag-gem-detail">
+                  {selectedRecipe ? (
+                    <div className="bag-gem-detail-content">
+                      <div className="bag-gem-detail-title">{selectedRecipe.name}</div>
+                      <div className="bag-gem-detail-meta">
+                        <Tag color="default">类型：{gemTypeLabel[selectedRecipe.gemType]}</Tag>
+                        <Tag color="blue">产出：{selectedRecipe.output.name} ×{selectedRecipe.output.qty}</Tag>
+                        <Tag color={selectedRecipe.successRate >= 1 ? 'green' : 'orange'}>
+                          成功率：{formatPercent(selectedRecipe.successRate)}
+                        </Tag>
                       </div>
-                      <div className="bag-gem-batch-controls">
-                        <Select
-                          value={sourceLevel}
-                          options={sourceLevelOptions}
-                          onChange={(value) => setSourceLevel(Number(value) || 1)}
-                          placeholder="起始等级"
-                        />
-                        <Select
-                          value={targetLevel}
-                          options={targetLevelOptions}
-                          onChange={(value) => setTargetLevel(Number(value) || 2)}
-                          placeholder="目标等级"
-                        />
+
+                      <div className="bag-gem-costs">
+                        {selectedRecipe.input.qty > 0 ? (
+                          <div className={`bag-gem-cost-line ${selectedRecipe.input.owned < selectedRecipe.input.qty ? 'is-missing' : ''}`}>
+                            <span>{selectedRecipe.input.name}</span>
+                            <span>{selectedRecipe.input.qty} / {selectedRecipe.input.owned}</span>
+                          </div>
+                        ) : null}
+                        {selectedRecipe.costs.silver > 0 ? (
+                          <div className={`bag-gem-cost-line ${(wallet?.silver ?? 0) < selectedRecipe.costs.silver ? 'is-missing' : ''}`}>
+                            <span>银两</span>
+                            <span>{selectedRecipe.costs.silver.toLocaleString()} / {(wallet?.silver ?? 0).toLocaleString()}</span>
+                          </div>
+                        ) : null}
+                        {selectedRecipe.costs.spiritStones > 0 ? (
+                          <div className={`bag-gem-cost-line ${(wallet?.spiritStones ?? 0) < selectedRecipe.costs.spiritStones ? 'is-missing' : ''}`}>
+                            <span>灵石</span>
+                            <span>{selectedRecipe.costs.spiritStones.toLocaleString()} / {(wallet?.spiritStones ?? 0).toLocaleString()}</span>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="bag-gem-submit">
+                        <div className="bag-gem-submit-input">
+                          <span>合成次数</span>
+                          <InputNumber
+                            min={1}
+                            max={Math.max(1, selectedRecipe.maxSynthesizeTimes)}
+                            value={times}
+                            onChange={(value) => setTimes(clampSynthesizeTimes(Number(value || 1), selectedRecipe.maxSynthesizeTimes))}
+                          />
+                          <span>最多 {selectedRecipe.maxSynthesizeTimes}</span>
+                        </div>
                         <Button
-                          disabled={!canBatch}
-                          loading={batchSubmitting}
-                          onClick={() => void handleBatch()}
+                          type="primary"
+                          disabled={!canSynthesize || submitting}
+                          loading={submitting}
+                          onClick={() => void handleExecute()}
                         >
-                          一键批量合成
+                          {canSynthesize ? '执行合成' : '材料或货币不足'}
                         </Button>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="请选择配方" />
-                )}
-              </div>
-            </>
-          )}
-        </div>
+                  ) : (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="请选择配方" />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );
