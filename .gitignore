@@ -36,8 +36,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Tool configs
-.kiro/
-.claude/
+.kiro/specs
 
 # Generated files
 src/generated/
@@ -60,3 +59,4 @@ coverage/
 *.bak
 *.tmp
 *.temp
+local_cache

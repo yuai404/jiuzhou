@@ -137,6 +137,16 @@ export interface StartIdleSessionResult {
  */
 export async function startIdleSession(params: StartIdleSessionParams): Promise<StartIdleSessionResult> {
   const { characterId, config } = params;
+
+  // 0. 组队中禁止挂机：查询 team_members 表判断角色是否在队伍中
+  const teamCheck = await query(
+    `SELECT team_id FROM team_members WHERE character_id = $1 LIMIT 1`,
+    [characterId]
+  );
+  if (teamCheck.rows.length > 0) {
+    return { success: false, error: '组队中无法进行离线挂机，请先退出队伍' };
+  }
+
   const lockKey = idleLockKey(characterId);
 
   // 1. 尝试获取 Redis 互斥锁（SET NX EX）
