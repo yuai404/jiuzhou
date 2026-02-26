@@ -152,11 +152,19 @@ const matchesRuleSet = (ruleSet: AutoDisassembleRuleSet, meta: AutoDisassembleCa
     return false;
   }
 
-  if (ruleCategories.length > 0 && !ruleCategories.some((category) => candidateCategorySet.has(category))) {
+  // category 与 subCategory 匹配逻辑：
+  // - subCategory 是比 category 更精确的筛选维度
+  // - 当规则指定了 subCategories 且物品 subCategory 命中时，视为类型已精确匹配，跳过 category 检查
+  // - 这允许玩家创建如 categories=['other'] + subCategories=['technique_book'] 的规则，
+  //   即使功法书的真实 category 是 'consumable' 也能正确命中
+  const subCategoryMatched =
+    ruleSet.subCategories.length > 0 && subCategory.length > 0 && ruleSet.subCategories.includes(subCategory);
+
+  if (ruleSet.subCategories.length > 0 && !subCategoryMatched) {
     return false;
   }
 
-  if (ruleSet.subCategories.length > 0 && !ruleSet.subCategories.includes(subCategory)) {
+  if (!subCategoryMatched && ruleCategories.length > 0 && !ruleCategories.some((category) => candidateCategorySet.has(category))) {
     return false;
   }
 
