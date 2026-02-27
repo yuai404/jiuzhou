@@ -9,7 +9,7 @@ import {
 import { emitThemeModeChange, getStoredThemeMode, persistThemeMode, type ThemeMode } from '../../../../constants/theme';
 import {
   AUTO_DISASSEMBLE_CATEGORY_OPTIONS,
-  AUTO_DISASSEMBLE_SUB_CATEGORY_OPTIONS,
+  buildAutoDisassembleSubCategoryOptionsByCategories,
   normalizeAutoDisassembleCategoryList,
   normalizeAutoDisassembleSubCategoryList,
 } from '../../shared/autoDisassembleFilters';
@@ -142,8 +142,8 @@ const normalizeAutoDisassembleRuleDraftContentList = (raw: unknown): AutoDisasse
 
 const buildAutoDisassembleRulePayload = (rule: AutoDisassembleRuleDraft): AutoDisassembleRuleDto => {
   const categories = normalizeAutoDisassembleCategoryList(rule.categories);
-  const subCategories = normalizeAutoDisassembleSubCategoryList(rule.subCategories);
-  const excludedSubCategories = normalizeAutoDisassembleSubCategoryList(rule.excludedSubCategories);
+  const subCategories = normalizeRuleSubCategoriesBySelectedCategories(categories, rule.subCategories);
+  const excludedSubCategories = normalizeRuleSubCategoriesBySelectedCategories(categories, rule.excludedSubCategories);
   const includeNameKeywords = parseCommaList(rule.includeNameKeywordsText, true);
   const excludeNameKeywords = parseCommaList(rule.excludeNameKeywordsText, true);
 
@@ -155,6 +155,37 @@ const buildAutoDisassembleRulePayload = (rule: AutoDisassembleRuleDraft): AutoDi
     ...(excludeNameKeywords.length > 0 ? { excludeNameKeywords } : {}),
     maxQualityRank: clampQualityRank(rule.maxQualityRank),
   };
+};
+
+/**
+ * 按规则内已选一级分类，清理“包含子类/排除子类”中的无效值。
+ *
+ * 作用：
+ * - 让规则编辑态与实际命中语义一致，避免“一级分类=消耗品，但子类仍保留材料子类”的误配置。
+ * - 将子类联动逻辑集中到一个函数，供品类切换与子类选择复用，减少重复判断分支。
+ *
+ * 输入：
+ * - categoriesRaw：规则当前选择的一级分类列表。
+ * - subCategoriesRaw：待归一化的子类列表（可来自旧规则或当前交互输入）。
+ *
+ * 输出：
+ * - 去重、规范化且符合当前一级分类约束的子类列表。
+ *
+ * 关键边界条件：
+ * 1) 当一级分类为空时，不额外裁剪子类，保持“未限制品类”规则可覆盖全量子类。
+ * 2) 当一级分类存在时，仅保留该分类集合可见的子类值，防止保存无效组合。
+ */
+const normalizeRuleSubCategoriesBySelectedCategories = (
+  categoriesRaw: unknown,
+  subCategoriesRaw: unknown,
+): string[] => {
+  const normalizedCategories = normalizeAutoDisassembleCategoryList(categoriesRaw);
+  const normalizedSubCategories = normalizeAutoDisassembleSubCategoryList(subCategoriesRaw);
+  if (normalizedCategories.length <= 0) return normalizedSubCategories;
+  const allowedValueSet = new Set(
+    buildAutoDisassembleSubCategoryOptionsByCategories(normalizedCategories).map((option) => option.value)
+  );
+  return normalizedSubCategories.filter((value) => allowedValueSet.has(value));
 };
 
 const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
@@ -360,124 +391,135 @@ const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
 
               <Typography.Text type="secondary" className="setting-rule-tip">
                 可新增多条规则。自动分解采用"或（OR）"判断：命中任意一条规则即会分解。最高品质为规则级配置，
-                每条规则独立生效。
+                每条规则独立生效。子类列表会随已选品类联动，避免配置到不属于该品类的子类。
               </Typography.Text>
 
-              {autoDisassembleRules.map((rule, index) => (
-                <div className="setting-rule-card" key={rule.id}>
-                  <div className="setting-rule-header">
-                    <Typography.Text strong>{`规则 ${index + 1}`}</Typography.Text>
-                    <Button
-                      danger
-                      type="text"
-                      size="small"
-                      disabled={autoDisassembleLoading || autoDisassembleSaving || autoDisassembleRules.length <= 1}
-                      onClick={() => handleRemoveAutoDisassembleRule(rule.id)}
-                    >
-                      删除规则
-                    </Button>
-                  </div>
+              {autoDisassembleRules.map((rule, index) => {
+                const normalizedCategories = normalizeAutoDisassembleCategoryList(rule.categories);
+                const subCategoryOptions = buildAutoDisassembleSubCategoryOptionsByCategories(normalizedCategories);
+                const hasLimitedCategories = normalizedCategories.length > 0;
+                return (
+                  <div className="setting-rule-card" key={rule.id}>
+                    <div className="setting-rule-header">
+                      <Typography.Text strong>{`规则 ${index + 1}`}</Typography.Text>
+                      <Button
+                        danger
+                        type="text"
+                        size="small"
+                        disabled={autoDisassembleLoading || autoDisassembleSaving || autoDisassembleRules.length <= 1}
+                        onClick={() => handleRemoveAutoDisassembleRule(rule.id)}
+                      >
+                        删除规则
+                      </Button>
+                    </div>
 
-                  <div className="setting-row setting-row-column">
-                    <Typography.Text>本规则最高品质</Typography.Text>
-                    <Select
-                      value={rule.maxQualityRank}
-                      disabled={autoDisassembleLoading || autoDisassembleSaving}
-                      options={[
-                        { label: '黄品', value: 1 },
-                        { label: '玄品', value: 2 },
-                        { label: '地品', value: 3 },
-                        { label: '天品', value: 4 },
-                      ]}
-                      onChange={(next) =>
-                        handleUpdateAutoDisassembleRule(rule.id, {
-                          maxQualityRank: clampQualityRank(next),
-                        })
-                      }
-                      style={{ width: '100%' }}
-                    />
-                  </div>
+                    <div className="setting-row setting-row-column">
+                      <Typography.Text>本规则最高品质</Typography.Text>
+                      <Select
+                        value={rule.maxQualityRank}
+                        disabled={autoDisassembleLoading || autoDisassembleSaving}
+                        options={[
+                          { label: '黄品', value: 1 },
+                          { label: '玄品', value: 2 },
+                          { label: '地品', value: 3 },
+                          { label: '天品', value: 4 },
+                        ]}
+                        onChange={(next) =>
+                          handleUpdateAutoDisassembleRule(rule.id, {
+                            maxQualityRank: clampQualityRank(next),
+                          })
+                        }
+                        style={{ width: '100%' }}
+                      />
+                    </div>
 
-                  <div className="setting-row setting-row-column">
-                    <Typography.Text>自动分解品类</Typography.Text>
-                    <Select
-                      mode="multiple"
-                      value={rule.categories}
-                      disabled={autoDisassembleLoading || autoDisassembleSaving}
-                      options={AUTO_DISASSEMBLE_CATEGORY_OPTIONS}
-                      onChange={(next) =>
-                        handleUpdateAutoDisassembleRule(rule.id, {
-                          categories: normalizeAutoDisassembleCategoryList(next),
-                        })
-                      }
-                      style={{ width: '100%' }}
-                      placeholder="未选择时默认仅装备"
-                    />
-                  </div>
+                    <div className="setting-row setting-row-column">
+                      <Typography.Text>自动分解品类</Typography.Text>
+                      <Select
+                        mode="multiple"
+                        value={rule.categories}
+                        disabled={autoDisassembleLoading || autoDisassembleSaving}
+                        options={AUTO_DISASSEMBLE_CATEGORY_OPTIONS}
+                        onChange={(next) => {
+                          const nextCategories = normalizeAutoDisassembleCategoryList(next);
+                          handleUpdateAutoDisassembleRule(rule.id, {
+                            categories: nextCategories,
+                            subCategories: normalizeRuleSubCategoriesBySelectedCategories(nextCategories, rule.subCategories),
+                            excludedSubCategories: normalizeRuleSubCategoriesBySelectedCategories(
+                              nextCategories,
+                              rule.excludedSubCategories,
+                            ),
+                          });
+                        }}
+                        style={{ width: '100%' }}
+                        placeholder="未选择时默认仅装备"
+                      />
+                    </div>
 
-                  <div className="setting-row setting-row-column">
-                    <Typography.Text>包含子类</Typography.Text>
-                    <Select
-                      mode="multiple"
-                      value={rule.subCategories}
-                      disabled={autoDisassembleLoading || autoDisassembleSaving}
-                      options={AUTO_DISASSEMBLE_SUB_CATEGORY_OPTIONS}
-                      onChange={(next) =>
-                        handleUpdateAutoDisassembleRule(rule.id, {
-                          subCategories: normalizeAutoDisassembleSubCategoryList(next),
-                        })
-                      }
-                      style={{ width: '100%' }}
-                      placeholder="请选择需要包含的子类"
-                    />
-                  </div>
+                    <div className="setting-row setting-row-column">
+                      <Typography.Text>包含子类</Typography.Text>
+                      <Select
+                        mode="multiple"
+                        value={rule.subCategories}
+                        disabled={autoDisassembleLoading || autoDisassembleSaving}
+                        options={subCategoryOptions}
+                        onChange={(next) =>
+                          handleUpdateAutoDisassembleRule(rule.id, {
+                            subCategories: normalizeRuleSubCategoriesBySelectedCategories(rule.categories, next),
+                          })
+                        }
+                        style={{ width: '100%' }}
+                        placeholder={hasLimitedCategories ? '仅展示当前品类可选子类' : '未限制品类时展示全部子类'}
+                      />
+                    </div>
 
-                  <div className="setting-row setting-row-column">
-                    <Typography.Text>排除子类</Typography.Text>
-                    <Select
-                      mode="multiple"
-                      value={rule.excludedSubCategories}
-                      disabled={autoDisassembleLoading || autoDisassembleSaving}
-                      options={AUTO_DISASSEMBLE_SUB_CATEGORY_OPTIONS}
-                      onChange={(next) =>
-                        handleUpdateAutoDisassembleRule(rule.id, {
-                          excludedSubCategories: normalizeAutoDisassembleSubCategoryList(next),
-                        })
-                      }
-                      style={{ width: '100%' }}
-                      placeholder="请选择需要排除的子类"
-                    />
-                  </div>
+                    <div className="setting-row setting-row-column">
+                      <Typography.Text>排除子类</Typography.Text>
+                      <Select
+                        mode="multiple"
+                        value={rule.excludedSubCategories}
+                        disabled={autoDisassembleLoading || autoDisassembleSaving}
+                        options={subCategoryOptions}
+                        onChange={(next) =>
+                          handleUpdateAutoDisassembleRule(rule.id, {
+                            excludedSubCategories: normalizeRuleSubCategoriesBySelectedCategories(rule.categories, next),
+                          })
+                        }
+                        style={{ width: '100%' }}
+                        placeholder={hasLimitedCategories ? '仅展示当前品类可选子类' : '未限制品类时展示全部子类'}
+                      />
+                    </div>
 
-                  <div className="setting-row setting-row-column">
-                    <Typography.Text>包含名称关键词（逗号分隔）</Typography.Text>
-                    <Input
-                      value={rule.includeNameKeywordsText}
-                      disabled={autoDisassembleLoading || autoDisassembleSaving}
-                      onChange={(e) =>
-                        handleUpdateAutoDisassembleRule(rule.id, {
-                          includeNameKeywordsText: e.target.value,
-                        })
-                      }
-                      placeholder="如：丹, 剑, 残页"
-                    />
-                  </div>
+                    <div className="setting-row setting-row-column">
+                      <Typography.Text>包含名称关键词（逗号分隔）</Typography.Text>
+                      <Input
+                        value={rule.includeNameKeywordsText}
+                        disabled={autoDisassembleLoading || autoDisassembleSaving}
+                        onChange={(e) =>
+                          handleUpdateAutoDisassembleRule(rule.id, {
+                            includeNameKeywordsText: e.target.value,
+                          })
+                        }
+                        placeholder="如：丹, 剑, 残页"
+                      />
+                    </div>
 
-                  <div className="setting-row setting-row-column">
-                    <Typography.Text>排除名称关键词（逗号分隔）</Typography.Text>
-                    <Input
-                      value={rule.excludeNameKeywordsText}
-                      disabled={autoDisassembleLoading || autoDisassembleSaving}
-                      onChange={(e) =>
-                        handleUpdateAutoDisassembleRule(rule.id, {
-                          excludeNameKeywordsText: e.target.value,
-                        })
-                      }
-                      placeholder="如：任务, 钥匙"
-                    />
+                    <div className="setting-row setting-row-column">
+                      <Typography.Text>排除名称关键词（逗号分隔）</Typography.Text>
+                      <Input
+                        value={rule.excludeNameKeywordsText}
+                        disabled={autoDisassembleLoading || autoDisassembleSaving}
+                        onChange={(e) =>
+                          handleUpdateAutoDisassembleRule(rule.id, {
+                            excludeNameKeywordsText: e.target.value,
+                          })
+                        }
+                        placeholder="如：任务, 钥匙"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               <Button
                 disabled={autoDisassembleLoading || autoDisassembleSaving || autoDisassembleRules.length >= 20}

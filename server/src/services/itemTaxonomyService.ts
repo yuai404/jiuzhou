@@ -91,7 +91,7 @@ const SUB_CATEGORY_LABEL_FALLBACK: Record<string, string> = {
   pill: '丹药',
   relic: '遗物',
   scroll: '卷轴',
-  technique: '功法',
+  technique: '功法材料',
   technique_book: '功法书',
   token: '代币',
   wood: '木材',

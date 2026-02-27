@@ -79,6 +79,36 @@ export const buildAutoDisassembleSubCategoryOptions = (rawValues: string[]): Lab
 };
 
 /**
+ * 按“多个一级分类”构建自动分解子类型选项（可附加动态子类型）
+ *
+ * 作用：
+ * - 统一“多选品类 -> 子类候选”的映射，避免设置页/背包页各自拼接导致规则口径不一致。
+ * - 当选择了一级分类时，仅展示该分类集合下的子类，减少“消耗品选到材料子类”这类误配。
+ *
+ * 输入：
+ * - categoriesRaw：一级分类数组（允许空、大小写不一致、重复值）。
+ * - extraRawValues：业务侧临时补充子类（例如实时数据中出现的新子类）。
+ *
+ * 输出：
+ * - 去重、排序后的子类 options（value 为稳定英文编码，label 为中文展示）。
+ *
+ * 关键边界条件：
+ * 1) 当 `categoriesRaw` 为空时，回退到 `all` 下的全量子类，保证“未限制一级分类”场景可配置。
+ * 2) 当分类值不在 taxonomy 中时会被归一化阶段剔除，避免把非法值透传到规则保存。
+ */
+export const buildAutoDisassembleSubCategoryOptionsByCategories = (
+  categoriesRaw: string[] = [],
+  extraRawValues: string[] = [],
+): LabeledOption[] => {
+  const categories = normalizeAutoDisassembleCategoryList(categoriesRaw);
+  const defaults =
+    categories.length > 0
+      ? categories.flatMap((category) => ITEM_SUB_CATEGORY_VALUES_BY_CATEGORY[category] ?? [])
+      : ITEM_SUB_CATEGORY_VALUES_BY_CATEGORY.all;
+  return buildAutoDisassembleSubCategoryOptions([...defaults, ...extraRawValues]);
+};
+
+/**
  * 按一级分类构建“完整子类型”选项（可附加动态子类型）
  *
  * 输入：
@@ -92,6 +122,5 @@ export const buildAutoDisassembleSubCategoryOptionsByCategory = (
   category: AutoDisassembleBagCategory,
   extraRawValues: string[] = [],
 ): LabeledOption[] => {
-  const defaults = ITEM_SUB_CATEGORY_VALUES_BY_CATEGORY[category] ?? ITEM_SUB_CATEGORY_VALUES_BY_CATEGORY.all;
-  return buildAutoDisassembleSubCategoryOptions([...defaults, ...extraRawValues]);
+  return buildAutoDisassembleSubCategoryOptionsByCategories([category], extraRawValues);
 };
