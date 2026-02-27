@@ -253,3 +253,76 @@ test('技能与词条触发日志应按时机排序（主动作在前，on_skill
   assert.match(secondAction.skillId, /^proc-/);
   assert.equal(secondAction.skillName, '青玉冠·灵潮息');
 });
+
+test('echo伤害词条应按本次命中伤害比例结算真伤', () => {
+  const effect: BattleSetBonusEffect = {
+    setId: 'affix-601-proc_huixiang',
+    setName: '太虚回锋',
+    pieceCount: 1,
+    trigger: 'on_hit',
+    target: 'enemy',
+    effectType: 'damage',
+    params: {
+      chance: 1,
+      damage_type: 'echo',
+      value: 0.3,
+    },
+  };
+  const owner = createUnit('player-6', '测试剑修', [effect]);
+  const target = createUnit('monster-6', '木桩妖', []);
+  const state = createState(owner, target);
+
+  const logs = triggerSetBonusEffects(state, 'on_hit', owner, { target, damage: 200 });
+  assert.equal(logs.length, 1);
+  const actionLog = assertActionLog(logs[0]);
+  assert.equal(actionLog.targets[0]?.hits[0]?.damage, 60);
+});
+
+test('echo伤害词条缺失本次命中伤害时不应生效', () => {
+  const effect: BattleSetBonusEffect = {
+    setId: 'affix-602-proc_huixiang',
+    setName: '太虚回锋',
+    pieceCount: 1,
+    trigger: 'on_hit',
+    target: 'enemy',
+    effectType: 'damage',
+    params: {
+      chance: 1,
+      damage_type: 'echo',
+      value: 0.3,
+    },
+  };
+  const owner = createUnit('player-7', '测试剑修', [effect]);
+  const target = createUnit('monster-7', '木桩妖', []);
+  const state = createState(owner, target);
+
+  const logs = triggerSetBonusEffects(state, 'on_hit', owner, { target });
+  assert.equal(logs.length, 0);
+});
+
+test('damage_echo护盾词条应按本次受击伤害比例生成护盾', () => {
+  const effect: BattleSetBonusEffect = {
+    setId: 'affix-701-proc_xuangang',
+    setName: '玄罡回璧',
+    pieceCount: 1,
+    trigger: 'on_be_hit',
+    target: 'self',
+    effectType: 'shield',
+    durationRound: 2,
+    params: {
+      chance: 1,
+      shield_mode: 'damage_echo',
+      value: 0.5,
+    },
+  };
+  const owner = createUnit('player-8', '测试体修', [effect]);
+  const target = createUnit('monster-8', '木桩妖', []);
+  const state = createState(owner, target);
+
+  const logs = triggerSetBonusEffects(state, 'on_be_hit', owner, { target, damage: 120 });
+  assert.equal(logs.length, 1);
+  assert.equal(owner.shields.length, 1);
+  assert.equal(owner.shields[0]?.value, 60);
+  assert.equal(owner.shields[0]?.maxValue, 60);
+  assert.equal(owner.shields[0]?.duration, 2);
+});

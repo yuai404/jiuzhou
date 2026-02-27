@@ -33,7 +33,7 @@ const COMMON_POOL_IDS = [
   'ap-artifact-common',
 ] as const;
 
-const EXPECTED_TOTAL_TIER_ROWS = 1055;
+const EXPECTED_TOTAL_TIER_ROWS = 1073;
 
 const trimNumber = (value: number, maxDp = 6): string => {
   return Number(value)
@@ -42,13 +42,48 @@ const trimNumber = (value: number, maxDp = 6): string => {
     .replace(/(\.\d*?[1-9])0+$/, '$1');
 };
 
-const specialDescriptionBuilders: Record<string, (min: number, max: number) => string> = {
-  proc_zhuihun: (min, max) => `命中时22%概率触发追魂斩，追加${trimNumber(min)}~${trimNumber(max)}点真伤并附加60%物攻加成`,
-  proc_tianlei: (min, max) => `命中时22%概率引动天雷，追加${trimNumber(min)}~${trimNumber(max)}点法伤并附加65%法攻加成`,
-  proc_baonu: (min, max) => `暴击时28%概率激发暴怒意，2回合内增伤提高${trimNumber(min * 100)}%~${trimNumber(max * 100)}%`,
-  proc_hushen: (min, max) => `受击时26%概率触发护心诀，回复${trimNumber(min)}~${trimNumber(max)}点气血并附加9%生命加成`,
-  proc_fansha: (min, max) => `受击时22%概率反煞，反弹${trimNumber(min * 100)}%~${trimNumber(max * 100)}%本次伤害`,
-  proc_lingchao: (min, max) => `回合开始时30%概率引动灵潮，恢复${trimNumber(min)}~${trimNumber(max)}点灵气`,
+type SpecialDescriptionRule = {
+  buildDescription: (min: number, max: number) => string;
+  requiredTiers: number[];
+};
+
+const specialDescriptionRules: Record<string, SpecialDescriptionRule> = {
+  proc_zhuihun: {
+    buildDescription: (min, max) => `命中时22%概率触发追魂斩，追加${trimNumber(min)}~${trimNumber(max)}点真伤并附加60%物攻加成`,
+    requiredTiers: [7, 8],
+  },
+  proc_tianlei: {
+    buildDescription: (min, max) => `命中时22%概率引动天雷，追加${trimNumber(min)}~${trimNumber(max)}点法伤并附加65%法攻加成`,
+    requiredTiers: [7, 8],
+  },
+  proc_baonu: {
+    buildDescription: (min, max) => `暴击时28%概率激发暴怒意，2回合内增伤提高${trimNumber(min * 100)}%~${trimNumber(max * 100)}%`,
+    requiredTiers: [7, 8],
+  },
+  proc_hushen: {
+    buildDescription: (min, max) => `受击时26%概率触发护心诀，回复${trimNumber(min)}~${trimNumber(max)}点气血并附加9%生命加成`,
+    requiredTiers: [7, 8],
+  },
+  proc_fansha: {
+    buildDescription: (min, max) => `受击时22%概率反煞，反弹${trimNumber(min * 100)}%~${trimNumber(max * 100)}%本次伤害`,
+    requiredTiers: [7, 8],
+  },
+  proc_lingchao: {
+    buildDescription: (min, max) => `回合开始时30%概率引动灵潮，恢复${trimNumber(min)}~${trimNumber(max)}点灵气`,
+    requiredTiers: [7, 8],
+  },
+  proc_duanxing: {
+    buildDescription: (min, max) => `命中时20%概率引爆断星芒，造成${trimNumber(min)}~${trimNumber(max)}点真伤并附加42%最大灵气加成`,
+    requiredTiers: [8],
+  },
+  proc_huixiang: {
+    buildDescription: (min, max) => `命中时22%概率引动太虚回锋，追加本次命中伤害${trimNumber(min * 100)}%~${trimNumber(max * 100)}%的真伤`,
+    requiredTiers: [8],
+  },
+  proc_xuangang: {
+    buildDescription: (min, max) => `受击时27%概率凝成玄罡回璧，获得相当于本次受击伤害${trimNumber(min * 100)}%~${trimNumber(max * 100)}%的护盾，持续2回合`,
+    requiredTiers: [8],
+  },
 };
 
 const loadSeed = (): AffixPoolSeedFile => {
@@ -121,20 +156,20 @@ test('common池词缀应连续到T8且区间单调', () => {
   }
 });
 
-test('special词缀的T7/T8描述应与数值一致', () => {
+test('special词缀关键档位描述应与数值一致', () => {
   const seed = loadSeed();
 
   for (const pool of seed.pools) {
     for (const affix of pool.affixes) {
       if (affix.apply_type !== 'special') continue;
 
-      const descBuilder = specialDescriptionBuilders[affix.key];
-      assert.ok(descBuilder, `${pool.id}:${affix.key} 缺少描述模板`);
+      const descriptionRule = specialDescriptionRules[affix.key];
+      assert.ok(descriptionRule, `${pool.id}:${affix.key} 缺少描述模板`);
 
-      for (const targetTier of [7, 8]) {
+      for (const targetTier of descriptionRule.requiredTiers) {
         const tier = affix.tiers.find((row) => row.tier === targetTier);
         assert.ok(tier, `${pool.id}:${affix.key} 缺少 T${targetTier}`);
-        const expected = descBuilder(Number(tier.min), Number(tier.max));
+        const expected = descriptionRule.buildDescription(Number(tier.min), Number(tier.max));
         assert.equal(
           (tier.description ?? '').trim(),
           expected,

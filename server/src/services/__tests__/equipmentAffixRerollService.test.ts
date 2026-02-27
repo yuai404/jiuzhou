@@ -170,3 +170,40 @@ test('洗炼生成flat词条时应支持复合modifiers', () => {
   assert.equal(rerollResult.affixes?.[0]?.modifiers?.[0]?.value, 20);
   assert.equal(rerollResult.affixes?.[0]?.modifiers?.[1]?.value, 10);
 });
+
+test('special比例词条应保留小数精度（echo 与 damage_echo）', () => {
+  const parsed = parseGeneratedAffixesForReroll([
+    {
+      key: 'proc_huixiang',
+      name: '太虚回锋',
+      apply_type: 'special',
+      tier: 8,
+      value: 0.2456789,
+      trigger: 'on_hit',
+      target: 'enemy',
+      effect_type: 'damage',
+      params: {
+        damage_type: 'echo',
+        chance: 0.22,
+      },
+    },
+    {
+      key: 'proc_xuangang',
+      name: '玄罡回璧',
+      apply_type: 'special',
+      tier: 8,
+      value: 0.4234567,
+      trigger: 'on_be_hit',
+      target: 'self',
+      effect_type: 'shield',
+      params: {
+        shield_mode: 'damage_echo',
+        chance: 0.27,
+      },
+    },
+  ]);
+
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0]?.value, 0.245679);
+  assert.equal(parsed[1]?.value, 0.423457);
+});

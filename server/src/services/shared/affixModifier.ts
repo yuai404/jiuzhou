@@ -8,7 +8,7 @@
  */
 
 export type AffixApplyType = 'flat' | 'percent' | 'special';
-export type AffixEffectType = 'buff' | 'debuff' | 'damage' | 'heal' | 'resource';
+export type AffixEffectType = 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield';
 export type AffixParamValue = string | number | boolean;
 export type AffixParams = Record<string, AffixParamValue>;
 
@@ -72,11 +72,19 @@ const isRatioSpecialAffixValue = (
   const paramAttrKey = typeof params.attr_key === 'string' ? params.attr_key : '';
   const damageType = typeof params.damage_type === 'string' ? params.damage_type : '';
   const debuffType = typeof params.debuff_type === 'string' ? params.debuff_type : '';
+  const shieldMode = typeof params.shield_mode === 'string' ? params.shield_mode : '';
 
   if ((effectType === 'buff' || effectType === 'debuff') && (paramApplyType === 'percent' || isRatioAttrKey(paramAttrKey))) {
     return true;
   }
-  if (effectType === 'damage' && damageType === 'reflect') return true;
+  /**
+   * special 比例型数值判定：
+   * - reflect/echo：按伤害比例结算；
+   * - damage_echo：按受击伤害比例生成护盾；
+   * - bleed：按比例读取持续伤害系数。
+   */
+  if (effectType === 'damage' && (damageType === 'reflect' || damageType === 'echo')) return true;
+  if (effectType === 'shield' && shieldMode === 'damage_echo') return true;
   if (effectType === 'debuff' && debuffType === 'bleed') return true;
   return false;
 };

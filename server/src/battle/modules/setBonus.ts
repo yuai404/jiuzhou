@@ -68,7 +68,7 @@ export function triggerSetBonusEffects(
         applyResult = applySetResource(owner, target, params);
         break;
       case 'shield':
-        applyResult = applySetShield(effect, owner, target, params);
+        applyResult = applySetShield(effect, owner, target, params, context.damage);
         break;
       default:
         break;
@@ -175,7 +175,18 @@ function applySetDamage(
   const damageTypeRaw = asNonEmptyString(params.damage_type) ?? 'true';
 
   let damage = 0;
-  if (damageTypeRaw === 'reflect' && typeof sourceDamage === 'number' && sourceDamage > 0) {
+  /**
+   * 触发伤害模式说明：
+   * 1) reflect：沿用旧规则，按“本次受击伤害 × 比例”反弹伤害；
+   * 2) echo：新机制“回响伤害”，按“本次命中伤害 × 比例”追加真伤；
+   * 3) 其他模式：按词条基础值结算（可叠加 scale）。
+   *
+   * 边界：
+   * - reflect/echo 依赖 sourceDamage，若缺失或 <=0，则本次不生效；
+   * - echo 设计为纯比例机制，不叠加 scale，避免与“固定值+比例”混合。
+   */
+  if (damageTypeRaw === 'reflect' || damageTypeRaw === 'echo') {
+    if (typeof sourceDamage !== 'number' || sourceDamage <= 0) return null;
     damage += Math.floor(sourceDamage * normalizeRate(rawValue));
   } else {
     damage += Math.floor(rawValue);
@@ -183,7 +194,7 @@ function applySetDamage(
 
   const scaleKey = asNonEmptyString(params.scale_key);
   const scaleRateRaw = asFiniteNumber(params.scale_rate);
-  if (scaleKey && scaleRateRaw !== null) {
+  if (damageTypeRaw !== 'echo' && scaleKey && scaleRateRaw !== null) {
     const attrValue = asFiniteNumber(readAttrValue(owner, scaleKey)) ?? 0;
     damage += Math.floor(attrValue * normalizeRate(scaleRateRaw));
   }
@@ -308,16 +319,33 @@ function applySetShield(
   effect: BattleSetBonusEffect,
   owner: BattleUnit,
   target: BattleUnit,
-  params: Record<string, unknown>
+  params: Record<string, unknown>,
+  sourceDamage?: number
 ): SetBonusApplyResult | null {
   const baseValue = asFiniteNumber(params.value) ?? 0;
   const scaleKey = asNonEmptyString(params.scale_key);
   const scaleRate = asFiniteNumber(params.scale_rate);
+  const shieldModeRaw = asNonEmptyString(params.shield_mode);
 
-  let shieldValue = Math.floor(baseValue);
-  if (scaleKey && scaleRate !== null) {
-    const scaleAttr = asFiniteNumber(readAttrValue(owner, scaleKey)) ?? 0;
-    shieldValue += Math.floor(scaleAttr * normalizeRate(scaleRate));
+  /**
+   * 护盾模式说明：
+   * 1) damage_echo：新机制“受击回璧”，按“本次受击伤害 × 比例”生成护盾；
+   * 2) 默认模式：沿用旧规则，按基础值 + 可选 scale 生成护盾。
+   *
+   * 边界：
+   * - damage_echo 必须依赖 sourceDamage，缺失或 <=0 时不生效；
+   * - 护盾值 <=0 时直接忽略，避免写入无效护盾实例。
+   */
+  let shieldValue = 0;
+  if (shieldModeRaw === 'damage_echo') {
+    if (typeof sourceDamage !== 'number' || sourceDamage <= 0) return null;
+    shieldValue = Math.floor(sourceDamage * normalizeRate(baseValue));
+  } else {
+    shieldValue = Math.floor(baseValue);
+    if (scaleKey && scaleRate !== null) {
+      const scaleAttr = asFiniteNumber(readAttrValue(owner, scaleKey)) ?? 0;
+      shieldValue += Math.floor(scaleAttr * normalizeRate(scaleRate));
+    }
   }
 
   if (shieldValue <= 0) return null;
