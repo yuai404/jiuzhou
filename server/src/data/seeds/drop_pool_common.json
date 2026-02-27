@@ -881,6 +881,20 @@
           "show_in_ui": true
         },
         {
+          "item_def_id": "set-pojun-weapon",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-pojun-artifact",
+          "chance": 0.04,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
           "item_def_id": "set-cangyue-head",
           "chance": 0.06,
           "qty_min": 1,
@@ -917,6 +931,20 @@
         },
         {
           "item_def_id": "set-cangyue-accessory",
+          "chance": 0.04,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-weapon",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-cangyue-artifact",
           "chance": 0.04,
           "qty_min": 1,
           "qty_max": 1,
