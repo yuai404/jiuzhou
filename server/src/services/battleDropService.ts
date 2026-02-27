@@ -33,6 +33,7 @@ import {
 import { lockCharacterInventoryMutexesTx } from './inventoryMutex.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { getRealmOrderIndex } from './shared/realmRules.js';
+import { safeRelease, safeRollback } from './shared/transaction.js';
 
 // ============================================
 // 类型定义
@@ -724,7 +725,7 @@ export const distributeBattleRewards = async (
     };
     
   } catch (error) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     console.error('分发战斗奖励失败:', error);
     return {
       success: false,
@@ -732,7 +733,7 @@ export const distributeBattleRewards = async (
       rewards: { exp: 0, silver: 0, items: [] },
     };
   } finally {
-    client.release();
+    safeRelease(client);
   }
 };
 

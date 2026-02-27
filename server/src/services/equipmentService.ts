@@ -38,6 +38,7 @@ import {
   resolveRatingBaseAttrKey,
   toRatingAttrKey,
 } from './shared/affixRating.js';
+import { normalizeItemInstanceObtainedFrom } from './shared/itemInstanceSource.js';
 
 // ============================================
 // 类型定义
@@ -755,6 +756,11 @@ export const createEquipmentInstanceTx = async (
   const location = options.location || 'bag';
   const hasExplicitSlot = options.locationSlot !== undefined && options.locationSlot !== null;
   let locationSlot = options.locationSlot ?? null;
+  const obtainedFromResult = normalizeItemInstanceObtainedFrom(options.obtainedFrom);
+  if (!obtainedFromResult.success) {
+    return { success: false, message: obtainedFromResult.message };
+  }
+  const obtainedFrom = obtainedFromResult.value;
 
   await lockCharacterInventoryMutexTx(client, characterId);
 
@@ -796,7 +802,7 @@ export const createEquipmentInstanceTx = async (
           JSON.stringify(generated.affixes),
           options.identified !== false,
           generated.affixGenVersion || AFFIX_GEN_VERSION,
-          options.obtainedFrom || 'system',
+          obtainedFrom,
         ]
       );
 

@@ -54,6 +54,7 @@ import { buildDisassembleRewardPlan } from "../disassembleRewardPlanner.js";
 import type { GeneratedAffix } from "../equipmentService.js";
 import { extractFlatAffixDeltas } from "../shared/affixModifier.js";
 import { resolveQualityRankFromName } from "../shared/itemQuality.js";
+import { normalizeItemInstanceObtainedFrom } from "../shared/itemInstanceSource.js";
 import {
   isGemItemDefinition,
   resolveGemTypeFromItemDefinition,
@@ -1263,6 +1264,10 @@ export const addItemToInventoryTx = async (
     if (!error || typeof error !== "object") return false;
     return (error as { code?: unknown }).code === "23505";
   };
+  const isInvalidTransactionBlock = (error: unknown): boolean => {
+    if (!error || typeof error !== "object") return false;
+    return (error as { code?: unknown }).code === "25P01";
+  };
 
   if (!Number.isInteger(qty) || qty <= 0) {
     return { success: false, message: "数量参数错误" };
@@ -1281,12 +1286,26 @@ export const addItemToInventoryTx = async (
   const stack_max = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
   const def_bind_type = String(itemDef.bind_type || "none");
   const actualBindType = bindType !== "none" ? bindType : def_bind_type;
+  const obtainedFromResult = normalizeItemInstanceObtainedFrom(
+    options.obtainedFrom,
+  );
+  if (!obtainedFromResult.success) {
+    return { success: false, message: obtainedFromResult.message };
+  }
+  const obtainedFrom = obtainedFromResult.value;
 
   const info = await getInventoryInfoWithClient(characterId, client);
   const capacity = getSlottedCapacity(info, location);
 
   const savepointName = "sp_add_item_to_inventory_tx";
-  await client.query(`SAVEPOINT ${savepointName}`);
+  try {
+    await client.query(`SAVEPOINT ${savepointName}`);
+  } catch (error) {
+    if (isInvalidTransactionBlock(error)) {
+      return { success: false, message: "事务状态异常，无法添加物品" };
+    }
+    throw error;
+  }
 
   const itemIds: number[] = [];
   let remainingQty = qty;
@@ -1396,7 +1415,7 @@ export const addItemToInventoryTx = async (
                 slot,
                 actualBindType,
                 options.affixes ? JSON.stringify(options.affixes) : null,
-                options.obtainedFrom || "system",
+                obtainedFrom,
               ],
             );
             insertedId = Number(insertResult.rows[0]?.id);

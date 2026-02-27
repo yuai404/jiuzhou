@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS item_instance (
   expire_at TIMESTAMPTZ,                              -- 实例过期时间
 
   -- 来源追溯
-  obtained_from VARCHAR(32),                          -- 获取来源（drop/quest/shop/craft/mail/admin）
+  obtained_from VARCHAR(128),                         -- 获取来源（drop/quest/shop/craft/mail/admin）
   obtained_ref_id VARCHAR(64),                        -- 来源引用ID
   metadata JSONB,                                     -- 扩展字段
 
@@ -479,6 +479,23 @@ const migrateTechniqueBookBindTypeForMarket = async (): Promise<void> => {
   console.log(`  → 功法书可交易迁移完成：更新实例=${updated}`);
 };
 
+/**
+ * 统一扩容 item_instance.obtained_from 字段长度。
+ *
+ * 原因：
+ * - 业务侧来源标识已包含动态前缀（如 craft-refund:recipe_id / use_item:item_def_id）。
+ * - 旧长度 VARCHAR(32) 在部分配置数据下会触发 22001（字符串过长）并中断事务。
+ *
+ * 边界说明：
+ * 1) 仅做“扩容”不做截断，避免损失来源追踪信息。
+ * 2) 迁移为幂等执行（通过 migrationKey 控制只执行一次），避免重复 DDL。
+ */
+const migrateItemInstanceObtainedFromLengthV128 = async (): Promise<void> => {
+  await query('ALTER TABLE item_instance ALTER COLUMN obtained_from TYPE VARCHAR(128)');
+  await query("COMMENT ON COLUMN item_instance.obtained_from IS '获取来源类型';");
+  console.log('  → 物品来源字段扩容完成：item_instance.obtained_from VARCHAR(128)');
+};
+
 // ============================================
 // 初始化物品系统表
 // ============================================
@@ -509,6 +526,12 @@ export const initItemTables = async (): Promise<void> => {
       migrationKey: 'item_instance_technique_book_tradeable_v1',
       description: '将历史功法书实例解绑为none以支持坊市交易',
       execute: migrateTechniqueBookBindTypeForMarket,
+    });
+
+    await runDbMigrationOnce({
+      migrationKey: 'item_instance_obtained_from_v128',
+      description: '扩容 item_instance.obtained_from 字段长度到 VARCHAR(128)',
+      execute: migrateItemInstanceObtainedFromLengthV128,
     });
 
     await query("COMMENT ON COLUMN item_instance.identified IS '是否已鉴定';");

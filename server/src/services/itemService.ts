@@ -17,6 +17,7 @@ import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { safeRelease, safeRollback } from './shared/transaction.js';
 import {
   applyCharacterResourceDeltaByCharacterId,
   getCharacterComputedByCharacterId,
@@ -633,10 +634,12 @@ export const useItem = async (
         location: 'bag',
         obtainedFrom: `use_item:${itemDef.id}`
       });
-      if (addRes.success) {
-        const itemName = getItemDefinitionById(lootItem.itemDefId)?.name || lootItem.itemDefId;
-        lootResults.push({ type: 'item', name: itemName, amount: lootItem.qty });
+      if (!addRes.success) {
+        await safeRollback(client);
+        return { success: false, message: addRes.message || '道具掉落发放失败' };
       }
+      const itemName = getItemDefinitionById(lootItem.itemDefId)?.name || lootItem.itemDefId;
+      lootResults.push({ type: 'item', name: itemName, amount: lootItem.qty });
     }
 
     if (effectiveCdSec > 0) {
@@ -700,11 +703,11 @@ export const useItem = async (
     };
 
   } catch (error) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     console.error('使用物品失败:', error);
     return { success: false, message: '使用物品失败' };
   } finally {
-    client.release();
+    safeRelease(client);
   }
 };
 

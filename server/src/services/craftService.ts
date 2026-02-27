@@ -4,6 +4,7 @@ import { addItemToInventoryTx } from './inventory/index.js';
 import { lockCharacterInventoryMutexTx } from './inventoryMutex.js';
 import { recordCraftItemEvent } from './taskService.js';
 import { REALM_ORDER } from './shared/realmRules.js';
+import { safeRelease, safeRollback } from './shared/transaction.js';
 import { getItemDefinitionById, getItemDefinitionsByIds, getItemRecipeById, getItemRecipeDefinitionsByType } from './staticConfigLoader.js';
 
 type CraftRecipeType = 'craft' | 'refine' | 'decompose' | 'upgrade' | string;
@@ -683,11 +684,11 @@ export const executeCraftRecipe = async (
       },
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     console.error('执行炼制失败:', error);
     return { success: false, message: '执行炼制失败' };
   } finally {
-    client.release();
+    safeRelease(client);
   }
 };
 

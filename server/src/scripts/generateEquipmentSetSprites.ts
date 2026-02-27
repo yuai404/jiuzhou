@@ -1,8 +1,9 @@
 /**
  * 作用：
  * 1) 基于指定装备套装（set_id）调用火山方舟 `doubao-seedream-5-0-260128` 生成一张“1图8件”大图。
- * 2) 基于本地 RMBG-2.0（ModelScope: `AI-ModelScope/RMBG-2.0`）对整图按 4x2 网格逐格抠图。
- * 3) 对每张抠图子图做白底残留清理与 alpha 紧裁，导出最终 PNG 素材。
+ * 2) 生图阶段固定注入两张本地参考图（`icon_chest protection_1_16`、`icon_clothes_1_16`）以约束服饰视觉方向。
+ * 3) 基于本地 RMBG-2.0（ModelScope: `AI-ModelScope/RMBG-2.0`）对整图按 4x2 网格逐格抠图。
+ * 4) 对每张抠图子图做白底残留清理与 alpha 紧裁，导出最终 PNG 素材。
  *
  * 不做什么：
  * 1) 不做旧流程兼容（不再走“单件独立生成”流程）。
@@ -17,8 +18,9 @@
  *   d) `<outputDir>/<setId>-manifest.json`（切图元数据）
  *
  * 数据流 / 状态流：
- * 1) 读取套装装备定义 -> 2) 生成大图 Prompt -> 3) 请求方舟接口拿到大图 ->
- * 4) 按 4x2 网格逐格调用本地 RMBG-2.0 抠图 -> 5) 白底清理 + alpha 紧裁 -> 6) 输出素材与 manifest。
+ * 1) 读取套装装备定义 -> 2) 生成大图 Prompt -> 3) 读取并编码本地参考图 ->
+ * 4) 请求方舟接口拿到大图 -> 5) 按 4x2 网格逐格调用本地 RMBG-2.0 抠图 ->
+ * 6) 白底清理 + alpha 紧裁 -> 7) 输出素材与 manifest。
  *
  * 关键边界条件与坑点：
  * 1) `equipment_def.json` 中套装必须精确 8 件且槽位完整（weapon/head/clothes/gloves/pants/necklace/accessory/artifact）。
@@ -26,6 +28,7 @@
  * 3) RMBG 本地推理首次执行会自动创建 `server/.venv-rmbg` 并安装依赖，耗时取决于网络与磁盘速度。
  * 4) 抠图后仍可能存在格子留白；因此每张切图必须按 alpha 再做紧裁。
  * 5) `ARK_API_KEY` 缺失会立即失败；RMBG 运行依赖系统 `python3` 用于创建虚拟环境。
+ * 6) 参考图文件必须存在于 `client/src/assets/images/items`，且后缀需为方舟支持格式，否则立即失败。
  */
 
 import fs from "fs/promises";
@@ -90,6 +93,16 @@ const DEFAULT_OUTPUT_ROOT_DIR = path.resolve(
   __dirname,
   "../../generated/equipment-set-sprites",
 );
+const REFERENCE_IMAGE_SOURCE_DIR = path.resolve(
+  __dirname,
+  "../../../client/src/assets/images/items",
+);
+const REFERENCE_IMAGE_FILE_NAMES = [
+  "icon_shoulder armour_1_13.png",
+  "icon_pants_1_13.png",
+  "icon_chest protection_1_13.png",
+  "icon_clothes_1_13.png",
+] as const;
 
 const SLOT_ORDER = [
   "weapon",
@@ -113,6 +126,46 @@ const SLOT_LABEL_MAP: Record<EquipSlot, string> = {
   necklace: "项链",
   accessory: "戒指/配饰",
   artifact: "法宝",
+};
+
+interface SlotObjectGuidance {
+  mustBe: string;
+  mustNot: string;
+}
+
+const SLOT_OBJECT_GUIDANCE_MAP: Record<EquipSlot, SlotObjectGuidance> = {
+  weapon: {
+    mustBe: "单件武器（剑/刀/枪/杖/匕首其一）",
+    mustNot: "头盔、衣服、手套、下装、项链、戒指、法宝牌",
+  },
+  head: {
+    mustBe: "单件头部装备（头盔/冠/帽其一）",
+    mustNot: "武器、胸甲、手套、靴子、项链、戒指、法宝牌",
+  },
+  clothes: {
+    mustBe: "单件上身装备（衣服/胸甲/法袍其一）",
+    mustNot: "头盔、武器、手套、下装、项链、戒指、法宝牌",
+  },
+  gloves: {
+    mustBe: "单件手部装备（手套/护手/臂甲其一）",
+    mustNot: "头盔、衣服、武器、下装、项链、戒指、法宝牌",
+  },
+  pants: {
+    mustBe: "单件下装（裤甲/护腿/战靴组合其一）",
+    mustNot: "头盔、衣服、手套、武器、项链、戒指、法宝牌",
+  },
+  necklace: {
+    mustBe: "单件颈部饰品（项链/吊坠其一）",
+    mustNot: "头盔、衣服、手套、下装、武器、戒指、法宝牌",
+  },
+  accessory: {
+    mustBe: "单件手指/配饰（戒指优先）",
+    mustNot: "头盔、衣服、手套、下装、项链、武器、法宝牌",
+  },
+  artifact: {
+    mustBe: "单件法宝（符牌/令牌/玉牌/幡印其一）",
+    mustNot: "头盔、衣服、手套、下装、项链、戒指、武器",
+  },
 };
 
 interface CliOptions {
@@ -144,6 +197,7 @@ interface SetPiece {
 interface ArkImageGenerationRequest {
   model: string;
   prompt: string;
+  image?: string | string[];
   size: string;
   response_format: "b64_json";
   sequential_image_generation: "disabled";
@@ -201,6 +255,46 @@ interface RgbColor {
   green: number;
   blue: number;
 }
+
+/**
+ * 生成“由模型自主决定配色，但全套母色统一”的提示词片段。
+ *
+ * 输入：
+ * - 无。
+ *
+ * 输出：
+ * - 一段用于约束全套色调统一性的中文文本。
+ *
+ * 关键边界条件：
+ * 1) 不预设具体色相与色板，避免把配色定义死。
+ * 2) 必须强调“先定母色再展开”，防止 8 格出现互不相关的跳色方案。
+ */
+const buildUnifiedToneGuidance = (): string => {
+  return "配色由模型自主设计：先为整套确定1个统一母色方向（再配1个辅色与1个点缀色），8件必须共享同一母色体系；允许局部明度/饱和度变化，但禁止每格独立换主色或出现明显跨色跳变。";
+};
+
+/**
+ * 生成“每格必须是什么物体”的强约束提示词片段。
+ *
+ * 输入：
+ * - `pieces`：已按固定槽位顺序排序的 8 件装备数组。
+ *
+ * 输出：
+ * - 一段包含“第N格必须类型 + 禁止类型”的中文文本。
+ *
+ * 关键边界条件：
+ * 1) 文本按网格顺序逐格输出，避免模型把槽位语义映射错位。
+ * 2) 每格同时给出“必须是”与“禁止是”，降低模型把衣服/手套混淆的概率。
+ */
+const buildGridObjectGuidance = (pieces: SetPiece[]): string => {
+  const gridGuidance = pieces
+    .map((piece, index) => {
+      const slotGuidance = SLOT_OBJECT_GUIDANCE_MAP[piece.equipSlot];
+      return `第${index + 1}格（${SLOT_LABEL_MAP[piece.equipSlot]}《${piece.name}》）：必须是${slotGuidance.mustBe}；禁止出现${slotGuidance.mustNot}`;
+    })
+    .join("。");
+  return `逐格物体约束：${gridGuidance}。若任一格出现类别错误（例如手套格画成衣服），整图视为不合格并重绘。`;
+};
 
 /**
  * 判断字符串是否为受支持的装备槽位。
@@ -449,22 +543,22 @@ const buildSheetPrompt = (
   const pieceText = pieces
     .map((piece) => `${SLOT_LABEL_MAP[piece.equipSlot]}=${piece.name}`)
     .join("，");
+  const unifiedToneGuidance = buildUnifiedToneGuidance();
+  const gridObjectGuidance = buildGridObjectGuidance(pieces);
 
   const segments = [
     `请生成一张国风仙侠游戏UI装备图标素材图，必须只包含8件装备。`,
     `套装ID：${setId}。`,
     `8件装备固定排布为4列2行网格，每格仅1件，从左到右、从上到下的槽位顺序固定为：武器、头部、衣服、手套、下装、项链、戒指/配饰、法宝。`,
+    gridObjectGuidance,
     `对应装备名称为：${pieceText}。`,
+    `参考图使用规则：只参考线稿干净度、赛璐璐平涂层次、材质表达与国风语汇；严禁复刻参考图的具体轮廓、局部纹样排布、配色分区、装饰位置与整体剪影。`,
     `构图安全区要求：每件装备主体（含发光外沿）必须完整位于所在格子内，四边至少预留10%安全留白；若空间不足必须缩小物体，不可贴边、不可截断。`,
     `长柄/长刃类武器必须完整入框，尖端与柄端都不可触碰格子边缘。`,
-    `套装一致性要求：8件必须被识别为同一套装，不是8件散装道具；先定义统一“视觉圣经”，包含主色1个、辅色1个、点缀色1个，并在全部8件中严格复用。`,
-    `配色要求：所有宝石/能量体/发光部位使用同一色相家族，不允许红绿紫蓝混搭跳色；金属与布料的明度关系保持一致。`,
-    `纹样要求：统一使用中式仙侠语汇（云纹、回纹、玉雕纹、符纹其一或组合），同一纹样要在多件装备重复出现，强化套装感。`,
-    `整体风格要求：经典游戏道具图标风，2D手绘厚涂，轮廓清晰，体积光影明确；保留适度夸张但不要Q版。`,
-    `文化风格要求：明确中国仙侠/东方古风审美，服装结构偏中式交领、宽袖、系带；头饰是中式冠饰，不是西式王冠。`,
+    `套装一致性要求：8件必须被识别为同一套装，不是8件散装道具；统一画风、材质语言与纹样体系，并且必须共享同一母色逻辑。`,
+    unifiedToneGuidance,
     `装备主体必须完整、居中、清晰，不可互相遮挡，不可超出格子可视范围；每格只表现单个装备图标，不要额外装饰物。`,
     `严格禁止：背景卡片、格子边框、分隔线、文字、logo、水印、人物、地台、展示底座、棋盘格透明底纹、多余阴影块。`,
-    `严格禁止风格：欧美西幻元素（十字徽记、骑士板甲、西式礼服剪裁、西式皮手套主导造型）、电商白底产品渲染风、低对比灰白雾面风、过于素净写实静物风。`,
     `严格禁止任何数字或序号标注（包括但不限于 1~8、罗马数字、角标、编号标签）；这些顺序信息仅用于生成约束，不得出现在画面中。`,
     `背景要求：统一纯净浅色背景（接近纯白），背景尽量平整无纹理，便于整图抠图后再裁切。`,
   ];
@@ -477,11 +571,104 @@ const buildSheetPrompt = (
 };
 
 /**
+ * 根据参考图文件后缀推导 MIME 类型。
+ *
+ * 输入：
+ * - `imageFilePath`：图片文件绝对路径（仅使用后缀名判定格式）。
+ *
+ * 输出：
+ * - 可用于 Data URI 的 MIME 类型字符串。
+ *
+ * 关键边界条件：
+ * 1) 仅允许方舟文档明确支持的格式：png/jpeg/webp/bmp/tiff/gif。
+ * 2) 若后缀不在白名单内立即失败，避免把不可识别格式传给生图接口。
+ */
+const resolveReferenceImageMimeType = (imageFilePath: string): string => {
+  const extension = path.extname(imageFilePath).toLowerCase();
+
+  if (extension === ".png") {
+    return "image/png";
+  }
+  if (extension === ".jpg" || extension === ".jpeg") {
+    return "image/jpeg";
+  }
+  if (extension === ".webp") {
+    return "image/webp";
+  }
+  if (extension === ".bmp") {
+    return "image/bmp";
+  }
+  if (extension === ".tiff" || extension === ".tif") {
+    return "image/tiff";
+  }
+  if (extension === ".gif") {
+    return "image/gif";
+  }
+
+  throw new Error(
+    `参考图格式错误：不支持的后缀 ${extension || "(空)"}，文件：${imageFilePath}`,
+  );
+};
+
+/**
+ * 将本地参考图文件编码为方舟 `image` 字段可直接使用的 Data URI。
+ *
+ * 输入：
+ * - `imageFilePath`：本地参考图绝对路径。
+ *
+ * 输出：
+ * - `data:image/<type>;base64,<payload>` 格式字符串。
+ *
+ * 关键边界条件：
+ * 1) 文件读取失败会直接抛错，避免静默忽略导致生图偏离预期。
+ * 2) 空文件会直接失败，避免向模型传入无效图像载荷。
+ */
+const encodeReferenceImageToDataUri = async (
+  imageFilePath: string,
+): Promise<string> => {
+  const fileBuffer = await fs.readFile(imageFilePath);
+  if (fileBuffer.length <= 0) {
+    throw new Error(`参考图读取失败：文件为空：${imageFilePath}`);
+  }
+
+  const mimeType = resolveReferenceImageMimeType(imageFilePath);
+  const base64Payload = fileBuffer.toString("base64");
+  return `data:${mimeType};base64,${base64Payload}`;
+};
+
+/**
+ * 统一加载默认参考图并编码为 Data URI 列表。
+ *
+ * 设计原因：
+ * 1) 参考图路径与编码逻辑集中在单一入口，避免在请求构建阶段散落硬编码。
+ * 2) 当后续需要替换参考图时，只需维护常量列表，不需要修改请求调用链。
+ *
+ * 输入：
+ * - 无（固定读取 `REFERENCE_IMAGE_FILE_NAMES`）。
+ *
+ * 输出：
+ * - 按常量顺序排列的 Data URI 数组，可直接赋给方舟 `image` 字段。
+ *
+ * 关键边界条件：
+ * 1) 任一参考图文件缺失会立即失败，避免“部分参考图生效”的不确定结果。
+ * 2) 输出顺序与文件名常量严格一致，保证提示词中的“图1/图2”语义可预测。
+ */
+const loadDefaultReferenceImageDataUris = async (): Promise<string[]> => {
+  const imagePaths = REFERENCE_IMAGE_FILE_NAMES.map((fileName) =>
+    path.join(REFERENCE_IMAGE_SOURCE_DIR, fileName),
+  );
+  return Promise.all(
+    imagePaths.map((imagePath) => encodeReferenceImageToDataUri(imagePath)),
+  );
+};
+
+/**
  * 调用方舟图像接口并返回首张图片二进制。
  */
 const requestArkSheetImageBuffer = async (
   prompt: string,
   size: string,
+  referenceImageDataUris: string[],
   seed?: number,
 ): Promise<Buffer> => {
   const apiKey = String(process.env.ARK_API_KEY ?? "").trim();
@@ -492,6 +679,7 @@ const requestArkSheetImageBuffer = async (
   const requestBody: ArkImageGenerationRequest = {
     model: ARK_MODEL_ID,
     prompt,
+    image: referenceImageDataUris,
     size,
     response_format: "b64_json",
     sequential_image_generation: "disabled",
@@ -1383,6 +1571,7 @@ const main = async (): Promise<void> => {
   };
   const pieces = await loadSetPieces(options.setId);
   const prompt = buildSheetPrompt(options.setId, pieces, options.promptExtra);
+  const referenceImageDataUris = await loadDefaultReferenceImageDataUris();
 
   await fs.mkdir(options.outputDir, { recursive: true });
 
@@ -1390,6 +1579,7 @@ const main = async (): Promise<void> => {
   console.log(`输出目录：${options.outputDir}`);
   console.log(`使用模型：${ARK_MODEL_ID}`);
   console.log(`整图尺寸：${options.size}`);
+  console.log(`参考图：${REFERENCE_IMAGE_FILE_NAMES.join("、")}`);
   console.log(
     `本地抠图：${localRmbgRuntimeConfigWithPython.modelId}（device=${localRmbgRuntimeConfigWithPython.device}, cache=${localRmbgRuntimeConfigWithPython.cacheDir}）`,
   );
@@ -1397,6 +1587,7 @@ const main = async (): Promise<void> => {
   const rawSheetBuffer = await requestArkSheetImageBuffer(
     prompt,
     options.size,
+    referenceImageDataUris,
     options.seed,
   );
   const normalizedRawSheet = await sharp(rawSheetBuffer).png().toBuffer();
