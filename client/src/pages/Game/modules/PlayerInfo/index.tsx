@@ -4,6 +4,7 @@ import { UserOutlined, LoadingOutlined, MinusOutlined, PlusOutlined } from '@ant
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
 import { SERVER_BASE, getRealmOverview, uploadAvatar, addAttributePoint, removeAttributePoint, type RealmOverviewDto } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { formatPercent, formatRecovery } from '../../shared/formatAttr';
 import './index.scss';
 
@@ -117,7 +118,7 @@ const PlayerInfo: React.FC = () => {
         // 刷新角色数据
         gameSocket.refreshCharacter();
       } else {
-        message.error(result.message || '上传失败');
+        message.error(getUnifiedApiErrorMessage(result, '上传失败'));
       }
     } catch {
       message.error('上传失败');
@@ -136,7 +137,7 @@ const PlayerInfo: React.FC = () => {
       if (result.success) {
         gameSocket.refreshCharacter();
       } else {
-        message.error(result.message || '加点失败');
+        message.error(getUnifiedApiErrorMessage(result, '加点失败'));
       }
     } catch {
       message.error('加点失败');
@@ -155,7 +156,7 @@ const PlayerInfo: React.FC = () => {
       if (result.success) {
         gameSocket.refreshCharacter();
       } else {
-        message.error(result.message || '减点失败');
+        message.error(getUnifiedApiErrorMessage(result, '减点失败'));
       }
     } catch {
       message.error('减点失败');

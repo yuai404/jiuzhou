@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react';
-import { getGameItemTaxonomy } from '../../../services/api';
+import { getGameItemTaxonomy, getUnifiedApiErrorMessage } from '../../../services/api';
 import { applyGameItemTaxonomy } from './itemTaxonomy';
 
 /**
@@ -36,11 +36,17 @@ const ensureGameItemTaxonomyLoaded = async (): Promise<void> => {
   if (taxonomyReady) return;
   if (inflight) return inflight;
   inflight = (async () => {
-    const res = await getGameItemTaxonomy();
-    if (!res?.success || !res.data?.taxonomy) return;
-    applyGameItemTaxonomy(res.data.taxonomy);
-    taxonomyReady = true;
-    emitTaxonomyUpdated();
+    try {
+      const res = await getGameItemTaxonomy();
+      if (!res.data?.taxonomy) return;
+      applyGameItemTaxonomy(res.data.taxonomy);
+      taxonomyReady = true;
+      emitTaxonomyUpdated();
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('[taxonomy] 加载失败：', getUnifiedApiErrorMessage(error, '加载分类失败'));
+      }
+    }
   })().finally(() => {
     inflight = null;
   });

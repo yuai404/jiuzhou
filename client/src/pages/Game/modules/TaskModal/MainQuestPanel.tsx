@@ -12,6 +12,7 @@ import {
   type SectionDto,
 } from '../../../../services/mainQuestApi';
 import { resolveAssetUrl } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import lingshiIcon from '../../../../assets/images/ui/lingshi.png';
 import tongqianIcon from '../../../../assets/images/ui/tongqian.png';
@@ -138,7 +139,7 @@ const MainQuestPanel: React.FC<MainQuestPanelProps> = ({ onTrackChange }) => {
         onTrackChange?.();
         window.dispatchEvent(new Event('room:objects:changed'));
       } else {
-        message.error(res?.message || '操作失败');
+        message.error(getUnifiedApiErrorMessage(res, '操作失败'));
       }
     } catch {
       message.error('操作失败');
@@ -187,7 +188,7 @@ const MainQuestPanel: React.FC<MainQuestPanelProps> = ({ onTrackChange }) => {
         }
         await loadProgress();
       } else {
-        message.error(res?.message || '完成任务失败');
+        message.error(getUnifiedApiErrorMessage(res, '完成任务失败'));
       }
     } catch {
       message.error('完成任务失败');

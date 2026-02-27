@@ -11,6 +11,7 @@ import {
   type BattlePassRewardDto,
   type BattlePassTaskDto,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import './index.scss';
 
@@ -100,7 +101,7 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
     setTaskLoading(true);
     try {
       const res = await getBattlePassTasks();
-      if (!res.success || !res.data) throw new Error(res.message || '加载战令任务失败');
+      if (!res.success || !res.data) throw new Error(getUnifiedApiErrorMessage(res, '加载战令任务失败'));
       const toTask = (t: BattlePassTaskDto): BattlePassTask => ({
         id: String(t.id || ''),
         title: String(t.name || ''),
@@ -114,8 +115,7 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
       setWeeklyTasks((res.data.weekly ?? []).map(toTask));
       setSeasonTasks((res.data.season ?? []).map(toTask));
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '加载战令任务失败');
+      message.error(getUnifiedApiErrorMessage(error, '加载战令任务失败'));
       setDailyTasks([]);
       setWeeklyTasks([]);
       setSeasonTasks([]);
@@ -153,15 +153,14 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
     try {
       const res = await claimBattlePassReward(lv, 'free');
       if (!res.success) {
-        message.error(res.message || '领取失败');
+        message.error(getUnifiedApiErrorMessage(res, '领取失败'));
         return;
       }
       message.success(`领取成功！`);
       // 刷新状态以更新领取记录
       await refreshStatus();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '领取失败');
+      message.error(getUnifiedApiErrorMessage(error, '领取失败'));
     } finally {
       setClaimingLevel(null);
     }
@@ -180,15 +179,14 @@ const BattlePassModal: React.FC<BattlePassModalProps> = ({ open, onClose }) => {
     try {
       const res = await completeBattlePassTask(task.id);
       if (!res.success) {
-        message.error(res.message || '任务完成失败');
+        message.error(getUnifiedApiErrorMessage(res, '任务完成失败'));
         return;
       }
       const gainedExp = Number(res.data?.gainedExp ?? task.exp);
       message.success(`任务完成，获得 ${gainedExp} 经验`);
       await Promise.all([refreshStatus(), refreshTasks()]);
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '任务完成失败');
+      message.error(getUnifiedApiErrorMessage(error, '任务完成失败'));
     } finally {
       setCompletingTaskId(null);
     }

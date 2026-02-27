@@ -8,6 +8,7 @@ import localeData from 'dayjs/plugin/localeData';
 import type { Dayjs } from 'dayjs';
 import { HolidayUtil, Lunar } from 'lunar-typescript';
 import { doSignIn, getSignInOverview, type SignInRecordDto } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { gameSocket } from '../../../../services/gameSocket';
 import './index.scss';
 
@@ -148,7 +149,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ open, onClose, onSigned }) =>
       try {
         const res = await getSignInOverview(month);
         if (!res.success || !res.data) {
-          message.error(res.message || '获取签到信息失败');
+          message.error(getUnifiedApiErrorMessage(res, '获取签到信息失败'));
           return;
         }
         setOverviewMonth(res.data.month);
@@ -159,7 +160,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ open, onClose, onSigned }) =>
         setTodayKey(res.data.today || dayjs().format('YYYY-MM-DD'));
       } catch (err) {
         const e = err as { message?: string };
-        message.error(e?.message || '获取签到信息失败');
+        message.error(getUnifiedApiErrorMessage(e, '获取签到信息失败'));
       } finally {
         setLoading(false);
       }
@@ -191,7 +192,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ open, onClose, onSigned }) =>
     try {
       const res = await doSignIn();
       if (!res.success || !res.data) {
-        message.error(res.message || '签到失败');
+        message.error(getUnifiedApiErrorMessage(res, '签到失败'));
         return;
       }
       message.success(`签到成功，获得灵石 +${res.data.reward}`);
@@ -200,7 +201,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ open, onClose, onSigned }) =>
       onSigned?.();
     } catch (err) {
       const e = err as { message?: string };
-      message.error(e?.message || '签到失败');
+      message.error(getUnifiedApiErrorMessage(e, '签到失败'));
     } finally {
       setLoading(false);
     }

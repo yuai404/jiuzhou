@@ -13,3 +13,4 @@ export * from './api/info-config';
 export * from './api/technique';
 export * from './api/combat-realm';
 export * from './api/gemSynthesis';
+export * from './api/error';

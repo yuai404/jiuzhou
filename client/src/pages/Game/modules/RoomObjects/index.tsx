@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Tag } from 'antd';
 import type { InfoTarget } from '../InfoModal';
 import { getGameTime, getRoomObjects, type GameTimeSnapshotDto } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import './index.scss';
 
 interface RoomObjectsProps {
@@ -165,7 +166,7 @@ const RoomObjects: React.FC<RoomObjectsProps> = ({ mapId, roomId, onSelect }) =>
         .catch((e) => {
           if (cancelled) return;
           setObjects([]);
-          setError(e?.message || '网络错误');
+          setError(getUnifiedApiErrorMessage(e, '网络错误'));
         })
         .finally(() => {
           if (cancelled) return;

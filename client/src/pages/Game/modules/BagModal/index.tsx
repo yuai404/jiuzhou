@@ -18,6 +18,7 @@ import {
   unequipInventoryItem,
   inventoryUseItem,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import type { InventoryInfoData } from '../../../../services/api';
 import {
   attrLabel,
@@ -137,8 +138,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       setInfo(infoRes.data);
       setItems(nextItems);
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '获取背包数据失败');
+      message.error(getUnifiedApiErrorMessage(error, '获取背包数据失败'));
       setInfo(null);
       setItems([]);
       setActiveId(null);
@@ -365,18 +365,17 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     try {
       if (activeItem.location === 'equipped') {
         const res = await unequipInventoryItem(activeItem.id, 'bag');
-        if (!res.success) throw new Error(res.message || '卸下失败');
+        if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '卸下失败'));
         message.success(res.message || '卸下成功');
       } else {
         const res = await equipInventoryItem(activeItem.id);
-        if (!res.success) throw new Error(res.message || '装备失败');
+        if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '装备失败'));
         message.success(res.message || '装备成功');
       }
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '操作失败');
+      message.error(getUnifiedApiErrorMessage(error, '操作失败'));
       setLoading(false);
     }
   }, [activeItem, message, refresh]);
@@ -389,7 +388,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     try {
       const beforeChar = gameSocket.getCharacter();
       const res = await inventoryUseItem({ itemInstanceId: activeItem.id, qty: useCount });
-      if (!res.success) throw new Error(res.message || '使用失败');
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '使用失败'));
 
       const lootResults = res.data?.lootResults;
       const remaining = Math.max(0, Math.floor(activeItem.qty) - useCount);
@@ -437,10 +436,9 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error: unknown) {
-      const err = error as { message?: string };
       window.dispatchEvent(
         new CustomEvent('chat:append', {
-          detail: { channel: 'system', content: `使用【${activeItem.name}】失败：${err.message || '操作失败'}` },
+          detail: { channel: 'system', content: `使用【${activeItem.name}】失败：${getUnifiedApiErrorMessage(error, '操作失败')}` },
         }),
       );
       setLoading(false);
@@ -463,8 +461,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '设置锁定状态失败');
+      message.error(getUnifiedApiErrorMessage(error, '设置锁定状态失败'));
       setLoading(false);
     }
   }, [activeItem, message, refresh]);
@@ -616,13 +613,12 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
         message.success(res.message || '强化成功');
       } else {
         if ((res.message || '') === '强化失败') message.warning(res.message || '强化失败');
-        else message.error(res.message || '强化失败');
+        else message.error(getUnifiedApiErrorMessage(res, '强化失败'));
       }
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '强化失败');
+      message.error(getUnifiedApiErrorMessage(error, '强化失败'));
     } finally {
       setEnhanceSubmitting(false);
     }
@@ -640,13 +636,12 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
         message.success(res.message || '精炼成功');
       } else {
         if ((res.message || '') === '精炼失败') message.warning(res.message || '精炼失败');
-        else message.error(res.message || '精炼失败');
+        else message.error(getUnifiedApiErrorMessage(res, '精炼失败'));
       }
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '精炼失败');
+      message.error(getUnifiedApiErrorMessage(error, '精炼失败'));
     } finally {
       setRefineSubmitting(false);
     }
@@ -666,15 +661,14 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
         gemItemId: socketState.selectedGem.id,
         slot: socketState.selectedSlot,
       });
-      if (!res.success) throw new Error(res.message || '镶嵌失败');
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '镶嵌失败'));
       message.success(res.message || '镶嵌成功');
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
       setSelectedGemItemId(undefined);
       setSocketSlot(undefined);
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '镶嵌失败');
+      message.error(getUnifiedApiErrorMessage(error, '镶嵌失败'));
     } finally {
       setSocketSubmitting(false);
     }
@@ -720,7 +714,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
         lockIndexes,
       });
       if (!res.success) {
-        message.error(res.message || '洗炼失败');
+        message.error(getUnifiedApiErrorMessage(res, '洗炼失败'));
         return;
       }
       message.success(res.message || '洗炼成功');
@@ -733,8 +727,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '洗炼失败');
+      message.error(getUnifiedApiErrorMessage(error, '洗炼失败'));
     } finally {
       setRerollSubmitting(false);
     }
@@ -965,11 +958,10 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                   setLoading(true);
                   try {
                     const res = await sortInventory('bag');
-                    if (!res.success) throw new Error(res.message || '整理失败');
+                    if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '整理失败'));
                     await refresh();
                   } catch (error: unknown) {
-                    const err = error as { message?: string };
-                    message.error(err.message || '整理失败');
+                    message.error(getUnifiedApiErrorMessage(error, '整理失败'));
                   } finally {
                     setLoading(false);
                   }
@@ -1748,19 +1740,18 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                     }
 
                     const res = await disassembleInventoryEquipmentBatch(payloadItems);
-                    if (!res.success) throw new Error(res.message || '分解失败');
+                    if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '分解失败'));
                     message.success(res.message || '分解成功');
                   } else {
                     const ids = batchCandidates.map((x) => x.id);
                     const res = await removeInventoryItemsBatch(ids);
-                    if (!res.success) throw new Error(res.message || '丢弃失败');
+                    if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '丢弃失败'));
                     message.success(res.message || '丢弃成功');
                   }
                   await refresh();
                   setBatchOpen(false);
                 } catch (error: unknown) {
-                  const err = error as { message?: string };
-                  message.error(err.message || '操作失败');
+                  message.error(getUnifiedApiErrorMessage(error, '操作失败'));
                 } finally {
                   setBatchSubmitting(false);
                 }

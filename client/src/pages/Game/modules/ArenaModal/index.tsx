@@ -11,6 +11,7 @@ import {
   type ArenaRecordDto,
   type ArenaStatusDto,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import './index.scss';
 
@@ -61,14 +62,14 @@ const ArenaModal: React.FC<ArenaModalProps> = ({ open, onClose, character, onSta
   const refreshOpponents = useCallback(async () => {
     try {
       const res = await getArenaOpponents(10);
-      if (!res?.success) {
-        message.error(res?.message || '获取对手失败');
+      if (!res.success) {
+        message.error(getUnifiedApiErrorMessage(res, '获取对手失败'));
         setOpponents([]);
         return;
       }
       setOpponents(res.data ?? []);
     } catch (e) {
-      message.error((e as { message?: string })?.message || '获取对手失败');
+      message.error(getUnifiedApiErrorMessage(e, '获取对手失败'));
       setOpponents([]);
     }
   }, [message]);
@@ -76,14 +77,14 @@ const ArenaModal: React.FC<ArenaModalProps> = ({ open, onClose, character, onSta
   const refreshStatus = useCallback(async () => {
     try {
       const res = await getArenaStatus();
-      if (!res?.success) {
-        message.error(res?.message || '获取竞技场状态失败');
+      if (!res.success) {
+        message.error(getUnifiedApiErrorMessage(res, '获取竞技场状态失败'));
         setStatus(null);
         return;
       }
       setStatus(res.data ?? null);
     } catch (e) {
-      message.error((e as { message?: string })?.message || '获取竞技场状态失败');
+      message.error(getUnifiedApiErrorMessage(e, '获取竞技场状态失败'));
       setStatus(null);
     }
   }, [message]);
@@ -91,14 +92,14 @@ const ArenaModal: React.FC<ArenaModalProps> = ({ open, onClose, character, onSta
   const refreshRecords = useCallback(async () => {
     try {
       const res = await getArenaRecords(50);
-      if (!res?.success) {
-        message.error(res?.message || '获取战报失败');
+      if (!res.success) {
+        message.error(getUnifiedApiErrorMessage(res, '获取战报失败'));
         setRecords([]);
         return;
       }
       setRecords(res.data ?? []);
     } catch (e) {
-      message.error((e as { message?: string })?.message || '获取战报失败');
+      message.error(getUnifiedApiErrorMessage(e, '获取战报失败'));
       setRecords([]);
     }
   }, [message]);
@@ -163,7 +164,7 @@ const ArenaModal: React.FC<ArenaModalProps> = ({ open, onClose, character, onSta
         try {
           const res = await arenaMatch();
           if (!res?.success || !res.data?.battleId) {
-            message.error(res?.message || '匹配失败');
+            message.error(getUnifiedApiErrorMessage(res, '匹配失败'));
             stopMatching();
             return;
           }
@@ -171,7 +172,7 @@ const ArenaModal: React.FC<ArenaModalProps> = ({ open, onClose, character, onSta
           onClose();
           onStartBattle?.(res.data.battleId);
         } catch (e) {
-          message.error((e as { message?: string })?.message || '匹配失败');
+          message.error(getUnifiedApiErrorMessage(e, '匹配失败'));
           stopMatching();
         }
       })();
@@ -183,13 +184,13 @@ const ArenaModal: React.FC<ArenaModalProps> = ({ open, onClose, character, onSta
       try {
         const res = await arenaChallenge(opp.id);
         if (!res?.success || !res.data?.battleId) {
-          message.error(res?.message || '挑战失败');
+          message.error(getUnifiedApiErrorMessage(res, '挑战失败'));
           return;
         }
         onClose();
         onStartBattle?.(res.data.battleId);
       } catch (e) {
-        message.error((e as { message?: string })?.message || '挑战失败');
+        message.error(getUnifiedApiErrorMessage(e, '挑战失败'));
       }
     },
     [message, onClose, onStartBattle],

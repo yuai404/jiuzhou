@@ -6,6 +6,7 @@ import {
   type InventoryCraftKind,
   type InventoryCraftRecipeDto,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 
 type CraftKindFilter = InventoryCraftKind | 'all';
 
@@ -72,7 +73,7 @@ const CraftModal: React.FC<CraftModalProps> = ({ open, onClose, onSuccess, focus
       const selected = nextRecipes.find((x) => x.id === nextSelected);
       setTimes(clampTimes(1, selected?.maxCraftTimes ?? 1));
     } catch (error: unknown) {
-      message.error((error as { message?: string }).message || '加载配方失败');
+      message.error(getUnifiedApiErrorMessage(error, '加载配方失败'));
       setRecipes([]);
       setCharacter(null);
       setSelectedRecipeId('');
@@ -133,7 +134,7 @@ const CraftModal: React.FC<CraftModalProps> = ({ open, onClose, onSuccess, focus
       await onSuccess();
       await refresh();
     } catch (error: unknown) {
-      message.error((error as { message?: string }).message || '炼制失败');
+      message.error(getUnifiedApiErrorMessage(error, '炼制失败'));
     } finally {
       setSubmitting(false);
     }

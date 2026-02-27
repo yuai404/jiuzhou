@@ -6,6 +6,7 @@ import {
   type AutoDisassembleRuleDto,
   type AutoDisassembleRulesDto,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { emitThemeModeChange, getStoredThemeMode, persistThemeMode, type ThemeMode } from '../../../../constants/theme';
 import {
   AUTO_DISASSEMBLE_CATEGORY_OPTIONS,
@@ -281,12 +282,11 @@ const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
     setAutoDisassembleSaving(true);
     try {
       const res = await updateCharacterAutoDisassemble(nextEnabled, nextRules);
-      if (!res.success) throw new Error(res.message || '设置保存失败');
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '设置保存失败'));
       message.success('自动分解设置已保存');
     } catch (error) {
       rollback();
-      const e = error as { message?: string };
-      message.error(e.message || '设置保存失败');
+      message.error(getUnifiedApiErrorMessage(error, '设置保存失败'));
     } finally {
       setAutoDisassembleSaving(false);
     }

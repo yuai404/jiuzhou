@@ -9,6 +9,7 @@ import {
   type SectRankRowDto,
   type WealthRankRowDto,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import './index.scss';
 
@@ -40,8 +41,7 @@ const RankModal: React.FC<RankModalProps> = ({ open, onClose }) => {
       setWealthRanks(overviewRes.data.wealth ?? []);
       if (arenaRes.success) setArenaRanks(arenaRes.data ?? []);
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '加载排行榜失败');
+      message.error(getUnifiedApiErrorMessage(error, '加载排行榜失败'));
       setRealmRanks([]);
       setSectRanks([]);
       setWealthRanks([]);

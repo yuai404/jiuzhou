@@ -10,6 +10,7 @@ import {
   deleteAllMails,
   markAllMailsRead,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import type { MailDto } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import { formatDateTimeToMinute } from '../../shared/time';
@@ -131,7 +132,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
         if (res.rewards?.itemIds?.length) rewards.push(`物品 x${res.rewards.itemIds.length}`);
         message.success(`领取成功${rewards.length > 0 ? '：' + rewards.join('，') : ''}`);
       } else {
-        message.error(res.message || '领取失败');
+        message.error(getUnifiedApiErrorMessage(res, '领取失败'));
       }
     } catch {
       message.error('领取失败');
@@ -158,7 +159,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
         if (res.rewards?.itemCount) rewards.push(`物品 x${res.rewards.itemCount}`);
         message.success(`已领取 ${res.claimedCount} 封邮件附件${rewards.length > 0 ? '：' + rewards.join('，') : ''}`);
       } else {
-        message.error(res.message || '领取失败');
+        message.error(getUnifiedApiErrorMessage(res, '领取失败'));
       }
     } catch {
       message.error('领取失败');
@@ -181,7 +182,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
         setUnreadCount(0);
         message.success(`已读 ${res.readCount} 封邮件`);
       } else {
-        message.error(res.message || '操作失败');
+        message.error(getUnifiedApiErrorMessage(res, '操作失败'));
       }
     } catch {
       message.error('操作失败');

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toUnifiedApiError } from './error';
 
 const normalizeBaseUrl = (raw: string): string => {
   const s = String(raw || '').trim();
@@ -93,10 +94,30 @@ api.interceptors.request.use((config) => {
 
 // 响应拦截器
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    const payload = response.data;
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      const success = (payload as { success?: unknown }).success;
+      if (success === false) {
+        const record = payload as { message?: unknown; code?: unknown };
+        return Promise.reject(
+          toUnifiedApiError(
+            {
+              message: record.message,
+              code: record.code,
+              success: false,
+              httpStatus: response.status,
+              raw: payload,
+            },
+            '请求失败',
+          ),
+        );
+      }
+    }
+    return payload;
+  },
   (error) => {
-    const message = error.response?.data?.message || '网络错误';
-    return Promise.reject({ success: false, message });
+    return Promise.reject(toUnifiedApiError(error, '网络错误'));
   }
 );
 

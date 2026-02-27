@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Form, Input, Button, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { login as apiLogin, register as apiRegister, checkCharacter } from '../../services/api';
+import { getUnifiedApiErrorMessage } from '../../services/api';
 import CreateCharacter from '../../components/CreateCharacter';
 import logo from '../../assets/images/logo.png';
 import './index.scss';
@@ -60,11 +61,10 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
           setShowCreateCharacter(true);
         }
       } else {
-        message.error(result.message || '登录失败');
+        message.error(getUnifiedApiErrorMessage(result, '登录失败'));
       }
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '登录失败');
+      message.error(getUnifiedApiErrorMessage(error, '登录失败'));
     } finally {
       setLoading(false);
     }
@@ -78,11 +78,10 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
         message.success('注册成功，请登录');
         setIsFlipped(false);
       } else {
-        message.error(result.message || '注册失败');
+        message.error(getUnifiedApiErrorMessage(result, '注册失败'));
       }
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '注册失败');
+      message.error(getUnifiedApiErrorMessage(error, '注册失败'));
     } finally {
       setLoading(false);
     }

@@ -8,6 +8,7 @@ import {
   type GemSynthesisRecipeDto,
   type GemType,
 } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 
 interface GemSynthesisModalProps {
   open: boolean;
@@ -191,7 +192,7 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
       const maxLevel = allToLevels.length > 0 ? Math.max(...allToLevels) : 2;
       setTargetLevel(Math.max(2, Math.min(maxLevel, currentTargetLevel)));
     } catch (error: unknown) {
-      message.error((error as { message?: string }).message || '加载宝石配方失败');
+      message.error(getUnifiedApiErrorMessage(error, '加载宝石配方失败'));
       setRecipes([]);
       setWallet(null);
       setSelectedRecipeId('');
@@ -288,7 +289,7 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
       await onSuccess();
       await refresh();
     } catch (error: unknown) {
-      message.error((error as { message?: string }).message || '宝石合成失败');
+      message.error(getUnifiedApiErrorMessage(error, '宝石合成失败'));
     } finally {
       setSubmitting(false);
     }
@@ -319,7 +320,7 @@ const GemSynthesisModal: React.FC<GemSynthesisModalProps> = ({ open, onClose, on
       await onSuccess();
       await refresh();
     } catch (error: unknown) {
-      message.error((error as { message?: string }).message || '快捷合成失败');
+      message.error(getUnifiedApiErrorMessage(error, '快捷合成失败'));
     } finally {
       setBatchSubmitting(false);
     }

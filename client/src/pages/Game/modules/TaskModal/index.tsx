@@ -7,6 +7,7 @@ import tongqianIcon from '../../../../assets/images/ui/tongqian.png';
 import {
   resolveAssetUrl,
   claimTaskReward,
+  getUnifiedApiErrorMessage,
   getBountyTaskOverview,
   getDungeonWeeklyTargets,
   getTaskOverview,
@@ -83,18 +84,6 @@ const formatRewardAmount = (amount: number, amountMax?: number): string => {
   const hasRange = Number.isFinite(maxRaw) && maxRaw > min;
   if (!hasRange) return `×${min.toLocaleString()}`;
   return `×${min.toLocaleString()}~${Math.floor(maxRaw).toLocaleString()}`;
-};
-
-const hasMessage = (value: unknown): value is { message: string } => {
-  if (!value || typeof value !== 'object') return false;
-  const record = value as Record<string, unknown>;
-  return typeof record.message === 'string' && record.message.trim().length > 0;
-};
-
-const getErrorMessage = (err: unknown): string => {
-  if (typeof err === 'string') return err;
-  if (hasMessage(err)) return err.message;
-  return '';
 };
 
 const categoryLabels: Record<TaskCategory, string> = {
@@ -215,7 +204,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
     setLoading(true);
     try {
       const [res, bountyRes, weeklyRes] = await Promise.all([getTaskOverview(), getBountyTaskOverview(), getDungeonWeeklyTargets()]);
-      if (!res?.success || !res.data) throw new Error(res?.message || '加载任务失败');
+      if (!res.data) throw new Error('加载任务失败');
 
       const mapped: TaskItem[] = (res.data.tasks || [])
         .map((t) => {
@@ -333,7 +322,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
         setWeeklyPeriod(null);
       }
     } catch (e: unknown) {
-      message.error(getErrorMessage(e) || '加载任务失败');
+      message.error(getUnifiedApiErrorMessage(e, '加载任务失败'));
       setTasks([]);
       setWeeklyTargets([]);
       setWeeklySummary(null);
@@ -420,13 +409,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
     if (!activeTask?.id) return;
     const nextTracked = !activeTask.tracked;
     try {
-      const res = await setTaskTracked(activeTask.id, nextTracked);
-      if (!res?.success) throw new Error(res?.message || '更新追踪失败');
+      await setTaskTracked(activeTask.id, nextTracked);
       setTasks((prev) => prev.map((t) => (t.id === activeTask.id ? { ...t, tracked: nextTracked } : t)));
       message.success(nextTracked ? '已追踪' : '已取消追踪');
       onTrackedChange?.();
     } catch (e: unknown) {
-      message.error(getErrorMessage(e) || '更新追踪失败');
+      message.error(getUnifiedApiErrorMessage(e, '更新追踪失败'));
     }
   }, [activeTask?.id, activeTask?.tracked, message, onTrackedChange]);
 
@@ -434,13 +422,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
     if (!task?.id) return;
     try {
       const res = await claimTaskReward(task.id);
-      if (!res?.success) throw new Error(res?.message || '领取失败');
       message.success('领取成功');
       const rewardText = formatTaskRewardsToText(res.data?.rewards);
       appendSystemChat(`【任务】领取奖励：${task.title}${rewardText ? `（${rewardText}）` : ''}`);
       await refresh();
     } catch (e: unknown) {
-      message.error(getErrorMessage(e) || '领取失败');
+      message.error(getUnifiedApiErrorMessage(e, '领取失败'));
     }
   }, [appendSystemChat, formatTaskRewardsToText, message, refresh]);
 
@@ -453,13 +440,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
       return;
     }
     try {
-      const res = await submitTaskToNpc(npcId, task.id);
-      if (!res?.success) throw new Error(res?.message || '完成失败');
+      await submitTaskToNpc(npcId, task.id);
       message.success('完成成功');
       appendSystemChat(`【任务】已完成：${task.title}`);
       await refresh();
     } catch (e: unknown) {
-      message.error(getErrorMessage(e) || '完成失败');
+      message.error(getUnifiedApiErrorMessage(e, '完成失败'));
     }
   }, [appendSystemChat, message, refresh]);
 
@@ -468,13 +454,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
       if (!task?.id) return;
       setSubmittingTaskId(task.id);
       try {
-        const res = await submitBountyMaterials(task.id);
-        if (!res?.success) throw new Error(res?.message || '提交失败');
+        await submitBountyMaterials(task.id);
         message.success('提交成功');
         appendSystemChat(`【悬赏】已提交材料：${task.title}`);
         await refresh();
       } catch (e: unknown) {
-        message.error(getErrorMessage(e) || '提交失败');
+        message.error(getUnifiedApiErrorMessage(e, '提交失败'));
       } finally {
         setSubmittingTaskId('');
       }

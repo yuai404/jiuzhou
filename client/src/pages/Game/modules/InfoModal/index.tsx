@@ -2,6 +2,7 @@ import { App, Avatar, Button, Form, Input, InputNumber, Modal, Select, Table, Ta
 import { UserOutlined } from '@ant-design/icons';
 import { useEffect, useRef, useState } from 'react';
 import {
+  getUnifiedApiErrorMessage,
   SERVER_BASE,
   claimBounty,
   getBountyBoard,
@@ -15,18 +16,6 @@ import './index.scss';
 
 type InfoTargetType = 'npc' | 'monster' | 'item' | 'player';
 type InfoActionItem = { key: string; text: string; disabled?: boolean };
-
-const hasMessage = (value: unknown): value is { message: string } => {
-  if (!value || typeof value !== 'object') return false;
-  const record = value as Record<string, unknown>;
-  return typeof record.message === 'string' && record.message.trim().length > 0;
-};
-
-const getErrorMessage = (err: unknown): string => {
-  if (typeof err === 'string') return err;
-  if (hasMessage(err)) return err.message;
-  return '';
-};
 
 export type InfoTarget =
   | {
@@ -518,15 +507,11 @@ const InfoModal: React.FC<InfoModalProps> = ({ open, target, onClose, onAction }
                                         onClick={async () => {
                                           setBoardClaimingId(row.id);
                                           try {
-                                            const res = await claimBounty(row.id);
-                                            if (!res?.success) {
-                                              message.error(res?.message || '接取失败');
-                                              return;
-                                            }
+                                            await claimBounty(row.id);
                                             message.success('接取成功');
                                             await fetchBoard(boardPool);
                                           } catch (e: unknown) {
-                                            message.error(getErrorMessage(e) || '接取失败');
+                                            message.error(getUnifiedApiErrorMessage(e, '接取失败'));
                                           } finally {
                                             setBoardClaimingId(null);
                                           }
@@ -606,15 +591,11 @@ const InfoModal: React.FC<InfoModalProps> = ({ open, target, onClose, onAction }
                                         onClick={async () => {
                                           setBoardClaimingId(row.id);
                                           try {
-                                            const res = await claimBounty(row.id);
-                                            if (!res?.success) {
-                                              message.error(res?.message || '接取失败');
-                                              return;
-                                            }
+                                            await claimBounty(row.id);
                                             message.success('接取成功');
                                             await fetchBoard(boardPool);
                                           } catch (e: unknown) {
-                                            message.error(getErrorMessage(e) || '接取失败');
+                                            message.error(getUnifiedApiErrorMessage(e, '接取失败'));
                                           } finally {
                                             setBoardClaimingId(null);
                                           }
@@ -687,7 +668,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ open, target, onClose, onAction }
 
                                 setPublishLoading(true);
                                 try {
-                                  const res = await publishBounty({
+                                  await publishBounty({
                                     taskId,
                                     title,
                                     description,
@@ -697,10 +678,6 @@ const InfoModal: React.FC<InfoModalProps> = ({ open, target, onClose, onAction }
                                     silverReward,
                                     requiredItems,
                                   });
-                                  if (!res?.success) {
-                                    message.error(res?.message || '发布失败');
-                                    return;
-                                  }
                                   message.success('发布成功');
                                   setBoardPool('player');
                                   setBoardTabKey('player');
@@ -708,7 +685,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ open, target, onClose, onAction }
                                   publishForm.resetFields();
                                   setPublishFeePreview({ spiritFee: 0, silverFee: 0, spiritCost: 0, silverCost: 0 });
                                 } catch (e: unknown) {
-                                  message.error(getErrorMessage(e) || '发布失败');
+                                  message.error(getUnifiedApiErrorMessage(e, '发布失败'));
                                 } finally {
                                   setPublishLoading(false);
                                 }

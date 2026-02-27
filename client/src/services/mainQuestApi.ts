@@ -1,29 +1,4 @@
-import axios from 'axios';
-import { API_BASE } from './api';
-
-const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    const message = error.response?.data?.message || '网络错误';
-    return Promise.reject({ success: false, message });
-  }
-);
+import api from './api/core';
 
 // 对话节点类型
 export type DialogueNodeType = 'narration' | 'npc' | 'player' | 'choice' | 'system' | 'action';

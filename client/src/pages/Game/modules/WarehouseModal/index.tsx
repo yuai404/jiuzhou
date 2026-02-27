@@ -2,6 +2,7 @@ import { App, Button, Drawer, Modal, Segmented, Spin, Tabs, Tooltip } from 'antd
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import { SERVER_BASE, getInventoryInfo, getInventoryItems, moveInventoryItem, type InventoryItemDto, type ItemDefLite } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import { getItemQualityMeta } from '../../shared/itemQuality';
 import InventoryItemCell from '../../shared/InventoryItemCell';
@@ -211,8 +212,7 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
       setBagSlots(buildSlots(nextBagCap, bagItems));
       setWarehouseSlots(buildSlots(nextWhCap, warehouseItems));
     } catch (e: unknown) {
-      const err = e as { message?: string };
-      message.error(err.message || '加载背包/仓库失败');
+      message.error(getUnifiedApiErrorMessage(e, '加载背包/仓库失败'));
       setBagSlots([]);
       setBagCapacity(0);
       setWarehouseSlots([]);
@@ -266,15 +266,14 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
       setLoading(true);
       moveInventoryItem({ itemId: it.id, targetLocation: toSide, targetSlot: emptyIndex })
         .then((res) => {
-          if (!res?.success) {
-            message.error(res?.message || '移动失败');
+          if (!res.success) {
+            message.error(getUnifiedApiErrorMessage(res, '移动失败'));
             return;
           }
           void refreshAll({ keepLoading: true });
         })
         .catch((e: unknown) => {
-          const err = e as { message?: string };
-          message.error(err.message || '移动失败');
+          message.error(getUnifiedApiErrorMessage(e, '移动失败'));
         })
         .finally(() => setLoading(false));
     },
@@ -294,15 +293,14 @@ const WarehouseModal: React.FC<WarehouseModalProps> = ({ open, onClose }) => {
       setLoading(true);
       moveInventoryItem({ itemId: it.id, targetLocation: to.side, targetSlot: to.index })
         .then((res) => {
-          if (!res?.success) {
-            message.error(res?.message || '移动失败');
+          if (!res.success) {
+            message.error(getUnifiedApiErrorMessage(res, '移动失败'));
             return;
           }
           void refreshAll({ keepLoading: true });
         })
         .catch((e: unknown) => {
-          const err = e as { message?: string };
-          message.error(err.message || '移动失败');
+          message.error(getUnifiedApiErrorMessage(e, '移动失败'));
         })
         .finally(() => setLoading(false));
     },

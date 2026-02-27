@@ -2,6 +2,7 @@ import { App, Button, Modal, Progress, Tag } from 'antd';
 import { useCallback, useMemo, useState } from 'react';
 import coin01 from '../../../../assets/images/ui/sh_icon_0006_jinbi_02.png';
 import { activateMonthCardItem, claimMonthCardReward, getInventoryItems, getMonthCardStatus } from '../../../../services/api';
+import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import './index.scss';
 
 interface MonthCardModalProps {
@@ -35,7 +36,7 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
       const res = await getMonthCardStatus(monthCardId);
       if (!res.success || !res.data) {
         setStatus(null);
-        message.error(res.message || '获取月卡信息失败');
+        message.error(getUnifiedApiErrorMessage(res, '获取月卡信息失败'));
         return;
       }
       setStatus(res.data);
@@ -104,7 +105,7 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     try {
       const res = await activateMonthCardItem({ monthCardId, itemInstanceId: monthCardItem.instanceId });
       if (!res.success) {
-        message.error(res.message || '使用失败');
+        message.error(getUnifiedApiErrorMessage(res, '使用失败'));
         return;
       }
       message.success('使用成功');
@@ -124,7 +125,7 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     try {
       const res = await claimMonthCardReward(monthCardId);
       if (!res.success) {
-        message.error(res.message || '领取失败');
+        message.error(getUnifiedApiErrorMessage(res, '领取失败'));
         return;
       }
       message.success(`领取成功 +${res.data?.rewardSpiritStones ?? 0} 灵石`);

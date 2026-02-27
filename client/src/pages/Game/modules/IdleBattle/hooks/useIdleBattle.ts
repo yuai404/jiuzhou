@@ -26,6 +26,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameSocket } from '../../../../../services/gameSocket';
+import { getUnifiedApiErrorMessage } from '../../../../../services/api';
 import type { IdleUpdatePayload, IdleFinishedPayload } from '../../../../../services/gameSocket';
 import {
   startIdleSession,
@@ -121,16 +122,21 @@ export function useIdleBattle(): UseIdleBattleReturn {
   // ============================================
 
   const loadStatus = useCallback(async () => {
-    const res = await getIdleStatus();
-    if (res.success) {
+    try {
+      const res = await getIdleStatus();
       setActiveSession(res.session);
+    } catch (err) {
+      setActiveSession(null);
+      setError(getUnifiedApiErrorMessage(err, '加载挂机状态失败'));
     }
   }, []);
 
   const loadConfig = useCallback(async () => {
-    const res = await getIdleConfig();
-    if (res.success) {
+    try {
+      const res = await getIdleConfig();
       setConfigState(res.config);
+    } catch (err) {
+      setError(getUnifiedApiErrorMessage(err, '加载挂机配置失败'));
     }
   }, []);
 
@@ -190,20 +196,26 @@ export function useIdleBattle(): UseIdleBattleReturn {
 
         if (elapsed >= RECONNECT_PROGRESS_DELAY_MS) {
           void (async () => {
-            const res = await getIdleProgress();
-            if (res.success) {
+            try {
+              const res = await getIdleProgress();
               setActiveSession(res.session);
               if (res.session && res.batches.length > 0) {
                 // 有新批次时，若当前选中的是该会话，刷新批次列表
                 setSelectedSession((prev) => {
                   if (prev?.id === res.session?.id) {
-                    void getIdleBatches(res.session!.id).then((batchRes) => {
-                      if (batchRes.success) setSessionBatches(batchRes.batches);
-                    });
+                    void getIdleBatches(res.session!.id)
+                      .then((batchRes) => {
+                        setSessionBatches(batchRes.batches);
+                      })
+                      .catch((error) => {
+                        setError(getUnifiedApiErrorMessage(error, '刷新挂机回放失败'));
+                      });
                   }
                   return prev;
                 });
               }
+            } catch (error) {
+              setError(getUnifiedApiErrorMessage(error, '同步挂机进度失败'));
             }
           })();
         }
@@ -234,9 +246,10 @@ export function useIdleBattle(): UseIdleBattleReturn {
 
   const saveConfig = useCallback(async () => {
     setError(null);
-    const res = await updateIdleConfig(config);
-    if (!res.success) {
-      setError(res.message ?? '保存配置失败');
+    try {
+      await updateIdleConfig(config);
+    } catch (err) {
+      setError(getUnifiedApiErrorMessage(err, '保存配置失败'));
     }
   }, [config]);
 
@@ -254,30 +267,30 @@ export function useIdleBattle(): UseIdleBattleReturn {
       setError('请先选择挂机怪物');
       return;
     }
-    const res = await startIdleSession({
-      mapId: config.mapId,
-      roomId: config.roomId,
-      maxDurationMs: config.maxDurationMs,
-      autoSkillPolicy: config.autoSkillPolicy,
-      targetMonsterDefId: config.targetMonsterDefId,
-    });
-    if (!res.success) {
-      setError(res.message ?? '启动挂机失败');
-      return;
+    try {
+      await startIdleSession({
+        mapId: config.mapId,
+        roomId: config.roomId,
+        maxDurationMs: config.maxDurationMs,
+        autoSkillPolicy: config.autoSkillPolicy,
+        targetMonsterDefId: config.targetMonsterDefId,
+      });
+      // 启动成功后重新拉取状态（获取完整 session 对象）
+      await loadStatus();
+    } catch (err) {
+      setError(getUnifiedApiErrorMessage(err, '启动挂机失败'));
     }
-    // 启动成功后重新拉取状态（获取完整 session 对象）
-    await loadStatus();
   }, [config, loadStatus]);
 
   const stopIdle = useCallback(async () => {
     setError(null);
-    const res = await stopIdleSession();
-    if (!res.success) {
-      setError(res.message ?? '停止挂机失败');
-      return;
+    try {
+      await stopIdleSession();
+      // 乐观更新：将 status 改为 stopping（等待 idle:finished 事件清空）
+      setActiveSession((prev) => prev ? { ...prev, status: 'stopping' } : null);
+    } catch (err) {
+      setError(getUnifiedApiErrorMessage(err, '停止挂机失败'));
     }
-    // 乐观更新：将 status 改为 stopping（等待 idle:finished 事件清空）
-    setActiveSession((prev) => prev ? { ...prev, status: 'stopping' } : null);
   }, []);
 
   // ============================================
@@ -285,9 +298,12 @@ export function useIdleBattle(): UseIdleBattleReturn {
   // ============================================
 
   const loadHistory = useCallback(async () => {
-    const res = await getIdleHistory();
-    if (res.success) {
+    try {
+      const res = await getIdleHistory();
       setHistory(res.history);
+    } catch (err) {
+      setHistory([]);
+      setError(getUnifiedApiErrorMessage(err, '加载挂机历史失败'));
     }
   }, []);
 
@@ -312,14 +328,18 @@ export function useIdleBattle(): UseIdleBattleReturn {
     setSelectedBatch(null);
 
     if (found) {
-      void getIdleBatches(sessionId).then((res) => {
-        if (res.success) {
+      void getIdleBatches(sessionId)
+        .then((res) => {
           setSessionBatches(res.batches);
-        }
-      });
+        })
+        .catch((error) => {
+          setError(getUnifiedApiErrorMessage(error, '加载挂机回放失败'));
+        });
 
       // 标记已查看（幂等，服务端有 viewed_at IS NULL 保护）
-      void markIdleSessionViewed(sessionId);
+      void markIdleSessionViewed(sessionId).catch((error) => {
+        setError(getUnifiedApiErrorMessage(error, '更新已读状态失败'));
+      });
       // 同步更新本地历史记录的 viewedAt
       setHistory((prev) =>
         prev.map((s) => (s.id === sessionId && s.viewedAt === null ? { ...s, viewedAt: new Date().toISOString() } : s))

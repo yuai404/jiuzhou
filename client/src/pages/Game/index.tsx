@@ -53,6 +53,7 @@ import {
   updateCharacterPositionKeepalive,
   SERVER_BASE,
 } from '../../services/api';
+import { getUnifiedApiErrorMessage } from '../../services/api';
 import type { InventoryItemDto } from '../../services/api';
 import { getMainQuestProgress, startDialogue, advanceDialogue, selectDialogueChoice, completeSection, type DialogueState } from '../../services/mainQuestApi';
 import { getMyTeam, getTeamApplications, leaveTeam, type TeamInfo } from '../../services/teamApi';
@@ -808,7 +809,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         try {
           const res = await gatherRoomResource(currentMapId, currentRoomId, target.id);
           if (gatherActionKeyRef.current !== key) return;
-          if (!res?.success) throw new Error(res?.message || '采集失败');
+          if (!res?.success) throw new Error(getUnifiedApiErrorMessage(res, '采集失败'));
           const d = res.data;
           const actionSec = typeof d?.actionSec === 'number' && d.actionSec > 0 ? d.actionSec : 5;
           const cooldownSec = typeof d?.cooldownSec === 'number' && d.cooldownSec > 0 ? d.cooldownSec : actionSec;
@@ -849,9 +850,8 @@ const Game: FC<GameProps> = ({ onLogout }) => {
           gatherTickTimerRef.current = window.setTimeout(() => void tick(), delayMs);
         } catch (error: unknown) {
           if (gatherActionKeyRef.current !== key) return;
-          const err = error as { message?: string };
           stopGatherLoop();
-          messageRef.current.error(err.message || '采集失败');
+          messageRef.current.error(getUnifiedApiErrorMessage(error, '采集失败'));
         }
       };
 
@@ -903,7 +903,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     try {
       const res = await nextDungeonInstance(dungeonInstanceId);
       if (!res?.success || !res.data) {
-        messageRef.current.error(res?.message || '推进秘境失败');
+        messageRef.current.error(getUnifiedApiErrorMessage(res, '推进秘境失败'));
         return;
       }
 
@@ -935,7 +935,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       }
       setDungeonBattleId(nextBattleId);
     } catch (e) {
-      messageRef.current.error((e as { message?: string })?.message || '推进秘境失败');
+      messageRef.current.error(getUnifiedApiErrorMessage(e, '推进秘境失败'));
     }
   }, [dungeonInstanceId]);
 
@@ -1005,13 +1005,12 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     setNpcTalkLoading(true);
     try {
       const res = await npcTalk(nid);
-      if (!res?.success || !res.data) throw new Error(res?.message || '对话失败');
+      if (!res?.success || !res.data) throw new Error(getUnifiedApiErrorMessage(res, '对话失败'));
       const data = res.data as unknown as NpcTalkData;
       setNpcTalkData(data);
       return data;
     } catch (e: unknown) {
-      const err = e as { message?: string };
-      messageRef.current.error(err.message || '对话失败');
+      messageRef.current.error(getUnifiedApiErrorMessage(e, '对话失败'));
       setNpcTalkData(null);
       return null;
     } finally {
@@ -1097,7 +1096,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const refreshEquippedItems = useCallback(async () => {
     try {
       const res = await getInventoryItems('equipped', 1, 200);
-      if (!res.success || !res.data) throw new Error(res.message || '获取已穿戴物品失败');
+      if (!res.success || !res.data) throw new Error(getUnifiedApiErrorMessage(res, '获取已穿戴物品失败'));
       const list = (res.data.items ?? [])
         .map((it: InventoryItemDto) => {
           const def = it.def;
@@ -1147,12 +1146,11 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       setUnequippingId(it.id);
       try {
         const res = await unequipInventoryItem(it.id, 'bag');
-        if (!res.success) throw new Error(res.message || '卸下失败');
+        if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '卸下失败'));
         messageRef.current.success(res.message || '卸下成功');
         window.dispatchEvent(new Event('inventory:changed'));
       } catch (error: unknown) {
-        const err = error as { message?: string };
-        messageRef.current.error(err.message || '卸下失败');
+        messageRef.current.error(getUnifiedApiErrorMessage(error, '卸下失败'));
       } finally {
         setUnequippingId(null);
       }
@@ -1177,9 +1175,9 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       setAutoMode(next);
       void (async () => {
         const res = await updateCharacterAutoCastSkills(next);
-        if (!res?.success) {
+        if (!res.success) {
           setAutoMode(!next);
-          messageRef.current.error(res?.message || '设置保存失败');
+          messageRef.current.error(getUnifiedApiErrorMessage(res, '设置保存失败'));
         }
       })();
     },
@@ -1373,7 +1371,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     try {
       const res = await leaveTeam(characterId);
       if (!res.success) {
-        messageRef.current.error(res.message || '退出队伍失败');
+        messageRef.current.error(getUnifiedApiErrorMessage(res, '退出队伍失败'));
         return;
       }
       messageRef.current.success(res.message || '已退出队伍');
@@ -1596,7 +1594,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       void (async () => {
         try {
           const res = await pickupRoomItem(currentMapId, currentRoomId, target.id);
-          if (!res?.success) throw new Error(res?.message || '拾取失败');
+          if (!res?.success) throw new Error(getUnifiedApiErrorMessage(res, '拾取失败'));
           const qty = typeof res.data?.qty === 'number' ? Math.max(0, Math.floor(res.data.qty)) : 0;
           if (qty > 0) {
             const itemName = String(target.name || target.id || '').trim() || target.id;
@@ -1609,8 +1607,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
             messageRef.current.info(res?.message || '什么都没捡到');
           }
         } catch (e: unknown) {
-          const err = e as { message?: string };
-          messageRef.current.error(err.message || '拾取失败');
+          messageRef.current.error(getUnifiedApiErrorMessage(e, '拾取失败'));
         }
       })();
       return;
@@ -2041,7 +2038,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                             setMainQuestDialogueState(res.data.dialogueState);
                             setNpcTalkPhase('mainQuestDialogue');
                           } else {
-                            messageRef.current.error(res?.message || '开始对话失败');
+                            messageRef.current.error(getUnifiedApiErrorMessage(res, '开始对话失败'));
                           }
                         } catch {
                           messageRef.current.error('开始对话失败');
@@ -2073,7 +2070,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                             await refreshTrackedRoomIds();
                             window.dispatchEvent(new Event('room:objects:changed'));
                           } else {
-                            messageRef.current.error(res?.message || '完成任务失败');
+                            messageRef.current.error(getUnifiedApiErrorMessage(res, '完成任务失败'));
                           }
                         } catch {
                           messageRef.current.error('完成任务失败');
@@ -2166,7 +2163,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                   setNpcTalkActionKey(`accept:${task.taskId}`);
                   try {
                     const res = await acceptTaskFromNpc(npcTalkNpcId, task.taskId);
-                    if (!res?.success) throw new Error(res?.message || '接取失败');
+                    if (!res?.success) throw new Error(getUnifiedApiErrorMessage(res, '接取失败'));
                     messageRef.current.success('接取成功');
                     appendSystemChat(`【任务】已接取：${task.title}`);
                     appendNpcDialogue('npc', '好，我已为你记下。去吧。');
@@ -2176,8 +2173,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                       window.dispatchEvent(new Event('room:objects:changed'));
                     }
                   } catch (e: unknown) {
-                    const err = e as { message?: string };
-                    messageRef.current.error(err.message || '接取失败');
+                    messageRef.current.error(getUnifiedApiErrorMessage(e, '接取失败'));
                   } finally {
                     setNpcTalkActionKey('');
                   }
@@ -2187,7 +2183,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                   setNpcTalkActionKey(`submit:${task.taskId}`);
                   try {
                     const res = await submitTaskToNpc(npcTalkNpcId, task.taskId);
-                    if (!res?.success) throw new Error(res?.message || '提交失败');
+                    if (!res?.success) throw new Error(getUnifiedApiErrorMessage(res, '提交失败'));
                     messageRef.current.success('提交成功');
                     appendSystemChat(`【任务】已提交：${task.title}`);
                     appendNpcDialogue('npc', '办得好。稍等，我为你结算。');
@@ -2195,8 +2191,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                     await refreshTrackedRoomIds();
                     window.dispatchEvent(new Event('room:objects:changed'));
                   } catch (e: unknown) {
-                    const err = e as { message?: string };
-                    messageRef.current.error(err.message || '提交失败');
+                    messageRef.current.error(getUnifiedApiErrorMessage(e, '提交失败'));
                   } finally {
                     setNpcTalkActionKey('');
                   }
@@ -2206,7 +2201,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                   setNpcTalkActionKey(`claim:${task.taskId}`);
                   try {
                     const res = await claimTaskReward(task.taskId);
-                    if (!res?.success) throw new Error(res?.message || '领取失败');
+                    if (!res?.success) throw new Error(getUnifiedApiErrorMessage(res, '领取失败'));
                     messageRef.current.success('领取成功');
                     const rewardText = formatTaskRewardsToText(res.data?.rewards);
                     appendSystemChat(`【任务】领取奖励：${task.title}${rewardText ? `（${rewardText}）` : ''}`);
@@ -2216,8 +2211,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                     await refreshTrackedRoomIds();
                     window.dispatchEvent(new Event('room:objects:changed'));
                   } catch (e: unknown) {
-                    const err = e as { message?: string };
-                    messageRef.current.error(err.message || '领取失败');
+                    messageRef.current.error(getUnifiedApiErrorMessage(e, '领取失败'));
                   } finally {
                     setNpcTalkActionKey('');
                   }
@@ -2272,7 +2266,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                         window.dispatchEvent(new Event('room:objects:changed'));
                       }
                     } else {
-                      messageRef.current.error(res?.message || '推进对话失败');
+                      messageRef.current.error(getUnifiedApiErrorMessage(res, '推进对话失败'));
                     }
                   } catch {
                     messageRef.current.error('推进对话失败');
@@ -2295,7 +2289,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
                         window.dispatchEvent(new Event('room:objects:changed'));
                       }
                     } else {
-                      messageRef.current.error(res?.message || '选择失败');
+                      messageRef.current.error(getUnifiedApiErrorMessage(res, '选择失败'));
                     }
                   } catch {
                     messageRef.current.error('选择失败');
@@ -2425,14 +2419,14 @@ const Game: FC<GameProps> = ({ onLogout }) => {
           try {
             const createRes = await createDungeonInstance(dungeonId, rank);
             if (!createRes?.success || !createRes.data?.instanceId) {
-              messageRef.current.error(createRes?.message || '创建秘境失败');
+              messageRef.current.error(getUnifiedApiErrorMessage(createRes, '创建秘境失败'));
               return;
             }
 
             const instanceId = String(createRes.data.instanceId);
             const startRes = await startDungeonInstance(instanceId);
             if (!startRes?.success || !startRes.data?.battleId) {
-              messageRef.current.error(startRes?.message || '开始秘境失败');
+              messageRef.current.error(getUnifiedApiErrorMessage(startRes, '开始秘境失败'));
               return;
             }
 
@@ -2443,7 +2437,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
             setViewMode('battle');
             gameSocket.refreshCharacter();
           } catch (e) {
-            messageRef.current.error((e as { message?: string })?.message || '进入秘境失败');
+            messageRef.current.error(getUnifiedApiErrorMessage(e, '进入秘境失败'));
             setDungeonBattleId(null);
             setDungeonInstanceId(null);
           }
