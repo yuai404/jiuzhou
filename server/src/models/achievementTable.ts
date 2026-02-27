@@ -57,17 +57,11 @@ CREATE TABLE IF NOT EXISTS character_title (
 );
 
 COMMENT ON TABLE character_title IS '角色称号拥有与装备状态';
-COMMENT ON COLUMN character_title.expires_at IS '称号过期时间；NULL表示永久有效';
 
 CREATE INDEX IF NOT EXISTS idx_character_title_character
   ON character_title(character_id, obtained_at DESC);
 CREATE INDEX IF NOT EXISTS idx_character_title_equipped
   ON character_title(character_id, is_equipped);
-CREATE INDEX IF NOT EXISTS idx_character_title_active_validity
-  ON character_title(character_id, is_equipped, expires_at);
-CREATE INDEX IF NOT EXISTS idx_character_title_expires_at
-  ON character_title(expires_at)
-  WHERE expires_at IS NOT NULL;
 `;
 
 /**
