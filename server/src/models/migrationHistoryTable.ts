@@ -1,4 +1,4 @@
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 /**
  * 迁移历史表工具
@@ -83,12 +83,13 @@ export const runDbMigrationOnce = async (
   const description = String(options.description || '').trim();
 
   await ensureMigrationHistoryTable();
-  if (await hasMigrationExecuted(migrationKey)) {
-    return { executed: false };
-  }
+  return withTransaction(async () => {
+    if (await hasMigrationExecuted(migrationKey)) {
+      return { executed: false };
+    }
 
-  await options.execute();
-  await markMigrationExecuted(migrationKey, description);
-  return { executed: true };
+    await options.execute();
+    await markMigrationExecuted(migrationKey, description);
+    return { executed: true };
+  });
 };
-

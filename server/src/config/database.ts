@@ -1,5 +1,34 @@
+/**
+ * 数据库统一入口（连接池 + 自动事务上下文）
+ *
+ * 作用（做什么 / 不做什么）：
+ * - 做什么：
+ *   1) 提供统一 `query` 查询入口；
+ *   2) 提供 `withTransaction` 自动事务封装；
+ *   3) 支持嵌套事务自动 SAVEPOINT；
+ *   4) 启用严格模式：写语句必须在事务上下文执行。
+ * - 不做什么：
+ *   1) 不承载业务规则；
+ *   2) 不做“失败后吞错并继续执行”的容错兜底；
+ *   3) 不吞掉业务异常。
+ *
+ * 输入/输出：
+ * - 输入：SQL 文本、参数数组、事务回调函数。
+ * - 输出：数据库查询结果、事务回调返回值。
+ *
+ * 数据流/状态流：
+ * - 根事务：`withTransaction` 创建连接并 `BEGIN`，回调成功 `COMMIT`，异常 `ROLLBACK`，最终释放连接。
+ * - 嵌套事务：在同一连接上自动创建 `SAVEPOINT`，局部失败仅回滚到当前保存点。
+ * - 普通查询：`query` 自动复用当前事务上下文连接；无事务时走连接池直连查询。
+ *
+ * 关键边界条件与坑点：
+ * 1) 统一 `query` 入口上的事务外写语句会自动进入事务；原始 `client.query` 仍要求显式事务语义。
+ * 2) 嵌套事务名必须可预测且无注入风险，因此仅使用内部生成的 ASCII 安全标识符。
+ */
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { Pool as PgPool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 dotenv.config();
 
@@ -7,6 +36,13 @@ const { Pool } = pg;
 
 // 是否启用查询日志（生产环境关闭）
 const ENABLE_QUERY_LOG = process.env.DB_LOG === 'true';
+
+/**
+ * 严格写入事务模式：
+ * - true：事务外写语句自动封装为事务执行；若调用方使用原始 client 且未开启事务，则仍会被拦截。
+ * - false：关闭自动写事务与拦截。
+ */
+const STRICT_WRITE_TRANSACTION = true;
 
 // 数据库连接池
 export const pool = new Pool({
@@ -21,13 +57,452 @@ export const pool = new Pool({
   statement_timeout: 30000, // 单条语句超时 30 秒，防止锁等待过久
 });
 
+type TransactionContext = {
+  client: PoolClient;
+};
+
+type QueryCallable = (...queryArgs: unknown[]) => unknown;
+
+const transactionContextStorage = new AsyncLocalStorage<TransactionContext | null>();
+
+type ClientTransactionState = {
+  depth: number;
+  released: boolean;
+  savepointCounter: number;
+  savepointStack: string[];
+  clientId: number;
+};
+
+type DecoratedPoolClient = PoolClient & {
+  __txState?: ClientTransactionState;
+  __txRawQuery?: QueryCallable;
+  __txRawRelease?: (err?: Error | boolean) => void;
+};
+
+let decoratedClientIdCounter = 0;
+
+const getActiveTransactionContext = (): TransactionContext | null => {
+  return transactionContextStorage.getStore() ?? null;
+};
+
+const stripLeadingSqlComments = (sql: string): string => {
+  let text = sql.trim();
+
+  while (text.length > 0) {
+    if (text.startsWith('--')) {
+      const lineBreakIndex = text.indexOf('\n');
+      text = lineBreakIndex >= 0 ? text.slice(lineBreakIndex + 1).trimStart() : '';
+      continue;
+    }
+
+    if (text.startsWith('/*')) {
+      const endIndex = text.indexOf('*/');
+      text = endIndex >= 0 ? text.slice(endIndex + 2).trimStart() : '';
+      continue;
+    }
+
+    break;
+  }
+
+  return text;
+};
+
+const isWriteSql = (sql: string): boolean => {
+  const normalized = stripLeadingSqlComments(sql).toUpperCase();
+  if (!normalized) return false;
+
+  if (
+    normalized.startsWith('INSERT') ||
+    normalized.startsWith('UPDATE') ||
+    normalized.startsWith('DELETE') ||
+    normalized.startsWith('MERGE') ||
+    normalized.startsWith('REPLACE') ||
+    normalized.startsWith('TRUNCATE')
+  ) {
+    return true;
+  }
+
+  if (normalized.startsWith('SELECT') && /\bFOR\s+UPDATE\b/.test(normalized)) {
+    return true;
+  }
+
+  if (normalized.startsWith('WITH')) {
+    return /\b(INSERT|UPDATE|DELETE|MERGE)\b/.test(normalized);
+  }
+
+  return false;
+};
+
+const normalizeCommandSql = (sql: string): string => {
+  return stripLeadingSqlComments(sql)
+    .replace(/;\s*$/g, '')
+    .trim()
+    .toUpperCase();
+};
+
+const extractSqlTextFromQueryArgs = (queryArgs: unknown[]): string => {
+  const firstArg = queryArgs[0];
+  if (typeof firstArg === 'string') {
+    return firstArg;
+  }
+
+  if (firstArg && typeof firstArg === 'object' && 'text' in (firstArg as Record<string, unknown>)) {
+    return String((firstArg as { text?: unknown }).text || '');
+  }
+
+  return '';
+};
+
+const isPromiseLike = (value: unknown): value is PromiseLike<unknown> => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'then' in value &&
+    typeof (value as { then?: unknown }).then === 'function'
+  );
+};
+
+const executeRawQueryAsPromise = (
+  rawQuery: QueryCallable,
+  sql: string,
+): Promise<QueryResult<QueryResultRow>> => {
+  const result = rawQuery(sql);
+  if (!isPromiseLike(result)) {
+    throw new Error(`数据库查询返回值异常：期望 Promise，实际为 ${typeof result}`);
+  }
+  return result as Promise<QueryResult<QueryResultRow>>;
+};
+
+const createNoopQueryResult = <T extends QueryResultRow>(
+  command: string,
+): QueryResult<T> => {
+  return {
+    command,
+    rowCount: 0,
+    oid: 0,
+    rows: [],
+    fields: [],
+  } as QueryResult<T>;
+};
+
+const nextSavepointName = (state: ClientTransactionState): string => {
+  state.savepointCounter += 1;
+  return `sp_auto_client_${state.clientId}_${state.savepointCounter}`;
+};
+
+const safeRollbackRootTransaction = async (client: PoolClient): Promise<void> => {
+  try {
+    await client.query('ROLLBACK');
+  } catch {
+    // 回滚失败不覆盖主异常，交由上层保留原始错误信息。
+  }
+};
+
+const safeReleaseClient = (client: PoolClient): void => {
+  try {
+    client.release();
+  } catch {
+    // 释放失败通常是重复释放，不应覆盖主流程异常。
+  }
+};
+
+const decoratePoolClient = (client: PoolClient): PoolClient => {
+  const decoratedClient = client as DecoratedPoolClient;
+  if (decoratedClient.__txState && decoratedClient.__txRawQuery && decoratedClient.__txRawRelease) {
+    return decoratedClient;
+  }
+
+  const rawQuery = client.query.bind(client) as QueryCallable;
+  const rawRelease = client.release.bind(client) as (err?: Error | boolean) => void;
+  const state: ClientTransactionState = {
+    depth: 0,
+    released: false,
+    savepointCounter: 0,
+    savepointStack: [],
+    clientId: ++decoratedClientIdCounter,
+  };
+
+  decoratedClient.__txState = state;
+  decoratedClient.__txRawQuery = rawQuery;
+  decoratedClient.__txRawRelease = rawRelease;
+
+  client.query = ((...queryArgs: unknown[]) => {
+    const sql = extractSqlTextFromQueryArgs(queryArgs);
+    const normalizedCommand = normalizeCommandSql(sql);
+
+    if (normalizedCommand === 'BEGIN' || normalizedCommand === 'START TRANSACTION') {
+      if (state.depth <= 0) {
+        return executeRawQueryAsPromise(rawQuery, 'BEGIN').then((result) => {
+          state.depth = 1;
+          transactionContextStorage.enterWith({ client });
+          return result;
+        });
+      }
+
+      const savepointName = nextSavepointName(state);
+      return executeRawQueryAsPromise(rawQuery, `SAVEPOINT ${savepointName}`).then(() => {
+        state.savepointStack.push(savepointName);
+        state.depth += 1;
+        return createNoopQueryResult<QueryResultRow>('BEGIN');
+      });
+    }
+
+    if (normalizedCommand === 'COMMIT' || normalizedCommand === 'END') {
+      if (state.depth <= 0) {
+        return Promise.resolve(createNoopQueryResult<QueryResultRow>('COMMIT'));
+      }
+
+      if (state.depth === 1) {
+        return executeRawQueryAsPromise(rawQuery, 'COMMIT').then((result) => {
+          state.depth = 0;
+          state.savepointStack = [];
+          const active = getActiveTransactionContext();
+          if (active?.client === client) {
+            transactionContextStorage.enterWith(null);
+          }
+          return result;
+        });
+      }
+
+      const savepointName = state.savepointStack[state.savepointStack.length - 1];
+      if (!savepointName) {
+        state.depth = Math.max(0, state.depth - 1);
+        return Promise.resolve(createNoopQueryResult<QueryResultRow>('COMMIT'));
+      }
+
+      return executeRawQueryAsPromise(rawQuery, `RELEASE SAVEPOINT ${savepointName}`).then(() => {
+        state.savepointStack.pop();
+        state.depth -= 1;
+        return createNoopQueryResult<QueryResultRow>('COMMIT');
+      });
+    }
+
+    if (normalizedCommand === 'ROLLBACK') {
+      if (state.depth <= 0) {
+        return Promise.resolve(createNoopQueryResult<QueryResultRow>('ROLLBACK'));
+      }
+
+      if (state.depth === 1) {
+        return executeRawQueryAsPromise(rawQuery, 'ROLLBACK').then((result) => {
+          state.depth = 0;
+          state.savepointStack = [];
+          const active = getActiveTransactionContext();
+          if (active?.client === client) {
+            transactionContextStorage.enterWith(null);
+          }
+          return result;
+        });
+      }
+
+      const savepointName = state.savepointStack[state.savepointStack.length - 1];
+      if (!savepointName) {
+        state.depth = Math.max(0, state.depth - 1);
+        return Promise.resolve(createNoopQueryResult<QueryResultRow>('ROLLBACK'));
+      }
+
+      return executeRawQueryAsPromise(rawQuery, `ROLLBACK TO SAVEPOINT ${savepointName}`)
+        .then(() => executeRawQueryAsPromise(rawQuery, `RELEASE SAVEPOINT ${savepointName}`))
+        .then(() => {
+          state.savepointStack.pop();
+          state.depth -= 1;
+          return createNoopQueryResult<QueryResultRow>('ROLLBACK');
+        });
+    }
+
+    if (STRICT_WRITE_TRANSACTION && isWriteSql(sql) && state.depth <= 0) {
+      return Promise.reject(
+        new Error(
+          `严格事务模式拦截：检测到事务外写操作，必须通过 withTransaction 或显式事务执行。SQL: ${stripLeadingSqlComments(sql).slice(0, 120)}`,
+        ),
+      );
+    }
+
+    return rawQuery(...queryArgs);
+  }) as PoolClient['query'];
+
+  client.release = ((err?: Error | boolean) => {
+    if (state.released) return;
+
+    if (state.depth > 0) {
+      // 释放前强制回滚未结束事务，避免连接污染回池。
+      void executeRawQueryAsPromise(rawQuery, 'ROLLBACK').catch(() => undefined);
+      state.depth = 0;
+      state.savepointStack = [];
+      const active = getActiveTransactionContext();
+      if (active?.client === client) {
+        transactionContextStorage.enterWith(null);
+      }
+    }
+
+    state.released = true;
+    rawRelease(err);
+  }) as PoolClient['release'];
+
+  return client;
+};
+
+const rawPoolConnect = pool.connect.bind(pool) as PgPool['connect'];
+
+const connectDecoratedClient = async (): Promise<PoolClient> => {
+  const client = await (rawPoolConnect as () => Promise<PoolClient>)();
+  return decoratePoolClient(client);
+};
+
+pool.connect = ((callback?: unknown) => {
+  if (typeof callback === 'function') {
+    const done = callback as (
+      err: Error | undefined,
+      client: PoolClient | undefined,
+      release: (releaseArg?: unknown) => void,
+    ) => void;
+
+    void connectDecoratedClient()
+      .then((client) => {
+        done(
+          undefined,
+          client,
+          (releaseArg?: unknown) => client.release(releaseArg as Error | boolean | undefined),
+        );
+      })
+      .catch((error: unknown) => {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        done(normalizedError, undefined, () => undefined);
+      });
+    return;
+  }
+
+  return connectDecoratedClient();
+}) as PgPool['connect'];
+
+const executeQueryWithLogging = (
+  runner: QueryCallable,
+  queryArgs: unknown[],
+  sql: string,
+): unknown => {
+  const rawResult = runner(...queryArgs);
+  if (!ENABLE_QUERY_LOG || !sql || !isPromiseLike(rawResult)) {
+    return rawResult;
+  }
+
+  return (rawResult as Promise<QueryResult<QueryResultRow>>).then((result) => {
+    console.log('执行查询:', { text: sql.substring(0, 50), rows: result.rowCount });
+    return result;
+  });
+};
+
+/**
+ * 对“统一 query 入口上的事务外写语句”执行自动事务封装。
+ *
+ * 设计说明：
+ * - 该逻辑只处理统一 `query` 入口；
+ * - 原始 `client.query` 保持强约束，要求调用方显式事务语义（BEGIN/withTransaction）。
+ */
+const executeWriteWithAutoTransaction = (
+  queryArgs: unknown[],
+  sql: string,
+): Promise<unknown> => {
+  return withTransaction(async () => {
+    const context = getActiveTransactionContext();
+    if (!context) {
+      throw new Error('自动写事务初始化失败：缺少事务上下文');
+    }
+    const txRunner = context.client.query.bind(context.client) as QueryCallable;
+    const txResult = executeQueryWithLogging(txRunner, queryArgs, sql);
+    if (!isPromiseLike(txResult)) {
+      throw new Error('自动写事务仅支持 Promise 风格调用');
+    }
+    return txResult;
+  });
+};
+
+/**
+ * 获取当前事务上下文连接。
+ *
+ * 设计说明：
+ * - 仅供少量底层场景使用（如显式锁粒度控制）。
+ * - 普通业务应优先调用 `query`，避免与事务生命周期耦合。
+ */
+export const getTransactionClient = (): PoolClient | null => {
+  return getActiveTransactionContext()?.client ?? null;
+};
+
+/**
+ * 当前调用链是否处于事务上下文中。
+ */
+export const isInTransaction = (): boolean => {
+  return Boolean(getActiveTransactionContext());
+};
+
+/**
+ * 统一 SQL 查询入口。
+ *
+ * 设计说明：
+ * - 在事务上下文内自动复用同一连接；
+ * - 在事务外执行写语句时，会自动提升到事务执行。
+ */
+export const query = ((...queryArgs: unknown[]) => {
+  const sql = extractSqlTextFromQueryArgs(queryArgs);
+  const context = getActiveTransactionContext();
+
+  if (!context && STRICT_WRITE_TRANSACTION && sql && isWriteSql(sql)) {
+    return executeWriteWithAutoTransaction(queryArgs, sql);
+  }
+
+  const runner = context
+    ? (context.client.query.bind(context.client) as QueryCallable)
+    : (pool.query.bind(pool) as QueryCallable);
+
+  return executeQueryWithLogging(runner, queryArgs, sql);
+}) as PgPool['query'];
+
+/**
+ * 自动事务执行器。
+ *
+ * 语义：
+ * - 根调用：开启真实事务；
+ * - 嵌套调用：自动 SAVEPOINT；
+ * - 失败时只回滚当前层级并继续抛错。
+ */
+export const withTransaction = async <T>(
+  callback: (client: PoolClient) => Promise<T>,
+): Promise<T> => {
+  const parentContext = getActiveTransactionContext();
+
+  if (parentContext) {
+    try {
+      await parentContext.client.query('BEGIN');
+      const result = await callback(parentContext.client);
+      await parentContext.client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await safeRollbackRootTransaction(parentContext.client);
+      throw error;
+    }
+  }
+
+  const client = await pool.connect();
+  const rootContext: TransactionContext = { client };
+
+  try {
+    await client.query('BEGIN');
+    const result = await transactionContextStorage.run(rootContext, async () => callback(client));
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await safeRollbackRootTransaction(client);
+    throw error;
+  } finally {
+    safeReleaseClient(client);
+  }
+};
+
 // 延迟函数
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 测试数据库连接（带重试）
 export const testConnection = async (
   maxRetries = 10,
-  initialDelay = 1000
+  initialDelay = 1000,
 ): Promise<boolean> => {
   let retries = 0;
   let delay = initialDelay;
@@ -36,7 +511,7 @@ export const testConnection = async (
     try {
       const client = await pool.connect();
       console.log('✓ 数据库连接成功');
-      client.release();
+      safeReleaseClient(client);
       return true;
     } catch (error) {
       retries++;
@@ -50,13 +525,4 @@ export const testConnection = async (
     }
   }
   return false;
-};
-
-// 执行SQL查询（默认不输出日志）
-export const query = async (text: string, params?: unknown[]) => {
-  const result = await pool.query(text, params);
-  if (ENABLE_QUERY_LOG) {
-    console.log('执行查询:', { text: text.substring(0, 50), rows: result.rowCount });
-  }
-  return result;
 };

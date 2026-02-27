@@ -1247,6 +1247,46 @@ export const findEmptySlotsWithClient = async (
 // ============================================
 // 添加物品到背包（智能堆叠）
 // ============================================
+/**
+ * 统一的库存写事务执行器。
+ *
+ * 作用（做什么 / 不做什么）：
+ * - 做什么：把库存写入逻辑统一包裹在 `BEGIN/COMMIT/ROLLBACK` 语义里。
+ * - 不做什么：不吞掉执行器抛出的未知异常；业务失败由调用方返回 `success: false`。
+ *
+ * 输入/输出：
+ * - 输入：已获取的 `PoolClient` 与执行器函数。
+ * - 输出：执行器返回值；当 `success=false` 时自动回滚当前事务层。
+ *
+ * 数据流/状态流：
+ * - 总是先执行 `BEGIN`；
+ * - 执行器返回失败则 `ROLLBACK`；
+ * - 执行器返回成功则 `COMMIT`；
+ * - 执行器抛异常则 `ROLLBACK` 后继续抛出。
+ *
+ * 关键边界条件与坑点：
+ * 1) 当外层已经在事务中时，此处 `BEGIN` 会由数据库层自动转换为 SAVEPOINT 语义，保证可嵌套。
+ * 2) `pg_advisory_xact_lock` 必须处于事务中才有正确生命周期，因此锁操作必须放在该执行器内部。
+ */
+const runInventoryMutationTx = async <T extends { success: boolean }>(
+  client: PoolClient,
+  executor: () => Promise<T>,
+): Promise<T> => {
+  await client.query("BEGIN");
+  try {
+    const result = await executor();
+    if (!result.success) {
+      await client.query("ROLLBACK");
+      return result;
+    }
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+};
+
 export const addItemToInventoryTx = async (
   client: PoolClient,
   characterId: number,
@@ -1264,59 +1304,39 @@ export const addItemToInventoryTx = async (
     if (!error || typeof error !== "object") return false;
     return (error as { code?: unknown }).code === "23505";
   };
-  const isInvalidTransactionBlock = (error: unknown): boolean => {
-    if (!error || typeof error !== "object") return false;
-    return (error as { code?: unknown }).code === "25P01";
-  };
 
   if (!Number.isInteger(qty) || qty <= 0) {
     return { success: false, message: "数量参数错误" };
   }
 
-  await lockCharacterInventoryMutexTx(client, characterId);
+  return runInventoryMutationTx(client, async () => {
+    await lockCharacterInventoryMutexTx(client, characterId);
 
-  const location = options.location || "bag";
-  const bindType = options.bindType || "none";
+    const location = options.location || "bag";
+    const bindType = options.bindType || "none";
 
-  const itemDef = getStaticItemDef(itemDefId);
-  if (!itemDef) {
-    return { success: false, message: "物品不存在" };
-  }
-
-  const stack_max = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
-  const def_bind_type = String(itemDef.bind_type || "none");
-  const actualBindType = bindType !== "none" ? bindType : def_bind_type;
-  const obtainedFromResult = normalizeItemInstanceObtainedFrom(
-    options.obtainedFrom,
-  );
-  if (!obtainedFromResult.success) {
-    return { success: false, message: obtainedFromResult.message };
-  }
-  const obtainedFrom = obtainedFromResult.value;
-
-  const info = await getInventoryInfoWithClient(characterId, client);
-  const capacity = getSlottedCapacity(info, location);
-
-  const savepointName = "sp_add_item_to_inventory_tx";
-  try {
-    await client.query(`SAVEPOINT ${savepointName}`);
-  } catch (error) {
-    if (isInvalidTransactionBlock(error)) {
-      return { success: false, message: "事务状态异常，无法添加物品" };
+    const itemDef = getStaticItemDef(itemDefId);
+    if (!itemDef) {
+      return { success: false, message: "物品不存在" };
     }
-    throw error;
-  }
 
-  const itemIds: number[] = [];
-  let remainingQty = qty;
+    const stack_max = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
+    const def_bind_type = String(itemDef.bind_type || "none");
+    const actualBindType = bindType !== "none" ? bindType : def_bind_type;
+    const obtainedFromResult = normalizeItemInstanceObtainedFrom(
+      options.obtainedFrom,
+    );
+    if (!obtainedFromResult.success) {
+      return { success: false, message: obtainedFromResult.message };
+    }
+    const obtainedFrom = obtainedFromResult.value;
 
-  const rollbackToSavepointAndReturn = async (message: string) => {
-    await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
-    await client.query(`RELEASE SAVEPOINT ${savepointName}`);
-    return { success: false, message };
-  };
+    const info = await getInventoryInfoWithClient(characterId, client);
+    const capacity = getSlottedCapacity(info, location);
 
-  try {
+    const itemIds: number[] = [];
+    let remainingQty = qty;
+
     let stackRows: Array<{ id: number; qty: number }> = [];
     if (stack_max > 1) {
       const stackResult = await client.query(
@@ -1358,7 +1378,7 @@ export const addItemToInventoryTx = async (
         client,
       );
       if (emptySlots.length < neededSlots) {
-        return await rollbackToSavepointAndReturn("背包已满");
+        return { success: false, message: "背包已满" };
       }
     }
 
@@ -1393,7 +1413,7 @@ export const addItemToInventoryTx = async (
           client,
         );
         if (emptySlots.length === 0) {
-          return await rollbackToSavepointAndReturn("背包已满");
+          return { success: false, message: "背包已满" };
         }
 
         for (const slot of emptySlots) {
@@ -1428,7 +1448,7 @@ export const addItemToInventoryTx = async (
       }
 
       if (insertedId === null || !Number.isFinite(insertedId)) {
-        return await rollbackToSavepointAndReturn("背包已满");
+        return { success: false, message: "背包已满" };
       }
 
       itemIds.push(insertedId);
@@ -1437,18 +1457,11 @@ export const addItemToInventoryTx = async (
 
     const usedSlots = location === "bag" ? info.bag_used : info.warehouse_used;
     if (usedSlots > capacity) {
-      return await rollbackToSavepointAndReturn("背包数据异常");
+      return { success: false, message: "背包数据异常" };
     }
 
-    await client.query(`RELEASE SAVEPOINT ${savepointName}`);
     return { success: true, message: "添加成功", itemIds };
-  } catch (error) {
-    try {
-      await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
-      await client.query(`RELEASE SAVEPOINT ${savepointName}`);
-    } catch {}
-    throw error;
-  }
+  });
 };
 
 export const addItemToInventory = async (
@@ -1466,9 +1479,7 @@ export const addItemToInventory = async (
   const client = await pool.connect();
 
   try {
-    await client.query("BEGIN");
-
-    const txResult = await addItemToInventoryTx(
+    return await addItemToInventoryTx(
       client,
       characterId,
       userId,
@@ -1476,15 +1487,7 @@ export const addItemToInventory = async (
       qty,
       options,
     );
-    if (!txResult.success) {
-      await client.query("ROLLBACK");
-      return txResult;
-    }
-
-    await client.query("COMMIT");
-    return txResult;
   } catch (error) {
-    await client.query("ROLLBACK");
     console.error("添加物品失败:", error);
     return { success: false, message: "添加物品失败" };
   } finally {
