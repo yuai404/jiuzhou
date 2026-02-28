@@ -245,11 +245,18 @@ export const buildRewardSummaryLinesFast = (
   }
 
   const playerNameMap = buildCharacterNameMap(state);
-  const totalLine =
-    participantCount > 1
-      ? `【斗法所得】队伍共得 修为+${totalExp} 银两+${totalSilver}（${participantCount}人）`
-      : `【斗法所得】修为+${totalExp} 银两+${totalSilver}`;
 
+  // 单人战斗：只显示个人奖励，不显示总计
+  if (participantCount === 1 && perPlayerRewards.length === 1) {
+    const reward = perPlayerRewards[0];
+    const playerName = playerNameMap.get(reward.characterId) ?? `角色${reward.characterId}`;
+    const exp = toSafeInt(reward.exp);
+    const silver = toSafeInt(reward.silver);
+    return [`【斗法所得】${playerName} 修为+${exp} 银两+${silver}`];
+  }
+
+  // 多人战斗：显示总计 + 各人分配
+  const totalLine = `【斗法所得】队伍共得 修为+${totalExp} 银两+${totalSilver}（${participantCount}人）`;
   const perLines = perPlayerRewards.map((reward) => {
     const playerName = playerNameMap.get(reward.characterId) ?? `角色${reward.characterId}`;
     const exp = toSafeInt(reward.exp);
@@ -269,12 +276,24 @@ export const buildDropLinesFast = (
 
   const playerNameMap = buildCharacterNameMap(state);
 
-  return items
-    .map((item) => {
-      const receiverName = playerNameMap.get(item.receiverId) ?? `角色${item.receiverId}`;
-      const itemName = normalizeName(item.name || item.itemDefId, '未知物品');
-      const quantity = Math.max(1, toSafeInt(item.quantity));
-      return `【战利分配】${receiverName} 取走 ${itemName}×${quantity}`;
-    })
-    .filter(Boolean);
+  // 按玩家分组物品
+  const itemsByReceiver = new Map<number, Array<{ name: string; quantity: number }>>();
+
+  for (const item of items) {
+    const receiverId = item.receiverId;
+    const itemName = normalizeName(item.name || item.itemDefId, '未知物品');
+    const quantity = Math.max(1, toSafeInt(item.quantity));
+
+    if (!itemsByReceiver.has(receiverId)) {
+      itemsByReceiver.set(receiverId, []);
+    }
+    itemsByReceiver.get(receiverId)!.push({ name: itemName, quantity });
+  }
+
+  // 为每个玩家生成一行日志
+  return Array.from(itemsByReceiver.entries()).map(([receiverId, receiverItems]) => {
+    const receiverName = playerNameMap.get(receiverId) ?? `角色${receiverId}`;
+    const itemTexts = receiverItems.map((item) => `${item.name}×${item.quantity}`);
+    return `【战利分配】${receiverName} 取走 ${itemTexts.join('、')}`;
+  });
 };
