@@ -234,7 +234,8 @@ const decoratePoolClient = (client: PoolClient): PoolClient => {
       if (state.depth <= 0) {
         return executeRawQueryAsPromise(rawQuery, 'BEGIN').then((result) => {
           state.depth = 1;
-          transactionContextStorage.enterWith({ client });
+          // 不在这里设置 AsyncLocalStorage
+          // AsyncLocalStorage 应该只在 withTransaction 的 transactionContextStorage.run() 中管理
           return result;
         });
       }
