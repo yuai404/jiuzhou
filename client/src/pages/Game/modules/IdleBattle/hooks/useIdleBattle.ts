@@ -26,7 +26,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameSocket } from '../../../../../services/gameSocket';
-import { getUnifiedApiErrorMessage } from '../../../../../services/api';
+import { getUnifiedApiErrorMessage, toUnifiedApiError } from '../../../../../services/api';
 import type { IdleUpdatePayload, IdleFinishedPayload } from '../../../../../services/gameSocket';
 import {
   startIdleSession,
@@ -278,7 +278,18 @@ export function useIdleBattle(): UseIdleBattleReturn {
       // 启动成功后重新拉取状态（获取完整 session 对象）
       await loadStatus();
     } catch (err) {
-      setError(getUnifiedApiErrorMessage(err, '启动挂机失败'));
+      const normalizedError = toUnifiedApiError(err, '启动挂机失败');
+      setError(normalizedError.message);
+
+      // 冲突时主动同步一次服务端状态，修正本地 activeSession 过期导致的“未显示挂机中”。
+      if (normalizedError.httpStatus === 409) {
+        try {
+          const statusRes = await getIdleStatus();
+          setActiveSession(statusRes.session);
+        } catch {
+          // 状态同步失败时保留原始错误提示，不覆盖为次级错误。
+        }
+      }
     }
   }, [config, loadStatus]);
 

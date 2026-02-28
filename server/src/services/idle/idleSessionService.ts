@@ -19,8 +19,8 @@
  *   客户端上线 → getActiveIdleSession → 断线续战
  *
  * 关键边界条件：
- *   1. Redis 互斥锁键：`idle:lock:{characterId}`，TTL = MAX_DURATION_MS + 5min 缓冲
- *      SET NX EX 保证原子性，防止并发启动两个会话
+ *   1. Redis 互斥锁键：`idle:lock:{characterId}`，TTL = 本次 maxDurationMs + 5min 缓冲（有上下限）
+ *      SET NX EX + compare-and-del 保证并发场景下不会误删他人锁
  *   2. getIdleHistory 超过 30 条时自动删除最旧记录（按 started_at 升序取最旧）
  *   3. markSessionViewed 幂等：已设置 viewed_at 时不重复更新
  *   4. stopIdleSession 仅负责状态持久化；执行器收到 stop 信号后会被立即唤醒做终止检查
@@ -46,8 +46,14 @@ import { rowToIdleBattleRow, rowToIdleSessionRow } from './rowMappers.js';
 /** Redis 互斥锁键前缀 */
 const IDLE_LOCK_PREFIX = 'idle:lock:';
 
-/** 互斥锁 TTL = 最大挂机时长（8h）+ 5min 缓冲，单位：秒 */
-const IDLE_LOCK_TTL_SECONDS = (28_800_000 + 5 * 60 * 1000) / 1000;
+/** 互斥锁 TTL 缓冲（毫秒） */
+const IDLE_LOCK_TTL_BUFFER_MS = 5 * 60 * 1000;
+
+/** 互斥锁 TTL 最小值（秒） */
+const IDLE_LOCK_TTL_MIN_SECONDS = 60;
+
+/** 互斥锁 TTL 最大值（秒，8h + 5min） */
+const IDLE_LOCK_TTL_MAX_SECONDS = (28_800_000 + IDLE_LOCK_TTL_BUFFER_MS) / 1000;
 
 /** 历史记录最大保留条数 */
 const MAX_HISTORY_COUNT = 30;
@@ -59,6 +65,49 @@ const MAX_HISTORY_COUNT = 30;
 /** 构造 Redis 互斥锁键 */
 function idleLockKey(characterId: number): string {
   return `${IDLE_LOCK_PREFIX}${characterId}`;
+}
+
+/** 根据本次挂机时长计算锁 TTL（防止短时挂机失败后锁残留过久） */
+function idleLockTtlSeconds(maxDurationMs: number): number {
+  const ttl = Math.ceil((maxDurationMs + IDLE_LOCK_TTL_BUFFER_MS) / 1000);
+  return Math.min(IDLE_LOCK_TTL_MAX_SECONDS, Math.max(IDLE_LOCK_TTL_MIN_SECONDS, ttl));
+}
+
+/** 查询角色当前活跃会话 ID（启动冲突判定专用） */
+async function findActiveSessionId(characterId: number): Promise<string | undefined> {
+  const existingRes = await query(
+    `SELECT id FROM idle_sessions
+     WHERE character_id = $1 AND status IN ('active', 'stopping')
+     ORDER BY started_at DESC
+     LIMIT 1`,
+    [characterId]
+  );
+  return existingRes.rows[0] ? String(existingRes.rows[0].id) : undefined;
+}
+
+/** 比较并删除锁（仅当当前 value 与期望值一致时删除） */
+async function compareAndDeleteLock(lockKey: string, expectedValue: string): Promise<boolean> {
+  const deleted = await redis.eval(
+    `if redis.call('GET', KEYS[1]) == ARGV[1] then
+       return redis.call('DEL', KEYS[1])
+     end
+     return 0`,
+    1,
+    lockKey,
+    expectedValue
+  );
+  return Number(deleted) === 1;
+}
+
+/** 尝试获取启动锁（使用 token 防止并发误删） */
+async function tryAcquireStartLock(lockKey: string, lockToken: string, ttlSeconds: number): Promise<boolean> {
+  const lockAcquired = await redis.set(lockKey, lockToken, 'EX', ttlSeconds, 'NX');
+  return lockAcquired === 'OK';
+}
+
+/** 仅在持有 token 时释放启动锁 */
+async function releaseStartLock(lockKey: string, lockToken: string): Promise<void> {
+  await compareAndDeleteLock(lockKey, lockToken);
 }
 
 // ============================================
@@ -105,23 +154,37 @@ export async function startIdleSession(params: StartIdleSessionParams): Promise<
   }
 
   const lockKey = idleLockKey(characterId);
+  const lockToken = `idle-start:${randomUUID()}`;
+  const lockTtlSeconds = idleLockTtlSeconds(config.maxDurationMs);
 
   // 1. 尝试获取 Redis 互斥锁（SET NX EX）
-  const lockAcquired = await redis.set(lockKey, '1', 'EX', IDLE_LOCK_TTL_SECONDS, 'NX');
+  let lockAcquired = await tryAcquireStartLock(lockKey, lockToken, lockTtlSeconds);
   if (!lockAcquired) {
-    // 锁已存在，查询现有活跃会话 ID 返回给调用方
-    const existingRes = await query(
-      `SELECT id FROM idle_sessions WHERE character_id = $1 AND status IN ('active', 'stopping') LIMIT 1`,
-      [characterId]
-    );
-    const existingSessionId = existingRes.rows[0] ? String(existingRes.rows[0].id) : undefined;
-    return { success: false, error: '已有活跃挂机会话', existingSessionId };
+    const existingSessionId = await findActiveSessionId(characterId);
+    if (existingSessionId) {
+      return { success: false, error: '已有活跃挂机会话', existingSessionId };
+    }
+
+    // 无活跃会话但拿不到锁：判定为陈旧锁，先做 compare-and-del 再重试一次。
+    const currentLockValue = await redis.get(lockKey);
+    if (currentLockValue) {
+      await compareAndDeleteLock(lockKey, currentLockValue);
+    }
+
+    lockAcquired = await tryAcquireStartLock(lockKey, lockToken, lockTtlSeconds);
+    if (!lockAcquired) {
+      const raceSessionId = await findActiveSessionId(characterId);
+      if (raceSessionId) {
+        return { success: false, error: '已有活跃挂机会话', existingSessionId: raceSessionId };
+      }
+      return { success: false, error: '挂机会话正在初始化，请稍后重试' };
+    }
   }
 
   // 2. 快照构建放在事务外，避免长事务占用连接与行锁。
   const snapshotData = await buildCharacterBattleSnapshot(characterId);
   if (!snapshotData) {
-    await redis.del(lockKey);
+    await releaseStartLock(lockKey, lockToken);
     return { success: false, error: '角色数据加载失败' };
   }
 
@@ -144,7 +207,7 @@ export async function startIdleSession(params: StartIdleSessionParams): Promise<
         [characterId]
       );
       if (charRes.rows.length === 0) {
-        await redis.del(lockKey);
+        await releaseStartLock(lockKey, lockToken);
         return { success: false, error: '角色不存在' };
       }
 
@@ -175,7 +238,7 @@ export async function startIdleSession(params: StartIdleSessionParams): Promise<
       return { success: true, sessionId };
     });
   } catch (err) {
-    await redis.del(lockKey);
+    await releaseStartLock(lockKey, lockToken);
     throw err;
   }
 }
