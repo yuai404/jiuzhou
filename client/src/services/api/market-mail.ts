@@ -166,6 +166,7 @@ export interface MailClaimAllResponse {
   success: boolean;
   message: string;
   claimedCount: number;
+  skippedCount?: number;
   rewards?: {
     silver: number;
     spiritStones: number;

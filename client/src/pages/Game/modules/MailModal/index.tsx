@@ -20,6 +20,14 @@ interface MailModalProps {
   onClose: () => void;
 }
 
+// 统一邮件读状态与附件状态判断，供列表渲染、计数和删除逻辑复用，避免同规则重复散落。
+const isMailRead = (mail: MailDto): boolean => !!mail.readAt;
+
+const hasAttachments = (mail: MailDto): boolean =>
+  mail.attachSilver > 0 || mail.attachSpiritStones > 0 || (mail.attachItems && mail.attachItems.length > 0);
+
+const hasUnclaimedAttachments = (mail: MailDto): boolean => !mail.claimedAt && hasAttachments(mail);
+
 const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
   const { message, modal } = App.useApp();
   const [mails, setMails] = useState<MailDto[]>([]);
@@ -73,6 +81,8 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
   }, [activeId, mails]);
 
   const activeMail = useMemo(() => mails.find((m) => m.id === safeActiveId) ?? null, [mails, safeActiveId]);
+  const readMails = useMemo(() => mails.filter(isMailRead), [mails]);
+  const readMailCount = readMails.length;
 
   // 打开邮件（标记已读）
   const openMail = async (id: number) => {
@@ -99,12 +109,9 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
     const target = mails.find((m) => m.id === id);
     if (!target) return;
 
-    const hasAttachments =
-      target.attachSilver > 0 ||
-      target.attachSpiritStones > 0 ||
-      (target.attachItems && target.attachItems.length > 0);
+    const mailHasAttachments = hasAttachments(target);
 
-    if (!hasAttachments) {
+    if (!mailHasAttachments) {
       message.info('该邮件没有附件');
       return;
     }
@@ -150,16 +157,23 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
     setClaiming(true);
     try {
       const res = await claimAllMailAttachments();
-      if (res.success) {
-        await loadMails();
-        const rewards: string[] = [];
-        if (res.rewards?.silver) rewards.push(`银两 +${res.rewards.silver}`);
-        if (res.rewards?.spiritStones) rewards.push(`灵石 +${res.rewards.spiritStones}`);
-        if (res.rewards?.itemCount) rewards.push(`物品 x${res.rewards.itemCount}`);
-        message.success(`已领取 ${res.claimedCount} 封邮件附件${rewards.length > 0 ? '：' + rewards.join('，') : ''}`);
-      } else {
-        void 0;
+      if (!res.success) {
+        message.warning(res.message || '一键领取失败');
+        return;
       }
+
+      await loadMails();
+      if (res.claimedCount === 0) {
+        message.info(res.message || '没有可领取的附件');
+        return;
+      }
+
+      const rewards: string[] = [];
+      if (res.rewards?.silver) rewards.push(`银两 +${res.rewards.silver}`);
+      if (res.rewards?.spiritStones) rewards.push(`灵石 +${res.rewards.spiritStones}`);
+      if (res.rewards?.itemCount) rewards.push(`物品 x${res.rewards.itemCount}`);
+      const skippedTip = res.skippedCount && res.skippedCount > 0 ? `，${res.skippedCount} 封因背包空间不足未领取` : '';
+      message.success(`已领取 ${res.claimedCount} 封邮件附件${skippedTip}${rewards.length > 0 ? '：' + rewards.join('，') : ''}`);
     } catch {
       void 0;
     } finally {
@@ -190,26 +204,32 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
 
   // 一键删除
   const deleteAll = () => {
-    if (mails.length === 0) {
-      message.info('邮箱暂无邮件');
+    if (readMailCount === 0) {
+      message.info('没有已读邮件可删除');
       return;
     }
     modal.confirm({
-      title: '一键删除',
-      content: '确认删除所有邮件？删除后不可恢复。',
+      title: '一键删除已读',
+      content: '确认删除所有已读邮件？未读邮件会保留，删除后不可恢复。',
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
         try {
-          const res = await deleteAllMails(false);
+          const res = await deleteAllMails(true);
           if (res.success) {
-            setMails([]);
-            setActiveId(null);
-            setShowMobileDetail(false);
-            setUnreadCount(0);
-            setUnclaimedCount(0);
-            message.success(`已删除 ${res.deletedCount} 封邮件`);
+            const unreadMails = mails.filter((mail) => !isMailRead(mail));
+            setMails(unreadMails);
+            setActiveId((prev) => {
+              if (prev && unreadMails.some((mail) => mail.id === prev)) return prev;
+              return unreadMails[0]?.id ?? null;
+            });
+            if (unreadMails.length === 0) {
+              setShowMobileDetail(false);
+            }
+            setUnreadCount(unreadMails.length);
+            setUnclaimedCount(unreadMails.filter(hasUnclaimedAttachments).length);
+            message.success(`已删除 ${res.deletedCount} 封已读邮件`);
           }
         } catch {
           void 0;
@@ -223,15 +243,11 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
     const target = mails.find((m) => m.id === id);
     if (!target) return;
 
-    const hasUnclaimedAttachments =
-      !target.claimedAt &&
-      (target.attachSilver > 0 ||
-        target.attachSpiritStones > 0 ||
-        (target.attachItems && target.attachItems.length > 0));
+    const targetHasUnclaimedAttachments = hasUnclaimedAttachments(target);
 
     modal.confirm({
       title: '删除邮件',
-      content: hasUnclaimedAttachments
+      content: targetHasUnclaimedAttachments
         ? '该邮件有未领取的附件，确认删除？删除后不可恢复。'
         : '确认删除该邮件？删除后不可恢复。',
       okText: '删除',
@@ -249,7 +265,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
             }
             // 更新计数
             if (!target.readAt) setUnreadCount((c) => Math.max(0, c - 1));
-            if (hasUnclaimedAttachments) setUnclaimedCount((c) => Math.max(0, c - 1));
+            if (targetHasUnclaimedAttachments) setUnclaimedCount((c) => Math.max(0, c - 1));
             message.success('邮件已删除');
           }
         } catch {
@@ -258,10 +274,6 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
       },
     });
   };
-
-  // 判断是否有附件
-  const hasAttachments = (mail: MailDto) =>
-    mail.attachSilver > 0 || mail.attachSpiritStones > 0 || (mail.attachItems && mail.attachItems.length > 0);
 
   return (
     <Modal
@@ -307,14 +319,14 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
                     disabled={unreadCount === 0}
                   />
                 </Tooltip>
-                <Tooltip title="一键删除">
+                <Tooltip title="一键删除已读">
                   <Button
                     size="small"
                     type="text"
                     danger
                     icon={<DeleteOutlined />}
                     onClick={deleteAll}
-                    disabled={mails.length === 0}
+                    disabled={readMailCount === 0}
                   />
                 </Tooltip>
               </Space>
@@ -322,7 +334,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
             <div className="mail-list">
               {mails.map((m) => {
                 const isActive = m.id === safeActiveId;
-                const isUnread = !m.readAt;
+                const isUnread = !isMailRead(m);
                 const hasGift = hasAttachments(m);
                 const giftClaimed = hasGift && !!m.claimedAt;
                 return (
@@ -390,7 +402,7 @@ const MailModal: React.FC<MailModalProps> = ({ open, onClose }) => {
                 </div>
 
                 <div className="mail-detail-meta">
-                  <Tag color={activeMail.readAt ? 'default' : 'blue'}>{activeMail.readAt ? '已读' : '未读'}</Tag>
+                  <Tag color={isMailRead(activeMail) ? 'default' : 'blue'}>{isMailRead(activeMail) ? '已读' : '未读'}</Tag>
                   <Tag color="default">发件人：{activeMail.senderName}</Tag>
                   <Tag color="default">时间：{formatDateTimeToMinute(activeMail.createdAt)}</Tag>
                   {activeMail.expireAt && (

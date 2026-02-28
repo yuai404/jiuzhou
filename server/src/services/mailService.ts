@@ -9,7 +9,7 @@
  * 5. 删除邮件
  * 6. 批量操作
  */
-import { query, withTransaction, withTransactionAuto } from '../config/database.js';
+import { query, withTransactionAuto } from '../config/database.js';
 import { createItem } from './itemService.js';
 import { getInventoryInfoWithClient } from './inventory/index.js';
 import { recordCollectItemEvent } from './taskService.js';
@@ -109,6 +109,25 @@ const estimateRequiredSlots = async (
   }
 
   return slots;
+};
+
+const isBagCapacityMessage = (message: string): boolean => {
+  return message.includes('背包空间不足') || message.includes('背包已满');
+};
+
+const isSkippableClaimMessage = (message: string): boolean => {
+  return (
+    isBagCapacityMessage(message) ||
+    message === '邮件不存在' ||
+    message === '附件已领取' ||
+    message === '邮件已过期' ||
+    message === '该邮件没有附件'
+  );
+};
+
+const getAttachItemTotalQty = (items: MailAttachItem[] | null | undefined): number => {
+  if (!items || items.length === 0) return 0;
+  return items.reduce((sum, item) => sum + Math.max(0, Math.floor(Number(item.qty) || 0)), 0);
 };
 
 // ============================================
@@ -467,121 +486,95 @@ export const claimAttachments = async (
 export const claimAllAttachments = async (
   userId: number,
   characterId: number
-): Promise<{ success: boolean; message: string; claimedCount: number; rewards?: { silver: number; spiritStones: number; itemCount: number } }> => {
-  const collectCounts = new Map<string, number>();
-
+): Promise<{
+  success: boolean;
+  message: string;
+  claimedCount: number;
+  skippedCount?: number;
+  rewards?: { silver: number; spiritStones: number; itemCount: number };
+}> => {
   return await withTransactionAuto(async (client) => {
+    // 1. 获取所有可尝试领取的邮件（不做总量空间校验，改为逐封领取）
+    const mailsResult = await client.query(
+      `
+      SELECT id, attach_silver, attach_spirit_stones, attach_items
+      FROM mail
+      WHERE (recipient_character_id = $1 OR (recipient_user_id = $2 AND recipient_character_id IS NULL))
+        AND deleted_at IS NULL
+        AND claimed_at IS NULL
+        AND (attach_silver > 0 OR attach_spirit_stones > 0 OR attach_items IS NOT NULL)
+        AND (expire_at IS NULL OR expire_at > NOW())
+      ORDER BY created_at ASC, id ASC
+    `,
+      [characterId, userId],
+    );
 
-  // 1. 获取所有未领取的邮件
-  const mailsResult = await client.query(`
-    SELECT id, attach_silver, attach_spirit_stones, attach_items
-    FROM mail
-    WHERE (recipient_character_id = $1 OR (recipient_user_id = $2 AND recipient_character_id IS NULL))
-      AND deleted_at IS NULL
-      AND claimed_at IS NULL
-      AND (attach_silver > 0 OR attach_spirit_stones > 0 OR attach_items IS NOT NULL)
-      AND (expire_at IS NULL OR expire_at > NOW())
-    FOR UPDATE
-  `, [characterId, userId]);
-
-  if (mailsResult.rows.length === 0) {
-    return { success: true, message: '没有可领取的附件', claimedCount: 0 };
-  }
-
-  // 2. 计算总需空间
-  let totalItemSlots = 0;
-  const allAttachItems: MailAttachItem[] = [];
-  for (const mail of mailsResult.rows) {
-    if (mail.attach_items && mail.attach_items.length > 0) {
-      allAttachItems.push(...(mail.attach_items as MailAttachItem[]));
+    if (mailsResult.rows.length === 0) {
+      return { success: true, message: '没有可领取的附件', claimedCount: 0, skippedCount: 0 };
     }
-  }
-  if (allAttachItems.length > 0) {
-    totalItemSlots = await estimateRequiredSlots(client, allAttachItems);
-  }
 
-  // 3. 检查背包空间
-  if (totalItemSlots > 0) {
-    const inventoryInfo = await getInventoryInfoWithClient(characterId, client);
-    const freeSlots = inventoryInfo.bag_capacity - inventoryInfo.bag_used;
-    if (freeSlots < totalItemSlots) {
-      return { success: false, message: `背包空间不足，需要${totalItemSlots}格，当前剩余${freeSlots}格`, claimedCount: 0 };
-    }
-  }
+    let claimedCount = 0;
+    let skippedCount = 0;
+    let totalSilver = 0;
+    let totalSpiritStones = 0;
+    let totalItemCount = 0;
 
-  // 4. 汇总货币
-  let totalSilver = 0;
-  let totalSpiritStones = 0;
-  let totalItemCount = 0;
-  const mailIds: number[] = [];
+    for (const row of mailsResult.rows) {
+      const mailId = Number(row.id);
+      const attachItems = Array.isArray(row.attach_items) ? (row.attach_items as MailAttachItem[]) : [];
+      const hasCurrency = Number(row.attach_silver) > 0 || Number(row.attach_spirit_stones) > 0;
+      const hasItems = attachItems.length > 0;
+      if (!hasCurrency && !hasItems) continue;
 
-  for (const mail of mailsResult.rows) {
-    totalSilver += mail.attach_silver || 0;
-    totalSpiritStones += mail.attach_spirit_stones || 0;
-    if (mail.attach_items) {
-      for (const item of mail.attach_items as MailAttachItem[]) {
-        totalItemCount += item.qty;
-      }
-    }
-    mailIds.push(mail.id);
-  }
+      const claimResult = await claimAttachments(userId, characterId, mailId);
 
-  // 5. 发放货币
-  if (totalSilver > 0 || totalSpiritStones > 0) {
-    await client.query(`
-      UPDATE characters 
-      SET silver = silver + $1, spirit_stones = spirit_stones + $2, updated_at = NOW()
-      WHERE id = $3
-    `, [totalSilver, totalSpiritStones, characterId]);
-  }
-
-  // 6. 发放物品
-  for (const mail of mailsResult.rows) {
-    if (mail.attach_items && mail.attach_items.length > 0) {
-      for (const attachItem of mail.attach_items as MailAttachItem[]) {
-        const createResult = await createItem(
-          userId,
-          characterId,
-          attachItem.item_def_id,
-          attachItem.qty,
-          {
-            location: 'bag',
-            bindType: attachItem.options?.bindType,
-            obtainedFrom: 'mail',
-            equipOptions: attachItem.options?.equipOptions,
-            dbClient: client
-          }
-        );
-
-        if (!createResult.success) {
-          return { success: false, message: `物品创建失败: ${createResult.message}`, claimedCount: 0 };
+      if (!claimResult.success) {
+        if (isBagCapacityMessage(claimResult.message)) {
+          skippedCount += 1;
+          continue;
         }
-
-        const key = String(attachItem.item_def_id || '').trim();
-        if (key) collectCounts.set(key, (collectCounts.get(key) || 0) + Math.max(1, Math.floor(Number(attachItem.qty) || 1)));
+        if (isSkippableClaimMessage(claimResult.message)) {
+          continue;
+        }
+        throw new Error(`批量领取失败(mailId=${mailId}): ${claimResult.message}`);
       }
+
+      claimedCount += 1;
+      totalSilver += Math.max(0, Math.floor(Number(claimResult.rewards?.silver) || 0));
+      totalSpiritStones += Math.max(0, Math.floor(Number(claimResult.rewards?.spiritStones) || 0));
+      totalItemCount += getAttachItemTotalQty(attachItems);
     }
-  }
 
-  // 7. 批量更新邮件状态
-  await client.query(`
-    UPDATE mail 
-    SET claimed_at = NOW(), read_at = COALESCE(read_at, NOW()), updated_at = NOW()
-    WHERE id = ANY($1)
-  `, [mailIds]);
+    if (claimedCount === 0) {
+      if (skippedCount > 0) {
+        return {
+          success: true,
+          message: `背包空间不足，${skippedCount}封邮件附件未领取`,
+          claimedCount: 0,
+          skippedCount,
+        };
+      }
+      return { success: true, message: '没有可领取的附件', claimedCount: 0, skippedCount: 0 };
+    }
 
-  for (const [itemDefId, qty] of collectCounts.entries()) {
-    await recordCollectItemEvent(characterId, itemDefId, qty);
-  }
+    if (skippedCount > 0) {
+      return {
+        success: true,
+        message: `成功领取${claimedCount}封邮件附件，${skippedCount}封因背包空间不足未领取`,
+        claimedCount,
+        skippedCount,
+        rewards: { silver: totalSilver, spiritStones: totalSpiritStones, itemCount: totalItemCount },
+      };
+    }
 
-  return {
-    success: true,
-    message: `成功领取${mailIds.length}封邮件附件`,
-    claimedCount: mailIds.length,
-    rewards: { silver: totalSilver, spiritStones: totalSpiritStones, itemCount: totalItemCount }
-  };
+    return {
+      success: true,
+      message: `成功领取${claimedCount}封邮件附件`,
+      claimedCount,
+      skippedCount: 0,
+      rewards: { silver: totalSilver, spiritStones: totalSpiritStones, itemCount: totalItemCount },
+    };
   });
-
 };
 
 // ============================================
