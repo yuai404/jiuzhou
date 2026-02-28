@@ -231,11 +231,23 @@ export const updateCharacterPosition = async (
     if (Number.isFinite(characterId) && characterId > 0) {
       try {
         await updateSectionProgress(characterId, { type: 'reach', roomId });
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
       try {
         await updateAchievementProgress(characterId, `map:discover:${mapId}`, 1);
         await updateAchievementProgress(characterId, `room:reach:${roomId}`, 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
     }
 
     return { success: true, message: '位置更新成功' };

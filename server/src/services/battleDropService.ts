@@ -683,7 +683,14 @@ export const distributeBattleRewards = async (
     for (const entry of collectCounts.values()) {
       try {
         await recordCollectItemEvent(entry.characterId, entry.itemDefId, entry.qty);
-      } catch {}
+      } catch (error) {
+        // 记录成就/主线失败不应该影响战斗奖励发放
+        // 但如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('记录收集物品事件失败:', error);
+      }
     }
 
     for (const [receiverCharacterId, entry] of pendingMailByReceiver.entries()) {

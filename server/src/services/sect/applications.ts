@@ -88,7 +88,13 @@ export const applyToSect = async (characterId: number, sectId: string, message?:
         await addLogTx(client, sectId, 'join', characterId, null, '加入宗门（开放加入）');
   try {
           await updateAchievementProgress(characterId, 'sect:join', 1);
-        } catch {}
+        } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
         return { success: true, message: '加入成功' };
       }
   
@@ -279,7 +285,13 @@ export const handleApplication = async (operatorId: number, applicationId: numbe
       await addLogTx(client, me.sectId, 'approve', operatorId, app.character_id, '通过入门申请');
   try {
         await updateAchievementProgress(app.character_id, 'sect:join', 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
       return { success: true, message: '已通过' };
     });
   } catch (error) {

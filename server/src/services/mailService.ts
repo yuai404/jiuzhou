@@ -466,7 +466,13 @@ export const claimAttachments = async (
     for (const [itemDefId, qty] of collectCounts.entries()) {
       try {
         await recordCollectItemEvent(characterId, itemDefId, qty);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
     }
 
     return { success: true, message: '领取成功', rewards };
@@ -595,7 +601,13 @@ export const claimAllAttachments = async (
     for (const [itemDefId, qty] of collectCounts.entries()) {
       try {
         await recordCollectItemEvent(characterId, itemDefId, qty);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
     }
 
     return {

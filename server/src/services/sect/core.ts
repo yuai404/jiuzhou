@@ -94,7 +94,13 @@ export const createSect = async (characterId: number, name: string, description?
       await upsertLogTx(client, sectId, 'create', characterId, null, `创建宗门：${name}`);
   try {
         await updateAchievementProgress(characterId, 'sect:join', 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
       return { success: true, message: '创建成功', sectId };
     });
   } catch (error) {

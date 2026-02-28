@@ -191,7 +191,13 @@ const pickFirstExistingPath = async (
     try {
       const s = await stat(p);
       if (s.isFile()) return p;
-    } catch {}
+    } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
   }
   return null;
 };
@@ -1230,7 +1236,13 @@ export const breakthroughToNextRealm = async (
       }
       try {
         await updateAchievementProgress(characterId, `realm:reach:${bt.to}`, 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
 
       const spentItems = costsBuilt.items.map((x) => {
         const meta = itemMap[x.itemDefId];

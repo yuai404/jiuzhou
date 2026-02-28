@@ -298,7 +298,13 @@ export const createTeam = async (characterId: number, name?: string, goal?: stri
     try {
       await updateAchievementProgress(characterId, 'team:create', 1);
       await updateAchievementProgress(characterId, 'team:join', 1);
-    } catch {}
+    } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
 
     return {
       success: true,
@@ -481,7 +487,13 @@ export const applyToTeam = async (characterId: number, teamId: string, message?:
       await notifyTeamMembersChanged(teamId, [characterId], 'auto_join');
       try {
         await updateAchievementProgress(characterId, 'team:join', 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
       return { success: true, message: '已自动加入队伍', autoJoined: true };
     }
 
@@ -615,7 +627,13 @@ export const handleApplication = async (characterId: number, applicationId: stri
 
       try {
         await updateAchievementProgress(Number(app.applicant_id), 'team:join', 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
 
       return { success: true, message: '已通过申请' };
     } else {

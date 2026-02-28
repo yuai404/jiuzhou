@@ -672,7 +672,13 @@ export const upgradeTechnique = async (
         await updateAchievementProgress(characterId, 'skill:level:any', 1);
         await updateAchievementProgress(characterId, `skill:level:layer:${nextLayer}`, 1);
         await updateAchievementProgress(characterId, `skill:level:${techniqueId}`, 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
   
       return {
         success: true,

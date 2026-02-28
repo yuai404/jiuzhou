@@ -1176,7 +1176,13 @@ export const gatherRoomResource = async (params: {
       }
   try {
         await recordGatherResourceEvent(characterId, resourceId, 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
       return {
         success: true,
         message: '采集成功',
@@ -1332,7 +1338,13 @@ export const pickupRoomItem = async (params: {
       }
   try {
         await recordGatherResourceEvent(characterId, itemDefId, 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
       return { success: true, message: '拾取成功', data: { itemDefId, qty: 1 } };
     });
   } catch (error) {

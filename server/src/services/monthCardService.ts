@@ -246,7 +246,13 @@ export const useMonthCardItem = async (
       }
   try {
         await updateAchievementProgress(characterId, 'monthcard:activate', 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
   
       const daysLeft = Math.max(0, Math.ceil((nextExpireAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
       return {
@@ -327,7 +333,13 @@ export const buyMonthCard = async (userId: number, monthCardId: string): Promise
       }
   try {
         await updateAchievementProgress(characterId, 'monthcard:activate', 1);
-      } catch {}
+      } catch (error) {
+        // 如果是事务中止错误，必须重新抛出
+        if (error && typeof error === 'object' && 'code' in error && error.code === '25P02') {
+          throw error;
+        }
+        console.warn('操作失败（已忽略）:', error);
+      }
   
       const daysLeft = Math.max(0, Math.ceil((expireAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
       return {
