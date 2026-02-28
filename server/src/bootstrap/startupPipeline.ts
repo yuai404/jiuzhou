@@ -1,13 +1,16 @@
 import type { Server as HttpServer } from 'http';
+import { cpus } from 'os';
 import { testConnection, pool } from '../config/database.js';
 import { closeRedis, testRedisConnection } from '../config/redis.js';
 import { initTables } from '../models/initTables.js';
 import { initGameTimeService, stopGameTimeService } from '../services/gameTimeService.js';
 import { recoverBattlesFromRedis } from '../domains/battle/index.js';
 import { cleanupUndefinedItemDataOnStartup } from '../services/itemDataCleanupService.js';
-import { recoverActiveIdleSessions, flushAllBuffers, stopAllExecutionLoops } from '../services/idle/idleBattleExecutor.js';
+import { recoverActiveIdleSessions, flushAllBuffers, stopAllExecutionLoops } from '../services/idle/idleBattleExecutorWorker.js';
 import { initArenaWeeklySettlementService, stopArenaWeeklySettlementService } from '../services/arenaWeeklySettlementService.js';
 import { stopBattleService } from '../services/battle/index.js';
+import { initializeWorkerPool, shutdownWorkerPool } from '../workers/workerPool.js';
+import { getMonsterDefinitions, getSkillDefinitions } from '../services/staticConfigLoader.js';
 
 export interface StartServerOptions {
   httpServer: HttpServer;
@@ -33,6 +36,26 @@ export const startServerWithPipeline = async (options: StartServerOptions): Prom
 
   await initTables();
   await cleanupUndefinedItemDataOnStartup();
+
+  // 初始化 Worker 池
+  console.log('正在初始化 Worker 池...');
+  const cpuCount = cpus().length;
+  const workerCount = process.env.IDLE_WORKER_COUNT
+    ? parseInt(process.env.IDLE_WORKER_COUNT, 10)
+    : Math.max(1, cpuCount - 1);
+
+  const monsterDefs = new Map(getMonsterDefinitions().map((m) => [m.id, m]));
+  const skillDefs = new Map(getSkillDefinitions().map((s) => [s.id, s]));
+
+  console.log(`  - CPU 核心数: ${cpuCount}，启动 ${workerCount} 个 Worker`);
+  console.log(`  - 加载 ${monsterDefs.size} 个怪物定义，${skillDefs.size} 个技能定义`);
+
+  await initializeWorkerPool({
+    workerCount,
+    workerData: { monsterDefs, skillDefs },
+  });
+  console.log(`✓ Worker 池已就绪（${workerCount} 个 Worker）\n`);
+
   await initGameTimeService();
   await initArenaWeeklySettlementService();
 
@@ -79,14 +102,18 @@ export const registerGracefulShutdown = (httpServer: HttpServer): void => {
     stopAllExecutionLoops();
     console.log('✓ 挂机执行循环已停止');
 
-    // 3. 等待现有操作完成（给一点时间让正在执行的操作完成）
+    // 3. 关闭 Worker 池
+    await shutdownWorkerPool();
+    console.log('✓ Worker 池已关闭');
+
+    // 4. 等待现有操作完成（给一点时间让正在执行的操作完成）
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // 4. 刷新所有缓冲区
+    // 5. 刷新所有缓冲区
     await flushAllBuffers();
     console.log('✓ 挂机缓冲区已刷写');
 
-    // 5. 关闭外部连接
+    // 6. 关闭外部连接
     await closeRedis();
     console.log('✓ Redis 连接已关闭');
 

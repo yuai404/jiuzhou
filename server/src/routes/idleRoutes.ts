@@ -36,7 +36,7 @@ import {
   getSessionBatches,
   markSessionViewed,
 } from '../services/idle/idleSessionService.js';
-import { startExecutionLoop } from '../services/idle/idleBattleExecutor.js';
+import { startExecutionLoop } from '../services/idle/idleBattleExecutorWorker.js';
 import { validateAutoSkillPolicy, serializeAutoSkillPolicy } from '../services/idle/autoSkillPolicyCodec.js';
 import { query } from '../config/database.js';
 import { getRoomInMap } from '../services/mapService.js';
