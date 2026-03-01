@@ -621,13 +621,15 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     const handleCooldownReady = (event: Event) => {
       const customEvent = event as CustomEvent<{ characterId: number; timestamp: number }>;
       const myCharacterId = gameSocket.getCharacter()?.id;
+      const currentState = battleStateRef.current;
+      const isFinishedWin = currentState?.phase === 'finished' && currentState.result === 'attacker_win';
 
       if (customEvent.detail.characterId === myCharacterId) {
         setWaitingForCooldown(false);
         setStartupStatus('none');
 
         // 自动触发下一场战斗
-        if (resolvedAllowAutoNext && result === 'win' && !resolvedExternalBattleId) {
+        if (resolvedAllowAutoNext && !onNext && isFinishedWin) {
           void startBattle(lastMonsterIdsRef.current, { retryOnCooldown: false, silentCooldown: true });
         }
       }
@@ -650,7 +652,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
       window.removeEventListener('battle:cooldown-ready', handleCooldownReady);
       window.removeEventListener('battle:cooldown-sync', handleCooldownSync);
     };
-  }, [resolvedAllowAutoNext, result, resolvedExternalBattleId, startBattle]);
+  }, [onNext, resolvedAllowAutoNext, startBattle]);
 
   useEffect(() => {
     if (!resolvedExternalBattleId) return;
@@ -733,7 +735,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
     clearAutoNextTimer();
 
     // 战斗结束后，设置等待服务端冷却推送状态
-    if (!onNext && !resolvedExternalBattleId) {
+    if (!onNext) {
       setWaitingForCooldown(true);
       setStartupStatus('cooldown');
       return;
