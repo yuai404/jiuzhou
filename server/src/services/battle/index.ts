@@ -59,6 +59,11 @@ import {
 } from '../staticConfigLoader.js';
 import { normalizeRealmKeepingUnknown } from '../shared/realmRules.js';
 import { idleSessionService } from '../idle/idleSessionService.js';
+import {
+  calculateArenaRatingDelta,
+  DEFAULT_ARENA_RATING,
+  type ArenaBattleOutcome,
+} from '../shared/arenaRatingDelta.js';
 
 // 活跃战斗缓存
 const activeBattles = new Map<string, BattleEngine>();
@@ -1959,7 +1964,11 @@ async function settleArenaBattleIfNeeded(
   );
   if (res.rows.length === 0) return;
 
-  const row = res.rows[0] as any;
+  const row = res.rows[0] as {
+    challenger_character_id?: unknown;
+    opponent_character_id?: unknown;
+    status?: unknown;
+  };
   if (String(row.status ?? '') === 'finished') return;
 
   const challengerCharacterId = Number(row.challenger_character_id);
@@ -1968,25 +1977,35 @@ async function settleArenaBattleIfNeeded(
   if (!Number.isFinite(opponentCharacterId) || opponentCharacterId <= 0) return;
 
   await query(
-    `INSERT INTO arena_rating(character_id, rating) VALUES ($1, 1000) ON CONFLICT (character_id) DO NOTHING`,
-    [challengerCharacterId]
+    `INSERT INTO arena_rating(character_id, rating) VALUES ($1, $2) ON CONFLICT (character_id) DO NOTHING`,
+    [challengerCharacterId, DEFAULT_ARENA_RATING]
   );
   await query(
-    `INSERT INTO arena_rating(character_id, rating) VALUES ($1, 1000) ON CONFLICT (character_id) DO NOTHING`,
-    [opponentCharacterId]
+    `INSERT INTO arena_rating(character_id, rating) VALUES ($1, $2) ON CONFLICT (character_id) DO NOTHING`,
+    [opponentCharacterId, DEFAULT_ARENA_RATING]
   );
 
   const challengerRatingRes = await query(`SELECT rating FROM arena_rating WHERE character_id = $1`, [challengerCharacterId]);
   const opponentRatingRes = await query(`SELECT rating FROM arena_rating WHERE character_id = $1`, [opponentCharacterId]);
-  const challengerBefore = Number(challengerRatingRes.rows?.[0]?.rating ?? 1000) || 1000;
-  const opponentBefore = Number(opponentRatingRes.rows?.[0]?.rating ?? 1000) || 1000;
+  const challengerBefore = Number(challengerRatingRes.rows?.[0]?.rating ?? DEFAULT_ARENA_RATING) || DEFAULT_ARENA_RATING;
+  const opponentBefore = Number(opponentRatingRes.rows?.[0]?.rating ?? DEFAULT_ARENA_RATING) || DEFAULT_ARENA_RATING;
 
-  const challengerOutcome = battleResult === 'attacker_win' ? 'win' : battleResult === 'defender_win' ? 'lose' : 'draw';
-  const challengerDelta = challengerOutcome === 'win' ? 10 : challengerOutcome === 'lose' ? -5 : 0;
+  const challengerOutcome: ArenaBattleOutcome =
+    battleResult === 'attacker_win' ? 'win' : battleResult === 'defender_win' ? 'lose' : 'draw';
+  const challengerDelta = calculateArenaRatingDelta({
+    selfRating: challengerBefore,
+    opponentRating: opponentBefore,
+    outcome: challengerOutcome,
+  });
   const challengerAfter = Math.max(0, challengerBefore + challengerDelta);
 
-  const opponentOutcome = challengerOutcome === 'win' ? 'lose' : challengerOutcome === 'lose' ? 'win' : 'draw';
-  const opponentDelta = opponentOutcome === 'win' ? 10 : opponentOutcome === 'lose' ? -5 : 0;
+  const opponentOutcome: ArenaBattleOutcome =
+    challengerOutcome === 'win' ? 'lose' : challengerOutcome === 'lose' ? 'win' : 'draw';
+  const opponentDelta = calculateArenaRatingDelta({
+    selfRating: opponentBefore,
+    opponentRating: challengerBefore,
+    outcome: opponentOutcome,
+  });
   const opponentAfter = Math.max(0, opponentBefore + opponentDelta);
 
   await query(

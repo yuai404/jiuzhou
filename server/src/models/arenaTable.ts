@@ -1,4 +1,5 @@
 import { query } from '../config/database.js';
+import { runDbMigrationOnce } from './migrationHistoryTable.js';
 
 const arenaRatingTableSQL = `
 CREATE TABLE IF NOT EXISTS arena_rating (
@@ -41,7 +42,7 @@ COMMENT ON COLUMN arena_battle.challenger_character_id IS '挑战者角色ID';
 COMMENT ON COLUMN arena_battle.opponent_character_id IS '被挑战者角色ID';
 COMMENT ON COLUMN arena_battle.status IS '状态（running进行中/finished已结算）';
 COMMENT ON COLUMN arena_battle.result IS '结果（win胜/lose败/draw平）';
-COMMENT ON COLUMN arena_battle.delta_score IS '积分变化（胜+10，败-5，最低0）';
+COMMENT ON COLUMN arena_battle.delta_score IS '挑战者积分变化（按双方分差与胜负动态计算）';
 COMMENT ON COLUMN arena_battle.score_before IS '结算前积分';
 COMMENT ON COLUMN arena_battle.score_after IS '结算后积分';
 COMMENT ON COLUMN arena_battle.created_at IS '创建时间';
@@ -80,9 +81,22 @@ CREATE INDEX IF NOT EXISTS idx_arena_weekly_settlement_settled_at
   ON arena_weekly_settlement(settled_at DESC);
 `;
 
+const migrateArenaDeltaScoreComment = async (): Promise<void> => {
+  await runDbMigrationOnce({
+    migrationKey: 'arena_battle_delta_score_dynamic_comment_v1',
+    description: '更新 arena_battle.delta_score 注释为动态计分描述',
+    execute: async () => {
+      await query(`
+        COMMENT ON COLUMN arena_battle.delta_score IS '挑战者积分变化（按双方分差与胜负动态计算）'
+      `);
+    },
+  });
+};
+
 export const initArenaTables = async (): Promise<void> => {
   await query(arenaRatingTableSQL);
   await query(arenaBattleTableSQL);
   await query(arenaWeeklySettlementTableSQL);
+  await migrateArenaDeltaScoreComment();
   console.log('✓ 竞技场系统表检测完成');
 };
