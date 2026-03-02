@@ -1850,6 +1850,100 @@ async function getTeamMembersData(
   };
 }
 
+type TeamBattleMember = { data: CharacterData; skills: SkillData[] };
+
+type TeamBattlePreparationResult =
+  | {
+      success: true;
+      validTeamMembers: TeamBattleMember[];
+      participantUserIds: number[];
+    }
+  | { success: false; result: BattleResult };
+
+type TeamBattlePreparationOptions = {
+  ignoreMemberCooldown: boolean;
+};
+
+async function prepareTeamBattleParticipants(
+  userId: number,
+  selfCharacterId: number,
+  options: TeamBattlePreparationOptions,
+): Promise<TeamBattlePreparationResult> {
+  const teamInfo = await getTeamMembersData(userId, selfCharacterId);
+  if (teamInfo.isInTeam && !teamInfo.isLeader) {
+    return {
+      success: false,
+      result: { success: false, message: "组队中只有队长可以发起战斗" },
+    };
+  }
+
+  const validTeamMembers: TeamBattleMember[] = [];
+  const participantUserIds: number[] = [userId];
+
+  if (!teamInfo.isInTeam || teamInfo.members.length === 0) {
+    return { success: true, validTeamMembers, participantUserIds };
+  }
+
+  for (const member of teamInfo.members) {
+    const memberCharacterId = Number((member.data as any)?.id);
+    if (
+      Number.isFinite(memberCharacterId) &&
+      memberCharacterId > 0 &&
+      isCharacterInBattle(memberCharacterId)
+    ) {
+      continue;
+    }
+    if (
+      !options.ignoreMemberCooldown &&
+      Number.isFinite(memberCharacterId) &&
+      memberCharacterId > 0 &&
+      getBattleStartCooldownRemainingMs(memberCharacterId) > 0
+    ) {
+      continue;
+    }
+    if (member.data.qixue <= 0) continue;
+
+    validTeamMembers.push({
+      ...member,
+      data: withBattleStartResources(member.data),
+    });
+    participantUserIds.push(member.data.user_id);
+  }
+
+  return { success: true, validTeamMembers, participantUserIds };
+}
+
+const buildBattleStartCooldownResult = (
+  cooldown: BattleStartCooldownValidation,
+  reason: string,
+  message?: string,
+): BattleResult => ({
+  success: false,
+  message: message ?? cooldown.message,
+  data: {
+    reason,
+    retryAfterMs: cooldown.retryAfterMs,
+    battleStartCooldownMs: cooldown.cooldownMs,
+    nextBattleAvailableAt: cooldown.nextBattleAvailableAt,
+  },
+});
+
+function registerStartedBattle(
+  battleId: string,
+  engine: BattleEngine,
+  participantUserIds: number[],
+): void {
+  engine.startBattle();
+  activeBattles.set(battleId, engine);
+  battleParticipants.set(battleId, participantUserIds);
+  emitBattleUpdate(battleId, {
+    kind: "battle_started",
+    battleId,
+    state: engine.getState(),
+  });
+  startBattleTicker(battleId);
+}
+
 /**
  * 发起PVE战斗（支持组队）
  */
@@ -1884,16 +1978,10 @@ export async function startPVEBattle(
     if (selfInBattleResult) return selfInBattleResult;
     const selfCooldown = validateBattleStartCooldown(characterId);
     if (selfCooldown) {
-      return {
-        success: false,
-        message: selfCooldown.message,
-        data: {
-          reason: "battle_start_cooldown",
-          retryAfterMs: selfCooldown.retryAfterMs,
-          battleStartCooldownMs: selfCooldown.cooldownMs,
-          nextBattleAvailableAt: selfCooldown.nextBattleAvailableAt,
-        },
-      };
+      return buildBattleStartCooldownResult(
+        selfCooldown,
+        "battle_start_cooldown",
+      );
     }
     const character = withBattleStartResources(characterWithSetBonus);
 
@@ -1931,46 +2019,13 @@ export async function startPVEBattle(
 
     const playerSkills = await getCharacterBattleSkillData(characterId);
 
-    // 检查是否在队伍中，获取队友数据
-    const teamInfo = await getTeamMembersData(userId, character.id);
-    if (teamInfo.isInTeam && !teamInfo.isLeader) {
-      return { success: false, message: "组队中只有队长可以发起战斗" };
-    }
-
-    // 如果在队伍中，检查队友状态
-    const validTeamMembers: Array<{
-      data: CharacterData;
-      skills: SkillData[];
-    }> = [];
-    const participantUserIds: number[] = [userId];
-
-    if (teamInfo.isInTeam && teamInfo.members.length > 0) {
-      for (const member of teamInfo.members) {
-        const memberCharacterId = Number((member.data as any)?.id);
-        if (
-          Number.isFinite(memberCharacterId) &&
-          memberCharacterId > 0 &&
-          isCharacterInBattle(memberCharacterId)
-        ) {
-          continue;
-        }
-        if (
-          Number.isFinite(memberCharacterId) &&
-          memberCharacterId > 0 &&
-          getBattleStartCooldownRemainingMs(memberCharacterId) > 0
-        ) {
-          continue;
-        }
-        // 检查队友气血
-        if (member.data.qixue > 0) {
-          validTeamMembers.push({
-            ...member,
-            data: withBattleStartResources(member.data),
-          });
-          participantUserIds.push(member.data.user_id);
-        }
-      }
-    }
+    const preparedTeam = await prepareTeamBattleParticipants(
+      userId,
+      character.id,
+      { ignoreMemberCooldown: false },
+    );
+    if (!preparedTeam.success) return preparedTeam.result;
+    const { validTeamMembers, participantUserIds } = preparedTeam;
 
     await syncBattleStartResourcesForUsers(participantUserIds, {
       context: "同步战前资源（普通战斗）",
@@ -2019,24 +2074,8 @@ export async function startPVEBattle(
       validTeamMembers.length > 0 ? validTeamMembers : undefined,
     );
 
-    // 创建战斗引擎
     const engine = new BattleEngine(battleState);
-
-    // 开始战斗
-    engine.startBattle();
-
-    // 缓存战斗
-    activeBattles.set(battleId, engine);
-    // 记录战斗参与者
-    battleParticipants.set(battleId, participantUserIds);
-    // 先 emit battle_started 再启动 ticker，确保 battle_started 始终先于
-    // tickBattle 产生的 battle_state 到达客户端，避免日志重复推送。
-    emitBattleUpdate(battleId, {
-      kind: "battle_started",
-      battleId,
-      state: engine.getState(),
-    });
-    startBattleTicker(battleId);
+    registerStartedBattle(battleId, engine, participantUserIds);
 
     return {
       success: true,
@@ -2181,16 +2220,10 @@ export async function startDungeonPVEBattle(
     if (!options?.skipCooldown) {
       const selfCooldown = validateBattleStartCooldown(characterId);
       if (selfCooldown) {
-        return {
-          success: false,
-          message: selfCooldown.message,
-          data: {
-            reason: "battle_start_cooldown",
-            retryAfterMs: selfCooldown.retryAfterMs,
-            battleStartCooldownMs: selfCooldown.cooldownMs,
-            nextBattleAvailableAt: selfCooldown.nextBattleAvailableAt,
-          },
-        };
+        return buildBattleStartCooldownResult(
+          selfCooldown,
+          "battle_start_cooldown",
+        );
       }
     }
     const character = withBattleStartResources(characterWithSetBonus);
@@ -2204,45 +2237,13 @@ export async function startDungeonPVEBattle(
 
     const playerSkills = await getCharacterBattleSkillData(characterId);
 
-    const teamInfo = await getTeamMembersData(userId, character.id);
-    if (teamInfo.isInTeam && !teamInfo.isLeader) {
-      return { success: false, message: "组队中只有队长可以发起战斗" };
-    }
-
-    const validTeamMembers: Array<{
-      data: CharacterData;
-      skills: SkillData[];
-    }> = [];
-    const participantUserIds: number[] = [userId];
-    if (teamInfo.isInTeam && teamInfo.members.length > 0) {
-      for (const member of teamInfo.members) {
-        const memberCharacterId = Number((member.data as any)?.id);
-        if (
-          Number.isFinite(memberCharacterId) &&
-          memberCharacterId > 0 &&
-          isCharacterInBattle(memberCharacterId)
-        ) {
-          continue;
-        }
-        // 秘境战斗跳过冷却检查：秘境是连续波次战斗，队友不应因冷却被过滤
-        if (!options?.skipCooldown) {
-          if (
-            Number.isFinite(memberCharacterId) &&
-            memberCharacterId > 0 &&
-            getBattleStartCooldownRemainingMs(memberCharacterId) > 0
-          ) {
-            continue;
-          }
-        }
-        if (member.data.qixue > 0) {
-          validTeamMembers.push({
-            ...member,
-            data: withBattleStartResources(member.data),
-          });
-          participantUserIds.push(member.data.user_id);
-        }
-      }
-    }
+    const preparedTeam = await prepareTeamBattleParticipants(
+      userId,
+      character.id,
+      { ignoreMemberCooldown: Boolean(options?.skipCooldown) },
+    );
+    if (!preparedTeam.success) return preparedTeam.result;
+    const { validTeamMembers, participantUserIds } = preparedTeam;
 
     await syncBattleStartResourcesForUsers(participantUserIds, {
       queryExecutor: options?.resourceSyncClient,
@@ -2274,17 +2275,7 @@ export async function startDungeonPVEBattle(
     );
 
     const engine = new BattleEngine(battleState);
-    engine.startBattle();
-    activeBattles.set(battleId, engine);
-    battleParticipants.set(battleId, participantUserIds);
-
-    // 先 emit battle_started 再启动 ticker，避免日志重复推送
-    emitBattleUpdate(battleId, {
-      kind: "battle_started",
-      battleId,
-      state: engine.getState(),
-    });
-    startBattleTicker(battleId);
+    registerStartedBattle(battleId, engine, participantUserIds);
 
     return {
       success: true,
@@ -2360,30 +2351,19 @@ export async function startPVPBattle(
       challengerCharacterId,
     );
     if (challengerCooldown) {
-      return {
-        success: false,
-        message: challengerCooldown.message,
-        data: {
-          reason: "battle_start_cooldown",
-          retryAfterMs: challengerCooldown.retryAfterMs,
-          battleStartCooldownMs: challengerCooldown.cooldownMs,
-          nextBattleAvailableAt: challengerCooldown.nextBattleAvailableAt,
-        },
-      };
+      return buildBattleStartCooldownResult(
+        challengerCooldown,
+        "battle_start_cooldown",
+      );
     }
     if (!isArenaBattle) {
       const opponentCooldown = validateBattleStartCooldown(oppId);
       if (opponentCooldown) {
-        return {
-          success: false,
-          message: "对手刚结束战斗，暂时无法发起挑战",
-          data: {
-            reason: "opponent_battle_start_cooldown",
-            retryAfterMs: opponentCooldown.retryAfterMs,
-            battleStartCooldownMs: opponentCooldown.cooldownMs,
-            nextBattleAvailableAt: opponentCooldown.nextBattleAvailableAt,
-          },
-        };
+        return buildBattleStartCooldownResult(
+          opponentCooldown,
+          "opponent_battle_start_cooldown",
+          "对手刚结束战斗，暂时无法发起挑战",
+        );
       }
     }
 
@@ -2421,20 +2401,11 @@ export async function startPVPBattle(
     );
 
     const engine = new BattleEngine(battleState);
-    engine.startBattle();
-    activeBattles.set(finalBattleId, engine);
-    battleParticipants.set(
+    registerStartedBattle(
       finalBattleId,
+      engine,
       isArenaBattle ? [userId] : [userId, opponentUserId],
     );
-
-    // 先 emit battle_started 再启动 ticker，避免日志重复推送
-    emitBattleUpdate(finalBattleId, {
-      kind: "battle_started",
-      battleId: finalBattleId,
-      state: engine.getState(),
-    });
-    startBattleTicker(finalBattleId);
 
     return {
       success: true,
