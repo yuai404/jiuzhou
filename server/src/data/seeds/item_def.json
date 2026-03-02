@@ -1985,7 +1985,7 @@
       "stack_max": 999,
       "bind_type": "none",
       "tradeable": true,
-      "icon": "/assets/items/kuangshi_jinghua.png",
+      "icon": "/assets/items/lingmai-jingshi.png",
       "description": "灵脉矿渊深层孕育的高纯灵石精华，是炼己期装备锻造与强化核心材料。",
       "long_desc": "矿脉在高压灵潮中结晶形成的精石，蕴含稳定而浓郁的土属性灵能，可显著提升装备承载强度。",
       "tags": [
@@ -2123,7 +2123,7 @@
       "stack_max": 999,
       "bind_type": "none",
       "tradeable": true,
-      "icon": "/assets/items/kuangshi_jinghua.png",
+      "icon": "/assets/items/jiutai-jinghua.png",
       "description": "九台阵核析出的高纯灵质，常用于采药后段与结胎期装备锻铸。",
       "long_desc": "该精华兼具稳定性与承压性，是高阶套装部件与结胎期法宝的关键底材。",
       "tags": [
@@ -2146,7 +2146,7 @@
       "stack_max": 999,
       "bind_type": "none",
       "tradeable": true,
-      "icon": "/assets/items/lianji_dan.png",
+      "icon": "/assets/items/jietai_dan.png",
       "description": "用于采药期冲击结胎期的核心丹药，可显著降低灵压崩解风险。",
       "long_desc": "药性以稳神、聚息、护脉为主，常与胎元晶魄配合用于结胎仪式。",
       "tags": [
@@ -2229,7 +2229,7 @@
       "stack_max": 999,
       "bind_type": "none",
       "tradeable": true,
-      "icon": "/assets/items/lianji_dan.png",
+      "icon": "/assets/items/yangshen_dan.png",
       "description": "用于结胎期冲击养神期的核心丹药，可显著降低神魂崩散风险。",
       "long_desc": "药性以凝神、聚魂、护识为主，常与神魂凝晶配合用于养神仪式。",
       "tags": [
