@@ -864,10 +864,6 @@ function resolveMonsterRuntime(
     }
     const summonCountRaw = toNumber(triggerRaw.summon_count);
     const summonCount = summonCountRaw === null ? 1 : Math.max(1, Math.floor(summonCountRaw));
-    if (summonCount !== 1) {
-      resolvingPath.delete(monsterId);
-      return { success: false, error: `怪物[${monsterId}] 第${i + 1}条召唤触发仅支持summon_count=1` };
-    }
     const summonResult = resolveMonsterRuntime(
       summonMonsterId,
       monsterDefMap,
