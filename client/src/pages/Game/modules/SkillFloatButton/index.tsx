@@ -414,6 +414,11 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       const kind = String(data?.kind ?? '');
       const state = data?.state ?? data?.data?.state;
       if (!state) return;
+      // battle_started 表示新战斗开始（含秘境波次切换），需清除旧 battleId
+      // 以便 syncFromState 能接受新战斗的 skillCooldowns（为 {}，即重置所有冷却）
+      if (kind === 'battle_started') {
+        lastBattleIdRef.current = null;
+      }
       if (kind === 'battle_started' || kind === 'battle_state' || kind === 'battle_finished') {
         syncFromState(state);
       }
