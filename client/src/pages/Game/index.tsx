@@ -43,6 +43,7 @@ import {
   getAchievementList,
   getMySect,
   getMySectApplications,
+  getMailUnread,
   getSectApplications,
   nextDungeonInstance,
   startDungeonInstance,
@@ -671,6 +672,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const [realmModalOpen, setRealmModalOpen] = useState(false);
   const [signInModalOpen, setSignInModalOpen] = useState(false);
   const [showSignInDot, setShowSignInDot] = useState(false);
+  const [showMailDot, setShowMailDot] = useState(false);
   const [mailModalOpen, setMailModalOpen] = useState(false);
   const [settingModalOpen, setSettingModalOpen] = useState(false);
   // 挂机面板 Modal 开关
@@ -1509,6 +1511,44 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     return () => window.clearTimeout(t);
   }, [refreshSignInDot]);
 
+  /**
+   * 刷新邮箱未读红点。
+   *
+   * 设计说明：
+   * - 顶部入口只展示“未读邮件”状态，不复用附件未领计数，避免红点语义混淆。
+   * - 统一通过 `/mail/unread` 读取，避免在主界面重复拉取整页邮件列表。
+   */
+  const refreshMailDot = useCallback(async () => {
+    try {
+      const res = await getMailUnread();
+      if (!res.success || !res.data) {
+        setShowMailDot(false);
+        return;
+      }
+      const unreadCount = Math.max(0, Math.floor(Number(res.data.unreadCount) || 0));
+      setShowMailDot(unreadCount > 0);
+    } catch {
+      setShowMailDot(false);
+    }
+  }, []);
+
+  // 进入游戏后立即拉取一次邮件红点状态。
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void refreshMailDot();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [refreshMailDot]);
+
+  // 轻量轮询，确保不打开邮箱时也能看到新邮件红点。
+  useEffect(() => {
+    if (!characterId) return;
+    const timer = window.setInterval(() => {
+      void refreshMailDot();
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [characterId, refreshMailDot]);
+
   const refreshAchievementIndicator = useCallback(async () => {
     try {
       const res = await getAchievementList({ status: 'claimable', page: 1, limit: 1 });
@@ -1684,13 +1724,15 @@ const Game: FC<GameProps> = ({ onLogout }) => {
               onClick={() => setSignInModalOpen(true)}
             />
           </Badge>
-          <Button
-            className="game-header-icon-btn"
-            type="text"
-            icon={<MailOutlined />}
-            aria-label="邮箱"
-            onClick={() => setMailModalOpen(true)}
-          />
+          <Badge dot={showMailDot} offset={[-2, 2]}>
+            <Button
+              className="game-header-icon-btn"
+              type="text"
+              icon={<MailOutlined />}
+              aria-label="邮箱"
+              onClick={() => setMailModalOpen(true)}
+            />
+          </Badge>
           <Button
             className="game-header-icon-btn"
             type="text"
@@ -2524,7 +2566,13 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         />
       )}
       {mailModalOpen && (
-        <MailModal open={mailModalOpen} onClose={() => setMailModalOpen(false)} />
+        <MailModal
+          open={mailModalOpen}
+          onClose={() => {
+            setMailModalOpen(false);
+            void refreshMailDot();
+          }}
+        />
       )}
       {settingModalOpen && (
         <SettingModal open={settingModalOpen} onClose={() => setSettingModalOpen(false)} />
