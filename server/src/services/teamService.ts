@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getGameServer } from '../game/gameServer.js';
 import { onUserJoinTeam, onUserLeaveTeam } from './battle/index.js';
 import { updateAchievementProgress } from './achievementService.js';
+import { idleSessionService } from './idle/idleSessionService.js';
 import { REALM_ORDER } from './shared/realmRules.js';
 
 /**
@@ -174,6 +175,34 @@ const updateTeamApplicationStatus = async (
 };
 
 /**
+ * 校验角色是否允许执行“入队写操作”（创建队伍/自动入队/通过申请/接受邀请）。
+ *
+ * 作用：
+ * - 统一收敛“挂机状态与组队状态互斥”的业务规则，避免在多个入队入口重复写查询逻辑。
+ *
+ * 输入/输出：
+ * - 输入：characterId（目标入队角色）
+ * - 输出：null（可继续）或错误对象（应直接 return）
+ *
+ * 数据流：
+ * - teamService 入队入口 -> assertCharacterCanJoinTeam -> idleSessionService.getActiveIdleCharacterIdSet
+ *   -> 若存在活跃挂机会话则拒绝入队写操作。
+ *
+ * 关键边界条件与坑点：
+ * 1) 仅判定 status IN ('active', 'stopping') 为挂机中；已结束会话不会阻塞入队。
+ * 2) 该校验不负责“自动停挂机”；命中后直接失败，避免引入隐式状态变更。
+ */
+const assertCharacterCanJoinTeam = async (
+  characterId: number
+): Promise<{ success: false; message: string } | null> => {
+  const activeIdleCharacterIdSet = await idleSessionService.getActiveIdleCharacterIdSet([characterId]);
+  if (activeIdleCharacterIdSet.has(characterId)) {
+    return { success: false, message: '离线挂机中，无法进行组队操作' };
+  }
+  return null;
+};
+
+/**
  * 获取角色当前队伍
  */
 export const getCharacterTeam = async (characterId: number) => {
@@ -270,6 +299,9 @@ export const getTeamById = async (teamId: string) => {
  * 创建队伍
  */
 export const createTeam = async (characterId: number, name?: string, goal?: string) => {
+  const joinGuard = await assertCharacterCanJoinTeam(characterId);
+  if (joinGuard) return joinGuard;
+
   // 检查角色是否已在队伍中
   const existingMember = await query(
     `SELECT team_id FROM team_members WHERE character_id = $1`,
@@ -472,6 +504,9 @@ export const applyToTeam = async (characterId: number, teamId: string, message?:
 
   // 自动入队检查
   if (team.auto_join_enabled && isRealmSufficient(charRealm, team.auto_join_min_realm)) {
+    const joinGuard = await assertCharacterCanJoinTeam(characterId);
+    if (joinGuard) return joinGuard;
+
     // 直接加入队伍
     const userIds = await getUserIdsByCharacterIds([characterId]);
     const userId = Number(userIds?.[0]);
@@ -584,6 +619,11 @@ export const handleApplication = async (characterId: number, applicationId: stri
     if (existingMember.rows.length > 0) {
       await updateTeamApplicationStatus(applicationId, app.team_id, applicantId, 'rejected');
       return { success: false, message: '该玩家已加入其他队伍' };
+    }
+
+    const joinGuard = await assertCharacterCanJoinTeam(applicantId);
+    if (joinGuard) {
+      return joinGuard;
     }
 
     // 添加成员
@@ -1007,6 +1047,11 @@ export const handleInvitation = async (characterId: number, invitationId: string
         [invitationId]
       );
       return { success: false, message: '队伍已满' };
+    }
+
+    const joinGuard = await assertCharacterCanJoinTeam(characterId);
+    if (joinGuard) {
+      return joinGuard;
     }
 
     // 加入队伍

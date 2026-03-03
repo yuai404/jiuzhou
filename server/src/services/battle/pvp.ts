@@ -39,6 +39,7 @@ import { attachSetBonusEffectsToCharacterData } from "./shared/effects.js";
 import { getCharacterBattleSkillData } from "./shared/skills.js";
 import {
   rejectIfIdling,
+  isCharacterIdling,
   withBattleStartResources,
   syncBattleStartResourcesForUsers,
 } from "./shared/preparation.js";
@@ -80,6 +81,12 @@ export async function startPVPBattle(
     const requestedBattleId =
       typeof battleId === "string" ? battleId.trim() : "";
     const isArenaBattle = requestedBattleId.startsWith("arena-battle-");
+    if (!isArenaBattle) {
+      const opponentIdling = await isCharacterIdling(oppId);
+      if (opponentIdling) {
+        return { success: false, message: "对手离线挂机中，无法发起挑战" };
+      }
+    }
 
     const challengerInBattleResult = buildCharacterInBattleResult(
       challengerCharacterId,

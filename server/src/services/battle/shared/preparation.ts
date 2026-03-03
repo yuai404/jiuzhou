@@ -15,7 +15,7 @@
  *
  * 边界条件：
  * 1) getTeamMembersData 返回的 members 不含自己（排除 characterId）
- * 2) prepareTeamBattleParticipants 中跳过"正在战斗/冷却/气血为0"的队友
+ * 2) prepareTeamBattleParticipants 发现“队伍成员挂机中”时直接拒绝整场战斗，不允许以“跳过该成员”方式继续开战
  */
 
 import { query } from "../../../config/database.js";
@@ -56,6 +56,12 @@ type SyncBattleStartResourcesOptions = {
   context: string;
 };
 
+const normalizeCharacterId = (value: unknown): number => {
+  const characterId = Math.floor(Number(value));
+  if (!Number.isFinite(characterId) || characterId <= 0) return 0;
+  return characterId;
+};
+
 // ------ 挂机检查 ------
 
 /**
@@ -63,12 +69,18 @@ type SyncBattleStartResourcesOptions = {
  *
  * 返回：null 表示未挂机，可继续；非 null 为拒绝结果，直接 return 即可。
  */
+export async function isCharacterIdling(characterId: number): Promise<boolean> {
+  const normalizedCharacterId = normalizeCharacterId(characterId);
+  if (normalizedCharacterId <= 0) return false;
+  const activeIdleCharacterIdSet = await idleSessionService.getActiveIdleCharacterIdSet([normalizedCharacterId]);
+  return activeIdleCharacterIdSet.has(normalizedCharacterId);
+}
+
 export async function rejectIfIdling(
   characterId: number,
 ): Promise<BattleResult | null> {
-  const idleSession =
-    await idleSessionService.getActiveIdleSession(characterId);
-  if (idleSession) {
+  const idling = await isCharacterIdling(characterId);
+  if (idling) {
     return { success: false, message: "离线挂机中，无法发起战斗" };
   }
   return null;
@@ -204,18 +216,33 @@ export async function prepareTeamBattleParticipants(
     return { success: true, validTeamMembers, participantUserIds };
   }
 
+  const teamMemberCharacterIds = teamInfo.members
+    .map((member) => normalizeCharacterId((member.data as unknown as Record<string, unknown>)?.id))
+    .filter((characterId) => characterId > 0);
+  const activeIdleCharacterIdSet = await idleSessionService.getActiveIdleCharacterIdSet(teamMemberCharacterIds);
+  if (activeIdleCharacterIdSet.size > 0) {
+    for (const member of teamInfo.members) {
+      const memberCharacterId = normalizeCharacterId((member.data as unknown as Record<string, unknown>)?.id);
+      if (memberCharacterId <= 0) continue;
+      if (!activeIdleCharacterIdSet.has(memberCharacterId)) continue;
+      const memberNickname = String((member.data as unknown as Record<string, unknown>)?.nickname || "").trim();
+      const memberLabel = memberNickname.length > 0
+        ? `队伍成员【${memberNickname}】`
+        : `队伍成员(角色ID:${memberCharacterId})`;
+      return {
+        success: false,
+        result: { success: false, message: `${memberLabel}离线挂机中，无法发起战斗` },
+      };
+    }
+  }
+
   for (const member of teamInfo.members) {
-    const memberCharacterId = Number((member.data as unknown as Record<string, unknown>)?.id);
-    if (
-      Number.isFinite(memberCharacterId) &&
-      memberCharacterId > 0 &&
-      isCharacterInBattle(memberCharacterId)
-    ) {
+    const memberCharacterId = normalizeCharacterId((member.data as unknown as Record<string, unknown>)?.id);
+    if (memberCharacterId > 0 && isCharacterInBattle(memberCharacterId)) {
       continue;
     }
     if (
       !options.ignoreMemberCooldown &&
-      Number.isFinite(memberCharacterId) &&
       memberCharacterId > 0 &&
       getBattleStartCooldownRemainingMs(memberCharacterId) > 0
     ) {

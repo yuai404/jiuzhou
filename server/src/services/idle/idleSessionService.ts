@@ -74,6 +74,17 @@ function idleLockTtlSeconds(maxDurationMs: number): number {
   return Math.min(IDLE_LOCK_TTL_MAX_SECONDS, Math.max(IDLE_LOCK_TTL_MIN_SECONDS, ttl));
 }
 
+/** 归一化角色ID数组：仅保留正整数并去重，供批量 SQL 查询复用。 */
+function normalizeCharacterIds(characterIds: number[]): number[] {
+  const normalized = new Set<number>();
+  for (const rawCharacterId of characterIds) {
+    const characterId = Math.floor(Number(rawCharacterId));
+    if (!Number.isFinite(characterId) || characterId <= 0) continue;
+    normalized.add(characterId);
+  }
+  return Array.from(normalized.values());
+}
+
 /** 查询角色当前活跃会话 ID（启动冲突判定专用） */
 async function findActiveSessionId(characterId: number): Promise<string | undefined> {
   const existingRes = await query(
@@ -298,6 +309,49 @@ class IdleSessionService {
 
     if (res.rows.length === 0) return null;
     return rowToIdleSessionRow(res.rows[0] as Record<string, unknown>);
+  }
+
+  /**
+   * 批量查询“当前处于活跃挂机状态”的角色集合。
+   *
+   * 作用：
+   *   统一封装“角色是否在挂机中（active/stopping）”的批量判定逻辑，
+   *   避免战斗/组队模块重复实现相同 SQL 与 ID 归一化流程。
+   *
+   * 输入/输出：
+   *   - 输入：characterIds（可能包含重复值、非整数、无效值）
+   *   - 输出：Set<number>（仅包含正整数角色ID，自动去重）
+   *
+   * 数据流：
+   *   调用方角色ID数组 → normalizeCharacterIds → SQL 批量查询 idle_sessions
+   *   → 结果二次过滤 → 返回活跃挂机角色ID集合。
+   *
+   * 关键边界条件：
+   *   1. 输入数组为空或全为非法值时，直接返回空集合，不触发 SQL 查询。
+   *   2. 仅认定 status IN ('active', 'stopping') 为“挂机中”，其他状态一律视为非活跃。
+   */
+  async getActiveIdleCharacterIdSet(characterIds: number[]): Promise<Set<number>> {
+    const normalizedCharacterIds = normalizeCharacterIds(characterIds);
+    if (normalizedCharacterIds.length === 0) {
+      return new Set<number>();
+    }
+
+    const res = await query(
+      `SELECT DISTINCT character_id
+       FROM idle_sessions
+       WHERE character_id = ANY($1::int[])
+         AND status IN ('active', 'stopping')`,
+      [normalizedCharacterIds]
+    );
+
+    const activeIdleCharacterIdSet = new Set<number>();
+    for (const row of res.rows as Array<{ character_id: unknown }>) {
+      const characterId = Math.floor(Number(row.character_id));
+      if (!Number.isFinite(characterId) || characterId <= 0) continue;
+      activeIdleCharacterIdSet.add(characterId);
+    }
+
+    return activeIdleCharacterIdSet;
   }
 
   /**
