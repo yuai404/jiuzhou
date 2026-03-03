@@ -35,6 +35,10 @@ type WorkerTask<T = unknown> = {
   message: unknown;
   resolve: (value: T) => void;
   reject: (error: Error) => void;
+  /** 任务创建时间（用于超时计算） */
+  createdAt: number;
+  /** 超时定时器句柄 */
+  timeoutHandle: ReturnType<typeof setTimeout>;
 };
 
 type WorkerState = {
@@ -174,6 +178,9 @@ export class WorkerPool {
     state.currentTask = null;
     state.busy = false;
 
+    // 清理超时定时器，避免内存泄漏
+    clearTimeout(task.timeoutHandle);
+
     // 解析消息类型
     const response = msg as { type: string; result?: unknown; error?: string; stack?: string };
 
@@ -193,8 +200,9 @@ export class WorkerPool {
    * 处理 Worker 崩溃
    */
   private handleWorkerCrash(state: WorkerState, error: Error): void {
-    // 拒绝当前任务
+    // 拒绝当前任务并清理资源
     if (state.currentTask) {
+      clearTimeout(state.currentTask.timeoutHandle);
       state.currentTask.reject(new Error(`Worker 崩溃: ${error.message}`));
       state.currentTask = null;
     }
@@ -216,14 +224,26 @@ export class WorkerPool {
 
   /**
    * 执行任务（分发到空闲 Worker）
+   * 支持队列等待和统一的超时机制
    */
   executeTask<T = unknown>(message: unknown): Promise<T> {
     return new Promise((resolve, reject) => {
+      const createdAt = Date.now();
+      const timeoutMs = this.options.taskTimeout;
+
+      // 创建超时处理器（统一处理执行中和队列中的任务）
+      const timeoutHandle = setTimeout(() => {
+        const elapsed = Date.now() - createdAt;
+        this.handleTaskTimeout(task, elapsed);
+      }, timeoutMs);
+
       const task: WorkerTask = {
         id: `task-${this.nextTaskId++}`,
         message,
         resolve: resolve as (value: unknown) => void,
         reject,
+        createdAt,
+        timeoutHandle,
       };
 
       // 查找空闲 Worker
@@ -235,17 +255,34 @@ export class WorkerPool {
         // 所有 Worker 忙碌，加入队列
         this.taskQueue.push(task);
       }
-
-      // 任务超时保护
-      setTimeout(() => {
-        if (task === idleWorker?.currentTask) {
-          reject(new Error(`任务超时（${this.options.taskTimeout}ms）`));
-          idleWorker.currentTask = null;
-          idleWorker.busy = false;
-          this.processNextTask();
-        }
-      }, this.options.taskTimeout);
     });
+  }
+
+  /**
+   * 处理任务超时（统一处理执行中和队列中的任务）
+   */
+  private handleTaskTimeout(task: WorkerTask, elapsed: number): void {
+    // 1. 检查是否在队列中（尚未执行）
+    const queueIndex = this.taskQueue.indexOf(task);
+    if (queueIndex !== -1) {
+      // 从队列中移除并拒绝
+      this.taskQueue.splice(queueIndex, 1);
+      task.reject(new Error(`任务在队列中等待超时（${elapsed}ms）`));
+      return;
+    }
+
+    // 2. 检查是否正在某个 Worker 中执行
+    const workerState = this.workers.find((w) => w.currentTask === task);
+    if (workerState) {
+      // 标记 Worker 状态为空闲（任务已超时）
+      workerState.currentTask = null;
+      workerState.busy = false;
+      task.reject(new Error(`任务执行超时（${elapsed}ms）`));
+      this.processNextTask();
+      return;
+    }
+
+    // 3. 任务已完成或已被处理，无需操作
   }
 
   /**
@@ -284,8 +321,9 @@ export class WorkerPool {
     this.isShuttingDown = true;
     console.log(`[WorkerPool] 正在关闭 ${this.workers.length} 个 Worker...`);
 
-    // 拒绝队列中的所有任务
+    // 拒绝队列中的所有任务并清理资源
     for (const task of this.taskQueue) {
+      clearTimeout(task.timeoutHandle);
       task.reject(new Error('WorkerPool 正在关闭'));
     }
     this.taskQueue = [];
