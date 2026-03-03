@@ -1,21 +1,30 @@
-import { query } from '../config/database.js';
-import { Transactional } from '../decorators/transactional.js';
-import { findEmptySlotsWithClient } from './inventory/index.js';
-import { lockCharacterInventoryMutexTx, lockCharacterInventoryMutexesTx } from './inventoryMutex.js';
-import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
-import { getItemDefinitionById, getItemDefinitions } from './staticConfigLoader.js';
-import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { query } from "../config/database.js";
+import { Transactional } from "../decorators/transactional.js";
+import { findEmptySlotsWithClient } from "./inventory/index.js";
+import {
+  lockCharacterInventoryMutexTx,
+  lockCharacterInventoryMutexesTx,
+} from "./inventoryMutex.js";
+import { buildEquipmentDisplayBaseAttrs } from "./equipmentGrowthRules.js";
+import {
+  getItemDefinitionById,
+  getItemDefinitions,
+} from "./staticConfigLoader.js";
+import { resolveQualityRankFromName } from "./shared/itemQuality.js";
 import {
   enrichAffixesWithRollMeta,
   getEquipRealmRankForReroll,
   getQualityMultiplierForReroll,
   loadAffixPoolForReroll,
   parseGeneratedAffixesForReroll,
-} from './equipmentAffixRerollService.js';
-import { normalizeMarketCategoryFilter, resolveMarketItemCategory } from './shared/marketItemCategory.js';
-import { mailService } from './mailService.js';
+} from "./equipmentAffixRerollService.js";
+import {
+  normalizeMarketCategoryFilter,
+  resolveMarketItemCategory,
+} from "./shared/marketItemCategory.js";
+import { mailService } from "./mailService.js";
 
-export type MarketSort = 'timeDesc' | 'priceAsc' | 'priceDesc' | 'qtyDesc';
+export type MarketSort = "timeDesc" | "priceAsc" | "priceDesc" | "qtyDesc";
 
 export type MarketListingDto = {
   id: number;
@@ -47,7 +56,7 @@ export type MarketListingDto = {
 
 export type MarketTradeRecordDto = {
   id: number;
-  type: '买入' | '卖出';
+  type: "买入" | "卖出";
   itemDefId: string;
   name: string;
   icon: string | null;
@@ -57,21 +66,25 @@ export type MarketTradeRecordDto = {
   time: number;
 };
 
-const clampInt = (n: number, min: number, max: number): number => Math.max(min, Math.min(max, n));
+const clampInt = (n: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, n));
 
 const parsePositiveInt = (v: unknown): number | null => {
-  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return null;
   return n;
 };
 
 const parseNonNegativeInt = (v: unknown): number | null => {
-  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) return null;
   return n;
 };
 
-const parseMaybeString = (v: unknown): string => (typeof v === 'string' ? v : '').trim();
+const parseMaybeString = (v: unknown): string =>
+  (typeof v === "string" ? v : "").trim();
+
+const MARKET_LISTING_FEE_SILVER_PER_SPIRIT_STONE = 10n;
 
 const getTaxAmount = (totalPrice: bigint, taxRate: number): bigint => {
   if (!Number.isFinite(taxRate) || taxRate <= 0) return 0n;
@@ -79,8 +92,20 @@ const getTaxAmount = (totalPrice: bigint, taxRate: number): bigint => {
   return (totalPrice * BigInt(Math.floor(rate * 100))) / 10000n;
 };
 
-const requireBuyerBagSlot = async (buyerCharacterId: number): Promise<number | null> => {
-  const slots = await findEmptySlotsWithClient(buyerCharacterId, 'bag', 1, null);
+const getListingFeeSilver = (totalPriceSpiritStones: bigint): bigint => {
+  if (totalPriceSpiritStones <= 0n) return 0n;
+  return totalPriceSpiritStones * MARKET_LISTING_FEE_SILVER_PER_SPIRIT_STONE;
+};
+
+const requireBuyerBagSlot = async (
+  buyerCharacterId: number,
+): Promise<number | null> => {
+  const slots = await findEmptySlotsWithClient(
+    buyerCharacterId,
+    "bag",
+    1,
+    null,
+  );
   if (slots.length < 1) return null;
   return slots[0];
 };
@@ -89,7 +114,7 @@ const toListingDto = (
   row: Record<string, unknown>,
   affixPoolCache: Map<string, ReturnType<typeof loadAffixPoolForReroll>>,
 ): MarketListingDto | null => {
-  const itemDefId = String(row.item_def_id || '').trim();
+  const itemDefId = String(row.item_def_id || "").trim();
   if (!itemDefId) return null;
   const itemDef = getItemDefinitionById(itemDefId);
   if (!itemDef) return null;
@@ -97,13 +122,14 @@ const toListingDto = (
   const category = resolveMarketItemCategory(itemDef);
   const defQualityRank = resolveQualityRankFromName(itemDef.quality, 1);
   const resolvedQualityRank =
-    Number(row.instance_quality_rank) || resolveQualityRankFromName(row.instance_quality, defQualityRank);
+    Number(row.instance_quality_rank) ||
+    resolveQualityRankFromName(row.instance_quality, defQualityRank);
   const baseAttrsRaw =
-    itemDef.base_attrs && typeof itemDef.base_attrs === 'object'
+    itemDef.base_attrs && typeof itemDef.base_attrs === "object"
       ? (itemDef.base_attrs as Record<string, number>)
       : {};
   const baseAttrs =
-    category === 'equipment'
+    category === "equipment"
       ? buildEquipmentDisplayBaseAttrs({
           baseAttrsRaw,
           defQualityRankRaw: defQualityRank,
@@ -114,8 +140,11 @@ const toListingDto = (
         })
       : baseAttrsRaw;
   let normalizedAffixes = parseGeneratedAffixesForReroll(row.affixes);
-  if (category === 'equipment' && normalizedAffixes.length > 0) {
-    const affixPoolId = typeof itemDef.affix_pool_id === 'string' ? itemDef.affix_pool_id.trim() : '';
+  if (category === "equipment" && normalizedAffixes.length > 0) {
+    const affixPoolId =
+      typeof itemDef.affix_pool_id === "string"
+        ? itemDef.affix_pool_id.trim()
+        : "";
     if (affixPoolId) {
       if (!affixPoolCache.has(affixPoolId)) {
         affixPoolCache.set(affixPoolId, loadAffixPoolForReroll(affixPoolId));
@@ -123,8 +152,10 @@ const toListingDto = (
       const affixPool = affixPoolCache.get(affixPoolId);
       if (affixPool) {
         const realmRank = getEquipRealmRankForReroll(itemDef.equip_req_realm);
-        const resolvedQualityMultiplier = getQualityMultiplierForReroll(resolvedQualityRank);
-        const defQualityMultiplier = getQualityMultiplierForReroll(defQualityRank);
+        const resolvedQualityMultiplier =
+          getQualityMultiplierForReroll(resolvedQualityRank);
+        const defQualityMultiplier =
+          getQualityMultiplierForReroll(defQualityRank);
         const attrFactor =
           Number.isFinite(defQualityMultiplier) && defQualityMultiplier > 0
             ? resolvedQualityMultiplier / defQualityMultiplier
@@ -143,32 +174,55 @@ const toListingDto = (
     id: Number(row.id),
     itemInstanceId: Number(row.item_instance_id),
     itemDefId,
-    name: String(itemDef.name ?? ''),
-    icon: itemDef.icon === null || itemDef.icon === undefined ? null : String(itemDef.icon),
+    name: String(itemDef.name ?? ""),
+    icon:
+      itemDef.icon === null || itemDef.icon === undefined
+        ? null
+        : String(itemDef.icon),
     quality:
       row.instance_quality === null || row.instance_quality === undefined
-        ? (itemDef.quality === null || itemDef.quality === undefined ? null : String(itemDef.quality))
+        ? itemDef.quality === null || itemDef.quality === undefined
+          ? null
+          : String(itemDef.quality)
         : String(row.instance_quality),
     category: category || null,
-    subCategory: itemDef.sub_category === null || itemDef.sub_category === undefined ? null : String(itemDef.sub_category),
-    description: itemDef.description === null || itemDef.description === undefined ? null : String(itemDef.description),
-    longDesc: itemDef.long_desc === null || itemDef.long_desc === undefined ? null : String(itemDef.long_desc),
+    subCategory:
+      itemDef.sub_category === null || itemDef.sub_category === undefined
+        ? null
+        : String(itemDef.sub_category),
+    description:
+      itemDef.description === null || itemDef.description === undefined
+        ? null
+        : String(itemDef.description),
+    longDesc:
+      itemDef.long_desc === null || itemDef.long_desc === undefined
+        ? null
+        : String(itemDef.long_desc),
     tags: itemDef.tags ?? null,
     effectDefs: itemDef.effect_defs ?? null,
     baseAttrs,
-    equipSlot: itemDef.equip_slot === null || itemDef.equip_slot === undefined ? null : String(itemDef.equip_slot),
+    equipSlot:
+      itemDef.equip_slot === null || itemDef.equip_slot === undefined
+        ? null
+        : String(itemDef.equip_slot),
     equipReqRealm:
-      itemDef.equip_req_realm === null || itemDef.equip_req_realm === undefined ? null : String(itemDef.equip_req_realm),
-    useType: itemDef.use_type === null || itemDef.use_type === undefined ? null : String(itemDef.use_type),
+      itemDef.equip_req_realm === null || itemDef.equip_req_realm === undefined
+        ? null
+        : String(itemDef.equip_req_realm),
+    useType:
+      itemDef.use_type === null || itemDef.use_type === undefined
+        ? null
+        : String(itemDef.use_type),
     strengthenLevel: Math.max(0, Math.floor(Number(row.strengthen_level) || 0)),
     refineLevel: Math.max(0, Math.floor(Number(row.refine_level) || 0)),
     identified: Boolean(row.identified),
-    affixes: normalizedAffixes.length > 0 ? normalizedAffixes : row.affixes ?? [],
+    affixes:
+      normalizedAffixes.length > 0 ? normalizedAffixes : (row.affixes ?? []),
     qty: Number(row.qty),
     unitPriceSpiritStones: Number(row.unit_price_spirit_stones),
     sellerCharacterId: Number(row.seller_character_id),
-    sellerName: String(row.seller_name ?? ''),
-    listedAt: new Date(String(row.listed_at ?? '')).getTime(),
+    sellerName: String(row.seller_name ?? ""),
+    listedAt: new Date(String(row.listed_at ?? "")).getTime(),
   };
 };
 
@@ -183,7 +237,11 @@ class MarketService {
     sort?: MarketSort;
     page?: number;
     pageSize?: number;
-  }): Promise<{ success: boolean; message: string; data?: { listings: MarketListingDto[]; total: number } }> {
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data?: { listings: MarketListingDto[]; total: number };
+  }> {
     const page = clampInt(parsePositiveInt(params.page) ?? 1, 1, 1000000);
     const pageSize = clampInt(parsePositiveInt(params.pageSize) ?? 20, 1, 100);
     const offset = (page - 1) * pageSize;
@@ -193,12 +251,14 @@ class MarketService {
     const q = parseMaybeString(params.query);
     const minPrice = parseNonNegativeInt(params.minPrice);
     const maxPrice = parseNonNegativeInt(params.maxPrice);
-    const sort: MarketSort = (params.sort ?? 'timeDesc') as MarketSort;
+    const sort: MarketSort = (params.sort ?? "timeDesc") as MarketSort;
 
     const allItemDefs = getItemDefinitions();
-    const allItemDefIds = allItemDefs.map((entry) => String(entry.id || '').trim()).filter((id) => id.length > 0);
+    const allItemDefIds = allItemDefs
+      .map((entry) => String(entry.id || "").trim())
+      .filter((id) => id.length > 0);
     if (allItemDefIds.length === 0) {
-      return { success: true, message: 'ok', data: { listings: [], total: 0 } };
+      return { success: true, message: "ok", data: { listings: [], total: 0 } };
     }
 
     const where: string[] = [`ml.status = 'active'`];
@@ -208,41 +268,53 @@ class MarketService {
     where.push(`ml.item_def_id = ANY($${values.length}::varchar[])`);
 
     if (category === null) {
-      return { success: true, message: 'ok', data: { listings: [], total: 0 } };
+      return { success: true, message: "ok", data: { listings: [], total: 0 } };
     }
-    if (category !== 'all') {
+    if (category !== "all") {
       const categoryDefIds = allItemDefs
         .filter((entry) => resolveMarketItemCategory(entry) === category)
-        .map((entry) => String(entry.id || '').trim())
+        .map((entry) => String(entry.id || "").trim())
         .filter((id) => id.length > 0);
       if (categoryDefIds.length === 0) {
-        return { success: true, message: 'ok', data: { listings: [], total: 0 } };
+        return {
+          success: true,
+          message: "ok",
+          data: { listings: [], total: 0 },
+        };
       }
       values.push(categoryDefIds);
       where.push(`ml.item_def_id = ANY($${values.length}::varchar[])`);
     }
-    if (quality && quality !== 'all') {
+    if (quality && quality !== "all") {
       const qualityDefIds = allItemDefs
-        .filter((entry) => String(entry.quality || '') === quality)
-        .map((entry) => String(entry.id || '').trim())
+        .filter((entry) => String(entry.quality || "") === quality)
+        .map((entry) => String(entry.id || "").trim())
         .filter((id) => id.length > 0);
       values.push(quality);
       const qualityParam = `$${values.length}`;
       values.push(qualityDefIds);
       const qualityDefParam = `$${values.length}`;
-      where.push(`(ii.quality = ${qualityParam} OR (ii.quality IS NULL AND ml.item_def_id = ANY(${qualityDefParam}::varchar[])))`);
+      where.push(
+        `(ii.quality = ${qualityParam} OR (ii.quality IS NULL AND ml.item_def_id = ANY(${qualityDefParam}::varchar[])))`,
+      );
     }
     if (q) {
       const queryLower = q.toLowerCase();
       const nameMatchedDefIds = allItemDefs
-        .filter((entry) => String(entry.name || '').toLowerCase().includes(queryLower))
-        .map((entry) => String(entry.id || '').trim())
+        .filter((entry) =>
+          String(entry.name || "")
+            .toLowerCase()
+            .includes(queryLower),
+        )
+        .map((entry) => String(entry.id || "").trim())
         .filter((id) => id.length > 0);
       values.push(nameMatchedDefIds);
       const itemNameParam = `$${values.length}`;
       values.push(`%${q}%`);
       const sellerNameParam = `$${values.length}`;
-      where.push(`(ml.item_def_id = ANY(${itemNameParam}::varchar[]) OR c.nickname ILIKE ${sellerNameParam})`);
+      where.push(
+        `(ml.item_def_id = ANY(${itemNameParam}::varchar[]) OR c.nickname ILIKE ${sellerNameParam})`,
+      );
     }
     if (minPrice !== null) {
       values.push(minPrice);
@@ -253,20 +325,20 @@ class MarketService {
       where.push(`ml.unit_price_spirit_stones <= $${values.length}`);
     }
     const orderBy =
-      sort === 'priceAsc'
-        ? 'ml.unit_price_spirit_stones ASC, ml.listed_at DESC'
-        : sort === 'priceDesc'
-          ? 'ml.unit_price_spirit_stones DESC, ml.listed_at DESC'
-          : sort === 'qtyDesc'
-            ? 'ml.qty DESC, ml.listed_at DESC'
-            : 'ml.listed_at DESC';
+      sort === "priceAsc"
+        ? "ml.unit_price_spirit_stones ASC, ml.listed_at DESC"
+        : sort === "priceDesc"
+          ? "ml.unit_price_spirit_stones DESC, ml.listed_at DESC"
+          : sort === "qtyDesc"
+            ? "ml.qty DESC, ml.listed_at DESC"
+            : "ml.listed_at DESC";
 
     values.push(pageSize);
     const limitParam = `$${values.length}`;
     values.push(offset);
     const offsetParam = `$${values.length}`;
 
-    const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
 
     const listSql = `
       SELECT
@@ -301,13 +373,21 @@ class MarketService {
       ${whereSql}
     `;
 
-    const [listResult, countResult] = await Promise.all([query(listSql, values), query(countSql, values.slice(0, values.length - 2))]);
+    const [listResult, countResult] = await Promise.all([
+      query(listSql, values),
+      query(countSql, values.slice(0, values.length - 2)),
+    ]);
     const total = Number(countResult.rows[0]?.cnt ?? 0);
-    const affixPoolCache = new Map<string, ReturnType<typeof loadAffixPoolForReroll>>();
+    const affixPoolCache = new Map<
+      string,
+      ReturnType<typeof loadAffixPoolForReroll>
+    >();
     const listings: MarketListingDto[] = listResult.rows
-      .map((row) => toListingDto(row as Record<string, unknown>, affixPoolCache))
+      .map((row) =>
+        toListingDto(row as Record<string, unknown>, affixPoolCache),
+      )
       .filter((entry): entry is MarketListingDto => entry !== null);
-    return { success: true, message: 'ok', data: { listings, total } };
+    return { success: true, message: "ok", data: { listings, total } };
   }
 
   // 纯读方法，不加 @Transactional
@@ -316,11 +396,15 @@ class MarketService {
     status?: string;
     page?: number;
     pageSize?: number;
-  }): Promise<{ success: boolean; message: string; data?: { listings: MarketListingDto[]; total: number } }> {
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data?: { listings: MarketListingDto[]; total: number };
+  }> {
     const page = clampInt(parsePositiveInt(params.page) ?? 1, 1, 1000000);
     const pageSize = clampInt(parsePositiveInt(params.pageSize) ?? 20, 1, 100);
     const offset = (page - 1) * pageSize;
-    const status = parseMaybeString(params.status) || 'active';
+    const status = parseMaybeString(params.status) || "active";
 
     const listResult = await query(
       `
@@ -360,12 +444,17 @@ class MarketService {
     );
 
     const total = Number(countResult.rows[0]?.cnt ?? 0);
-    const affixPoolCache = new Map<string, ReturnType<typeof loadAffixPoolForReroll>>();
+    const affixPoolCache = new Map<
+      string,
+      ReturnType<typeof loadAffixPoolForReroll>
+    >();
     const listings: MarketListingDto[] = listResult.rows
-      .map((row) => toListingDto(row as Record<string, unknown>, affixPoolCache))
+      .map((row) =>
+        toListingDto(row as Record<string, unknown>, affixPoolCache),
+      )
       .filter((entry): entry is MarketListingDto => entry !== null);
 
-    return { success: true, message: 'ok', data: { listings, total } };
+    return { success: true, message: "ok", data: { listings, total } };
   }
 
   @Transactional
@@ -375,14 +464,22 @@ class MarketService {
     itemInstanceId: number;
     qty: number;
     unitPriceSpiritStones: number;
-  }): Promise<{ success: boolean; message: string; data?: { listingId: number } }> {
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data?: { listingId: number };
+  }> {
     const itemInstanceId = parsePositiveInt(params.itemInstanceId);
     const qty = parsePositiveInt(params.qty);
     const unitPrice = parsePositiveInt(params.unitPriceSpiritStones);
 
-    if (itemInstanceId === null) return { success: false, message: 'itemInstanceId参数错误' };
-    if (qty === null) return { success: false, message: 'qty参数错误' };
-    if (unitPrice === null) return { success: false, message: 'unitPriceSpiritStones参数错误' };
+    if (itemInstanceId === null)
+      return { success: false, message: "itemInstanceId参数错误" };
+    if (qty === null) return { success: false, message: "qty参数错误" };
+    if (unitPrice === null)
+      return { success: false, message: "unitPriceSpiritStones参数错误" };
+    const totalPriceSpiritStones = BigInt(unitPrice) * BigInt(qty);
+    const listingFeeSilver = getListingFeeSilver(totalPriceSpiritStones);
 
     await lockCharacterInventoryMutexTx(null, params.characterId);
 
@@ -418,39 +515,63 @@ class MarketService {
     );
 
     if (itemResult.rows.length === 0) {
-      return { success: false, message: '物品不存在' };
+      return { success: false, message: "物品不存在" };
     }
     const row = itemResult.rows[0];
-    const itemDefId = String(row.item_def_id || '').trim();
+    const itemDefId = String(row.item_def_id || "").trim();
     const itemDef = itemDefId ? getItemDefinitionById(itemDefId) : null;
     if (!itemDef) {
-      return { success: false, message: '物品不存在' };
+      return { success: false, message: "物品不存在" };
     }
     if (itemDef.tradeable !== true) {
-      return { success: false, message: '该物品不可交易' };
+      return { success: false, message: "该物品不可交易" };
     }
-    if (String(row.bind_type) !== 'none') {
-      return { success: false, message: '该物品已绑定，无法上架' };
+    if (String(row.bind_type) !== "none") {
+      return { success: false, message: "该物品已绑定，无法上架" };
     }
     if (row.locked) {
-      return { success: false, message: '该物品已锁定，无法上架' };
+      return { success: false, message: "该物品已锁定，无法上架" };
     }
-    if (String(row.location) === 'equipped' || row.equipped_slot) {
-      return { success: false, message: '已穿戴物品无法上架' };
+    if (String(row.location) === "equipped" || row.equipped_slot) {
+      return { success: false, message: "已穿戴物品无法上架" };
     }
-    if (!['bag', 'warehouse'].includes(String(row.location))) {
-      return { success: false, message: '该物品当前位置无法上架' };
+    if (!["bag", "warehouse"].includes(String(row.location))) {
+      return { success: false, message: "该物品当前位置无法上架" };
     }
 
     const curQty = Number(row.qty) || 0;
     if (qty > curQty) {
-      return { success: false, message: '数量不足' };
+      return { success: false, message: "数量不足" };
+    }
+
+    const characterWalletResult = await query(
+      `SELECT silver FROM characters WHERE id = $1 FOR UPDATE`,
+      [params.characterId],
+    );
+    if (characterWalletResult.rows.length === 0) {
+      return { success: false, message: "角色不存在" };
+    }
+    const currentSilver = BigInt(characterWalletResult.rows[0].silver ?? 0);
+    if (currentSilver < listingFeeSilver) {
+      return {
+        success: false,
+        message: `银两不足，上架手续费需要${listingFeeSilver.toString()}`,
+      };
+    }
+    if (listingFeeSilver > 0n) {
+      await query(
+        `UPDATE characters SET silver = silver - $1, updated_at = NOW() WHERE id = $2`,
+        [listingFeeSilver.toString(), params.characterId],
+      );
     }
 
     let listingItemInstanceId = itemInstanceId;
 
     if (qty < curQty) {
-      await query('UPDATE item_instance SET qty = qty - $1, updated_at = NOW() WHERE id = $2', [qty, itemInstanceId]);
+      await query(
+        "UPDATE item_instance SET qty = qty - $1, updated_at = NOW() WHERE id = $2",
+        [qty, itemInstanceId],
+      );
 
       const insertResult = await query(
         `
@@ -492,19 +613,31 @@ class MarketService {
         INSERT INTO market_listing (
           seller_user_id, seller_character_id,
           item_instance_id, item_def_id,
-          qty, unit_price_spirit_stones,
+          qty, unit_price_spirit_stones, listing_fee_silver,
           status
         ) VALUES (
           $1, $2,
           $3, $4,
-          $5, $6,
+          $5, $6, $7,
           'active'
         )
         RETURNING id
       `,
-      [params.userId, params.characterId, listingItemInstanceId, itemDefId, qty, unitPrice],
+      [
+        params.userId,
+        params.characterId,
+        listingItemInstanceId,
+        itemDefId,
+        qty,
+        unitPrice,
+        listingFeeSilver.toString(),
+      ],
     );
-    return { success: true, message: '上架成功', data: { listingId: Number(listingResult.rows[0].id) } };
+    return {
+      success: true,
+      message: `上架成功，已收取${listingFeeSilver.toString()}银两手续费（未卖出下架将退还）`,
+      data: { listingId: Number(listingResult.rows[0].id) },
+    };
   }
 
   @Transactional
@@ -514,13 +647,14 @@ class MarketService {
     listingId: number;
   }): Promise<{ success: boolean; message: string }> {
     const listingId = parsePositiveInt(params.listingId);
-    if (listingId === null) return { success: false, message: 'listingId参数错误' };
+    if (listingId === null)
+      return { success: false, message: "listingId参数错误" };
 
     await lockCharacterInventoryMutexTx(null, params.characterId);
 
     const listingResult = await query(
       `
-        SELECT id, seller_character_id, item_instance_id, qty, status
+        SELECT id, seller_character_id, item_instance_id, qty, status, listing_fee_silver
         FROM market_listing
         WHERE id = $1
         FOR UPDATE
@@ -529,16 +663,17 @@ class MarketService {
     );
 
     if (listingResult.rows.length === 0) {
-      return { success: false, message: '上架记录不存在' };
+      return { success: false, message: "上架记录不存在" };
     }
 
     const listing = listingResult.rows[0];
     if (Number(listing.seller_character_id) !== params.characterId) {
-      return { success: false, message: '无权限操作该上架记录' };
+      return { success: false, message: "无权限操作该上架记录" };
     }
-    if (String(listing.status) !== 'active') {
-      return { success: false, message: '该上架记录不可下架' };
+    if (String(listing.status) !== "active") {
+      return { success: false, message: "该上架记录不可下架" };
     }
+    const listingFeeSilver = BigInt(listing.listing_fee_silver ?? 0);
 
     const itemInstanceId = Number(listing.item_instance_id);
     const itemResult = await query(
@@ -551,19 +686,19 @@ class MarketService {
       [itemInstanceId],
     );
     if (itemResult.rows.length === 0) {
-      return { success: false, message: '物品不存在' };
+      return { success: false, message: "物品不存在" };
     }
     const item = itemResult.rows[0];
     if (Number(item.owner_character_id) !== params.characterId) {
-      return { success: false, message: '物品归属异常，无法下架' };
+      return { success: false, message: "物品归属异常，无法下架" };
     }
-    if (String(item.location) !== 'auction') {
-      return { success: false, message: '物品不在坊市中，无法下架' };
+    if (String(item.location) !== "auction") {
+      return { success: false, message: "物品不在坊市中，无法下架" };
     }
 
     const slot = await requireBuyerBagSlot(params.characterId);
     if (slot === null) {
-      return { success: false, message: '背包已满，无法下架' };
+      return { success: false, message: "背包已满，无法下架" };
     }
     await query(
       `
@@ -582,7 +717,18 @@ class MarketService {
       `,
       [listingId],
     );
-    return { success: true, message: '下架成功' };
+
+    if (listingFeeSilver > 0n) {
+      await query(
+        `UPDATE characters SET silver = silver + $1, updated_at = NOW() WHERE id = $2`,
+        [listingFeeSilver.toString(), params.characterId],
+      );
+    }
+
+    return {
+      success: true,
+      message: `下架成功，已退还${listingFeeSilver.toString()}银两手续费`,
+    };
   }
 
   @Transactional
@@ -592,7 +738,8 @@ class MarketService {
     listingId: number;
   }): Promise<{ success: boolean; message: string }> {
     const listingId = parsePositiveInt(params.listingId);
-    if (listingId === null) return { success: false, message: 'listingId参数错误' };
+    if (listingId === null)
+      return { success: false, message: "listingId参数错误" };
 
     const listingOwnerResult = await query(
       `
@@ -603,16 +750,24 @@ class MarketService {
       [listingId],
     );
     if (listingOwnerResult.rows.length === 0) {
-      return { success: false, message: '上架记录不存在' };
+      return { success: false, message: "上架记录不存在" };
     }
-    const sellerCharacterIdFromMeta = Number(listingOwnerResult.rows[0].seller_character_id);
-    if (!Number.isInteger(sellerCharacterIdFromMeta) || sellerCharacterIdFromMeta <= 0) {
-      return { success: false, message: '上架数据异常' };
+    const sellerCharacterIdFromMeta = Number(
+      listingOwnerResult.rows[0].seller_character_id,
+    );
+    if (
+      !Number.isInteger(sellerCharacterIdFromMeta) ||
+      sellerCharacterIdFromMeta <= 0
+    ) {
+      return { success: false, message: "上架数据异常" };
     }
     if (sellerCharacterIdFromMeta === params.buyerCharacterId) {
-      return { success: false, message: '不能购买自己上架的物品' };
+      return { success: false, message: "不能购买自己上架的物品" };
     }
-    await lockCharacterInventoryMutexesTx(null, [params.buyerCharacterId, sellerCharacterIdFromMeta]);
+    await lockCharacterInventoryMutexesTx(null, [
+      params.buyerCharacterId,
+      sellerCharacterIdFromMeta,
+    ]);
 
     const listingResult = await query(
       `
@@ -633,20 +788,20 @@ class MarketService {
     );
 
     if (listingResult.rows.length === 0) {
-      return { success: false, message: '上架记录不存在' };
+      return { success: false, message: "上架记录不存在" };
     }
 
     const listing = listingResult.rows[0];
-    if (String(listing.status) !== 'active') {
-      return { success: false, message: '该物品已被购买或下架' };
+    if (String(listing.status) !== "active") {
+      return { success: false, message: "该物品已被购买或下架" };
     }
     const sellerCharacterId = Number(listing.seller_character_id);
     const sellerUserId = Number(listing.seller_user_id);
     if (sellerCharacterId !== sellerCharacterIdFromMeta) {
-      return { success: false, message: '上架数据异常，请刷新后重试' };
+      return { success: false, message: "上架数据异常，请刷新后重试" };
     }
     if (sellerCharacterId === params.buyerCharacterId) {
-      return { success: false, message: '不能购买自己上架的物品' };
+      return { success: false, message: "不能购买自己上架的物品" };
     }
 
     const itemInstanceId = Number(listing.item_instance_id);
@@ -660,22 +815,22 @@ class MarketService {
       [itemInstanceId],
     );
     if (itemRowResult.rows.length === 0) {
-      return { success: false, message: '物品不存在' };
+      return { success: false, message: "物品不存在" };
     }
     const itemRow = itemRowResult.rows[0];
-    if (String(itemRow.location) !== 'auction') {
-      return { success: false, message: '物品不在坊市中' };
+    if (String(itemRow.location) !== "auction") {
+      return { success: false, message: "物品不在坊市中" };
     }
     if (Number(itemRow.qty) !== qty) {
-      return { success: false, message: '物品数量异常，请刷新后重试' };
+      return { success: false, message: "物品数量异常，请刷新后重试" };
     }
     if (Number(itemRow.owner_character_id) !== sellerCharacterId) {
-      return { success: false, message: '物品归属异常，请刷新后重试' };
+      return { success: false, message: "物品归属异常，请刷新后重试" };
     }
 
     const itemDef = getItemDefinitionById(itemDefId);
     if (!itemDef) {
-      return { success: false, message: '物品配置不存在，请稍后重试' };
+      return { success: false, message: "物品配置不存在，请稍后重试" };
     }
     const taxRate = Number(itemDef.tax_rate) || 0;
     const taxAmount = getTaxAmount(totalPrice, taxRate);
@@ -686,11 +841,14 @@ class MarketService {
       [params.buyerCharacterId],
     );
     if (buyerCharResult.rows.length === 0) {
-      return { success: false, message: '角色不存在' };
+      return { success: false, message: "角色不存在" };
     }
     const buyerStones = BigInt(buyerCharResult.rows[0].spirit_stones ?? 0);
     if (buyerStones < totalPrice) {
-      return { success: false, message: `灵石不足，需要${totalPrice.toString()}` };
+      return {
+        success: false,
+        message: `灵石不足，需要${totalPrice.toString()}`,
+      };
     }
 
     await query(
@@ -767,15 +925,15 @@ class MarketService {
     );
 
     // 统一复用邮件服务发放成交物品，避免在坊市模块重复实现“附件写库 + 领取流转”逻辑。
-    const mailTitle = '坊市购买到账通知';
+    const mailTitle = "坊市购买到账通知";
     const itemName = String(itemDef.name || itemDefId);
     const mailContent = `你在坊市购买的【${itemName}】已通过邮件发放，请及时领取附件。`;
     const mailResult = await mailService.sendMail({
       recipientUserId: params.buyerUserId,
       recipientCharacterId: params.buyerCharacterId,
-      senderType: 'system',
-      senderName: '坊市',
-      mailType: 'trade',
+      senderType: "system",
+      senderName: "坊市",
+      mailType: "trade",
       title: mailTitle,
       content: mailContent,
       attachItems: [
@@ -787,7 +945,7 @@ class MarketService {
       ],
       attachInstanceIds: [itemInstanceId],
       expireDays: 30,
-      source: 'market',
+      source: "market",
       sourceRefId: String(listingId),
       metadata: {
         listingId,
@@ -797,7 +955,7 @@ class MarketService {
       throw new Error(`坊市购买邮件发送失败: ${mailResult.message}`);
     }
 
-    return { success: true, message: '购买成功，物品已通过邮件发放' };
+    return { success: true, message: "购买成功，物品已通过邮件发放" };
   }
 
   // 纯读方法，不加 @Transactional
@@ -805,7 +963,11 @@ class MarketService {
     characterId: number;
     page?: number;
     pageSize?: number;
-  }): Promise<{ success: boolean; message: string; data?: { records: MarketTradeRecordDto[]; total: number } }> {
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data?: { records: MarketTradeRecordDto[]; total: number };
+  }> {
     const page = clampInt(parsePositiveInt(params.page) ?? 1, 1, 1000000);
     const pageSize = clampInt(parsePositiveInt(params.pageSize) ?? 20, 1, 100);
     const offset = (page - 1) * pageSize;
@@ -844,9 +1006,13 @@ class MarketService {
     const total = Number(countResult.rows[0]?.cnt ?? 0);
     const records: MarketTradeRecordDto[] = listResult.rows.map((r) => {
       const buyerId = Number(r.buyer_character_id);
-      const type: '买入' | '卖出' = params.characterId === buyerId ? '买入' : '卖出';
-      const counterparty = type === '买入' ? String(r.seller_name ?? '') : String(r.buyer_name ?? '');
-      const itemDefId = String(r.item_def_id || '').trim();
+      const type: "买入" | "卖出" =
+        params.characterId === buyerId ? "买入" : "卖出";
+      const counterparty =
+        type === "买入"
+          ? String(r.seller_name ?? "")
+          : String(r.buyer_name ?? "");
+      const itemDefId = String(r.item_def_id || "").trim();
       const itemDef = itemDefId ? getItemDefinitionById(itemDefId) : null;
       return {
         id: Number(r.id),
@@ -861,7 +1027,7 @@ class MarketService {
       };
     });
 
-    return { success: true, message: 'ok', data: { records, total } };
+    return { success: true, message: "ok", data: { records, total } };
   }
 }
 

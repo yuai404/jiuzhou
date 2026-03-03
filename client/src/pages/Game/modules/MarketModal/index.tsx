@@ -49,6 +49,7 @@ interface ListSheetProps {
   item: BagItem | null;
   listPrice: string;
   listQty: string;
+  listingFeeText: string;
   canList: boolean;
   equipDetailLines: ReturnType<typeof buildEquipmentDetailLines>;
   setInfo: BagItem['setInfo'];
@@ -63,6 +64,7 @@ const ListSheet: React.FC<ListSheetProps> = ({
   item,
   listPrice,
   listQty,
+  listingFeeText,
   canList,
   equipDetailLines,
   setInfo,
@@ -171,6 +173,11 @@ const ListSheet: React.FC<ListSheetProps> = ({
               placeholder="请输入数量"
             />
           </div>
+          <div className="market-list-sheet-row">
+            <span className="market-list-sheet-label">手续费（银两）</span>
+            <span className="market-list-sheet-value">{listingFeeText}</span>
+          </div>
+          <div className="market-list-sheet-fee-tip">未卖出下架会退还手续费</div>
           <div className="market-list-sheet-actions">
             <button
               className="market-list-sheet-btn is-primary"
@@ -302,6 +309,18 @@ const parseMaybeNumber = (v: string) => {
   const n = Number(s);
   if (!Number.isFinite(n)) return null;
   return n;
+};
+
+const MARKET_LISTING_FEE_SILVER_PER_SPIRIT_STONE = 10;
+
+const calculateListingFeeSilver = (priceInput: string, qtyInput: string): number | null => {
+  const unitPrice = parseMaybeNumber(priceInput);
+  const qty = parseMaybeNumber(qtyInput);
+  if (!unitPrice || !qty) return null;
+  const safeUnitPrice = Math.floor(unitPrice);
+  const safeQty = Math.floor(qty);
+  if (safeUnitPrice <= 0 || safeQty <= 0) return null;
+  return safeUnitPrice * safeQty * MARKET_LISTING_FEE_SILVER_PER_SPIRIT_STONE;
 };
 
 interface MarketModalProps {
@@ -1049,6 +1068,8 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     const priceNum = parseMaybeNumber(listPrice);
     const safeQty = qtyNum ? Math.floor(qtyNum) : null;
     const safePrice = priceNum ? Math.floor(priceNum) : null;
+    const listingFeeSilver = calculateListingFeeSilver(listPrice, listQty);
+    const listingFeeText = listingFeeSilver === null ? '--' : `${listingFeeSilver.toLocaleString()} 银两`;
     const canList =
       !!selectedBagItem &&
       !selectedBagItem.locked &&
@@ -1103,6 +1124,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
               item={selectedBagItem}
               listPrice={listPrice}
               listQty={listQty}
+              listingFeeText={listingFeeText}
               canList={canList}
               equipDetailLines={equipDetailLines}
               setInfo={setInfo}
@@ -1213,6 +1235,11 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                         <div className="market-list-k">数量</div>
                         <Input value={listQty} onChange={(e) => setListQty(e.target.value)} inputMode="numeric" placeholder="请输入数量" />
                       </div>
+                      <div className="market-list-row">
+                        <div className="market-list-k">手续费（银两）</div>
+                        <div className="market-list-v">{listingFeeText}</div>
+                      </div>
+                      <div className="market-list-fee-tip">未卖出下架会退还手续费</div>
                       <div className="market-list-actions">
                         <Button type="primary" disabled={!canList} onClick={doList}>
                           确认上架

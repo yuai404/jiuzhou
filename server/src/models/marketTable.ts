@@ -1,4 +1,4 @@
-import { query } from '../config/database.js';
+import { query } from "../config/database.js";
 
 const marketListingTableSQL = `
 CREATE TABLE IF NOT EXISTS market_listing (
@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS market_listing (
   item_def_id VARCHAR(64) NOT NULL,
   qty INTEGER NOT NULL,
   unit_price_spirit_stones BIGINT NOT NULL,
+  listing_fee_silver BIGINT NOT NULL DEFAULT 0,
   status VARCHAR(16) NOT NULL DEFAULT 'active',
   buyer_user_id BIGINT REFERENCES users(id),
   buyer_character_id BIGINT REFERENCES characters(id),
@@ -83,8 +84,19 @@ export const initMarketTable = async (): Promise<void> => {
   await query(marketListingTableSQL);
   await query(marketTradeRecordTableSQL);
 
-  await query(`ALTER TABLE market_listing DROP CONSTRAINT IF EXISTS market_listing_item_def_id_fkey`);
-  await query(`ALTER TABLE market_trade_record DROP CONSTRAINT IF EXISTS market_trade_record_item_def_id_fkey`);
+  await query(
+    `ALTER TABLE market_listing ADD COLUMN IF NOT EXISTS listing_fee_silver BIGINT NOT NULL DEFAULT 0`,
+  );
+  await query(
+    `COMMENT ON COLUMN market_listing.listing_fee_silver IS '上架手续费（银两）'`,
+  );
+
+  await query(
+    `ALTER TABLE market_listing DROP CONSTRAINT IF EXISTS market_listing_item_def_id_fkey`,
+  );
+  await query(
+    `ALTER TABLE market_trade_record DROP CONSTRAINT IF EXISTS market_trade_record_item_def_id_fkey`,
+  );
 
   // 迁移：将 item_instance_id 外键从 ON DELETE RESTRICT 改为 ON DELETE SET NULL
   try {
@@ -99,14 +111,22 @@ export const initMarketTable = async (): Promise<void> => {
         AND con.confdeltype = 'r'
     `);
     if (fkCheck.rows.length > 0) {
-      await query(`ALTER TABLE market_listing DROP CONSTRAINT market_listing_item_instance_id_fkey`);
-      await query(`ALTER TABLE market_listing ALTER COLUMN item_instance_id DROP NOT NULL`);
-      await query(`ALTER TABLE market_listing ADD CONSTRAINT market_listing_item_instance_id_fkey FOREIGN KEY (item_instance_id) REFERENCES item_instance(id) ON DELETE SET NULL`);
-      console.log('  ✓ market_listing.item_instance_id 外键已迁移为 ON DELETE SET NULL');
+      await query(
+        `ALTER TABLE market_listing DROP CONSTRAINT market_listing_item_instance_id_fkey`,
+      );
+      await query(
+        `ALTER TABLE market_listing ALTER COLUMN item_instance_id DROP NOT NULL`,
+      );
+      await query(
+        `ALTER TABLE market_listing ADD CONSTRAINT market_listing_item_instance_id_fkey FOREIGN KEY (item_instance_id) REFERENCES item_instance(id) ON DELETE SET NULL`,
+      );
+      console.log(
+        "  ✓ market_listing.item_instance_id 外键已迁移为 ON DELETE SET NULL",
+      );
     }
   } catch (e) {
     // 约束不存在或已迁移，忽略
   }
 
-  console.log('✓ 坊市系统表检测完成');
+  console.log("✓ 坊市系统表检测完成");
 };
