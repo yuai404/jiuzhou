@@ -72,7 +72,7 @@ const SUB_CATEGORY_LABEL_FALLBACK: Record<string, string> = {
   necklace: "项链",
   talisman: "法宝（护符）",
   mirror: "宝镜",
-  accessory: "配饰",
+  accessory: "饰品",
   armor: "护甲",
   battle_pass: "战令道具",
   bone: "骨材",
