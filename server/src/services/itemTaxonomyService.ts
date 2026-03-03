@@ -1,4 +1,4 @@
-import { getItemDefinitions } from './staticConfigLoader.js';
+import { getItemDefinitions } from "./staticConfigLoader.js";
 
 /**
  * 全局物品分类字典服务（后端权威）
@@ -39,66 +39,75 @@ export interface GameItemTaxonomyDto {
 }
 
 const CATEGORY_LABEL_FALLBACK: Record<string, string> = {
-  consumable: '消耗品',
-  material: '材料',
-  gem: '宝石',
-  equipment: '装备',
-  quest: '任务',
-  other: '其他',
+  consumable: "消耗品",
+  material: "材料",
+  gem: "宝石",
+  equipment: "装备",
+  quest: "任务",
+  other: "其他",
 };
 
-const CATEGORY_PREFERRED_ORDER = ['consumable', 'material', 'gem', 'equipment', 'quest', 'other'] as const;
+const CATEGORY_PREFERRED_ORDER = [
+  "consumable",
+  "material",
+  "gem",
+  "equipment",
+  "quest",
+  "other",
+] as const;
 
 const SUB_CATEGORY_LABEL_FALLBACK: Record<string, string> = {
-  sword: '剑',
-  blade: '刀',
-  staff: '法杖',
-  shield: '盾牌',
-  helmet: '头盔',
-  hat: '帽子',
-  robe: '法袍',
-  gloves: '手套',
-  gauntlets: '臂甲',
-  pants: '下装',
-  legguards: '护腿',
-  ring: '戒指',
-  necklace: '项链',
-  talisman: '项链',
-  mirror: '宝镜',
-  accessory: '配饰',
-  armor: '护甲',
-  battle_pass: '战令道具',
-  bone: '骨材',
-  box: '宝箱',
-  breakthrough: '突破道具',
-  collect: '采集物',
-  egg: '蛋类',
-  enhance: '强化道具',
-  essence: '精华',
-  forge: '锻造材料',
-  function: '功能道具',
-  gem: '宝石',
-  gem_attack: '攻击宝石',
-  gem_defense: '防御宝石',
-  gem_survival: '生存宝石',
-  gem_all: '通用宝石',
-  herb: '灵草',
-  key: '钥匙',
-  leather: '皮革',
-  month_card: '月卡道具',
-  object: '杂项道具',
-  ore: '矿石',
-  pill: '丹药',
-  relic: '遗物',
-  scroll: '卷轴',
-  technique: '功法材料',
-  technique_book: '功法书',
-  token: '法宝',
-  wood: '木材',
+  sword: "剑",
+  blade: "刀",
+  staff: "法杖",
+  shield: "盾牌",
+  helmet: "头盔",
+  hat: "帽子",
+  robe: "法袍",
+  gloves: "手套",
+  gauntlets: "臂甲",
+  pants: "下装",
+  legguards: "护腿",
+  ring: "戒指",
+  necklace: "项链",
+  talisman: "法宝（护符）",
+  mirror: "宝镜",
+  accessory: "配饰",
+  armor: "护甲",
+  battle_pass: "战令道具",
+  bone: "骨材",
+  box: "宝箱",
+  breakthrough: "突破道具",
+  collect: "采集物",
+  egg: "蛋类",
+  enhance: "强化道具",
+  essence: "精华",
+  forge: "锻造材料",
+  function: "功能道具",
+  gem: "宝石",
+  gem_attack: "攻击宝石",
+  gem_defense: "防御宝石",
+  gem_survival: "生存宝石",
+  gem_all: "通用宝石",
+  herb: "灵草",
+  key: "钥匙",
+  leather: "皮革",
+  month_card: "月卡道具",
+  object: "杂项道具",
+  ore: "矿石",
+  pill: "丹药",
+  relic: "遗物",
+  scroll: "卷轴",
+  technique: "功法材料",
+  technique_book: "功法书",
+  token: "法宝",
+  wood: "木材",
 };
 
 const normalizeToken = (raw: unknown): string => {
-  return String(raw ?? '').trim().toLowerCase();
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase();
 };
 
 const pushUnique = (list: string[], value: string): void => {
@@ -108,19 +117,24 @@ const pushUnique = (list: string[], value: string): void => {
 };
 
 const sortCategoryValues = (values: string[]): string[] => {
-  const rank = new Map<string, number>(CATEGORY_PREFERRED_ORDER.map((value, index) => [value, index]));
+  const rank = new Map<string, number>(
+    CATEGORY_PREFERRED_ORDER.map((value, index) => [value, index]),
+  );
   return [...values].sort((left, right) => {
     const leftRank = rank.get(left);
     const rightRank = rank.get(right);
-    if (leftRank !== undefined && rightRank !== undefined) return leftRank - rightRank;
+    if (leftRank !== undefined && rightRank !== undefined)
+      return leftRank - rightRank;
     if (leftRank !== undefined) return -1;
     if (rightRank !== undefined) return 1;
-    return left.localeCompare(right, 'zh-Hans-CN');
+    return left.localeCompare(right, "zh-Hans-CN");
   });
 };
 
 export const buildGameItemTaxonomy = (): GameItemTaxonomyDto => {
-  const itemDefs = getItemDefinitions().filter((entry) => entry.enabled !== false);
+  const itemDefs = getItemDefinitions().filter(
+    (entry) => entry.enabled !== false,
+  );
 
   const categorySet = new Set<string>();
   const subCategoryLabels: Record<string, string> = {};
@@ -139,17 +153,22 @@ export const buildGameItemTaxonomy = (): GameItemTaxonomyDto => {
     if (!subCategory) continue;
 
     if (!subCategoryLabels[subCategory]) {
-      subCategoryLabels[subCategory] = SUB_CATEGORY_LABEL_FALLBACK[subCategory] ?? subCategory;
+      subCategoryLabels[subCategory] =
+        SUB_CATEGORY_LABEL_FALLBACK[subCategory] ?? subCategory;
     }
 
     pushUnique(subCategoryByCategory.all, subCategory);
     if (category) {
-      pushUnique(subCategoryByCategory[category] ?? (subCategoryByCategory[category] = []), subCategory);
+      pushUnique(
+        subCategoryByCategory[category] ??
+          (subCategoryByCategory[category] = []),
+        subCategory,
+      );
     }
   }
 
   const categoryValues = sortCategoryValues(Array.from(categorySet));
-  const categoryLabels: Record<string, string> = { all: '全部' };
+  const categoryLabels: Record<string, string> = { all: "全部" };
   for (const category of categoryValues) {
     categoryLabels[category] = CATEGORY_LABEL_FALLBACK[category] ?? category;
     if (!subCategoryByCategory[category]) {
@@ -164,11 +183,15 @@ export const buildGameItemTaxonomy = (): GameItemTaxonomyDto => {
 
   const subCategoryOptions = Object.entries(subCategoryLabels)
     .map(([value, label]) => ({ value, label }))
-    .sort((left, right) => left.label.localeCompare(right.label, 'zh-Hans-CN') || left.value.localeCompare(right.value));
+    .sort(
+      (left, right) =>
+        left.label.localeCompare(right.label, "zh-Hans-CN") ||
+        left.value.localeCompare(right.value),
+    );
 
   return {
     categories: {
-      all: { value: 'all', label: categoryLabels.all },
+      all: { value: "all", label: categoryLabels.all },
       options: categoryOptions,
       labels: categoryLabels,
     },

@@ -62,7 +62,7 @@ const SUB_CATEGORY_OPTIONS_BASE: LabeledOption[] = [
   { label: '护腿', value: 'legguards' },
   { label: '戒指', value: 'ring' },
   { label: '项链', value: 'necklace' },
-  { label: '项链', value: 'talisman' },
+  { label: '法宝（护符）', value: 'talisman' },
   { label: '宝镜', value: 'mirror' },
   { label: '配饰', value: 'accessory' },
   { label: '护甲', value: 'armor' },
