@@ -16,6 +16,8 @@
  * 1) key 统一按 trim 后匹配，空字符串一律视为非法。
  * 2) 默认被动池中的 key 必须来自支持词典，否则会导致生成回退链路失效。
  */
+import { REALM_ORDER } from './realmRules.js';
+
 export type GeneratedTechniqueType = '武技' | '心法' | '法诀' | '身法' | '辅修';
 export type GeneratedTechniqueQuality = '黄' | '玄' | '地' | '天';
 
@@ -154,6 +156,7 @@ export const TECHNIQUE_PROMPT_GENERAL_RULES = [
   'chance 统一使用 0~1 浮点概率（0.1=10%），禁止使用 10/60 这类百分数整数',
   'valueType=combined 时必须同时提供 baseValue 与 scaleRate',
   'valueType=scale 时必须提供 scaleAttr 与 scaleRate',
+  'technique.requiredRealm 必须来自 realmEnum',
   'buff/debuff 的 buffId 必须符合 allowedBuffIdRules',
   'mark.markId 必须来自 allowedMarkIds',
   'effects 不支持 valueFormula，严禁返回该字段',
@@ -164,6 +167,8 @@ export const TECHNIQUE_PROMPT_GENERAL_RULES = [
 ] as const;
 
 export const TECHNIQUE_PROMPT_TYPE_ENUM = ['武技', '心法', '法诀', '身法', '辅修'] as const;
+
+export const TECHNIQUE_PROMPT_REALM_ENUM = REALM_ORDER;
 
 export const TECHNIQUE_PROMPT_TARGET_TYPE_ENUM = [
   'self',
@@ -328,7 +333,7 @@ export const TECHNIQUE_PROMPT_FIELD_SEMANTICS = {
     type: '功法类型：武技/心法/法诀/身法/辅修',
     quality: '功法品质，必须与 quality 入参一致',
     maxLayer: '最大层数，必须与 quality 对应层数一致',
-    requiredRealm: '学习最低境界，建议使用现有境界文本（如 凡人）',
+    requiredRealm: '学习最低境界，必须在 realmEnum 中（如 凡人 / 炼精化炁·养气期）',
     attributeType: '主属性类型，physical 或 magic（与技能主伤害倾向一致）',
     attributeElement: '元素属性，必须在 elementEnum 中',
     tags: '标签数组，便于检索与展示',
@@ -621,6 +626,7 @@ export const TECHNIQUE_PROMPT_OUTPUT_SCHEMA = {
 export const TECHNIQUE_PROMPT_OUTPUT_CHECKLIST = [
   '输出必须是单个 JSON 对象，且可被 JSON.parse 直接解析',
   '必须只返回 technique/skills/layers 三个顶层字段',
+  'technique.requiredRealm 必须在 realmEnum 中',
   'skills.length 必须命中对应品质的 skillCountRange',
   'layers.length 必须等于 maxLayer，且 layer 从 1 递增到 maxLayer',
   'layers[*].costMaterials 必须是 []',
@@ -649,6 +655,7 @@ export const buildTechniqueGeneratorPromptInput = (params: {
       generalRules: [...TECHNIQUE_PROMPT_GENERAL_RULES],
       fieldSemantics: TECHNIQUE_PROMPT_FIELD_SEMANTICS,
       typeEnum: [...TECHNIQUE_PROMPT_TYPE_ENUM],
+      realmEnum: [...TECHNIQUE_PROMPT_REALM_ENUM],
       targetTypeEnum: [...TECHNIQUE_PROMPT_TARGET_TYPE_ENUM],
       elementEnum: [...TECHNIQUE_PROMPT_ELEMENT_ENUM],
       damageTypeEnum: [...TECHNIQUE_PROMPT_DAMAGE_TYPE_ENUM],

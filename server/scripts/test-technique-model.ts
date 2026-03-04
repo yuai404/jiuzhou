@@ -18,6 +18,7 @@
  * 2) 模型可能返回非纯 JSON 文本，脚本会尝试从文本中提取第一个 JSON 对象。
  */
 import dotenv from 'dotenv';
+import { generateTechniqueSkillIconMap } from '../src/services/shared/techniqueSkillImageGenerator.js';
 import {
   buildTechniqueGeneratorPromptInput,
   TECHNIQUE_EFFECT_TYPE_LIST,
@@ -212,6 +213,68 @@ const parseModelJson = (content: string): Record<string, unknown> => {
   }
 };
 
+const isSkillImageGenEnabled = (): boolean => {
+  const endpoint = asString(process.env.AI_TECHNIQUE_IMAGE_MODEL_URL);
+  const apiKey = asString(process.env.AI_TECHNIQUE_IMAGE_MODEL_KEY);
+  return endpoint.length > 0 && apiKey.length > 0;
+};
+
+const attachGeneratedSkillIcons = async (
+  normalized: Record<string, unknown>,
+): Promise<{ next: Record<string, unknown>; generatedCount: number }> => {
+  const technique = normalized.technique;
+  if (!technique || typeof technique !== 'object' || Array.isArray(technique)) {
+    return { next: normalized, generatedCount: 0 };
+  }
+  const tech = technique as Record<string, unknown>;
+
+  const rawSkills = Array.isArray(normalized.skills) ? normalized.skills : [];
+  if (rawSkills.length <= 0) return { next: normalized, generatedCount: 0 };
+
+  const inputs = rawSkills.flatMap((entry, idx) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const skill = entry as Record<string, unknown>;
+    const skillId = asString(skill.id) || `skill_${idx + 1}`;
+    const skillName = asString(skill.name);
+    if (!skillName) return [];
+    return [{
+      skillId,
+      techniqueName: asString(tech.name) || '未知功法',
+      techniqueType: asString(tech.type) || '武技',
+      techniqueQuality: asString(tech.quality) || '黄',
+      techniqueElement: asString(tech.attributeElement) || 'none',
+      skillName,
+      skillDescription: asString(skill.description),
+      skillEffects: Array.isArray(skill.effects) ? skill.effects : [],
+    }];
+  });
+
+  if (inputs.length <= 0) return { next: normalized, generatedCount: 0 };
+
+  const iconMap = await generateTechniqueSkillIconMap(inputs);
+  if (iconMap.size <= 0) return { next: normalized, generatedCount: 0 };
+
+  const nextSkills = rawSkills.map((entry, idx) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+    const skill = entry as Record<string, unknown>;
+    const skillId = asString(skill.id) || `skill_${idx + 1}`;
+    const generatedIcon = iconMap.get(skillId);
+    if (!generatedIcon) return entry;
+    return {
+      ...skill,
+      icon: generatedIcon,
+    };
+  });
+
+  return {
+    next: {
+      ...normalized,
+      skills: nextSkills,
+    },
+    generatedCount: iconMap.size,
+  };
+};
+
 const main = async (): Promise<void> => {
   const args = parseArgMap(process.argv.slice(2));
   const quality = resolveQualityArg(args.quality);
@@ -273,12 +336,17 @@ const main = async (): Promise<void> => {
   const content = extractContentText(message?.content);
   const parsed = parseModelJson(content);
   const normalized = normalizeParsedLayers(parsed);
+  const imageEnabled = isSkillImageGenEnabled();
+  const withIcons = imageEnabled
+    ? await attachGeneratedSkillIcons(normalized)
+    : { next: normalized, generatedCount: 0 };
 
-  const technique = normalized.technique as Record<string, unknown> | undefined;
+  const finalOutput = withIcons.next;
+  const technique = finalOutput.technique as Record<string, unknown> | undefined;
   const techniqueName = asString(technique?.name) || '未知功法';
   const techniqueType = asString(technique?.type) || '未知类型';
-  const skills = Array.isArray(normalized.skills) ? normalized.skills : [];
-  const layers = Array.isArray(normalized.layers) ? normalized.layers : [];
+  const skills = Array.isArray(finalOutput.skills) ? finalOutput.skills : [];
+  const layers = Array.isArray(finalOutput.layers) ? finalOutput.layers : [];
 
   console.log('\n=== AI 领悟模型联调结果 ===');
   console.log(`请求地址: ${endpoint}`);
@@ -287,8 +355,9 @@ const main = async (): Promise<void> => {
   console.log(`功法: ${techniqueName}（${techniqueType}）`);
   console.log(`技能数量: ${skills.length}`);
   console.log(`层级数量: ${layers.length}`);
+  console.log(`技能绘图: ${imageEnabled ? `已启用（生成${withIcons.generatedCount}张）` : '未启用（缺少 AI_TECHNIQUE_IMAGE_MODEL_URL/KEY）'}`);
   console.log('\n--- 归一化后结构化输出(JSON) ---');
-  console.log(JSON.stringify(normalized, null, 2));
+  console.log(JSON.stringify(finalOutput, null, 2));
 };
 
 void main().catch((error) => {

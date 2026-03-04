@@ -27,6 +27,7 @@ import { getItemDefinitionById, getTechniqueDefinitions, refreshGeneratedTechniq
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { normalizeTechniqueName, validateTechniqueCustomName, getTechniqueNameRulesView } from './shared/techniqueNameRules.js';
+import { generateTechniqueSkillIconMap } from './shared/techniqueSkillImageGenerator.js';
 import {
   buildTechniqueGeneratorPromptInput,
   TECHNIQUE_EFFECT_TYPE_LIST,
@@ -127,6 +128,7 @@ const WEEKLY_LIMIT = 1;
 const DRAFT_EXPIRE_HOURS = 24;
 const DEFAULT_REQUIRED_REALM = '凡人';
 const GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID = 'book-generated-technique';
+const DEFAULT_GENERATED_SKILL_ICON = '/assets/skills/icon_skill_44.png';
 
 const QUALITY_MAX_LAYER: Record<TechniqueQuality, number> = {
   黄: 3,
@@ -336,7 +338,7 @@ const buildFallbackCandidate = (quality: TechniqueQuality): TechniqueGenerationC
       id: skillId,
       name: `${suggestedName}·${idx + 1}式`,
       description: `${suggestedName}的第${idx + 1}式。`,
-      icon: '/assets/skills/icon_skill_44.png',
+      icon: DEFAULT_GENERATED_SKILL_ICON,
       sourceType: 'technique' as const,
       costLingqi: quality === '天' ? 16 : quality === '地' ? 14 : quality === '玄' ? 12 : 10,
       costQixue: 0,
@@ -763,6 +765,40 @@ const remapGeneratedSkillIds = (
     ...candidate,
     skills: remappedSkills,
     layers: remappedLayers,
+  };
+};
+
+const decorateGeneratedCandidateSkillIcons = async (
+  candidate: TechniqueGenerationCandidate,
+): Promise<TechniqueGenerationCandidate> => {
+  const inputs = candidate.skills.map((skill) => ({
+    skillId: skill.id,
+    techniqueName: candidate.technique.name,
+    techniqueType: candidate.technique.type,
+    techniqueQuality: candidate.technique.quality,
+    techniqueElement: candidate.technique.attributeElement,
+    skillName: skill.name,
+    skillDescription: skill.description,
+    skillEffects: skill.effects,
+  }));
+
+  const iconMap = await generateTechniqueSkillIconMap(inputs);
+  if (iconMap.size <= 0) {
+    return {
+      ...candidate,
+      skills: candidate.skills.map((skill) => ({
+        ...skill,
+        icon: skill.icon || DEFAULT_GENERATED_SKILL_ICON,
+      })),
+    };
+  }
+
+  return {
+    ...candidate,
+    skills: candidate.skills.map((skill) => ({
+      ...skill,
+      icon: iconMap.get(skill.id) || skill.icon || DEFAULT_GENERATED_SKILL_ICON,
+    })),
   };
 };
 
@@ -1259,7 +1295,7 @@ class TechniqueGenerationService {
         JSON.stringify(normalizedCandidate.technique.tags),
         normalizedCandidate.technique.description,
         normalizedCandidate.technique.longDesc,
-        '/assets/skills/icon_skill_44.png',
+        DEFAULT_GENERATED_SKILL_ICON,
       ],
     );
 
@@ -1474,6 +1510,7 @@ class TechniqueGenerationService {
 
     try {
       const generated = await generateCandidateWithRetry(quality);
+      const candidateWithIcons = await decorateGeneratedCandidateSkillIcons(generated.candidate);
       const saveRes = await this.saveGeneratedDraftTx({
         characterId,
         generationId,
@@ -1481,7 +1518,7 @@ class TechniqueGenerationService {
         modelName: generated.modelName,
         promptSnapshot: generated.promptSnapshot,
         attemptCount: generated.attemptCount,
-        candidate: generated.candidate,
+        candidate: candidateWithIcons,
       });
 
       if (!saveRes.success || !saveRes.data) {
