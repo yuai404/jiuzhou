@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS mail (
   
   -- 收件人
   recipient_user_id BIGINT NOT NULL,
-  recipient_character_id BIGINT,
+  recipient_character_id BIGINT NOT NULL CHECK (recipient_character_id > 0),
   
   -- 发件人（系统邮件为空）
   sender_type VARCHAR(16) NOT NULL DEFAULT 'system',   -- system/player/gm
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS mail (
 -- 表注释
 COMMENT ON TABLE mail IS '邮件表';
 COMMENT ON COLUMN mail.recipient_user_id IS '收件人用户ID';
-COMMENT ON COLUMN mail.recipient_character_id IS '收件人角色ID（可为空表示账号级邮件）';
+COMMENT ON COLUMN mail.recipient_character_id IS '收件人角色ID（正整数）';
 COMMENT ON COLUMN mail.sender_type IS '发件人类型（system/player/gm）';
 COMMENT ON COLUMN mail.sender_name IS '发件人显示名称';
 COMMENT ON COLUMN mail.mail_type IS '邮件类型（normal/reward/trade/gm）';
@@ -70,7 +70,9 @@ CREATE INDEX IF NOT EXISTS idx_mail_unclaimed ON mail(recipient_character_id, cl
 CREATE INDEX IF NOT EXISTS idx_mail_created ON mail(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_mail_expire ON mail(expire_at) WHERE expire_at IS NOT NULL AND deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_mail_active_char_created ON mail(recipient_character_id, created_at DESC) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_mail_active_user_global_created ON mail(recipient_user_id, created_at DESC) WHERE deleted_at IS NULL AND recipient_character_id IS NULL;
+-- 用于角色维度“已读后批量软删除”场景，减少 read_at 过滤回表
+CREATE INDEX IF NOT EXISTS idx_mail_cleanup_read_by_character ON mail(recipient_character_id, id)
+WHERE deleted_at IS NULL AND read_at IS NOT NULL;
 `;
 
 export const initMailTable = async (): Promise<void> => {
