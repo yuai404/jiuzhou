@@ -33,7 +33,7 @@ import { clampInt, getStaticItemDef } from "./helpers.js";
 
 /**
  * 强化前装备状态校验
- * 返回装备的 id、qty、location、locked、strengthenLevel
+ * 返回装备的 id、qty、location、locked、strengthenLevel、equipReqRealm
  */
 export const getEnhanceItemState = async (
   characterId: number,
@@ -47,6 +47,7 @@ export const getEnhanceItemState = async (
     location: InventoryLocation | string;
     locked: boolean;
     strengthenLevel: number;
+    equipReqRealm: string | null;
   };
 }> => {
   const itemResult = await query(
@@ -103,13 +104,17 @@ export const getEnhanceItemState = async (
         0,
         ENHANCE_MAX_LEVEL,
       ),
+      equipReqRealm:
+        typeof itemDef.equip_req_realm === "string"
+          ? itemDef.equip_req_realm
+          : null,
     },
   };
 };
 
 /**
  * 精炼前装备状态校验
- * 返回装备的 id、qty、location、locked、refineLevel
+ * 返回装备的 id、qty、location、locked、refineLevel、equipReqRealm
  */
 export const getRefineItemState = async (
   characterId: number,
@@ -123,6 +128,7 @@ export const getRefineItemState = async (
     location: InventoryLocation | string;
     locked: boolean;
     refineLevel: number;
+    equipReqRealm: string | null;
   };
 }> => {
   const itemResult = await query(
@@ -175,6 +181,10 @@ export const getRefineItemState = async (
       location: row.location,
       locked: Boolean(row.locked),
       refineLevel: clampInt(Number(row.refine_level) || 0, 0, REFINE_MAX_LEVEL),
+      equipReqRealm:
+        typeof itemDef.equip_req_realm === "string"
+          ? itemDef.equip_req_realm
+          : null,
     },
   };
 };

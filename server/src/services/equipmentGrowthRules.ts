@@ -246,23 +246,25 @@ export interface GrowthCostPlan {
   spiritStoneCost: number;
 }
 
-export const buildEnhanceCostPlan = (targetLevel: number): GrowthCostPlan => {
+export const buildEnhanceCostPlan = (targetLevel: number, equipReqRealm: number): GrowthCostPlan => {
   const target = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
+  const realmMultiplier = Math.max(1, clampInt(equipReqRealm, 1, 99));
   return {
     materialItemDefId: target <= 10 ? 'enhance-001' : 'enhance-002',
-    materialQty: 1,
-    silverCost: Math.max(50, Math.floor(5 * 20 * target)),
-    spiritStoneCost: Math.max(0, Math.floor(target / 5)),
+    materialQty: target * realmMultiplier,
+    silverCost: Math.max(100, Math.floor(150 * target * realmMultiplier)),
+    spiritStoneCost: Math.max(0, 100 * target  * realmMultiplier),
   };
 };
 
-export const buildRefineCostPlan = (targetLevel: number): GrowthCostPlan => {
+export const buildRefineCostPlan = (targetLevel: number,equipReqRealm:number): GrowthCostPlan => {
   const target = clampInt(targetLevel, 1, REFINE_MAX_LEVEL);
+  const realmMultiplier = Math.max(1, clampInt(equipReqRealm, 1, 99));
   return {
     materialItemDefId: 'enhance-002',
-    materialQty: target >= 8 ? 2 : 1,
-    silverCost: Math.max(100, Math.floor(8 * 35 * target)),
-    spiritStoneCost: Math.max(0, Math.floor((target + 1) / 3)),
+    materialQty: target * realmMultiplier,
+    silverCost: Math.max(100, Math.floor(150 * target * realmMultiplier)),
+    spiritStoneCost: Math.max(0, 100 * target  * realmMultiplier),
   };
 };
 

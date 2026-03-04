@@ -54,7 +54,10 @@ import {
   getCharacterComputedByCharacterId,
   invalidateCharacterComputedCache,
 } from "../characterComputedService.js";
-import { getRealmRankOneBasedStrict } from "../shared/realmRules.js";
+import {
+  getRealmRankOneBasedForEquipment,
+  getRealmRankOneBasedStrict,
+} from "../shared/realmRules.js";
 import { lockCharacterInventoryMutex } from "../inventoryMutex.js";
 import {
   getEquipmentAttrDeltaByInstanceId,
@@ -420,7 +423,10 @@ export const enhanceEquipment = async (
   }
 
   const targetLv = curLv + 1;
-  const costPlan = buildEnhanceCostPlan(targetLv);
+  const costPlan = buildEnhanceCostPlan(
+    targetLv,
+    getRealmRankOneBasedForEquipment(item.equipReqRealm),
+  );
 
   const beforeDiffRes = await diffEquipmentAttrIfEquipped(
     characterId,
@@ -544,7 +550,10 @@ export const refineEquipment = async (
   }
 
   const targetLv = curLv + 1;
-  const costPlan = buildRefineCostPlan(targetLv);
+  const costPlan = buildRefineCostPlan(
+    targetLv,
+    getRealmRankOneBasedForEquipment(item.equipReqRealm),
+  );
 
   const beforeDiffRes = await diffEquipmentAttrIfEquipped(
     characterId,
