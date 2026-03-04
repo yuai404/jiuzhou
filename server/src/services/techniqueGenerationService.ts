@@ -27,6 +27,15 @@ import { getItemDefinitionById, getTechniqueDefinitions, refreshGeneratedTechniq
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { normalizeTechniqueName, validateTechniqueCustomName, getTechniqueNameRulesView } from './shared/techniqueNameRules.js';
+import {
+  buildTechniqueGeneratorPromptInput,
+  TECHNIQUE_EFFECT_TYPE_LIST,
+  TECHNIQUE_EFFECT_UNSUPPORTED_FIELDS,
+  TECHNIQUE_PASSIVE_KEY_POOL_BY_TYPE,
+  TECHNIQUE_PROMPT_SYSTEM_MESSAGE,
+  TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY,
+  isSupportedTechniquePassiveKey,
+} from './shared/techniqueGenerationConstraints.js';
 
 export type TechniqueGenerationStatus =
   | 'pending'
@@ -147,39 +156,7 @@ const EXCHANGE_POINTS_BY_QUALITY_RANK: Record<number, number> = {
   4: 60,
 };
 
-const DAMAGE_EFFECT_TYPE_SET = new Set(['damage', 'heal', 'shield', 'buff', 'debuff', 'dispel', 'resource', 'restore_lingqi', 'cleanse', 'cleanse_control', 'lifesteal', 'control', 'mark']);
-const PASSIVE_KEY_POOL_BY_TYPE: Record<TechniqueGenerationCandidate['technique']['type'], Array<{ key: string; mode: 'percent' | 'flat' }>> = {
-  武技: [
-    { key: 'wugong', mode: 'percent' },
-    { key: 'baoji', mode: 'percent' },
-    { key: 'baoshang', mode: 'percent' },
-    { key: 'mingzhong', mode: 'percent' },
-  ],
-  心法: [
-    { key: 'max_lingqi', mode: 'flat' },
-    { key: 'lingqi_huifu', mode: 'flat' },
-    { key: 'max_qixue', mode: 'percent' },
-    { key: 'lengque', mode: 'percent' },
-  ],
-  法诀: [
-    { key: 'fagong', mode: 'percent' },
-    { key: 'zengshang', mode: 'percent' },
-    { key: 'huo_kangxing', mode: 'percent' },
-    { key: 'shui_kangxing', mode: 'percent' },
-  ],
-  身法: [
-    { key: 'sudu', mode: 'flat' },
-    { key: 'shanbi', mode: 'percent' },
-    { key: 'mingzhong', mode: 'percent' },
-    { key: 'kongzhi_kangxing', mode: 'percent' },
-  ],
-  辅修: [
-    { key: 'zhiliao', mode: 'percent' },
-    { key: 'max_qixue', mode: 'percent' },
-    { key: 'qixue_huifu', mode: 'flat' },
-    { key: 'jianliao', mode: 'percent' },
-  ],
-};
+const DAMAGE_EFFECT_TYPE_SET = new Set<string>(TECHNIQUE_EFFECT_TYPE_LIST);
 
 const asString = (raw: unknown): string => (typeof raw === 'string' ? raw.trim() : '');
 const asNumber = (raw: unknown, fallback = 0): number => {
@@ -280,11 +257,21 @@ const chooseFrom = <T>(list: T[]): T => {
   return list[Math.floor(Math.random() * list.length)] as T;
 };
 
+const sanitizeTechniqueEffect = (raw: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...raw };
+  for (const field of TECHNIQUE_EFFECT_UNSUPPORTED_FIELDS) {
+    if (field in next) {
+      delete next[field];
+    }
+  }
+  return next;
+};
+
 const normalizeEffects = (raw: unknown): unknown[] => {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((entry) => entry && typeof entry === 'object' && !Array.isArray(entry))
-    .map((entry) => ({ ...(entry as Record<string, unknown>) }))
+    .map((entry) => sanitizeTechniqueEffect(entry as Record<string, unknown>))
     .filter((entry) => DAMAGE_EFFECT_TYPE_SET.has(String((entry as Record<string, unknown>).type || '')));
 };
 
@@ -328,47 +315,61 @@ const buildFallbackCandidate = (quality: TechniqueQuality): TechniqueGenerationC
   const suggestedName = `${chooseFrom(nounByType[type])}${suffixByType[type]}`;
   const attributeType = type === '武技' || type === '身法' ? 'physical' : 'magic';
   const element = chooseFrom(['none', 'jin', 'mu', 'shui', 'huo', 'tu']);
-  const skillId = buildGeneratedSkillId(1);
+  const skillCountRange = TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY[quality];
+  const fallbackSkillCount = Math.max(1, skillCountRange.min);
   const targetType: TechniqueGenerationCandidate['skills'][number]['targetType'] =
     type === '辅修' ? 'single_ally' : type === '心法' ? 'self' : 'single_enemy';
   const damageType: TechniqueGenerationCandidate['skills'][number]['damageType'] =
     type === '武技' || type === '身法' ? 'physical' : type === '法诀' ? 'magic' : null;
-  const skill: TechniqueGenerationCandidate['skills'][number] = {
-    id: skillId,
-    name: `${suggestedName}·一式`,
-    description: `${suggestedName}的核心招式。`,
-    icon: '/assets/skills/icon_skill_44.png',
-    sourceType: 'technique' as const,
-    costLingqi: quality === '天' ? 16 : quality === '地' ? 14 : quality === '玄' ? 12 : 10,
-    costQixue: 0,
-    cooldown: quality === '天' ? 2 : 1,
-    targetType,
-    targetCount: 1,
-    damageType,
-    element,
-    effects: buildFallbackSkillEffects(type, quality),
-    triggerType: 'active' as const,
-    aiPriority: 55,
-    upgrades: [
-      {
-        layer: maxLayer,
-        upgradeType: 'value',
-        changes: {
-          effects: buildFallbackSkillEffects(type, quality).map((entry) => {
-            if (!entry || typeof entry !== 'object') return entry;
-            const row = { ...(entry as Record<string, unknown>) };
-            const scaleRate = asNumber(row.scaleRate, NaN);
-            if (Number.isFinite(scaleRate)) row.scaleRate = clamp(scaleRate + 0.25, 0, 4);
-            const value = asNumber(row.value, NaN);
-            if (Number.isFinite(value)) row.value = Math.floor(clamp(value * 1.2, 0, 99999));
-            return row;
-          }),
+  const skills: TechniqueGenerationCandidate['skills'] = Array.from({ length: fallbackSkillCount }, (_, idx) => {
+    const skillId = buildGeneratedSkillId(idx + 1);
+    const effects = buildFallbackSkillEffects(type, quality).map((entry) => {
+      if (!entry || typeof entry !== 'object') return entry;
+      const row = { ...(entry as Record<string, unknown>) };
+      const scaleRate = asNumber(row.scaleRate, NaN);
+      if (Number.isFinite(scaleRate)) row.scaleRate = clamp(scaleRate + idx * 0.06, 0, 4);
+      const value = asNumber(row.value, NaN);
+      if (Number.isFinite(value)) row.value = Math.floor(clamp(value + idx * 2, 0, 99999));
+      return row;
+    });
+    return {
+      id: skillId,
+      name: `${suggestedName}·${idx + 1}式`,
+      description: `${suggestedName}的第${idx + 1}式。`,
+      icon: '/assets/skills/icon_skill_44.png',
+      sourceType: 'technique' as const,
+      costLingqi: quality === '天' ? 16 : quality === '地' ? 14 : quality === '玄' ? 12 : 10,
+      costQixue: 0,
+      cooldown: quality === '天' ? 2 : 1,
+      targetType,
+      targetCount: 1,
+      damageType,
+      element,
+      effects,
+      triggerType: 'active' as const,
+      aiPriority: Math.max(30, 55 - idx * 3),
+      upgrades: [
+        {
+          layer: maxLayer,
+          upgradeType: 'value',
+          changes: {
+            effects: effects.map((entry) => {
+              if (!entry || typeof entry !== 'object') return entry;
+              const row = { ...(entry as Record<string, unknown>) };
+              const scaleRate = asNumber(row.scaleRate, NaN);
+              if (Number.isFinite(scaleRate)) row.scaleRate = clamp(scaleRate + 0.25, 0, 4);
+              const value = asNumber(row.value, NaN);
+              if (Number.isFinite(value)) row.value = Math.floor(clamp(value * 1.2, 0, 99999));
+              return row;
+            }),
+          },
         },
-      },
-    ],
-  };
+      ],
+    };
+  });
+  const skillIds = skills.map((skill) => skill.id);
 
-  const passivePool = PASSIVE_KEY_POOL_BY_TYPE[type];
+  const passivePool = TECHNIQUE_PASSIVE_KEY_POOL_BY_TYPE[type];
   const layers: TechniqueGenerationCandidate['layers'] = [];
   for (let layer = 1; layer <= maxLayer; layer += 1) {
     const passiveDef = passivePool[(layer - 1) % passivePool.length] ?? passivePool[0];
@@ -381,17 +382,10 @@ const buildFallbackCandidate = (quality: TechniqueQuality): TechniqueGenerationC
       layer,
       costSpiritStones: layer <= 1 ? 0 : Math.floor(80 * qualityMult * Math.pow(layer, 1.5)),
       costExp: layer <= 1 ? 0 : Math.floor(120 * qualityMult * Math.pow(layer, 1.55)),
-      costMaterials: layer <= 1
-        ? []
-        : [
-            {
-              itemId: 'mat-gongfa-canye',
-              qty: Math.max(1, Math.floor((quality === '天' ? 6 : quality === '地' ? 5 : quality === '玄' ? 4 : 3) * layer * 0.8)),
-            },
-          ],
+      costMaterials: [],
       passives: [{ key: passiveDef.key, value: passiveValue }],
-      unlockSkillIds: layer === 1 ? [skillId] : [],
-      upgradeSkillIds: layer === maxLayer ? [skillId] : [],
+      unlockSkillIds: layer === 1 ? skillIds : [],
+      upgradeSkillIds: layer === maxLayer ? skillIds : [],
       layerDesc: `第${layer}层，强化${passiveDef.key}`,
     });
   }
@@ -409,7 +403,7 @@ const buildFallbackCandidate = (quality: TechniqueQuality): TechniqueGenerationC
       description: `由洞府研修推演而成的${quality}品${type}。`,
       longDesc: `${suggestedName}为研修所得秘传，随层数提升可持续增强核心套路。`,
     },
-    skills: [skill],
+    skills,
     layers,
   };
 };
@@ -435,6 +429,14 @@ const validateCandidate = (
   if (candidate.skills.length <= 0) {
     return { success: false, message: 'AI结果未生成技能', code: 'GENERATOR_INVALID' };
   }
+  const skillCountRange = TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY[quality];
+  if (candidate.skills.length < skillCountRange.min || candidate.skills.length > skillCountRange.max) {
+    return {
+      success: false,
+      message: `AI结果技能数量非法，${quality}品需${skillCountRange.min}~${skillCountRange.max}个技能`,
+      code: 'GENERATOR_INVALID',
+    };
+  }
 
   const skillIdSet = new Set(candidate.skills.map((skill) => skill.id));
   for (const layer of candidate.layers) {
@@ -449,6 +451,20 @@ const validateCandidate = (
     for (const skillId of layer.upgradeSkillIds) {
       if (!skillIdSet.has(skillId)) {
         return { success: false, message: 'AI结果强化技能ID不存在', code: 'GENERATOR_INVALID' };
+      }
+    }
+    if (Array.isArray(layer.costMaterials) && layer.costMaterials.length > 0) {
+      return { success: false, message: 'AI结果层级材料必须为空', code: 'GENERATOR_INVALID' };
+    }
+    if (!Array.isArray(layer.passives) || layer.passives.length <= 0) {
+      return { success: false, message: 'AI结果层级被动为空', code: 'GENERATOR_INVALID' };
+    }
+    for (const passive of layer.passives) {
+      if (!isSupportedTechniquePassiveKey(passive.key)) {
+        return { success: false, message: 'AI结果包含未支持的被动key', code: 'GENERATOR_INVALID' };
+      }
+      if (!Number.isFinite(passive.value)) {
+        return { success: false, message: 'AI结果被动数值非法', code: 'GENERATOR_INVALID' };
       }
     }
   }
@@ -473,6 +489,9 @@ const validateCandidate = (
     for (const effect of skill.effects) {
       if (!effect || typeof effect !== 'object' || Array.isArray(effect)) {
         return { success: false, message: 'AI结果技能效果结构非法', code: 'GENERATOR_INVALID' };
+      }
+      if ('valueFormula' in (effect as Record<string, unknown>)) {
+        return { success: false, message: 'AI结果技能效果包含未支持字段valueFormula', code: 'GENERATOR_INVALID' };
       }
       const effectType = asString((effect as Record<string, unknown>).type);
       if (!DAMAGE_EFFECT_TYPE_SET.has(effectType)) {
@@ -542,10 +561,18 @@ const sanitizeCandidateFromModel = (raw: unknown, quality: TechniqueQuality): Te
   if (skills.length <= 0) {
     skills.push(...fallback.skills);
   }
+  const skillCountRange = TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY[quality];
+  if (skills.length < skillCountRange.min) {
+    const missingCount = skillCountRange.min - skills.length;
+    skills.push(...fallback.skills.slice(0, missingCount));
+  }
+  if (skills.length > skillCountRange.max) {
+    skills.splice(skillCountRange.max);
+  }
 
   const rawLayers = Array.isArray(source.layers) ? source.layers : [];
   const orderedLayers = rawLayers
-    .map((rawLayer) => {
+    .map((rawLayer): TechniqueGenerationCandidate['layers'][number] | null => {
       if (!rawLayer || typeof rawLayer !== 'object' || Array.isArray(rawLayer)) return null;
       const row = rawLayer as Record<string, unknown>;
       const layerNo = Math.floor(clamp(asNumber(row.layer, 0), 1, maxLayer));
@@ -553,18 +580,7 @@ const sanitizeCandidateFromModel = (raw: unknown, quality: TechniqueQuality): Te
         layer: layerNo,
         costSpiritStones: Math.floor(clamp(asNumber(row.costSpiritStones, 0), 0, 1000000)),
         costExp: Math.floor(clamp(asNumber(row.costExp, 0), 0, 1000000)),
-        costMaterials: Array.isArray(row.costMaterials)
-          ? row.costMaterials
-              .map((entry) => {
-                if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
-                const material = entry as Record<string, unknown>;
-                const itemId = asString(material.itemId);
-                const qty = Math.floor(clamp(asNumber(material.qty, 0), 0, 9999));
-                if (!itemId || qty <= 0) return null;
-                return { itemId, qty };
-              })
-              .filter((entry): entry is { itemId: string; qty: number } => Boolean(entry))
-          : [],
+        costMaterials: [] as Array<{ itemId: string; qty: number }>,
         passives: Array.isArray(row.passives)
           ? row.passives
               .map((entry) => {
@@ -572,7 +588,7 @@ const sanitizeCandidateFromModel = (raw: unknown, quality: TechniqueQuality): Te
                 const passive = entry as Record<string, unknown>;
                 const key = asString(passive.key);
                 const value = asNumber(passive.value, NaN);
-                if (!key || !Number.isFinite(value)) return null;
+                if (!isSupportedTechniquePassiveKey(key) || !Number.isFinite(value)) return null;
                 return { key, value };
               })
               .filter((entry): entry is { key: string; value: number } => Boolean(entry))
@@ -586,20 +602,24 @@ const sanitizeCandidateFromModel = (raw: unknown, quality: TechniqueQuality): Te
         layerDesc: asString(row.layerDesc) || `第${layerNo}层`,
       };
     })
-    .filter((row): row is TechniqueGenerationCandidate['layers'][number] => Boolean(row))
+    .filter((row): row is TechniqueGenerationCandidate['layers'][number] => row !== null)
     .sort((a, b) => a.layer - b.layer);
 
   const fallbackLayerMap = new Map(fallback.layers.map((row) => [row.layer, row]));
   const layers: TechniqueGenerationCandidate['layers'] = [];
   for (let layer = 1; layer <= maxLayer; layer += 1) {
     const row = orderedLayers.find((entry) => entry.layer === layer) ?? fallbackLayerMap.get(layer);
+    const fallbackLayer = fallbackLayerMap.get(layer);
     if (!row) continue;
+    const passives = row.passives.length > 0
+      ? row.passives
+      : (fallbackLayer?.passives ?? []);
     layers.push({
       layer,
       costSpiritStones: row.costSpiritStones,
       costExp: row.costExp,
       costMaterials: row.costMaterials,
-      passives: row.passives,
+      passives,
       unlockSkillIds: row.unlockSkillIds,
       upgradeSkillIds: row.upgradeSkillIds,
       layerDesc: row.layerDesc,
@@ -622,6 +642,11 @@ const tryCallExternalGenerator = async (quality: TechniqueQuality): Promise<{ ca
   const apiKey = asString(process.env.AI_TECHNIQUE_MODEL_KEY);
   const modelName = asString(process.env.AI_TECHNIQUE_MODEL_NAME) || 'gpt-4o-mini';
   if (!endpoint || !apiKey) return null;
+  const promptInput = buildTechniqueGeneratorPromptInput({
+    quality,
+    maxLayer: QUALITY_MAX_LAYER[quality],
+    effectTypeEnum: Array.from(DAMAGE_EFFECT_TYPE_SET),
+  });
 
   const payload = {
     model: modelName,
@@ -629,65 +654,11 @@ const tryCallExternalGenerator = async (quality: TechniqueQuality): Promise<{ ca
     messages: [
       {
         role: 'system',
-        content: '你是修仙RPG功法设计器。请严格输出JSON，不要输出额外文本。',
+        content: TECHNIQUE_PROMPT_SYSTEM_MESSAGE,
       },
       {
         role: 'user',
-        content: JSON.stringify({
-          task: '生成完整功法定义',
-          quality,
-          maxLayer: QUALITY_MAX_LAYER[quality],
-          constraints: {
-            typeEnum: ['武技', '心法', '法诀', '身法', '辅修'],
-            targetTypeEnum: ['self', 'single_enemy', 'single_ally', 'all_enemy', 'all_ally', 'random_enemy', 'random_ally'],
-            effectTypeEnum: Array.from(DAMAGE_EFFECT_TYPE_SET),
-            cooldownRange: [0, 6],
-            lingqiCostRange: [0, 80],
-            targetCountRange: [1, 6],
-          },
-          outputSchema: {
-            technique: {
-              name: 'string',
-              type: 'enum',
-              requiredRealm: 'string',
-              attributeType: 'physical|magic',
-              attributeElement: 'string',
-              tags: 'string[]',
-              description: 'string',
-              longDesc: 'string',
-            },
-            skills: [
-              {
-                id: 'string',
-                name: 'string',
-                description: 'string',
-                icon: 'string|null',
-                costLingqi: 'number',
-                costQixue: 'number',
-                cooldown: 'number',
-                targetType: 'enum',
-                targetCount: 'number',
-                damageType: 'physical|magic|true|null',
-                element: 'string',
-                effects: 'object[]',
-                aiPriority: 'number',
-                upgrades: 'object[]',
-              },
-            ],
-            layers: [
-              {
-                layer: 'number',
-                costSpiritStones: 'number',
-                costExp: 'number',
-                costMaterials: [{ itemId: 'string', qty: 'number' }],
-                passives: [{ key: 'string', value: 'number' }],
-                unlockSkillIds: 'string[]',
-                upgradeSkillIds: 'string[]',
-                layerDesc: 'string',
-              },
-            ],
-          },
-        }),
+        content: JSON.stringify(promptInput),
       },
     ],
   };
@@ -760,6 +731,38 @@ const generateCandidateWithRetry = async (quality: TechniqueQuality): Promise<{ 
     modelName: 'fallback-rule-generator',
     attemptCount: maxAttempts,
     promptSnapshot: '{}',
+  };
+};
+
+const remapGeneratedSkillIds = (
+  candidate: TechniqueGenerationCandidate,
+): TechniqueGenerationCandidate => {
+  const idMap = new Map<string, string>();
+  const remappedSkills = candidate.skills.map((skill, idx) => {
+    const generatedSkillId = buildGeneratedSkillId(idx + 1);
+    idMap.set(skill.id, generatedSkillId);
+    return {
+      ...skill,
+      id: generatedSkillId,
+    };
+  });
+
+  const remapLayerSkillIds = (ids: string[]): string[] => {
+    return ids
+      .map((id) => idMap.get(id))
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  };
+
+  const remappedLayers = candidate.layers.map((layer) => ({
+    ...layer,
+    unlockSkillIds: remapLayerSkillIds(layer.unlockSkillIds),
+    upgradeSkillIds: remapLayerSkillIds(layer.upgradeSkillIds),
+  }));
+
+  return {
+    ...candidate,
+    skills: remappedSkills,
+    layers: remappedLayers,
   };
 };
 
@@ -1203,6 +1206,13 @@ class TechniqueGenerationService {
       return { success: false, message: validate.message, code: validate.code };
     }
 
+    // 强制由系统重建技能ID，避免模型返回ID污染全局主键空间。
+    const normalizedCandidate = remapGeneratedSkillIds(candidate);
+    const validateNormalized = validateCandidate(normalizedCandidate, quality);
+    if (!validateNormalized.success) {
+      return { success: false, message: validateNormalized.message, code: validateNormalized.code };
+    }
+
     const draftTechniqueId = buildGeneratedTechniqueId();
     await query(
       `
@@ -1239,21 +1249,21 @@ class TechniqueGenerationService {
         draftTechniqueId,
         generationId,
         characterId,
-        candidate.technique.name,
-        candidate.technique.type,
-        candidate.technique.quality,
-        candidate.technique.maxLayer,
-        candidate.technique.requiredRealm,
-        candidate.technique.attributeType,
-        candidate.technique.attributeElement,
-        JSON.stringify(candidate.technique.tags),
-        candidate.technique.description,
-        candidate.technique.longDesc,
+        normalizedCandidate.technique.name,
+        normalizedCandidate.technique.type,
+        normalizedCandidate.technique.quality,
+        normalizedCandidate.technique.maxLayer,
+        normalizedCandidate.technique.requiredRealm,
+        normalizedCandidate.technique.attributeType,
+        normalizedCandidate.technique.attributeElement,
+        JSON.stringify(normalizedCandidate.technique.tags),
+        normalizedCandidate.technique.description,
+        normalizedCandidate.technique.longDesc,
         '/assets/skills/icon_skill_44.png',
       ],
     );
 
-    for (const skill of candidate.skills) {
+    for (const skill of normalizedCandidate.skills) {
       await query(
         `
           INSERT INTO generated_skill_def (
@@ -1315,7 +1325,7 @@ class TechniqueGenerationService {
       );
     }
 
-    for (const layer of candidate.layers) {
+    for (const layer of normalizedCandidate.layers) {
       await query(
         `
           INSERT INTO generated_technique_layer (
@@ -1356,7 +1366,7 @@ class TechniqueGenerationService {
           JSON.stringify(layer.passives),
           layer.unlockSkillIds,
           layer.upgradeSkillIds,
-          candidate.technique.requiredRealm,
+          normalizedCandidate.technique.requiredRealm,
           layer.layerDesc,
         ],
       );
@@ -1383,12 +1393,12 @@ class TechniqueGenerationService {
         draftTechniqueId,
         preview: {
           draftTechniqueId,
-          aiSuggestedName: candidate.technique.name,
+          aiSuggestedName: normalizedCandidate.technique.name,
           quality,
-          type: candidate.technique.type,
-          maxLayer: candidate.technique.maxLayer,
-          description: candidate.technique.description,
-          skillNames: candidate.skills.map((skill) => skill.name),
+          type: normalizedCandidate.technique.type,
+          maxLayer: normalizedCandidate.technique.maxLayer,
+          description: normalizedCandidate.technique.description,
+          skillNames: normalizedCandidate.skills.map((skill) => skill.name),
         },
       },
     };

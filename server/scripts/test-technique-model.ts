@@ -1,0 +1,298 @@
+#!/usr/bin/env tsx
+/**
+ * AI 领悟模型联调脚本
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1) 做什么：读取环境变量中的模型服务配置，调用模型生成一份功法草稿，并打印到控制台。
+ * 2) 不做什么：不写数据库、不创建生成任务、不扣除研修点，仅做模型联调验证。
+ *
+ * 输入/输出：
+ * - 输入：CLI 参数（可选）：--quality <黄|玄|地|天>。
+ * - 输出：控制台打印模型响应、结构化 JSON、功法摘要。
+ *
+ * 数据流/状态流：
+ * 解析参数 -> 读取环境变量 -> 组装 prompt -> 请求模型 -> 解析 JSON -> 打印结果。
+ *
+ * 关键边界条件与坑点：
+ * 1) 若 AI_TECHNIQUE_MODEL_URL / AI_TECHNIQUE_MODEL_KEY 缺失，脚本会直接失败退出。
+ * 2) 模型可能返回非纯 JSON 文本，脚本会尝试从文本中提取第一个 JSON 对象。
+ */
+import dotenv from 'dotenv';
+import {
+  buildTechniqueGeneratorPromptInput,
+  TECHNIQUE_EFFECT_TYPE_LIST,
+  TECHNIQUE_EFFECT_UNSUPPORTED_FIELDS,
+  TECHNIQUE_PASSIVE_KEY_POOL_BY_TYPE,
+  TECHNIQUE_PROMPT_SYSTEM_MESSAGE,
+  isSupportedTechniquePassiveKey,
+  type GeneratedTechniqueType,
+} from '../src/services/shared/techniqueGenerationConstraints.js';
+
+dotenv.config();
+
+type TechniqueQuality = '黄' | '玄' | '地' | '天';
+
+type ArgMap = Record<string, string | undefined>;
+
+const QUALITY_RANDOM_WEIGHT: Array<{ quality: TechniqueQuality; weight: number }> = [
+  { quality: '黄', weight: 55 },
+  { quality: '玄', weight: 30 },
+  { quality: '地', weight: 12 },
+  { quality: '天', weight: 3 },
+];
+
+const QUALITY_MAX_LAYER: Record<TechniqueQuality, number> = {
+  黄: 3,
+  玄: 5,
+  地: 7,
+  天: 9,
+};
+
+const EFFECT_TYPE_SET = new Set<string>(TECHNIQUE_EFFECT_TYPE_LIST);
+
+const sanitizeSkillEffect = (raw: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...raw };
+  for (const field of TECHNIQUE_EFFECT_UNSUPPORTED_FIELDS) {
+    if (field in next) delete next[field];
+  }
+  return next;
+};
+
+const toTechniqueType = (raw: unknown): GeneratedTechniqueType => {
+  const text = asString(raw);
+  if (text === '武技' || text === '心法' || text === '法诀' || text === '身法' || text === '辅修') {
+    return text;
+  }
+  return '武技';
+};
+
+const normalizeParsedLayers = (parsed: Record<string, unknown>): Record<string, unknown> => {
+  const technique = parsed.technique && typeof parsed.technique === 'object' && !Array.isArray(parsed.technique)
+    ? (parsed.technique as Record<string, unknown>)
+    : null;
+  const techniqueType = toTechniqueType(technique?.type);
+  const passivePool = TECHNIQUE_PASSIVE_KEY_POOL_BY_TYPE[techniqueType];
+  const layers = Array.isArray(parsed.layers) ? parsed.layers : [];
+  const normalizedLayers = layers.map((layerRaw) => {
+    if (!layerRaw || typeof layerRaw !== 'object' || Array.isArray(layerRaw)) return layerRaw;
+    const layer = layerRaw as Record<string, unknown>;
+    const layerNo = Math.max(1, Math.floor(Number(layer.layer) || 1));
+    const rawPassives = Array.isArray(layer.passives) ? layer.passives : [];
+    const normalizedPassives = rawPassives
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+        const row = entry as Record<string, unknown>;
+        const key = asString(row.key);
+        const value = Number(row.value);
+        if (!isSupportedTechniquePassiveKey(key) || !Number.isFinite(value)) return null;
+        return { key, value };
+      })
+      .filter((entry): entry is { key: string; value: number } => Boolean(entry));
+    const fallbackPassive = passivePool[(layerNo - 1) % passivePool.length] ?? passivePool[0];
+    const passives = normalizedPassives.length > 0
+      ? normalizedPassives
+      : (fallbackPassive ? [{ key: fallbackPassive.key, value: 0.01 }] : []);
+
+    return {
+      ...layer,
+      costMaterials: [],
+      passives,
+    };
+  });
+
+  return {
+    ...parsed,
+    skills: Array.isArray(parsed.skills)
+      ? parsed.skills.map((skillRaw) => {
+          if (!skillRaw || typeof skillRaw !== 'object' || Array.isArray(skillRaw)) return skillRaw;
+          const skill = skillRaw as Record<string, unknown>;
+          const effects = Array.isArray(skill.effects)
+            ? skill.effects
+                .map((effectRaw) => {
+                  if (!effectRaw || typeof effectRaw !== 'object' || Array.isArray(effectRaw)) return null;
+                  const effect = sanitizeSkillEffect(effectRaw as Record<string, unknown>);
+                  const effectType = asString(effect.type);
+                  if (!EFFECT_TYPE_SET.has(effectType)) return null;
+                  return effect;
+                })
+                .filter((effect): effect is Record<string, unknown> => Boolean(effect))
+            : [];
+          return {
+            ...skill,
+            effects,
+          };
+        })
+      : [],
+    layers: normalizedLayers,
+  };
+};
+
+const parseArgMap = (argv: string[]): ArgMap => {
+  const map: ArgMap = {};
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (token === '--') continue;
+    if (!token.startsWith('--')) continue;
+    const key = token.slice(2);
+    const next = argv[i + 1];
+    if (!next || next.startsWith('--')) {
+      map[key] = 'true';
+      continue;
+    }
+    map[key] = next;
+    i += 1;
+  }
+  return map;
+};
+
+const asString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+
+const resolveChatCompletionsEndpoint = (rawEndpoint: string): string => {
+  const endpoint = trimTrailingSlash(rawEndpoint);
+  if (!endpoint) return endpoint;
+
+  if (/\/chat\/completions$/i.test(endpoint)) {
+    return endpoint;
+  }
+  if (/\/v1$/i.test(endpoint)) {
+    return `${endpoint}/chat/completions`;
+  }
+  return `${endpoint}/v1/chat/completions`;
+};
+
+const resolveQualityByWeight = (): TechniqueQuality => {
+  const totalWeight = QUALITY_RANDOM_WEIGHT.reduce((sum, row) => sum + row.weight, 0);
+  if (totalWeight <= 0) return '黄';
+  const roll = Math.random() * totalWeight;
+  let cursor = 0;
+  for (const row of QUALITY_RANDOM_WEIGHT) {
+    cursor += row.weight;
+    if (roll <= cursor) return row.quality;
+  }
+  return '黄';
+};
+
+const resolveQualityArg = (raw: string | undefined): TechniqueQuality => {
+  const text = asString(raw);
+  if (text === '黄' || text === '玄' || text === '地' || text === '天') return text;
+  return resolveQualityByWeight();
+};
+
+const extractContentText = (raw: unknown): string => {
+  if (typeof raw === 'string') return raw;
+  if (Array.isArray(raw)) {
+    const collected = raw
+      .map((item) => {
+        if (!item || typeof item !== 'object') return '';
+        const text = (item as Record<string, unknown>).text;
+        return typeof text === 'string' ? text : '';
+      })
+      .filter((part) => part.length > 0);
+    return collected.join('\n');
+  }
+  return '';
+};
+
+const parseModelJson = (content: string): Record<string, unknown> => {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    throw new Error('模型返回内容为空');
+  }
+
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    const matched = trimmed.match(/\{[\s\S]*\}/);
+    if (!matched) {
+      throw new Error('模型返回不是合法 JSON');
+    }
+    return JSON.parse(matched[0]) as Record<string, unknown>;
+  }
+};
+
+const main = async (): Promise<void> => {
+  const args = parseArgMap(process.argv.slice(2));
+  const quality = resolveQualityArg(args.quality);
+  const endpointRaw = asString(process.env.AI_TECHNIQUE_MODEL_URL);
+  const endpoint = resolveChatCompletionsEndpoint(endpointRaw);
+  const apiKey = asString(process.env.AI_TECHNIQUE_MODEL_KEY);
+  const modelName = asString(process.env.AI_TECHNIQUE_MODEL_NAME) || 'gpt-4o-mini';
+  const promptInput = buildTechniqueGeneratorPromptInput({
+    quality,
+    maxLayer: QUALITY_MAX_LAYER[quality],
+    effectTypeEnum: [...TECHNIQUE_EFFECT_TYPE_LIST],
+  });
+
+  if (!endpoint) {
+    throw new Error('缺少环境变量 AI_TECHNIQUE_MODEL_URL');
+  }
+  if (!apiKey) {
+    throw new Error('缺少环境变量 AI_TECHNIQUE_MODEL_KEY');
+  }
+
+  const payload = {
+    model: modelName,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: TECHNIQUE_PROMPT_SYSTEM_MESSAGE,
+      },
+      {
+        role: 'user',
+        content: JSON.stringify(promptInput),
+      },
+    ],
+  };
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`模型请求失败(${response.status}): ${responseText}`);
+  }
+
+  let responseBody: Record<string, unknown>;
+  try {
+    responseBody = JSON.parse(responseText) as Record<string, unknown>;
+  } catch {
+    throw new Error(`响应不是 JSON：${responseText.slice(0, 300)}`);
+  }
+
+  const choice = ((responseBody.choices as Array<Record<string, unknown>> | undefined) ?? [])[0];
+  const message = choice?.message as Record<string, unknown> | undefined;
+  const content = extractContentText(message?.content);
+  const parsed = parseModelJson(content);
+  const normalized = normalizeParsedLayers(parsed);
+
+  const technique = normalized.technique as Record<string, unknown> | undefined;
+  const techniqueName = asString(technique?.name) || '未知功法';
+  const techniqueType = asString(technique?.type) || '未知类型';
+  const skills = Array.isArray(normalized.skills) ? normalized.skills : [];
+  const layers = Array.isArray(normalized.layers) ? normalized.layers : [];
+
+  console.log('\n=== AI 领悟模型联调结果 ===');
+  console.log(`请求地址: ${endpoint}`);
+  console.log(`模型: ${modelName}`);
+  console.log(`品质: ${quality}`);
+  console.log(`功法: ${techniqueName}（${techniqueType}）`);
+  console.log(`技能数量: ${skills.length}`);
+  console.log(`层级数量: ${layers.length}`);
+  console.log('\n--- 归一化后结构化输出(JSON) ---');
+  console.log(JSON.stringify(normalized, null, 2));
+};
+
+void main().catch((error) => {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error(`[test-technique-model] ${msg}`);
+  process.exit(1);
+});

@@ -17,6 +17,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getTechniqueNameRulesView,
   normalizeTechniqueName,
   validateTechniqueCustomName,
 } from '../shared/techniqueNameRules.js';
@@ -27,10 +28,11 @@ test('名称规范化应处理空白与英文大小写', () => {
 
 test('合法名称应通过校验并自动添加前缀', () => {
   const result = validateTechniqueCustomName('太虚剑诀');
+  const prefix = getTechniqueNameRulesView().fixedPrefix;
   assert.equal(result.success, true);
   if (!result.success) return;
-  assert.equal(result.normalizedName, '悟道太虚剑诀');
-  assert.equal(result.displayName, '悟道太虚剑诀');
+  assert.equal(result.normalizedName, `${prefix.toLowerCase()}太虚剑诀`);
+  assert.equal(result.displayName, `${prefix}太虚剑诀`);
 });
 
 test('长度越界应返回 NAME_INVALID', () => {
