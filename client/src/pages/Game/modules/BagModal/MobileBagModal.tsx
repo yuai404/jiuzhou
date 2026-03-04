@@ -364,6 +364,7 @@ const ItemSheet: React.FC<SheetProps> = ({
               <span className={`mbag-sheet-tag mbag-sheet-tag--quality ${qualityClass[item.quality]}`}>
                 {qualityLabelText[item.quality]}
               </span>
+              <span className="mbag-sheet-tag mbag-sheet-tag--bind">{item.bind.detailLabel}</span>
               {item.locked ? <span className="mbag-sheet-tag mbag-sheet-tag--locked">已锁定</span> : null}
               {item.tags.map((t) => (
                 <span key={t} className="mbag-sheet-tag mbag-sheet-tag--tag">{t}</span>

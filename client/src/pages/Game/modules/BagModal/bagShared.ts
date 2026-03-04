@@ -3,6 +3,10 @@
  * 桌面端和移动端 BagModal 均引用此文件
  */
 import { resolveIconUrl } from "../../shared/resolveIcon";
+import {
+  resolveItemBindMeta,
+  type ItemBindMeta,
+} from "../../shared/itemBind";
 import type {
   InventoryItemDto,
   InventoryLocation,
@@ -102,6 +106,7 @@ export type BagItem = {
   icon: string;
   qty: number;
   stackMax: number;
+  bind: ItemBindMeta;
   location: InventoryLocation;
   equippedSlot: string | null;
   locked: boolean;
@@ -1364,6 +1369,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
   );
   const isEquip = category === "equipment";
   const hasSocketEffect = hasSocketBuffEffect(def.effect_defs);
+  const bind = resolveItemBindMeta(it.bind_type);
 
   return {
     id: Number(it.id),
@@ -1376,6 +1382,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
     icon: resolveIcon(def),
     qty: it.qty,
     stackMax: def.stack_max,
+    bind,
     location: it.location,
     equippedSlot: it.equipped_slot ?? null,
     locked: !!it.locked,

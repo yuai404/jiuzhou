@@ -236,7 +236,8 @@
   transform: scale(0.94);
 }
 
-.mbag-cell .inventory-item-cell__badge {
+.mbag-cell .inventory-item-cell__badge--equipped,
+.mbag-cell .inventory-item-cell__badge--locked {
   top: 3px;
   right: 3px;
   font-size: 8px;
@@ -441,6 +442,12 @@
   background: rgba(255, 77, 79, 0.14);
   color: var(--danger-color);
   border: 1px solid rgba(255, 77, 79, 0.35);
+}
+
+.mbag-sheet-tag--bind {
+  background: color-mix(in srgb, var(--warning-color) 14%, transparent);
+  color: var(--warning-color);
+  border: 1px solid color-mix(in srgb, var(--warning-color) 36%, transparent);
 }
 
 .mbag-sheet-qty {

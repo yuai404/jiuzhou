@@ -1013,6 +1013,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                       <Tag className={`bag-detail-quality-tag ${qualityClass[activeItem.quality]}`}>
                         {qualityLabelText[activeItem.quality]}
                       </Tag>
+                      <Tag>{activeItem.bind.detailLabel}</Tag>
                       {activeItem.locked ? <Tag color="red">已锁定</Tag> : null}
                       {activeItem.tags.map((t) => (
                         <Tag key={t} color="default">

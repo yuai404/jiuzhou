@@ -996,6 +996,11 @@
     background: color-mix(in srgb, var(--danger-color) 12%, transparent);
     color: var(--danger-color);
   }
+
+  &.market-list-sheet-tag--bind {
+    background: color-mix(in srgb, var(--warning-color) 12%, transparent);
+    color: var(--warning-color);
+  }
 }
 
 .market-list-sheet-qty {

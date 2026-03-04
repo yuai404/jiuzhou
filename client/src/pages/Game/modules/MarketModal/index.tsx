@@ -104,6 +104,7 @@ const ListSheet: React.FC<ListSheetProps> = ({
               <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${qualityClass[item.quality]}`}>
                 {qualityLabelText[item.quality]}
               </span>
+              <span className="market-list-sheet-tag market-list-sheet-tag--bind">{item.bind.detailLabel}</span>
               {item.locked ? <span className="market-list-sheet-tag market-list-sheet-tag--locked">已锁定</span> : null}
             </div>
             {item.stackMax > 1 && (
@@ -1178,6 +1179,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                         <div className="market-list-detail-tags">
                           <Tag className={`market-tag market-tag-quality ${getQualityClassName(selectedBagItem.quality)}`}>{selectedBagItem.quality}</Tag>
                           <Tag className="market-tag">{bagCategoryLabels[selectedBagItem.category]}</Tag>
+                          <Tag className="market-tag">{selectedBagItem.bind.detailLabel}</Tag>
                           <Tag className="market-tag">数量 {selectedBagItem.qty}</Tag>
                           {selectedBagItem.locked ? <Tag color="red">已锁定</Tag> : null}
                         </div>
