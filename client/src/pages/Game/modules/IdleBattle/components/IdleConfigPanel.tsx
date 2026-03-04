@@ -29,6 +29,7 @@ import { getEnabledMaps, getMapDetail, type MapDefLite, type MapRoom } from '../
 import { getCharacterTechniqueStatus } from '../../../../../services/api/technique';
 import { gameSocket } from '../../../../../services/gameSocket';
 import type { IdleConfigDto } from '../types';
+import { buildMonsterOptions, filterIdleMaps, filterRoomsWithMonsters } from '../utils/idleMapOptions';
 import './IdleConfigPanel.scss';
 
 /** 可选技能项（从角色功法状态 API 获取） */
@@ -95,11 +96,10 @@ const IdleConfigPanel: React.FC<IdleConfigPanelProps> = ({
     setMapsLoading(true);
     void getEnabledMaps()
       .then((res) => {
-        if (res.success && res.data?.maps) {
-          // 只展示有怪物的野外地图（map_type = 'field'）
-          setMaps(res.data.maps.filter((m) => m.map_type === 'field'));
-        }
+        const allMaps = res.success && res.data?.maps ? res.data.maps : [];
+        setMaps(filterIdleMaps(allMaps));
       })
+      .catch(() => setMaps([]))
       .finally(() => setMapsLoading(false));
   }, []);
 
@@ -112,11 +112,10 @@ const IdleConfigPanel: React.FC<IdleConfigPanelProps> = ({
     setRoomsLoading(true);
     void getMapDetail(config.mapId)
       .then((res) => {
-        if (res.success && res.data?.rooms) {
-          // 只展示有怪物的房间
-          setRooms(res.data.rooms.filter((r) => (r.monsters?.length ?? 0) > 0));
-        }
+        const allRooms = res.success && res.data?.rooms ? res.data.rooms : [];
+        setRooms(filterRoomsWithMonsters(allRooms));
       })
+      .catch(() => setRooms([]))
       .finally(() => setRoomsLoading(false));
   }, [config.mapId]);
 
@@ -222,10 +221,7 @@ const IdleConfigPanel: React.FC<IdleConfigPanelProps> = ({
 
   // 从当前选中房间派生怪物选项
   const currentRoom = rooms.find((r) => r.id === config.roomId);
-  const monsterOptions = (currentRoom?.monsters ?? []).map((m) => ({
-    value: m.monster_def_id,
-    label: m.name ?? m.monster_def_id,
-  }));
+  const monsterOptions = buildMonsterOptions(currentRoom);
 
   const canStart = !!config.mapId && !!config.roomId && !!config.targetMonsterDefId && !isActive;
   const durationMinutes = Math.round(config.maxDurationMs / 60_000);

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireCharacter, getOptionalUserId } from '../middleware/auth.js';
-import { getEnabledMaps, getMapDefById, getRoomInMap, getRoomsInMap, getWorldMap } from '../services/mapService.js';
+import { getEnabledMaps, getMapDefById, getRoomInMap, getRoomsInMap, getWorldMap, isMapEnabled } from '../services/mapService.js';
 import { roomObjectService } from '../services/roomObjectService.js';
 import { getMonsterDefinitions } from '../services/staticConfigLoader.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
@@ -30,7 +30,7 @@ router.get('/maps', asyncHandler(async (_req, res) => {
 router.get('/:mapId', asyncHandler(async (req, res) => {
   const mapId = getSingleParam(req.params.mapId);
   const map = await getMapDefById(mapId);
-  if (!map || map.enabled !== true) {
+  if (!isMapEnabled(map)) {
     throw new BusinessError('地图不存在', 404);
   }
   const rooms = await getRoomsInMap(mapId);

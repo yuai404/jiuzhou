@@ -69,6 +69,16 @@ const parseRooms = (rooms: unknown): MapRoom[] => {
 const mapDefCache = new Map<string, MapDefRow | null>();
 const mapRoomsCache = new Map<string, MapRoom[]>();
 
+/**
+ * 统一地图可用性判定。
+ * 约定：仅当 enabled 显式为 false 时视为不可用；缺省按可用处理。
+ */
+export const isMapEnabled = (
+  map: { enabled?: boolean | null } | null | undefined
+): boolean => {
+  return Boolean(map && map.enabled !== false);
+};
+
 export const getMapDefById = async (mapId: string): Promise<MapDefRow | null> => {
   if (mapDefCache.has(mapId)) {
     return mapDefCache.get(mapId) ?? null;
@@ -91,7 +101,7 @@ export const getEnabledMaps = async (): Promise<
   >
 > => {
   return getMapDefinitions()
-    .filter((entry) => entry.enabled !== false)
+    .filter((entry) => isMapEnabled(entry))
     .sort((left, right) => {
       const leftSortWeight = Number(left.sort_weight ?? 0);
       const rightSortWeight = Number(right.sort_weight ?? 0);
