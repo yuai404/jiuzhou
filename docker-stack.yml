@@ -102,7 +102,30 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    command: postgres -c max_connections=200 -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_preload_libraries=pg_stat_statements,auto_explain
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - auto_explain.log_min_duration=200ms
+      - -c
+      - auto_explain.log_analyze=on
+      - -c
+      - auto_explain.log_buffers=on
+      - -c
+      - auto_explain.log_timing=on
+      - -c
+      - auto_explain.log_nested_statements=off
+      - -c
+      - log_min_duration_statement=200ms
+      - -c
+      - log_lock_waits=on
+      - -c
+      - deadlock_timeout=1s
     environment:
       - POSTGRES_DB=jiuzhou
       - POSTGRES_USER=postgres
