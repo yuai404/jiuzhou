@@ -12,7 +12,7 @@
         "icon": "/assets/dungeon/stone_mine.png",
         "background": "/assets/dungeon/bg_stone_mine.png",
         "min_players": 1,
-        "max_players": 4,
+        "max_players": 5,
         "min_realm": "炼精化炁·养气期",
         "recommended_realm": "炼精化炁·养气期",
         "unlock_condition": {},

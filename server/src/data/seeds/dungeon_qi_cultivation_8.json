@@ -12,7 +12,7 @@
         "icon": "/assets/dungeon/storm_rift.png",
         "background": "/assets/dungeon/bg_storm_rift.png",
         "min_players": 1,
-        "max_players": 4,
+        "max_players": 5,
         "min_realm": "炼炁化神·炼己期",
         "recommended_realm": "炼炁化神·炼己期",
         "unlock_condition": {},

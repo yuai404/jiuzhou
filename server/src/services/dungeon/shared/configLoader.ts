@@ -44,7 +44,7 @@ export const getEnabledDungeonDefs = (): DungeonDefDto[] => {
       icon: typeof entry.icon === 'string' ? entry.icon : null,
       background: typeof entry.background === 'string' ? entry.background : null,
       min_players: asNumber(entry.min_players, 1),
-      max_players: asNumber(entry.max_players, 4),
+      max_players: asNumber(entry.max_players, 5),
       min_realm: typeof entry.min_realm === 'string' ? entry.min_realm : null,
       recommended_realm: typeof entry.recommended_realm === 'string' ? entry.recommended_realm : null,
       unlock_condition: entry.unlock_condition ?? {},
