@@ -151,6 +151,47 @@ test('未开启自动分解时应保持原奖励逻辑', async () => {
   assert.equal(calls[0]?.bindType, 'bound');
 });
 
+test('任务奖励来源应跳过自动分解', async () => {
+  const { calls, fn } = createCreateItemMock([
+    {
+      success: true,
+      message: 'ok',
+      itemIds: [601],
+      equipment: { qualityRank: 1 },
+    },
+  ]);
+
+  const result = await grantRewardItemWithAutoDisassemble({
+    characterId: 78,
+    itemDefId: 'equip-ring-001',
+    qty: 1,
+    itemMeta: { itemName: '玉戒', category: 'equipment', qualityRank: 1 },
+    autoDisassembleSetting: {
+      enabled: true,
+      rules: [
+        {
+          categories: ['equipment'],
+          subCategories: [],
+          excludedSubCategories: [],
+          includeNameKeywords: [],
+          excludeNameKeywords: [],
+          maxQualityRank: 4,
+        },
+      ],
+    },
+    sourceObtainedFrom: 'task_reward',
+    createItem: fn,
+  });
+
+  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(result.pendingMailItems, []);
+  assert.deepEqual(result.grantedItems, [{ itemDefId: 'equip-ring-001', qty: 1, itemIds: [601] }]);
+  assert.equal(result.gainedSilver, 0);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.itemDefId, 'equip-ring-001');
+  assert.equal(calls[0]?.obtainedFrom, 'task_reward');
+});
+
 test('品质超过阈值时应保留原装备', async () => {
   const { calls, fn } = createCreateItemMock([
     {

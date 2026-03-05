@@ -140,6 +140,16 @@ const createEmptyResult = (): GrantRewardItemWithAutoDisassembleResult => ({
   gainedSilver: 0,
 });
 
+const AUTO_DISASSEMBLE_EXCLUDED_SOURCES = new Set<string>([
+  'task_reward',
+  'main_quest',
+]);
+
+const normalizeSourceObtainedFrom = (sourceObtainedFrom: string): string => sourceObtainedFrom.trim().toLowerCase();
+
+const shouldSkipAutoDisassembleBySource = (sourceObtainedFrom: string): boolean =>
+  AUTO_DISASSEMBLE_EXCLUDED_SOURCES.has(normalizeSourceObtainedFrom(sourceObtainedFrom));
+
 const isQualityName = (value: unknown): value is '黄' | '玄' | '地' | '天' => {
   return value === '黄' || value === '玄' || value === '地' || value === '天';
 };
@@ -226,7 +236,7 @@ export const grantRewardItemWithAutoDisassemble = async (
     return 1;
   })();
 
-  if (!input.autoDisassembleSetting.enabled) {
+  if (!input.autoDisassembleSetting.enabled || shouldSkipAutoDisassembleBySource(input.sourceObtainedFrom)) {
     const createResult = await input.createItem({
       itemDefId: input.itemDefId,
       qty: normalizedQty,

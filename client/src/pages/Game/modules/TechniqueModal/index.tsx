@@ -519,6 +519,7 @@ interface TechniqueModalProps {
 }
 
 type TechniqueResearchStatusData = NonNullable<TechniqueResearchStatusResponse['data']>;
+const TECHNIQUE_RESEARCH_ENABLED = !import.meta.env.PROD;
 
 const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
   const { message } = App.useApp();
@@ -679,7 +680,12 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
   }, [characterId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !TECHNIQUE_RESEARCH_ENABLED) {
+      if (!TECHNIQUE_RESEARCH_ENABLED) {
+        setResearchStatus(null);
+      }
+      return;
+    }
     void refreshResearchStatus();
   }, [open, refreshResearchStatus]);
 
@@ -934,8 +940,10 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
     { key: 'learned', label: '已学功法' },
     { key: 'bonus', label: '功法加成' },
     { key: 'skills', label: isMobile ? '技能' : '技能配置' },
-    { key: 'research', label: '洞府研修' },
   ];
+  if (TECHNIQUE_RESEARCH_ENABLED) {
+    leftItems.push({ key: 'research', label: '洞府研修' });
+  }
 
   const renderSlotCard = (k: SlotKey) => {
     const t = equippedTech[k];
@@ -1429,7 +1437,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose }) => {
     if (panel === 'slots') return renderSlotsPanel();
     if (panel === 'learned') return renderLearnedPanel();
     if (panel === 'bonus') return renderBonusPanel();
-    if (panel === 'research') return renderResearchPanel();
+    if (panel === 'research' && TECHNIQUE_RESEARCH_ENABLED) return renderResearchPanel();
     return renderSkillsPanel();
   };
 
