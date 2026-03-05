@@ -254,7 +254,10 @@ export interface SkillEffect {
   baseValue?: number;  // 固定基础值（用于 combined 模式）
   scaleAttr?: string;
   scaleRate?: number;
-  buffId?: string;
+  buffKey?: string;  // Buff唯一键（用于刷新/去重）
+  buffKind?: string; // 扩展型 Buff 类别（attr/dot/hot/dodge_next/...）
+  attrKey?: string;  // buffKind=attr 时的属性键
+  applyType?: 'flat' | 'percent'; // buffKind=attr 时的叠加模式
   duration?: number;
   stacks?: number;
   bonusTargetMaxQixueRate?: number;  // 额外附加目标最大气血比例伤害（用于灼烧等持续伤害）

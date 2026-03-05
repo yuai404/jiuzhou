@@ -21,7 +21,8 @@ import { applyHealing } from './healing.js';
  *
  * 坑点1：刷新已有 Buff 时，若 stacks 发生变化，attrModifiers 的叠加值也会变化，
  *        必须重新计算属性，否则 currentAttrs 会与实际 stacks 不一致。
- * 坑点2：maxStacks=1 的 Buff 刷新时不叠层，但仍需刷新时间，属性无变化可跳过重算。
+ * 坑点2：同 buffDefId 可能来自不同技能等级/来源，刷新时必须同步更新 runtime 数据，
+ *        否则会出现“强效果覆盖弱效果失败”。
  */
 export function addBuff(
   unit: BattleUnit,
@@ -37,15 +38,27 @@ export function addBuff(
     
     // 刷新持续时间
     existing.remainingDuration = Math.max(existing.remainingDuration, duration);
-    
-    // 叠加层数，并在层数实际变化时重算属性
+
+    // 同 buffDefId 刷新时同步覆盖最新 runtime 数据
+    existing.name = buff.name;
+    existing.type = buff.type;
+    existing.category = buff.category;
+    existing.sourceUnitId = buff.sourceUnitId;
+    existing.attrModifiers = buff.attrModifiers;
+    existing.dot = buff.dot;
+    existing.hot = buff.hot;
+    existing.control = buff.control;
+    existing.tags = [...buff.tags];
+    existing.dispellable = buff.dispellable;
+
+    existing.maxStacks = Math.max(1, buff.maxStacks);
     if (existing.maxStacks > 1) {
-      const prevStacks = existing.stacks;
       existing.stacks = Math.min(existing.stacks + stacks, existing.maxStacks);
-      if (existing.stacks !== prevStacks) {
-        recalculateUnitAttrs(unit);
-      }
+    } else {
+      existing.stacks = 1;
     }
+
+    recalculateUnitAttrs(unit);
     
     return { added: false, refreshed: true };
   }

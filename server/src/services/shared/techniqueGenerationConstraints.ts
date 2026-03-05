@@ -157,7 +157,7 @@ export const TECHNIQUE_PROMPT_GENERAL_RULES = [
   'valueType=combined 时必须同时提供 baseValue 与 scaleRate',
   'valueType=scale 时必须提供 scaleAttr 与 scaleRate',
   'technique.requiredRealm 必须来自 realmEnum',
-  'buff/debuff 的 buffId 必须符合 allowedBuffIdRules',
+  'buff/debuff 必须使用结构化 Buff 字段（buffKind/attrKey/applyType/buffKey），禁止使用 buffId',
   'mark.markId 必须来自 allowedMarkIds',
   'effects 不支持 valueFormula，严禁返回该字段',
   'skills[*].upgrades 只允许使用 { layer, changes } 结构，不要返回 description/effectChanges/effectIndex',
@@ -207,14 +207,31 @@ export const TECHNIQUE_PROMPT_MARK_OPERATION_ENUM = ['apply', 'consume'] as cons
 export const TECHNIQUE_PROMPT_MARK_CONSUME_MODE_ENUM = ['all', 'fixed'] as const;
 export const TECHNIQUE_PROMPT_MARK_RESULT_TYPE_ENUM = ['damage', 'shield_self', 'heal_self'] as const;
 
-export const TECHNIQUE_PROMPT_BUFF_ID_RULES = {
-  special: ['debuff-burn', 'buff-hot', 'buff-dodge-next'],
-  pattern: '^(buff|debuff)-([a-z0-9-]+)-(up|down)$',
-  semantics: {
-    'debuff-burn': '持续伤害，支持 bonusTargetMaxQixueRate',
-    'buff-hot': '持续治疗',
-    'buff-dodge-next': '下次闪避增强',
-    pattern: '按属性增减益，示例：buff-wugong-up / debuff-fagong-down',
+export const TECHNIQUE_PROMPT_BUFF_CONFIG_RULES = {
+  kindEnum: ['attr', 'dot', 'hot', 'dodge_next'],
+  commonRequired: ['type', 'buffKind'],
+  commonOptional: ['buffKey', 'value', 'duration', 'stacks'],
+  byKind: {
+    attr: {
+      required: ['attrKey'],
+      optional: ['applyType', 'value'],
+      notes: ['applyType 可选 flat/percent；未填时由服务端按属性默认规则推导'],
+    },
+    dot: {
+      required: [],
+      optional: ['valueType', 'scaleAttr', 'scaleRate', 'bonusTargetMaxQixueRate'],
+      notes: ['持续伤害模板（例如灼烧）'],
+    },
+    hot: {
+      required: [],
+      optional: ['valueType', 'scaleAttr', 'scaleRate'],
+      notes: ['持续治疗模板'],
+    },
+    dodge_next: {
+      required: [],
+      optional: ['stacks'],
+      notes: ['下一次闪避强化模板'],
+    },
   },
 } as const;
 
@@ -434,29 +451,34 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
     },
   },
   buff: {
-    meaning: '增益效果，通常通过 buffId 指向一个可识别的增益模板',
-    required: ['type', 'buffId'],
-    optional: ['value', 'duration', 'stacks'],
+    meaning: '增益效果，使用结构化 Buff 配置（可扩展）',
+    required: ['type', 'buffKind'],
+    optional: ['buffKey', 'attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
     rules: [
-      'buffId 必须符合 allowedBuffIdRules',
+      'buffKind 必须在 allowedBuffConfigRules.kindEnum 中',
+      'buffKind=attr 时必须提供 attrKey',
       'duration/stacks 建议为正整数（见 numericRanges.effect.duration / stacks）',
     ],
     defaultTemplate: {
       type: 'buff',
-      buffId: 'buff-shanbi-up',
+      buffKind: 'attr',
+      buffKey: 'buff-shanbi-up',
+      attrKey: 'shanbi',
+      applyType: 'flat',
       value: 0.12,
       duration: 2,
       stacks: 1,
     },
   },
   debuff: {
-    meaning: '减益效果，通常通过 buffId 指向一个可识别的减益模板',
-    required: ['type', 'buffId'],
-    optional: ['value', 'duration', 'stacks'],
-    rules: ['buffId 必须符合 allowedBuffIdRules'],
+    meaning: '减益效果，使用结构化 Buff 配置（可扩展）',
+    required: ['type', 'buffKind'],
+    optional: ['buffKey', 'attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
+    rules: ['buffKind 必须在 allowedBuffConfigRules.kindEnum 中；buffKind=attr 时必须提供 attrKey'],
     defaultTemplate: {
       type: 'debuff',
-      buffId: 'debuff-burn',
+      buffKind: 'dot',
+      buffKey: 'debuff-burn',
       valueType: 'scale',
       scaleAttr: 'fagong',
       scaleRate: 0.3,
@@ -633,7 +655,7 @@ export const TECHNIQUE_PROMPT_OUTPUT_CHECKLIST = [
   '所有 effect.type 必须在 effectTypeEnum 中',
   '任何 effect 不得出现 valueFormula 字段',
   'controlType 必须在 controlTypeEnum；markId 必须在 allowedMarkIds',
-  'buff/debuff 的 buffId 必须符合 allowedBuffIdRules',
+  'buff/debuff 必须使用结构化 Buff 字段，不得使用 buffId',
   'skills[*].upgrades 只能使用 upgradeSchema，禁止 description/effectChanges/effectIndex',
   'upgrades[*].changes 只能包含 upgradeAllowedChangeKeys 中的字段',
   'chance 必须在 0~1 且使用浮点比例表达',
@@ -669,7 +691,7 @@ export const buildTechniqueGeneratorPromptInput = (params: {
       markOperationEnum: [...TECHNIQUE_PROMPT_MARK_OPERATION_ENUM],
       markConsumeModeEnum: [...TECHNIQUE_PROMPT_MARK_CONSUME_MODE_ENUM],
       markResultTypeEnum: [...TECHNIQUE_PROMPT_MARK_RESULT_TYPE_ENUM],
-      allowedBuffIdRules: TECHNIQUE_PROMPT_BUFF_ID_RULES,
+      allowedBuffConfigRules: TECHNIQUE_PROMPT_BUFF_CONFIG_RULES,
       attributeKeyEnum: [...TECHNIQUE_EFFECT_SCALE_ATTR_OPTIONS],
       numericRanges: TECHNIQUE_PROMPT_NUMERIC_RANGES,
       effectCommonFields: TECHNIQUE_PROMPT_EFFECT_COMMON_FIELDS,

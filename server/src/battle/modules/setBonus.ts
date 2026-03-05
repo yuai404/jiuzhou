@@ -17,6 +17,11 @@ import { addBuff, addShield } from './buff.js';
 import { applyDamage } from './damage.js';
 import { applyHealing } from './healing.js';
 import { applyMarkStacks, consumeMarkStacks, resolveMarkEffectConfig } from './mark.js';
+import {
+  convertRatingToPercent,
+  getEffectiveLevelByRealm,
+  resolveRatingBaseAttrKey,
+} from '../../services/shared/affixRating.js';
 
 interface SetBonusTriggerContext {
   target?: BattleUnit;
@@ -33,6 +38,38 @@ interface PreparedTriggerEffect {
   effect: BattleSetBonusEffect;
   params: Record<string, unknown>;
   chance: number;
+}
+
+interface SetBuffAttrModifier {
+  attrKey: string;
+  applyType: 'flat' | 'percent';
+  value: number;
+}
+
+function resolveSetBuffAttrModifier(
+  target: BattleUnit,
+  params: Record<string, unknown>
+): SetBuffAttrModifier | null {
+  const attrKey = asNonEmptyString(params.attr_key);
+  const applyType = asApplyType(params.apply_type);
+  const value = asFiniteNumber(params.value);
+  if (!attrKey || value === null || !applyType) return null;
+
+  const ratingBaseAttrKey = resolveRatingBaseAttrKey(attrKey);
+  if (!ratingBaseAttrKey) {
+    return { attrKey, applyType, value };
+  }
+
+  const effectiveLevel = getEffectiveLevelByRealm(target.currentAttrs.realm);
+  const convertedPercent = convertRatingToPercent(ratingBaseAttrKey, value, effectiveLevel);
+  if (!Number.isFinite(convertedPercent) || convertedPercent === 0) return null;
+
+  // rating 统一换算为百分比增量，以 flat 形式叠加到比率属性。
+  return {
+    attrKey: ratingBaseAttrKey,
+    applyType: 'flat',
+    value: convertedPercent,
+  };
 }
 
 export function triggerSetBonusEffects(
@@ -94,14 +131,12 @@ function applySetBuffOrDebuff(
   target: BattleUnit,
   params: Record<string, unknown>
 ): SetBonusApplyResult | null {
-  const attrKey = asNonEmptyString(params.attr_key);
-  const applyType = asApplyType(params.apply_type);
-  const value = asFiniteNumber(params.value);
+  const modifier = resolveSetBuffAttrModifier(target, params);
   const duration = normalizeDuration(effect.durationRound);
   const isDebuff = effect.effectType === 'debuff';
 
-  if (attrKey && value !== null && applyType) {
-    const buffDefId = buildSetBuffDefId(effect, attrKey);
+  if (modifier) {
+    const buffDefId = buildSetBuffDefId(effect, modifier.attrKey);
     const buffName = `${effect.setName}${isDebuff ? '负面' : '增益'}`;
     addBuff(
       target,
@@ -113,7 +148,7 @@ function applySetBuffOrDebuff(
         category: 'set_bonus',
         sourceUnitId: owner.id,
         maxStacks: 1,
-        attrModifiers: [{ attr: attrKey, value: isDebuff ? -Math.abs(value) : value, mode: applyType }],
+        attrModifiers: [{ attr: modifier.attrKey, value: isDebuff ? -Math.abs(modifier.value) : modifier.value, mode: modifier.applyType }],
         tags: ['set_bonus', effect.setId],
         dispellable: true,
       },

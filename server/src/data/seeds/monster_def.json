@@ -504,10 +504,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.2,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -909,10 +912,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.2,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -1541,10 +1547,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.25,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -1633,17 +1642,23 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-wufang-up",
                 "value": 0.2,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-wufang-up",
+                "buffKind": "attr",
+                "attrKey": "wufang",
+                "applyType": "percent"
               },
               {
                 "type": "buff",
-                "buffId": "buff-fafang-up",
                 "value": 0.2,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-fafang-up",
+                "buffKind": "attr",
+                "attrKey": "fafang",
+                "applyType": "percent"
               }
             ]
           },
@@ -2138,17 +2153,23 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-wufang-up",
                 "value": 0.2,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-wufang-up",
+                "buffKind": "attr",
+                "attrKey": "wufang",
+                "applyType": "percent"
               },
               {
                 "type": "buff",
-                "buffId": "buff-fafang-up",
                 "value": 0.2,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-fafang-up",
+                "buffKind": "attr",
+                "attrKey": "fafang",
+                "applyType": "percent"
               }
             ]
           },
@@ -2237,10 +2258,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.25,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -2799,10 +2823,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.22,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -2891,10 +2918,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.22,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -3255,10 +3285,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.25,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -3622,10 +3655,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.28,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },
@@ -3989,10 +4025,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-zengshang-up",
                 "value": 0.32,
                 "duration": 99,
-                "stacks": 1
+                "stacks": 1,
+                "buffKey": "buff-zengshang-up",
+                "buffKind": "attr",
+                "attrKey": "zengshang",
+                "applyType": "flat"
               }
             ]
           },

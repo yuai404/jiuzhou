@@ -243,9 +243,12 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-shanbi-up",
           "duration": 3,
-          "value": 0.15
+          "value": 0.15,
+          "buffKey": "buff-shanbi-up",
+          "buffKind": "attr",
+          "attrKey": "shanbi",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -258,9 +261,12 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-shanbi-up",
                 "duration": 3,
-                "value": 0.25
+                "value": 0.25,
+                "buffKey": "buff-shanbi-up",
+                "buffKind": "attr",
+                "attrKey": "shanbi",
+                "applyType": "flat"
               }
             ]
           }
@@ -331,10 +337,13 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-wufang-up",
           "duration": 2,
           "value": 0.1,
-          "target": "self"
+          "target": "self",
+          "buffKey": "buff-wufang-up",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -354,10 +363,13 @@
               },
               {
                 "type": "buff",
-                "buffId": "buff-wufang-up",
                 "duration": 2,
                 "value": 0.1,
-                "target": "self"
+                "target": "self",
+                "buffKey": "buff-wufang-up",
+                "buffKind": "attr",
+                "attrKey": "wufang",
+                "applyType": "percent"
               }
             ]
           }
@@ -427,9 +439,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-wufang-down",
           "duration": 3,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "debuff-wufang-down",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -442,9 +457,12 @@
             "effects": [
               {
                 "type": "debuff",
-                "buffId": "debuff-wufang-down",
                 "duration": 3,
-                "value": 0.3
+                "value": 0.3,
+                "buffKey": "debuff-wufang-down",
+                "buffKind": "attr",
+                "attrKey": "wufang",
+                "applyType": "percent"
               }
             ]
           }
@@ -593,12 +611,13 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-hot",
           "duration": 4,
           "valueType": "combined",
           "baseValue": 50,
           "scaleAttr": "fagong",
-          "scaleRate": 0.6
+          "scaleRate": 0.6,
+          "buffKey": "buff-hot",
+          "buffKind": "hot"
         }
       ],
       "trigger_type": "active",
@@ -611,12 +630,13 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-hot",
                 "duration": 5,
                 "valueType": "combined",
                 "baseValue": 100,
                 "scaleAttr": "fagong",
-                "scaleRate": 0.8
+                "scaleRate": 0.8,
+                "buffKey": "buff-hot",
+                "buffKind": "hot"
               }
             ]
           }
@@ -639,15 +659,21 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-wufang-up",
           "duration": 3,
-          "value": 0.25
+          "value": 0.25,
+          "buffKey": "buff-wufang-up",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         },
         {
           "type": "buff",
-          "buffId": "buff-fafang-up",
           "duration": 3,
-          "value": 0.25
+          "value": 0.25,
+          "buffKey": "buff-fafang-up",
+          "buffKind": "attr",
+          "attrKey": "fafang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -660,15 +686,21 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-wufang-up",
                 "duration": 3,
-                "value": 0.35
+                "value": 0.35,
+                "buffKey": "buff-wufang-up",
+                "buffKind": "attr",
+                "attrKey": "wufang",
+                "applyType": "percent"
               },
               {
                 "type": "buff",
-                "buffId": "buff-fafang-up",
                 "duration": 3,
-                "value": 0.35
+                "value": 0.35,
+                "buffKey": "buff-fafang-up",
+                "buffKind": "attr",
+                "attrKey": "fafang",
+                "applyType": "percent"
               }
             ]
           }
@@ -740,9 +772,12 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-max-lingqi-up",
           "duration": 3,
-          "value": 5
+          "value": 5,
+          "buffKey": "buff-max-lingqi-up",
+          "buffKind": "attr",
+          "attrKey": "max_lingqi",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -760,9 +795,12 @@
               },
               {
                 "type": "buff",
-                "buffId": "buff-max-lingqi-up",
                 "duration": 3,
-                "value": 8
+                "value": 8,
+                "buffKey": "buff-max-lingqi-up",
+                "buffKind": "attr",
+                "attrKey": "max_lingqi",
+                "applyType": "flat"
               }
             ]
           }
@@ -967,15 +1005,21 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-shanbi-up",
           "duration": 3,
-          "value": 0.3
+          "value": 0.3,
+          "buffKey": "buff-shanbi-up",
+          "buffKind": "attr",
+          "attrKey": "shanbi",
+          "applyType": "flat"
         },
         {
           "type": "buff",
-          "buffId": "buff-sudu-up",
           "duration": 3,
-          "value": 2
+          "value": 2,
+          "buffKey": "buff-sudu-up",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -988,15 +1032,21 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-shanbi-up",
                 "duration": 3,
-                "value": 0.4
+                "value": 0.4,
+                "buffKey": "buff-shanbi-up",
+                "buffKind": "attr",
+                "attrKey": "shanbi",
+                "applyType": "flat"
               },
               {
                 "type": "buff",
-                "buffId": "buff-sudu-up",
                 "duration": 3,
-                "value": 3
+                "value": 3,
+                "buffKey": "buff-sudu-up",
+                "buffKind": "attr",
+                "attrKey": "sudu",
+                "applyType": "flat"
               }
             ]
           }
@@ -1023,9 +1073,12 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-kongzhi-kangxing-up",
           "duration": 2,
-          "value": 0.5
+          "value": 0.5,
+          "buffKey": "buff-kongzhi-kangxing-up",
+          "buffKind": "attr",
+          "attrKey": "kongzhi_kangxing",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -1042,9 +1095,12 @@
               },
               {
                 "type": "buff",
-                "buffId": "buff-kongzhi-kangxing-up",
                 "duration": 3,
-                "value": 0.6
+                "value": 0.6,
+                "buffKey": "buff-kongzhi-kangxing-up",
+                "buffKind": "attr",
+                "attrKey": "kongzhi_kangxing",
+                "applyType": "flat"
               }
             ]
           }
@@ -1067,9 +1123,10 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-dodge-next",
           "duration": 2,
-          "stacks": 1
+          "stacks": 1,
+          "buffKey": "buff-dodge-next",
+          "buffKind": "dodge_next"
         }
       ],
       "trigger_type": "active",
@@ -1082,9 +1139,10 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-dodge-next",
                 "duration": 2,
-                "stacks": 2
+                "stacks": 2,
+                "buffKey": "buff-dodge-next",
+                "buffKind": "dodge_next"
               }
             ]
           }
@@ -1193,15 +1251,21 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-wugong-up",
           "duration": 3,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-wugong-up",
+          "buffKind": "attr",
+          "attrKey": "wugong",
+          "applyType": "percent"
         },
         {
           "type": "buff",
-          "buffId": "buff-fagong-up",
           "duration": 3,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-fagong-up",
+          "buffKind": "attr",
+          "attrKey": "fagong",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -1214,15 +1278,21 @@
             "effects": [
               {
                 "type": "buff",
-                "buffId": "buff-wugong-up",
                 "duration": 4,
-                "value": 0.3
+                "value": 0.3,
+                "buffKey": "buff-wugong-up",
+                "buffKind": "attr",
+                "attrKey": "wugong",
+                "applyType": "percent"
               },
               {
                 "type": "buff",
-                "buffId": "buff-fagong-up",
                 "duration": 4,
-                "value": 0.3
+                "value": 0.3,
+                "buffKey": "buff-fagong-up",
+                "buffKind": "attr",
+                "attrKey": "fagong",
+                "applyType": "percent"
               }
             ]
           }
@@ -1333,10 +1403,11 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-burn",
           "duration": 3,
           "value": 30,
-          "bonusTargetMaxQixueRate": 0.01
+          "bonusTargetMaxQixueRate": 0.01,
+          "buffKey": "debuff-burn",
+          "buffKind": "dot"
         }
       ],
       "trigger_type": "active",
@@ -1356,10 +1427,11 @@
               },
               {
                 "type": "debuff",
-                "buffId": "debuff-burn",
                 "duration": 3,
                 "value": 30,
-                "bonusTargetMaxQixueRate": 0.01
+                "bonusTargetMaxQixueRate": 0.01,
+                "buffKey": "debuff-burn",
+                "buffKind": "dot"
               }
             ]
           }
@@ -1388,10 +1460,11 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-burn",
           "duration": 3,
           "value": 50,
-          "bonusTargetMaxQixueRate": 0.01
+          "bonusTargetMaxQixueRate": 0.01,
+          "buffKey": "debuff-burn",
+          "buffKind": "dot"
         }
       ],
       "trigger_type": "active",
@@ -1460,9 +1533,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-sudu-down",
           "duration": 2,
-          "value": 2
+          "value": 2,
+          "buffKey": "debuff-sudu-down",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -1482,9 +1558,12 @@
               },
               {
                 "type": "debuff",
-                "buffId": "debuff-sudu-down",
                 "duration": 2,
-                "value": 2
+                "value": 2,
+                "buffKey": "debuff-sudu-down",
+                "buffKind": "attr",
+                "attrKey": "sudu",
+                "applyType": "flat"
               }
             ]
           }
@@ -1572,9 +1651,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-sudu-down",
           "duration": 3,
-          "value": 3
+          "value": 3,
+          "buffKey": "debuff-sudu-down",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -1602,9 +1684,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-sudu-down",
           "duration": 2,
-          "value": 2.6
+          "value": 2.6,
+          "buffKey": "debuff-sudu-down",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -1624,9 +1709,12 @@
               },
               {
                 "type": "debuff",
-                "buffId": "debuff-sudu-down",
                 "duration": 2,
-                "value": 3.2
+                "value": 3.2,
+                "buffKey": "debuff-sudu-down",
+                "buffKind": "attr",
+                "attrKey": "sudu",
+                "applyType": "flat"
               }
             ]
           }
@@ -1657,9 +1745,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-wufang-down",
           "duration": 2,
-          "value": 0.18
+          "value": 0.18,
+          "buffKey": "debuff-wufang-down",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -1679,9 +1770,12 @@
               },
               {
                 "type": "debuff",
-                "buffId": "debuff-wufang-down",
                 "duration": 2,
-                "value": 0.23
+                "value": 0.23,
+                "buffKey": "debuff-wufang-down",
+                "buffKind": "attr",
+                "attrKey": "wufang",
+                "applyType": "percent"
               }
             ]
           }
@@ -1789,9 +1883,12 @@
       "effects": [
         {
           "type": "buff",
-          "buffId": "buff-wugong-up",
           "duration": 2,
-          "value": 0.18
+          "value": 0.18,
+          "buffKey": "buff-wugong-up",
+          "buffKind": "attr",
+          "attrKey": "wugong",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -1849,11 +1946,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-burn",
           "duration": 2,
           "value": 0.35,
           "bonusTargetMaxQixueRate": 0.01,
-          "chance": 0.6
+          "chance": 0.6,
+          "buffKey": "debuff-burn",
+          "buffKind": "dot"
         }
       ],
       "trigger_type": "active",
@@ -1944,11 +2042,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-burn",
           "duration": 2,
           "value": 0.25,
           "bonusTargetMaxQixueRate": 0.01,
-          "chance": 0.45
+          "chance": 0.45,
+          "buffKey": "debuff-burn",
+          "buffKind": "dot"
         }
       ],
       "trigger_type": "active",
@@ -2108,9 +2207,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "buff-fafang-down",
           "duration": 2,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-fafang-down",
+          "buffKind": "attr",
+          "attrKey": "fafang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -2141,11 +2243,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-burn",
           "duration": 2,
           "value": 0.22,
           "bonusTargetMaxQixueRate": 0.01,
-          "chance": 0.5
+          "chance": 0.5,
+          "buffKey": "debuff-burn",
+          "buffKind": "dot"
         }
       ],
       "trigger_type": "active",
@@ -2236,9 +2339,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "buff-kongzhi-kangxing-down",
           "duration": 2,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-kongzhi-kangxing-down",
+          "buffKind": "attr",
+          "attrKey": "kongzhi_kangxing",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -2329,9 +2435,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "buff-wufang-down",
           "duration": 2,
-          "value": 0.18
+          "value": 0.18,
+          "buffKey": "buff-wufang-down",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -2423,15 +2532,21 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-wufang-up",
           "duration": 2,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-wufang-up",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         },
         {
           "type": "buff",
-          "buffId": "buff-fafang-up",
           "duration": 2,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-fafang-up",
+          "buffKind": "attr",
+          "attrKey": "fafang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -2523,9 +2638,12 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-zengshang-up",
           "duration": 2,
-          "value": 0.15
+          "value": 0.15,
+          "buffKey": "buff-zengshang-up",
+          "buffKind": "attr",
+          "attrKey": "zengshang",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -2556,9 +2674,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "buff-wufang-down",
           "duration": 2,
-          "value": 0.25
+          "value": 0.25,
+          "buffKey": "buff-wufang-down",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -2816,9 +2937,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-sudu-down",
           "duration": 2,
-          "value": 2
+          "value": 2,
+          "buffKey": "debuff-sudu-down",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -2844,9 +2968,12 @@
               },
               {
                 "type": "debuff",
-                "buffId": "debuff-sudu-down",
                 "duration": 2,
-                "value": 3
+                "value": 3,
+                "buffKey": "debuff-sudu-down",
+                "buffKind": "attr",
+                "attrKey": "sudu",
+                "applyType": "flat"
               }
             ]
           }
@@ -2878,9 +3005,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-wufang-down",
           "duration": 2,
-          "value": 0.28
+          "value": 0.28,
+          "buffKey": "debuff-wufang-down",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -2912,9 +3042,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-sudu-down",
           "duration": 1,
-          "value": 2
+          "value": 2,
+          "buffKey": "debuff-sudu-down",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -2978,15 +3111,21 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-zengshang-up",
           "duration": 2,
-          "value": 0.18
+          "value": 0.18,
+          "buffKey": "buff-zengshang-up",
+          "buffKind": "attr",
+          "attrKey": "zengshang",
+          "applyType": "flat"
         },
         {
           "type": "buff",
-          "buffId": "buff-wufang-up",
           "duration": 2,
-          "value": 0.2
+          "value": 0.2,
+          "buffKey": "buff-wufang-up",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -3017,9 +3156,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-fafang-down",
           "duration": 2,
-          "value": 0.18
+          "value": 0.18,
+          "buffKey": "debuff-fafang-down",
+          "buffKind": "attr",
+          "attrKey": "fafang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -3141,9 +3283,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-wufang-down",
           "duration": 2,
-          "value": 0.24
+          "value": 0.24,
+          "buffKey": "debuff-wufang-down",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -3176,9 +3321,12 @@
         },
         {
           "type": "buff",
-          "buffId": "buff-wufang-up",
           "duration": 3,
-          "value": 0.22
+          "value": 0.22,
+          "buffKey": "buff-wufang-up",
+          "buffKind": "attr",
+          "attrKey": "wufang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -3209,9 +3357,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-sudu-down",
           "duration": 2,
-          "value": 2.4
+          "value": 2.4,
+          "buffKey": "debuff-sudu-down",
+          "buffKind": "attr",
+          "attrKey": "sudu",
+          "applyType": "flat"
         }
       ],
       "trigger_type": "active",
@@ -3242,9 +3393,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-fafang-down",
           "duration": 2,
-          "value": 0.22
+          "value": 0.22,
+          "buffKey": "debuff-fafang-down",
+          "buffKind": "attr",
+          "attrKey": "fafang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",
@@ -3308,9 +3462,12 @@
         },
         {
           "type": "debuff",
-          "buffId": "debuff-fafang-down",
           "duration": 2,
-          "value": 0.26
+          "value": 0.26,
+          "buffKey": "debuff-fafang-down",
+          "buffKind": "attr",
+          "attrKey": "fafang",
+          "applyType": "percent"
         }
       ],
       "trigger_type": "active",

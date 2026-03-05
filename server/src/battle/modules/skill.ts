@@ -23,6 +23,14 @@ import { tryApplyControl, canUseSkill, isSilenced, isDisarmed } from './control.
 import { resolveTargets } from './target.js';
 import { triggerSetBonusEffects } from './setBonus.js';
 import { applyMarkStacks, consumeMarkStacks, resolveMarkEffectConfig } from './mark.js';
+import {
+  DEFAULT_PERCENT_BUFF_ATTR_SET,
+  normalizeBuffApplyType,
+  normalizeBuffAttrKey,
+  normalizeBuffKind,
+  resolveBuffEffectKey,
+  resolveSignedAttrValue,
+} from '../utils/buffSpec.js';
 
 interface SkillExecutionResult {
   success: boolean;
@@ -30,17 +38,19 @@ interface SkillExecutionResult {
   error?: string;
 }
 
-const PERCENT_BUFF_ATTR_SET = new Set(['wugong', 'fagong', 'wufang', 'fafang']);
-const BUFF_ATTR_ALIAS: Record<string, string> = {
-  'max-lingqi': 'max_lingqi',
-  'kongzhi-kangxing': 'kongzhi_kangxing',
-};
+const PERCENT_BUFF_ATTR_SET = DEFAULT_PERCENT_BUFF_ATTR_SET;
 
 type BuffRuntimeData = {
   attrModifiers?: AttrModifier[];
   dot?: DotEffect;
   hot?: HotEffect;
 };
+
+type BuffOrDebuffEffect = SkillEffect & { type: 'buff' | 'debuff' };
+
+function hasBuffRuntimeData(data: BuffRuntimeData): boolean {
+  return Boolean(data.dot || data.hot || (Array.isArray(data.attrModifiers) && data.attrModifiers.length > 0));
+}
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -77,13 +87,6 @@ function getAttrValue(unit: BattleUnit, attrKey: string): number {
   const attrs = unit.currentAttrs as unknown as Record<string, unknown>;
   const value = attrs[attrKey];
   return toFiniteNumber(value, 0);
-}
-
-function normalizeBuffAttrKey(raw: string): string {
-  const lowered = raw.trim().toLowerCase();
-  if (!lowered) return '';
-  if (BUFF_ATTR_ALIAS[lowered]) return BUFF_ATTR_ALIAS[lowered];
-  return lowered.replace(/-/g, '_');
 }
 
 function resolveEffectValue(
@@ -133,12 +136,12 @@ function buildBuffRuntimeData(
   caster: BattleUnit,
   target: BattleUnit,
   skill: BattleSkill,
-  effect: SkillEffect
+  effect: BuffOrDebuffEffect
 ): BuffRuntimeData {
-  const buffId = typeof effect.buffId === 'string' ? effect.buffId.trim() : '';
-  if (!buffId) return {};
+  const buffKind = normalizeBuffKind(effect.buffKind);
+  if (!buffKind) return {};
 
-  if (buffId === 'debuff-burn') {
+  if (buffKind === 'dot') {
     const scaleAttr = skill.damageType === 'magic' ? 'fagong' : 'wugong';
     const dotDamage = Math.max(1, resolveEffectValue(caster, skill, effect, scaleAttr));
     const burnBonusRate = resolveBurnTargetMaxQixueRate(effect);
@@ -152,31 +155,28 @@ function buildBuffRuntimeData(
     };
   }
 
-  if (buffId === 'buff-hot') {
+  if (buffKind === 'hot') {
     const heal = Math.max(1, resolveEffectValue(caster, skill, effect, 'fagong'));
     return { hot: { heal } };
   }
 
-  if (buffId === 'buff-dodge-next') {
+  if (buffKind === 'dodge_next') {
     const stacks = Math.max(1, Math.floor(toFiniteNumber(effect.stacks, 1)));
     return {
       attrModifiers: [{ attr: 'shanbi', value: 1 * stacks, mode: 'flat' }],
     };
   }
 
-  const matched = /^(buff|debuff)-([a-z0-9-]+)-(up|down)$/.exec(buffId);
-  if (!matched) return {};
-
-  const attr = normalizeBuffAttrKey(matched[2]);
+  if (buffKind !== 'attr') return {};
+  const attr = normalizeBuffAttrKey(effect.attrKey);
   if (!attr) return {};
-  const baseValue = Math.floor(Math.abs(toFiniteNumber(effect.value, 0)));
-  if (baseValue <= 0) return {};
-  const upOrDown = matched[3] === 'down' ? -1 : 1;
-  const buffOrDebuff = matched[1] === 'debuff' ? -1 : 1;
-  const value = baseValue * upOrDown * buffOrDebuff;
-  const mode: AttrModifier['mode'] = PERCENT_BUFF_ATTR_SET.has(attr) ? 'percent' : 'flat';
+  const value = resolveSignedAttrValue(effect.type, effect.value);
+  if (value === 0) return {};
+  const mode: AttrModifier['mode'] =
+    normalizeBuffApplyType(effect.applyType)
+    ?? (PERCENT_BUFF_ATTR_SET.has(attr) ? 'percent' : 'flat');
 
-  if (effect.type === 'buff' && target.currentAttrs[attr as keyof typeof target.currentAttrs] == null) {
+  if (target.currentAttrs[attr as keyof typeof target.currentAttrs] == null) {
     return {};
   }
 
@@ -494,7 +494,7 @@ function executeEffect(
       
     case 'buff':
     case 'debuff':
-      executeBuffEffect(caster, target, skill, effect, result);
+      executeBuffEffect(caster, target, skill, effect as BuffOrDebuffEffect, result);
       break;
       
     case 'dispel':
@@ -695,21 +695,22 @@ function executeBuffEffect(
   caster: BattleUnit,
   target: BattleUnit,
   skill: BattleSkill,
-  effect: SkillEffect,
+  effect: BuffOrDebuffEffect,
   result: TargetResult
 ): void {
-  const buffId = typeof effect.buffId === 'string' ? effect.buffId.trim() : '';
-  if (!buffId) return;
+  const buffDefId = resolveBuffEffectKey(effect);
+  if (!buffDefId) return;
   
   const buffType = effect.type === 'buff' ? 'buff' : 'debuff';
   const stacks = Math.max(1, Math.floor(toFiniteNumber(effect.stacks, 1)));
   const duration = Math.max(1, Math.floor(toFiniteNumber(effect.duration, 1)));
   const runtimeData = buildBuffRuntimeData(caster, target, skill, effect);
+  if (!hasBuffRuntimeData(runtimeData)) return;
   
   addBuff(target, {
-    id: `${buffId}-${Date.now()}`,
-    buffDefId: buffId,
-    name: buffId,
+    id: `${buffDefId}-${Date.now()}`,
+    buffDefId,
+    name: buffDefId,
     type: buffType,
     category: 'skill',
     sourceUnitId: caster.id,
@@ -721,7 +722,7 @@ function executeBuffEffect(
     dispellable: true,
   }, duration, stacks);
   
-  result.buffsApplied?.push(buffId);
+  result.buffsApplied?.push(buffDefId);
 }
 
 /**

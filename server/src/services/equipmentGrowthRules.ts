@@ -1,9 +1,9 @@
-import { QUALITY_MULTIPLIER_BY_RANK } from './shared/itemQuality.js';
-import { getItemDefinitionById } from './staticConfigLoader.js';
+import { QUALITY_MULTIPLIER_BY_RANK } from "./shared/itemQuality.js";
+import { getItemDefinitionById } from "./staticConfigLoader.js";
 
 export type CharacterAttrRecord = Record<string, number>;
 
-export type SocketApplyType = 'flat' | 'percent' | 'special';
+export type SocketApplyType = "flat" | "percent" | "special";
 
 export interface SocketEffect {
   attrKey: string;
@@ -62,91 +62,91 @@ const REFINE_SUCCESS_RATE_PERCENT: Record<number, number> = {
 };
 
 const GEM_TYPE_SYNONYMS: Record<string, string> = {
-  all: 'all',
-  any: 'all',
-  universal: 'all',
-  '*': 'all',
+  all: "all",
+  any: "all",
+  universal: "all",
+  "*": "all",
 
-  atk: 'attack',
-  attack: 'attack',
-  gongji: 'attack',
-  offense: 'attack',
+  atk: "attack",
+  attack: "attack",
+  gongji: "attack",
+  offense: "attack",
 
-  def: 'defense',
-  defense: 'defense',
-  fangyu: 'defense',
+  def: "defense",
+  defense: "defense",
+  fangyu: "defense",
 
-  hp: 'survival',
-  life: 'survival',
-  survival: 'survival',
-  shengming: 'survival',
+  hp: "survival",
+  life: "survival",
+  survival: "survival",
+  shengming: "survival",
 
-  util: 'utility',
-  utility: 'utility',
-  support: 'utility',
+  util: "utility",
+  utility: "utility",
+  support: "utility",
 };
 
 const GEM_SUB_CATEGORY_TO_TYPE: Record<string, string> = {
-  gem_attack: 'attack',
-  gem_defense: 'defense',
-  gem_survival: 'survival',
-  gem_all: 'all',
+  gem_attack: "attack",
+  gem_defense: "defense",
+  gem_survival: "survival",
+  gem_all: "all",
 };
 
 const ATTACK_ATTR_KEYS = new Set([
-  'wugong',
-  'fagong',
-  'mingzhong',
-  'baoji',
-  'baoshang',
-  'zengshang',
+  "wugong",
+  "fagong",
+  "mingzhong",
+  "baoji",
+  "baoshang",
+  "zengshang",
 ]);
 
 const DEFENSE_ATTR_KEYS = new Set([
-  'wufang',
-  'fafang',
-  'shanbi',
-  'zhaojia',
-  'kangbao',
-  'jianliao',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
+  "wufang",
+  "fafang",
+  "shanbi",
+  "zhaojia",
+  "kangbao",
+  "jianliao",
+  "kongzhi_kangxing",
+  "jin_kangxing",
+  "mu_kangxing",
+  "shui_kangxing",
+  "huo_kangxing",
+  "tu_kangxing",
 ]);
 
 const SURVIVAL_ATTR_KEYS = new Set([
-  'qixue',
-  'max_qixue',
-  'lingqi',
-  'max_lingqi',
-  'zhiliao',
-  'xixue',
-  'qixue_huifu',
-  'lingqi_huifu',
+  "qixue",
+  "max_qixue",
+  "lingqi",
+  "max_lingqi",
+  "zhiliao",
+  "xixue",
+  "qixue_huifu",
+  "lingqi_huifu",
 ]);
 
 const RATIO_ATTR_KEYS = new Set([
-  'shuxing_shuzhi',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
+  "shuxing_shuzhi",
+  "mingzhong",
+  "shanbi",
+  "zhaojia",
+  "baoji",
+  "baoshang",
+  "kangbao",
+  "zengshang",
+  "zhiliao",
+  "jianliao",
+  "xixue",
+  "lengque",
+  "kongzhi_kangxing",
+  "jin_kangxing",
+  "mu_kangxing",
+  "shui_kangxing",
+  "huo_kangxing",
+  "tu_kangxing",
 ]);
 
 export const clampInt = (value: number, min: number, max: number): number => {
@@ -156,13 +156,13 @@ export const clampInt = (value: number, min: number, max: number): number => {
 };
 
 const toNumber = (value: unknown): number => {
-  const n = typeof value === 'number' ? value : Number(value);
+  const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
 };
 
 const toObject = (value: unknown): Record<string, unknown> => {
   if (!value) return {};
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value) as unknown;
       return toObject(parsed);
@@ -170,7 +170,7 @@ const toObject = (value: unknown): Record<string, unknown> => {
       return {};
     }
   }
-  if (typeof value === 'object' && !Array.isArray(value)) {
+  if (typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
   return {};
@@ -179,7 +179,7 @@ const toObject = (value: unknown): Record<string, unknown> => {
 const toArray = (value: unknown): unknown[] => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value) as unknown;
       return Array.isArray(parsed) ? parsed : [];
@@ -191,8 +191,10 @@ const toArray = (value: unknown): unknown[] => {
 };
 
 export const normalizeGemType = (value: unknown): string => {
-  const raw = String(value || '').trim().toLowerCase();
-  if (!raw) return 'all';
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (!raw) return "all";
   return GEM_TYPE_SYNONYMS[raw] ?? raw;
 };
 
@@ -224,7 +226,7 @@ export const getRefineSuccessRatePercent = (targetLevel: number): number => {
 
 export const getEnhanceFailResultLevel = (
   currentLevel: number,
-  targetLevel: number
+  targetLevel: number,
 ): number => {
   const current = clampInt(currentLevel, 0, ENHANCE_MAX_LEVEL);
   const target = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
@@ -232,7 +234,10 @@ export const getEnhanceFailResultLevel = (
   return current;
 };
 
-export const getRefineFailResultLevel = (currentLevel: number, targetLevel: number): number => {
+export const getRefineFailResultLevel = (
+  currentLevel: number,
+  targetLevel: number,
+): number => {
   const current = clampInt(currentLevel, 0, REFINE_MAX_LEVEL);
   const target = clampInt(targetLevel, 1, REFINE_MAX_LEVEL);
   if (target >= 6) return Math.max(0, current - 1);
@@ -246,43 +251,54 @@ export interface GrowthCostPlan {
   spiritStoneCost: number;
 }
 
-export const buildEnhanceCostPlan = (targetLevel: number, equipReqRealm: number): GrowthCostPlan => {
+export const buildEnhanceCostPlan = (
+  targetLevel: number,
+  equipReqRealm: number,
+): GrowthCostPlan => {
   const target = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
   const realmMultiplier = Math.max(1, clampInt(equipReqRealm, 1, 99));
   return {
-    materialItemDefId: target <= 10 ? 'enhance-001' : 'enhance-002',
+    materialItemDefId: target <= 10 ? "enhance-001" : "enhance-002",
     materialQty: target * realmMultiplier,
     silverCost: Math.max(100, Math.floor(150 * target * realmMultiplier)),
-    spiritStoneCost: Math.max(0, 100 * target  * realmMultiplier),
+    spiritStoneCost: Math.max(0, 50 * target * realmMultiplier),
   };
 };
 
-export const buildRefineCostPlan = (targetLevel: number,equipReqRealm:number): GrowthCostPlan => {
+export const buildRefineCostPlan = (
+  targetLevel: number,
+  equipReqRealm: number,
+): GrowthCostPlan => {
   const target = clampInt(targetLevel, 1, REFINE_MAX_LEVEL);
   const realmMultiplier = Math.max(1, clampInt(equipReqRealm, 1, 99));
   return {
-    materialItemDefId: 'enhance-002',
+    materialItemDefId: "enhance-002",
     materialQty: target * realmMultiplier,
     silverCost: Math.max(100, Math.floor(150 * target * realmMultiplier)),
-    spiritStoneCost: Math.max(0, 100 * target  * realmMultiplier),
+    spiritStoneCost: Math.max(0, 50 * target * realmMultiplier),
   };
 };
 
-export const scaleNumberRecord = (record: Record<string, unknown>, factor: number): CharacterAttrRecord => {
+export const scaleNumberRecord = (
+  record: Record<string, unknown>,
+  factor: number,
+): CharacterAttrRecord => {
   const out: CharacterAttrRecord = {};
   const mul = Number.isFinite(factor) ? factor : 1;
   for (const [k, v] of Object.entries(record)) {
     const n = toNumber(v);
     if (!Number.isFinite(n)) continue;
     const scaled = mul !== 1 ? n * mul : n;
-    out[k] = RATIO_ATTR_KEYS.has(k) ? Number(scaled.toFixed(6)) : Math.round(scaled);
+    out[k] = RATIO_ATTR_KEYS.has(k)
+      ? Number(scaled.toFixed(6))
+      : Math.round(scaled);
   }
   return out;
 };
 
 export const mergeNumberRecord = (
   base: Record<string, number>,
-  extra: Record<string, number>
+  extra: Record<string, number>,
 ): CharacterAttrRecord => {
   const out: CharacterAttrRecord = { ...base };
   for (const [k, v] of Object.entries(extra)) {
@@ -293,21 +309,29 @@ export const mergeNumberRecord = (
   return out;
 };
 
-export const parseSocketEffectsFromItemEffectDefs = (effectDefsRaw: unknown): SocketEffect[] => {
+export const parseSocketEffectsFromItemEffectDefs = (
+  effectDefsRaw: unknown,
+): SocketEffect[] => {
   const effects: SocketEffect[] = [];
   const defs = toArray(effectDefsRaw);
   for (const raw of defs) {
     const effect = toObject(raw);
-    if (String(effect.trigger || '') !== 'socket') continue;
-    if (String(effect.effect_type || '') !== 'buff') continue;
+    if (String(effect.trigger || "") !== "socket") continue;
+    if (String(effect.effect_type || "") !== "buff") continue;
     const params = toObject(effect.params);
-    const attrKey = String(params.attr_key || '').trim();
+    const attrKey = String(params.attr_key || "").trim();
     const value = toNumber(params.value);
-    const applyType = String(params.apply_type || 'flat').trim().toLowerCase();
+    const applyType = String(params.apply_type || "flat")
+      .trim()
+      .toLowerCase();
     if (!attrKey) continue;
     if (!Number.isFinite(value) || value === 0) continue;
     const normalizedApplyType: SocketApplyType =
-      applyType === 'percent' ? 'percent' : applyType === 'special' ? 'special' : 'flat';
+      applyType === "percent"
+        ? "percent"
+        : applyType === "special"
+          ? "special"
+          : "flat";
     effects.push({ attrKey, value, applyType: normalizedApplyType });
   }
   return effects;
@@ -318,7 +342,7 @@ export const inferGemTypeFromEffects = (effects: SocketEffect[]): string => {
   let hasDefense = false;
   let hasSurvival = false;
   for (const effect of effects) {
-    const key = String(effect.attrKey || '').trim();
+    const key = String(effect.attrKey || "").trim();
     if (!key) continue;
     if (ATTACK_ATTR_KEYS.has(key)) hasAttack = true;
     else if (DEFENSE_ATTR_KEYS.has(key)) hasDefense = true;
@@ -326,11 +350,11 @@ export const inferGemTypeFromEffects = (effects: SocketEffect[]): string => {
   }
 
   const count = Number(hasAttack) + Number(hasDefense) + Number(hasSurvival);
-  if (count === 0) return 'utility';
-  if (count >= 2) return 'all';
-  if (hasAttack) return 'attack';
-  if (hasDefense) return 'defense';
-  return 'survival';
+  if (count === 0) return "utility";
+  if (count >= 2) return "all";
+  if (hasAttack) return "attack";
+  if (hasDefense) return "defense";
+  return "survival";
 };
 
 interface DynamicSocketGemMeta {
@@ -340,31 +364,51 @@ interface DynamicSocketGemMeta {
   icon?: string;
 }
 
-const resolveSocketGemMetaFromItemDef = (itemDefId: string): DynamicSocketGemMeta | null => {
+const resolveSocketGemMetaFromItemDef = (
+  itemDefId: string,
+): DynamicSocketGemMeta | null => {
   const itemDef = getItemDefinitionById(itemDefId);
   if (!itemDef) return null;
-  if (String(itemDef.category || '').trim().toLowerCase() !== 'gem') return null;
+  if (
+    String(itemDef.category || "")
+      .trim()
+      .toLowerCase() !== "gem"
+  )
+    return null;
 
   const effects = parseSocketEffectsFromItemEffectDefs(itemDef.effect_defs);
-  const subCategory = String(itemDef.sub_category || '').trim().toLowerCase();
+  const subCategory = String(itemDef.sub_category || "")
+    .trim()
+    .toLowerCase();
   const gemTypeBySubCategory = GEM_SUB_CATEGORY_TO_TYPE[subCategory];
-  const inferredGemType = effects.length > 0 ? inferGemTypeFromEffects(effects) : 'all';
-  const gemType = normalizeGemType(gemTypeBySubCategory || inferredGemType || 'all');
-  const name = typeof itemDef.name === 'string' && itemDef.name.trim() ? itemDef.name.trim() : undefined;
-  const icon = typeof itemDef.icon === 'string' && itemDef.icon.trim() ? itemDef.icon.trim() : undefined;
+  const inferredGemType =
+    effects.length > 0 ? inferGemTypeFromEffects(effects) : "all";
+  const gemType = normalizeGemType(
+    gemTypeBySubCategory || inferredGemType || "all",
+  );
+  const name =
+    typeof itemDef.name === "string" && itemDef.name.trim()
+      ? itemDef.name.trim()
+      : undefined;
+  const icon =
+    typeof itemDef.icon === "string" && itemDef.icon.trim()
+      ? itemDef.icon.trim()
+      : undefined;
   return { effects, gemType, name, icon };
 };
 
 const parseSocketEntry = (raw: unknown): SocketedGemEntry | null => {
   const src = toObject(raw);
   const slot = clampInt(toNumber(src.slot), 0, 999);
-  const itemDefId = String(src.itemDefId || src.item_def_id || '').trim();
+  const itemDefId = String(src.itemDefId || src.item_def_id || "").trim();
   if (!itemDefId) return null;
 
   // 只按静态定义动态解析宝石效果，不回退历史快照 effects。
   const dynamicMeta = resolveSocketGemMetaFromItemDef(itemDefId);
   if (!dynamicMeta || dynamicMeta.effects.length === 0) return null;
-  const effects: SocketEffect[] = dynamicMeta.effects.map((effect) => ({ ...effect }));
+  const effects: SocketEffect[] = dynamicMeta.effects.map((effect) => ({
+    ...effect,
+  }));
   const gemType = normalizeGemType(dynamicMeta.gemType);
   const name = dynamicMeta.name;
   const icon = dynamicMeta.icon;
@@ -383,26 +427,34 @@ export const parseSocketedGems = (raw: unknown): SocketedGemEntry[] => {
   return [...dedupBySlot.values()].sort((a, b) => a.slot - b.slot);
 };
 
-export const buildSocketFlatAttrDelta = (socketedGemsRaw: unknown): CharacterAttrRecord => {
+export const buildSocketFlatAttrDelta = (
+  socketedGemsRaw: unknown,
+): CharacterAttrRecord => {
   const delta: CharacterAttrRecord = {};
   const gems = parseSocketedGems(socketedGemsRaw);
   for (const gem of gems) {
     for (const effect of gem.effects) {
-      if (effect.applyType !== 'flat') continue;
+      if (effect.applyType !== "flat") continue;
       delta[effect.attrKey] = (delta[effect.attrKey] ?? 0) + effect.value;
     }
   }
   return delta;
 };
 
-export const resolveSocketMax = (socketMaxRaw: unknown, resolvedQualityRankRaw: unknown): number => {
+export const resolveSocketMax = (
+  socketMaxRaw: unknown,
+  resolvedQualityRankRaw: unknown,
+): number => {
   const configured = clampInt(toNumber(socketMaxRaw), 0, 12);
   if (configured > 0) return configured;
   const rank = clampInt(toNumber(resolvedQualityRankRaw), 1, 4);
   return DEFAULT_SOCKET_MAX_BY_QUALITY_RANK[rank] ?? 1;
 };
 
-const parseSlotAllowedGemTypes = (gemSlotTypesRaw: unknown, slot: number): string[] | null => {
+const parseSlotAllowedGemTypes = (
+  gemSlotTypesRaw: unknown,
+  slot: number,
+): string[] | null => {
   const rootArray = toArray(gemSlotTypesRaw);
   if (rootArray.length === 0) return null;
 
@@ -414,9 +466,11 @@ const parseSlotAllowedGemTypes = (gemSlotTypesRaw: unknown, slot: number): strin
     return normalized.length > 0 ? normalized : null;
   }
 
-  const allAsString = rootArray.every((v) => typeof v === 'string');
+  const allAsString = rootArray.every((v) => typeof v === "string");
   if (allAsString) {
-    const normalized = rootArray.map((v) => normalizeGemType(v)).filter((v) => !!v);
+    const normalized = rootArray
+      .map((v) => normalizeGemType(v))
+      .filter((v) => !!v);
     return normalized.length > 0 ? normalized : null;
   }
 
@@ -424,7 +478,9 @@ const parseSlotAllowedGemTypes = (gemSlotTypesRaw: unknown, slot: number): strin
   if (Object.keys(rootObj).length > 0) {
     const exact = rootObj[String(slot)];
     if (Array.isArray(exact)) {
-      const normalized = exact.map((v) => normalizeGemType(v)).filter((v) => !!v);
+      const normalized = exact
+        .map((v) => normalizeGemType(v))
+        .filter((v) => !!v);
       if (normalized.length > 0) return normalized;
     }
     if (Array.isArray(rootObj.default)) {
@@ -438,13 +494,17 @@ const parseSlotAllowedGemTypes = (gemSlotTypesRaw: unknown, slot: number): strin
   return null;
 };
 
-export const isGemTypeAllowedInSlot = (gemSlotTypesRaw: unknown, slot: number, gemTypeRaw: unknown): boolean => {
+export const isGemTypeAllowedInSlot = (
+  gemSlotTypesRaw: unknown,
+  slot: number,
+  gemTypeRaw: unknown,
+): boolean => {
   const allowed = parseSlotAllowedGemTypes(gemSlotTypesRaw, slot);
   if (!allowed || allowed.length === 0) return true;
   const normalizedGemType = normalizeGemType(gemTypeRaw);
   if (!normalizedGemType) return false;
-  if (allowed.includes('all')) return true;
-  if (normalizedGemType === 'all') return true;
+  if (allowed.includes("all")) return true;
+  if (normalizedGemType === "all") return true;
   return allowed.includes(normalizedGemType);
 };
 
@@ -457,13 +517,30 @@ export const buildEquipmentDisplayBaseAttrs = (params: {
   socketedGemsRaw: unknown;
 }): CharacterAttrRecord => {
   const baseAttrs = toObject(params.baseAttrsRaw);
-  const defQualityRank = Math.max(1, clampInt(toNumber(params.defQualityRankRaw), 1, 99));
-  const resolvedQualityRank = Math.max(1, clampInt(toNumber(params.resolvedQualityRankRaw), 1, 99));
-  const strengthenLevel = clampInt(toNumber(params.strengthenLevelRaw), 0, ENHANCE_MAX_LEVEL);
-  const refineLevel = clampInt(toNumber(params.refineLevelRaw), 0, REFINE_MAX_LEVEL);
+  const defQualityRank = Math.max(
+    1,
+    clampInt(toNumber(params.defQualityRankRaw), 1, 99),
+  );
+  const resolvedQualityRank = Math.max(
+    1,
+    clampInt(toNumber(params.resolvedQualityRankRaw), 1, 99),
+  );
+  const strengthenLevel = clampInt(
+    toNumber(params.strengthenLevelRaw),
+    0,
+    ENHANCE_MAX_LEVEL,
+  );
+  const refineLevel = clampInt(
+    toNumber(params.refineLevelRaw),
+    0,
+    REFINE_MAX_LEVEL,
+  );
 
-  const qualityFactor = getQualityMultiplier(resolvedQualityRank) / getQualityMultiplier(defQualityRank);
-  const growthFactor = getStrengthenMultiplier(strengthenLevel) * getRefineMultiplier(refineLevel);
+  const qualityFactor =
+    getQualityMultiplier(resolvedQualityRank) /
+    getQualityMultiplier(defQualityRank);
+  const growthFactor =
+    getStrengthenMultiplier(strengthenLevel) * getRefineMultiplier(refineLevel);
   const scaled = scaleNumberRecord(baseAttrs, qualityFactor * growthFactor);
   const socketDelta = buildSocketFlatAttrDelta(params.socketedGemsRaw);
   return mergeNumberRecord(scaled, socketDelta);

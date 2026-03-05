@@ -287,7 +287,15 @@ const buildFallbackSkillEffects = (type: TechniqueGenerationCandidate['technique
   }
   if (type === '身法') {
     return [
-      { type: 'buff', buffId: 'buff-shanbi-up', duration: 2, value: quality === '天' ? 0.24 : quality === '地' ? 0.2 : quality === '玄' ? 0.16 : 0.12 },
+      {
+        type: 'buff',
+        buffKey: 'buff-shanbi-up',
+        buffKind: 'attr',
+        attrKey: 'shanbi',
+        applyType: 'flat',
+        duration: 2,
+        value: quality === '天' ? 0.24 : quality === '地' ? 0.2 : quality === '玄' ? 0.16 : 0.12,
+      },
       { type: 'damage', valueType: 'scale', scaleAttr: 'wugong', scaleRate: 0.8 + (damageRate - 1) * 0.3 },
     ];
   }

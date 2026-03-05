@@ -22,24 +22,21 @@ import { makeAIDecision, selectTargets } from './modules/ai.js';
 import { isFeared, isStunned } from './modules/control.js';
 import { triggerSetBonusEffects } from './modules/setBonus.js';
 import { decayUnitMarksAtRoundStart } from './modules/mark.js';
+import {
+  DEFAULT_PERCENT_BUFF_ATTR_SET,
+  normalizeBuffApplyType,
+  normalizeBuffAttrKey,
+  normalizeBuffKind,
+  resolveBuffEffectKey,
+  resolveSignedAttrValue,
+} from './utils/buffSpec.js';
 
 import type { BattleSkill } from './types.js';
 
 /** 自定义玩家技能选择回调（用于挂机战斗注入 AutoSkillPolicy） */
 export type PlayerSkillSelector = (unit: BattleUnit) => BattleSkill;
-const PHASE_PERCENT_BUFF_ATTR_SET = new Set(['wugong', 'fagong', 'wufang', 'fafang']);
-const PHASE_ATTR_ALIAS: Record<string, string> = {
-  'max-lingqi': 'max_lingqi',
-  'max-qixue': 'max_qixue',
-  'qixue-huifu': 'qixue_huifu',
-  'lingqi-huifu': 'lingqi_huifu',
-  'kongzhi-kangxing': 'kongzhi_kangxing',
-  'jin-kangxing': 'jin_kangxing',
-  'mu-kangxing': 'mu_kangxing',
-  'shui-kangxing': 'shui_kangxing',
-  'huo-kangxing': 'huo_kangxing',
-  'tu-kangxing': 'tu_kangxing',
-};
+const PHASE_PERCENT_BUFF_ATTR_SET = DEFAULT_PERCENT_BUFF_ATTR_SET;
+type BuffOrDebuffEffect = SkillEffect & { type: 'buff' | 'debuff' };
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -50,28 +47,16 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
-function normalizePhaseAttrKey(raw: string): string {
-  const lowered = raw.trim().toLowerCase();
-  if (!lowered) return '';
-  const aliased = PHASE_ATTR_ALIAS[lowered] ?? lowered;
-  return aliased.replace(/-/g, '_');
-}
-
-function buildPhaseAttrModifiers(effect: SkillEffect): AttrModifier[] {
-  const buffId = typeof effect.buffId === 'string' ? effect.buffId.trim() : '';
-  if (!buffId) return [];
-  const matched = /^(buff|debuff)-([a-z0-9-]+)-(up|down)$/i.exec(buffId);
-  if (!matched) return [];
-
-  const attr = normalizePhaseAttrKey(matched[2]);
+function buildPhaseAttrModifiers(effect: BuffOrDebuffEffect): AttrModifier[] {
+  if (normalizeBuffKind(effect.buffKind) !== 'attr') return [];
+  const attr = normalizeBuffAttrKey(effect.attrKey);
   if (!attr) return [];
 
-  const baseValue = Math.abs(toFiniteNumber(effect.value, 0));
-  if (baseValue <= 0) return [];
-  const dirSign = matched[3].toLowerCase() === 'down' ? -1 : 1;
-  const typeSign = matched[1].toLowerCase() === 'debuff' ? -1 : 1;
-  const finalValue = baseValue * dirSign * typeSign;
-  const mode: AttrModifier['mode'] = PHASE_PERCENT_BUFF_ATTR_SET.has(attr) ? 'percent' : 'flat';
+  const finalValue = resolveSignedAttrValue(effect.type, effect.value);
+  if (finalValue === 0) return [];
+  const mode: AttrModifier['mode'] =
+    normalizeBuffApplyType(effect.applyType)
+    ?? (PHASE_PERCENT_BUFF_ATTR_SET.has(attr) ? 'percent' : 'flat');
 
   return [{ attr, value: finalValue, mode }];
 }
@@ -377,9 +362,10 @@ export class BattleEngine {
       : [];
     for (const effect of effects) {
       if (effect.type !== 'buff' && effect.type !== 'debuff') continue;
-      const buffId = typeof effect.buffId === 'string' ? effect.buffId.trim() : '';
+      const buffEffect = effect as BuffOrDebuffEffect;
+      const buffId = resolveBuffEffectKey(buffEffect);
       if (!buffId) continue;
-      const attrModifiers = buildPhaseAttrModifiers(effect);
+      const attrModifiers = buildPhaseAttrModifiers(buffEffect);
       if (attrModifiers.length === 0) continue;
 
       const stacks = Math.max(1, Math.floor(toFiniteNumber(effect.stacks, 1)));
@@ -388,7 +374,7 @@ export class BattleEngine {
         id: `phase-${buffId}-${Date.now()}`,
         buffDefId: buffId,
         name: buffId,
-        type: effect.type,
+        type: buffEffect.type,
         category: 'phase',
         sourceUnitId: unit.id,
         maxStacks: stacks,

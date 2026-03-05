@@ -48,11 +48,16 @@ import {
   cloneBattleSkill,
   cloneSkillEffectList,
 } from "./skills.js";
+import {
+  normalizeBuffApplyType,
+  normalizeBuffAttrKey,
+  normalizeBuffKind,
+  resolveBuffEffectKey,
+} from "../../../battle/utils/buffSpec.js";
 
 // ------ 常量 ------
 
 const MONSTER_PHASE_ACTION_SET = new Set(["enrage", "summon"]);
-const MONSTER_PHASE_BUFF_PATTERN = /^(buff|debuff)-([a-z0-9-]+)-(up|down)$/i;
 
 // ------ 内部类型 ------
 
@@ -173,11 +178,30 @@ export function parsePhaseEffects(
       };
     }
 
-    const buffId = toText(effect.buffId);
-    if (!MONSTER_PHASE_BUFF_PATTERN.test(buffId)) {
+    const buffKind = normalizeBuffKind(effect.buffKind);
+    if (buffKind !== "attr") {
       return {
         success: false,
-        error: `怪物[${monsterId}] 第${triggerIndex}条阶段触发第${i + 1}个effect的buffId非法: ${buffId}`,
+        error: `怪物[${monsterId}] 第${triggerIndex}条阶段触发第${i + 1}个effect的buffKind必须为attr`,
+      };
+    }
+
+    const attrKey = normalizeBuffAttrKey(toText(effect.attrKey));
+    if (!attrKey) {
+      return {
+        success: false,
+        error: `怪物[${monsterId}] 第${triggerIndex}条阶段触发第${i + 1}个effect缺少合法attrKey`,
+      };
+    }
+
+    const applyTypeRaw = toText(effect.applyType);
+    const applyType = applyTypeRaw
+      ? normalizeBuffApplyType(applyTypeRaw)
+      : null;
+    if (applyTypeRaw && !applyType) {
+      return {
+        success: false,
+        error: `怪物[${monsterId}] 第${triggerIndex}条阶段触发第${i + 1}个effect的applyType非法: ${applyTypeRaw}`,
       };
     }
 
@@ -194,9 +218,18 @@ export function parsePhaseEffects(
       durationRaw === null ? 1 : Math.max(1, Math.floor(durationRaw));
     const stacksRaw = toNumber(effect.stacks);
     const stacks = stacksRaw === null ? 1 : Math.max(1, Math.floor(stacksRaw));
+    const buffKeyRaw = toText(effect.buffKey);
+    const buffKey = buffKeyRaw || resolveBuffEffectKey({
+      type: effectType as "buff" | "debuff",
+      buffKind: "attr",
+      attrKey,
+    });
     effects.push({
       type: effectType,
-      buffId,
+      buffKind: "attr",
+      buffKey,
+      attrKey,
+      applyType: applyType ?? undefined,
       value,
       duration,
       stacks,
