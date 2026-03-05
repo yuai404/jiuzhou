@@ -214,6 +214,11 @@ export const nextDungeonInstance = async (
 
     const dataObj = asObject(inst.instance_data) ?? {};
     const rewardEligibleParticipants = selectDungeonRewardEligibleParticipants(participants, dataObj);
+    if (participants.length > 0 && rewardEligibleParticipants.length === 0) {
+      console.warn(
+        `[dungeon] 实例可领奖名单为空，结算奖励将跳过（instanceId=${instanceId}, participants=${participants.length})`,
+      );
+    }
     const currentBattleId = typeof dataObj.currentBattleId === 'string' ? dataObj.currentBattleId : '';
     if (!currentBattleId) return { success: false, message: '当前战斗不存在' };
 
@@ -524,9 +529,9 @@ export const nextDungeonInstance = async (
           }
         }
 
-      for (const p of rewardEligibleParticipants) {
-        const characterId = Number(p.characterId);
-        if (!Number.isFinite(characterId) || characterId <= 0) continue;
+      // 任务次数按“开战参与者”统计：体力在开战时已按 participants 扣除，避免资格快照异常导致任务不累计。
+      const taskEventCharacterIds = buildDungeonRewardEligibleCharacterIds(participants);
+      for (const characterId of taskEventCharacterIds) {
         await recordDungeonClearEvent(characterId, inst.dungeon_id, 1, inst.difficulty_id);
       }
 
