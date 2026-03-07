@@ -854,7 +854,7 @@
       "entries": [
         {
           "item_def_id": "scroll-jie-fu-fu",
-          "chance": 0.01,
+          "chance": 0.005,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
