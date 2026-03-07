@@ -25,11 +25,12 @@ import { type BagItem } from './bagShared';
 
 type GrowthCostPreviewData = NonNullable<InventoryGrowthCostPreviewResponse['data']>;
 type GrowthMode = 'enhance' | 'refine';
+export type EquipmentGrowthFailMode = 'none' | 'downgrade' | 'destroy';
 
 export interface EquipmentGrowthStageState {
   curLv: number;
   targetLv: number;
-  maxLv: number;
+  maxLv: number | null;
   materialItemDefId: string | null;
   materialName: string;
   materialQty: number;
@@ -37,9 +38,17 @@ export interface EquipmentGrowthStageState {
   silverCost: number;
   spiritStoneCost: number;
   successRate: number;
-  downgradeOnFail: boolean;
+  failMode: EquipmentGrowthFailMode;
   previewBaseAttrs: Record<string, number>;
 }
+
+export const getEquipmentGrowthFailModeText = (
+  failMode: EquipmentGrowthFailMode,
+): string => {
+  if (failMode === 'destroy') return '失败碎装';
+  if (failMode === 'downgrade') return '失败掉级';
+  return '';
+};
 
 interface UseEquipmentGrowthPreviewOptions {
   item: BagItem | null;
@@ -95,7 +104,7 @@ const buildStageState = (
     silverCost,
     spiritStoneCost,
     successRate: source.successRate,
-    downgradeOnFail: source.downgradeOnFail,
+    failMode: source.failMode,
     previewBaseAttrs: source.previewBaseAttrs,
   };
 };

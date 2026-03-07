@@ -21,20 +21,21 @@
  *
  * 边界条件：
  * 1. 穿戴替换已有装备时，若背包无空位则拒绝操作
- * 2. 强化/精炼失败时等级可能回退（由 getEnhanceFailResultLevel/getRefineFailResultLevel 决定）
+ * 2. 强化失败会直接销毁装备，精炼失败仍按既有规则回退等级
  */
 import { query } from "../../config/database.js";
 import { randomInt } from "crypto";
 import {
-  ENHANCE_MAX_LEVEL,
+  type EquipmentGrowthFailMode,
   REFINE_MAX_LEVEL,
   buildEnhanceCostPlan,
   buildEquipmentDisplayBaseAttrs,
   buildRefineCostPlan,
-  getEnhanceFailResultLevel,
+  getEnhanceFailMode,
   getEnhanceSuccessRatePercent,
   getRefineFailResultLevel,
   getRefineSuccessRatePercent,
+  normalizeEnhanceLevel,
 } from "../equipmentGrowthRules.js";
 import {
   buildAffixRerollCostPlan,
@@ -394,10 +395,12 @@ export const enhanceEquipment = async (
   success: boolean;
   message: string;
   data?: {
-    strengthenLevel: number;
+    strengthenLevel: number | null;
     targetLevel?: number;
     successRate?: number;
     roll?: number;
+    failMode?: EquipmentGrowthFailMode;
+    destroyed?: boolean;
     usedMaterial?: { itemDefId: string; qty: number };
     costs?: { silver: number; spiritStones: number };
     character?: unknown;
@@ -415,15 +418,7 @@ export const enhanceEquipment = async (
   }
   const item = itemState.item;
 
-  const curLv = clampInt(item.strengthenLevel, 0, ENHANCE_MAX_LEVEL);
-  if (curLv >= ENHANCE_MAX_LEVEL) {
-    return {
-      success: false,
-      message: "强化已达上限",
-      data: { strengthenLevel: curLv, targetLevel: curLv },
-    };
-  }
-
+  const curLv = normalizeEnhanceLevel(item.strengthenLevel);
   const targetLv = curLv + 1;
   const costPlan = buildEnhanceCostPlan(
     targetLv,
@@ -463,26 +458,51 @@ export const enhanceEquipment = async (
   const finalRate = Math.max(0, Math.min(1, baseRate));
   const roll = randomInt(0, 10_000) / 10_000;
   const success = roll < finalRate;
+  const failMode = success ? "none" : getEnhanceFailMode();
+  const destroyed = !success && failMode === "destroy";
+  const resultLevel = success ? targetLv : null;
 
-  const resultLevel = success
-    ? targetLv
-    : getEnhanceFailResultLevel(curLv, targetLv);
-
-  if (resultLevel !== curLv) {
+  if (success) {
     await query(
       "UPDATE item_instance SET strengthen_level = $1, updated_at = NOW() WHERE id = $2 AND owner_character_id = $3",
-      [resultLevel, itemInstanceId, characterId],
+      [targetLv, itemInstanceId, characterId],
     );
+  } else if (destroyed) {
+    if (String(item.location) === "equipped") {
+      const beforeSetBonus = await getEquippedSetBonusDelta(characterId);
+      await query(
+        "DELETE FROM item_instance WHERE id = $1 AND owner_character_id = $2",
+        [itemInstanceId, characterId],
+      );
+      if (beforeDiffRes.before) {
+        await applyCharacterAttrDelta(
+          characterId,
+          invertDelta(beforeDiffRes.before),
+        );
+      }
+      const afterSetBonus = await getEquippedSetBonusDelta(characterId);
+      const setBonusDelta = new Map<CharacterAttrKey, number>();
+      mergeDelta(setBonusDelta, afterSetBonus);
+      mergeDelta(setBonusDelta, invertDelta(beforeSetBonus));
+      await applyCharacterAttrDelta(characterId, setBonusDelta);
+    } else {
+      await query(
+        "DELETE FROM item_instance WHERE id = $1 AND owner_character_id = $2",
+        [itemInstanceId, characterId],
+      );
+    }
   }
 
-  const applyDiffRes = await applyEquipmentDiffIfEquipped(
-    characterId,
-    itemInstanceId,
-    item.location,
-    beforeDiffRes.before,
-  );
-  if (!applyDiffRes.success) {
-    return { success: false, message: applyDiffRes.message };
+  if (success) {
+    const applyDiffRes = await applyEquipmentDiffIfEquipped(
+      characterId,
+      itemInstanceId,
+      item.location,
+      beforeDiffRes.before,
+    );
+    if (!applyDiffRes.success) {
+      return { success: false, message: applyDiffRes.message };
+    }
   }
   await invalidateCharacterComputedCache(characterId);
   const character = await getCharacterComputedByCharacterId(characterId, {
@@ -490,12 +510,14 @@ export const enhanceEquipment = async (
   });
   return {
     success,
-    message: success ? "强化成功" : "强化失败",
+    message: success ? "强化成功" : destroyed ? "强化失败，装备已碎" : "强化失败",
     data: {
       strengthenLevel: resultLevel,
       targetLevel: targetLv,
       successRate: finalRate,
       roll,
+      failMode,
+      destroyed,
       usedMaterial: {
         itemDefId: costPlan.materialItemDefId,
         qty: costPlan.materialQty,
@@ -648,9 +670,9 @@ export const getEquipmentGrowthCostPreview = async (
     enhance: {
       currentLevel: number;
       targetLevel: number;
-      maxLevel: number;
+      maxLevel: number | null;
       successRate: number;
-      downgradeOnFail: boolean;
+      failMode: EquipmentGrowthFailMode;
       costs: {
         materialItemDefId: string;
         materialQty: number;
@@ -664,7 +686,7 @@ export const getEquipmentGrowthCostPreview = async (
       targetLevel: number;
       maxLevel: number;
       successRate: number;
-      downgradeOnFail: boolean;
+      failMode: EquipmentGrowthFailMode;
       costs: {
         materialItemDefId: string;
         materialQty: number;
@@ -688,18 +710,14 @@ export const getEquipmentGrowthCostPreview = async (
     enhanceState.item.equipReqRealm ?? refineState.item.equipReqRealm,
   );
 
-  const enhanceCurrentLevel = clampInt(
+  const enhanceCurrentLevel = normalizeEnhanceLevel(
     enhanceState.item.strengthenLevel,
-    0,
-    ENHANCE_MAX_LEVEL,
   );
-  const enhanceAtMaxLevel = enhanceCurrentLevel >= ENHANCE_MAX_LEVEL;
-  const enhanceTargetLevel = enhanceAtMaxLevel
-    ? ENHANCE_MAX_LEVEL
-    : enhanceCurrentLevel + 1;
-  const enhanceCostPlan = enhanceAtMaxLevel
-    ? null
-    : buildEnhanceCostPlan(enhanceTargetLevel, equipReqRealmRank);
+  const enhanceTargetLevel = enhanceCurrentLevel + 1;
+  const enhanceCostPlan = buildEnhanceCostPlan(
+    enhanceTargetLevel,
+    equipReqRealmRank,
+  );
 
   const refineCurrentLevel = clampInt(
     refineState.item.refineLevel,
@@ -769,11 +787,9 @@ export const getEquipmentGrowthCostPreview = async (
       enhance: {
         currentLevel: enhanceCurrentLevel,
         targetLevel: enhanceTargetLevel,
-        maxLevel: ENHANCE_MAX_LEVEL,
-        successRate: enhanceAtMaxLevel
-          ? 0
-          : getEnhanceSuccessRatePercent(enhanceTargetLevel),
-        downgradeOnFail: enhanceTargetLevel >= 8,
+        maxLevel: null,
+        successRate: getEnhanceSuccessRatePercent(enhanceTargetLevel),
+        failMode: getEnhanceFailMode(),
         costs: enhanceCostPlan,
         previewBaseAttrs: enhancePreviewBaseAttrs,
       },
@@ -784,7 +800,7 @@ export const getEquipmentGrowthCostPreview = async (
         successRate: refineAtMaxLevel
           ? 0
           : getRefineSuccessRatePercent(refineTargetLevel),
-        downgradeOnFail: refineTargetLevel >= 6,
+        failMode: refineTargetLevel >= 6 ? "downgrade" : "none",
         costs: refineCostPlan,
         previewBaseAttrs: refinePreviewBaseAttrs,
       },

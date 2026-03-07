@@ -162,10 +162,12 @@ export interface InventoryEnhanceResponse {
   success: boolean;
   message: string;
   data?: {
-    strengthenLevel: number;
+    strengthenLevel: number | null;
     targetLevel?: number;
     successRate?: number;
     roll?: number;
+    failMode?: 'none' | 'downgrade' | 'destroy';
+    destroyed?: boolean;
     usedMaterial?: { itemDefId: string; qty: number };
     costs?: { silver: number; spiritStones: number };
     character: unknown | null;
@@ -211,9 +213,9 @@ export interface InventoryGrowthCostPreviewResponse {
     enhance: {
       currentLevel: number;
       targetLevel: number;
-      maxLevel: number;
+      maxLevel: number | null;
       successRate: number;
-      downgradeOnFail: boolean;
+      failMode: 'none' | 'downgrade' | 'destroy';
       costs: {
         materialItemDefId: string;
         materialQty: number;
@@ -227,7 +229,7 @@ export interface InventoryGrowthCostPreviewResponse {
       targetLevel: number;
       maxLevel: number;
       successRate: number;
-      downgradeOnFail: boolean;
+      failMode: 'none' | 'downgrade' | 'destroy';
       costs: {
         materialItemDefId: string;
         materialQty: number;

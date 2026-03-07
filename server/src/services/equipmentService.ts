@@ -22,7 +22,9 @@ import {
 import {
   getRealmRankOneBasedForEquipment,
 } from './shared/realmRules.js';
+import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { getAffixPoolDefinitions, getItemDefinitionById } from './staticConfigLoader.js';
+import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import {
   buildAffixValueAndModifiers,
   isRatioAttrKey,
@@ -93,11 +95,6 @@ const resolveAffixRollRatio = (
   const span = high - low;
   if (span <= Number.EPSILON) return 1;
   return clampNumber((sampledValue - low) / span, 0, 1);
-};
-
-const getStrengthenMultiplier = (strengthenLevel: number): number => {
-  const lv = clampInt(strengthenLevel, 0, 15);
-  return 1 + lv * 0.03;
 };
 
 const normalizeScaledAttrValue = (attrKey: string, value: number): number => {
@@ -867,13 +864,16 @@ class EquipmentService {
     if (!itemDef || itemDef.category !== 'equipment') return null;
 
     const resolvedQuality = coerceQuality(row.quality) ?? '黄';
-    const resolvedQualityRank = Number(row.quality_rank) || QUALITY_RANK[resolvedQuality] || 1;
-    const baseRank = QUALITY_RANK['黄'];
-    const attrFactor = getQualityMultiplier(resolvedQualityRank) / getQualityMultiplier(baseRank);
-    const strengthenFactor = getStrengthenMultiplier(Number(row.strengthen_level) || 0);
-    const baseAttrs = itemDef.base_attrs && typeof itemDef.base_attrs === 'object'
-      ? (itemDef.base_attrs as Record<string, number>)
-      : {};
+    const defQualityRank = resolveQualityRankFromName(itemDef.quality, QUALITY_RANK['黄']);
+    const resolvedQualityRank = Number(row.quality_rank) || QUALITY_RANK[resolvedQuality] || defQualityRank;
+    const baseAttrs = buildEquipmentDisplayBaseAttrs({
+      baseAttrsRaw: itemDef.base_attrs,
+      defQualityRankRaw: defQualityRank,
+      resolvedQualityRankRaw: resolvedQualityRank,
+      strengthenLevelRaw: row.strengthen_level,
+      refineLevelRaw: row.refine_level,
+      socketedGemsRaw: row.socketed_gems,
+    });
     return {
       id: row.id,
       itemDefId: row.item_def_id,
@@ -883,10 +883,7 @@ class EquipmentService {
       qualityRank: resolvedQualityRank,
       equipSlot: itemDef.equip_slot,
       equipReqRealm: itemDef.equip_req_realm,
-      baseAttrs: scaleAttrs(
-        baseAttrs,
-        attrFactor * strengthenFactor
-      ),
+      baseAttrs,
       affixes: row.affixes || [],
       setId: itemDef.set_id,
       strengthenLevel: row.strengthen_level,

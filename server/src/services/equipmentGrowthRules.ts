@@ -27,7 +27,8 @@ const DEFAULT_SOCKET_MAX_BY_QUALITY_RANK: Record<number, number> = {
   4: 4,
 };
 
-export const ENHANCE_MAX_LEVEL = 15;
+export const ENHANCE_FIXED_RATE_START_LEVEL = 15;
+export const ENHANCE_MAX_LEVEL = ENHANCE_FIXED_RATE_START_LEVEL;
 export const REFINE_MAX_LEVEL = 10;
 
 const ENHANCE_SUCCESS_RATE_PERCENT: Record<number, number> = {
@@ -202,8 +203,16 @@ export const getQualityMultiplier = (rank: number): number => {
   return QUALITY_MULTIPLIER_BY_RANK[clampInt(rank, 1, 99)] ?? 1;
 };
 
+export type EquipmentGrowthFailMode = "none" | "downgrade" | "destroy";
+
+export const normalizeEnhanceLevel = (strengthenLevel: number): number => {
+  const level = Number(strengthenLevel);
+  if (!Number.isFinite(level)) return 0;
+  return Math.max(0, Math.floor(level));
+};
+
 export const getStrengthenMultiplier = (strengthenLevel: number): number => {
-  const level = clampInt(strengthenLevel, 0, ENHANCE_MAX_LEVEL);
+  const level = normalizeEnhanceLevel(strengthenLevel);
   return 1 + level * 0.03;
 };
 
@@ -213,8 +222,13 @@ export const getRefineMultiplier = (refineLevel: number): number => {
 };
 
 export const getEnhanceSuccessRatePercent = (targetLevel: number): number => {
-  const level = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
-  const value = ENHANCE_SUCCESS_RATE_PERCENT[level] ?? 0;
+  const level = Math.max(1, normalizeEnhanceLevel(targetLevel));
+  const fixedRate =
+    ENHANCE_SUCCESS_RATE_PERCENT[ENHANCE_FIXED_RATE_START_LEVEL] ?? 0;
+  const value =
+    level > ENHANCE_FIXED_RATE_START_LEVEL
+      ? fixedRate
+      : (ENHANCE_SUCCESS_RATE_PERCENT[level] ?? fixedRate);
   return Math.max(0, Math.min(1, value));
 };
 
@@ -224,14 +238,8 @@ export const getRefineSuccessRatePercent = (targetLevel: number): number => {
   return Math.max(0, Math.min(1, value));
 };
 
-export const getEnhanceFailResultLevel = (
-  currentLevel: number,
-  targetLevel: number,
-): number => {
-  const current = clampInt(currentLevel, 0, ENHANCE_MAX_LEVEL);
-  const target = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
-  if (target >= 8) return Math.max(0, current - 1);
-  return current;
+export const getEnhanceFailMode = (): EquipmentGrowthFailMode => {
+  return "destroy";
 };
 
 export const getRefineFailResultLevel = (
@@ -255,7 +263,7 @@ export const buildEnhanceCostPlan = (
   targetLevel: number,
   equipReqRealm: number,
 ): GrowthCostPlan => {
-  const target = clampInt(targetLevel, 1, ENHANCE_MAX_LEVEL);
+  const target = Math.max(1, normalizeEnhanceLevel(targetLevel));
   const realmMultiplier = Math.max(1, clampInt(equipReqRealm, 1, 99));
   return {
     materialItemDefId: target <= 10 ? "enhance-001" : "enhance-002",
@@ -526,9 +534,9 @@ export const buildEquipmentDisplayBaseAttrs = (params: {
     clampInt(toNumber(params.resolvedQualityRankRaw), 1, 99),
   );
   const strengthenLevel = clampInt(
-    toNumber(params.strengthenLevelRaw),
+    normalizeEnhanceLevel(toNumber(params.strengthenLevelRaw)),
     0,
-    ENHANCE_MAX_LEVEL,
+    Number.MAX_SAFE_INTEGER,
   );
   const refineLevel = clampInt(
     toNumber(params.refineLevelRaw),

@@ -442,7 +442,7 @@ router.post('/enhance', asyncHandler(async (req, res) => {
 
     const result = await inventoryService.enhanceEquipment(characterId, userId, parsedItemId);
 
-    if (result.success) {
+    if (result.success || result.data?.destroyed) {
       await safePushCharacterUpdate(userId);
     }
 

@@ -69,7 +69,7 @@ import { SetBonusDisplay } from './SetBonusDisplay';
 import DisassembleModal from './DisassembleModal';
 import CraftModal from './CraftModal';
 import GemSynthesisModal from './GemSynthesisModal';
-import { useEquipmentGrowthPreview } from './useEquipmentGrowthPreview';
+import { getEquipmentGrowthFailModeText, useEquipmentGrowthPreview } from './useEquipmentGrowthPreview';
 import './MobileBagModal.scss';
 
 /* ─── 排序面板 ─── */
@@ -673,8 +673,7 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
       const res = await enhanceInventoryItem({ itemId: item.id });
       if (res.success) message.success(res.message || '强化成功');
       else {
-        if (res.message === '强化失败') message.warning(res.message);
-        else void 0;
+        message.warning(res.message || '强化失败');
       }
       await onDone();
       window.dispatchEvent(new Event('inventory:changed'));
@@ -823,8 +822,10 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
                 <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--primary-color)' }}>+{st.targetLv}</span>
                 <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
                   成功率 {formatPercent(st.successRate)}
-                  {mode === 'enhance' && enhanceState?.downgradeOnFail && (
-                    <span style={{ marginLeft: 8, color: 'var(--danger-color)' }}>失败掉级</span>
+                  {mode === 'enhance' && enhanceState && enhanceState.failMode !== 'none' && (
+                    <span style={{ marginLeft: 8, color: 'var(--danger-color)' }}>
+                      {getEquipmentGrowthFailModeText(enhanceState.failMode)}
+                    </span>
                   )}
                 </div>
               </div>
@@ -1047,11 +1048,12 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
             disabled={
               submitting || item.locked ||
               (mode === 'enhance' && enhanceState
-                ? enhanceState.curLv >= enhanceState.maxLv || enhanceState.owned < enhanceState.materialQty ||
+                ? enhanceState.owned < enhanceState.materialQty ||
                 playerSilver < enhanceState.silverCost || playerSpiritStones < enhanceState.spiritStoneCost
                 : mode === 'enhance') ||
               (mode === 'refine' && refineState
-                ? refineState.curLv >= refineState.maxLv || refineState.owned < refineState.materialQty ||
+                ? (refineState.maxLv !== null && refineState.curLv >= refineState.maxLv) ||
+                refineState.owned < refineState.materialQty ||
                 playerSilver < refineState.silverCost || playerSpiritStones < refineState.spiritStoneCost
                 : mode === 'refine') ||
               (mode === 'reroll' && rerollState

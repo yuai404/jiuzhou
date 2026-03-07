@@ -20,8 +20,8 @@
  */
 import { query } from "../../../config/database.js";
 import {
-  ENHANCE_MAX_LEVEL,
   REFINE_MAX_LEVEL,
+  normalizeEnhanceLevel,
 } from "../../equipmentGrowthRules.js";
 import {
   parseGeneratedAffixesForReroll,
@@ -99,11 +99,7 @@ export const getEnhanceItemState = async (
       qty: Number(row.qty) || 1,
       location: row.location,
       locked: Boolean(row.locked),
-      strengthenLevel: clampInt(
-        Number(row.strengthen_level) || 0,
-        0,
-        ENHANCE_MAX_LEVEL,
-      ),
+      strengthenLevel: normalizeEnhanceLevel(Number(row.strengthen_level) || 0),
       equipReqRealm:
         typeof itemDef.equip_req_realm === "string"
           ? itemDef.equip_req_realm

@@ -62,7 +62,7 @@ import { getItemQualityMeta } from '../../shared/itemQuality';
 import InventoryItemCell from '../../shared/InventoryItemCell';
 import { EquipmentDetailAttrList } from './EquipmentDetailAttrList';
 import { SetBonusDisplay } from './SetBonusDisplay';
-import { useEquipmentGrowthPreview } from './useEquipmentGrowthPreview';
+import { getEquipmentGrowthFailModeText, useEquipmentGrowthPreview } from './useEquipmentGrowthPreview';
 import './index.scss';
 
 interface BagModalProps {
@@ -571,8 +571,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       if (res.success) {
         message.success(res.message || '强化成功');
       } else {
-        if ((res.message || '') === '强化失败') message.warning(res.message || '强化失败');
-        else void 0;
+        message.warning(res.message || '强化失败');
       }
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
@@ -1286,7 +1285,11 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                   <span className="bag-growth-level bag-growth-level--target">+{enhanceState.targetLv}</span>
                   <span className="bag-growth-rate">{formatPercent(enhanceState.successRate)}</span>
                 </div>
-                {enhanceState.downgradeOnFail && <div className="bag-growth-tip-warn">失败掉级</div>}
+                {enhanceState.failMode !== 'none' && (
+                  <div className="bag-growth-tip-warn">
+                    {getEquipmentGrowthFailModeText(enhanceState.failMode)}
+                  </div>
+                )}
               </div>
 
               <div className="bag-growth-cost-card">
@@ -1345,7 +1348,6 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 block
                 disabled={
                   enhanceSubmitting ||
-                  enhanceState.curLv >= enhanceState.maxLv ||
                   enhanceState.owned < enhanceState.materialQty ||
                   playerSilver < enhanceState.silverCost ||
                   playerSpiritStones < enhanceState.spiritStoneCost ||
@@ -1355,7 +1357,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 onClick={() => void handleEnhance()}
                 loading={enhanceSubmitting}
               >
-                {activeItem?.locked ? '物品已锁定' : enhanceState.curLv >= enhanceState.maxLv ? '已达上限' : '强化'}
+                {activeItem?.locked ? '物品已锁定' : '强化'}
               </Button>
             </>
           ) : (
@@ -1429,7 +1431,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 block
                 disabled={
                   refineSubmitting ||
-                  refineState.curLv >= refineState.maxLv ||
+                  (refineState.maxLv !== null && refineState.curLv >= refineState.maxLv) ||
                   refineState.owned < refineState.materialQty ||
                   playerSilver < refineState.silverCost ||
                   playerSpiritStones < refineState.spiritStoneCost ||
@@ -1439,7 +1441,11 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                 onClick={() => void handleRefine()}
                 loading={refineSubmitting}
               >
-                {activeItem?.locked ? '物品已锁定' : refineState.curLv >= refineState.maxLv ? '已达上限' : '精炼'}
+                {activeItem?.locked
+                  ? '物品已锁定'
+                  : refineState.maxLv !== null && refineState.curLv >= refineState.maxLv
+                    ? '已达上限'
+                    : '精炼'}
               </Button>
             </>
           ) : (
