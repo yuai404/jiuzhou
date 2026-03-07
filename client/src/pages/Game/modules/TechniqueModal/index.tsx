@@ -28,7 +28,11 @@ import {
 } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import ResearchPanel from './ResearchPanel';
-import { type TechniqueResearchStatusData } from './researchShared';
+import {
+  TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS,
+  resolveTechniqueResearchIndicatorStatus,
+  type TechniqueResearchStatusData,
+} from './researchShared';
 import { getSkillInlineSummary, renderSkillInlineDetails, renderSkillTooltip } from './skillDetailShared';
 import './index.scss';
 
@@ -418,6 +422,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
   const [publishGenerationId, setPublishGenerationId] = useState('');
   const [publishCustomName, setPublishCustomName] = useState('');
   const markingResearchViewedRef = useRef(false);
+  const [researchVisitToken, setResearchVisitToken] = useState(0);
 
   useEffect(() => {
     gameSocket.connect();
@@ -531,10 +536,9 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
         throw new Error(statusRes?.message || '获取研修状态失败');
       }
       setResearchStatus(statusRes.data);
-      onResearchIndicatorChange?.(statusRes.data.hasUnreadResult ? statusRes.data.resultStatus : null);
+      onResearchIndicatorChange?.(resolveTechniqueResearchIndicatorStatus(statusRes.data));
     } catch {
-      setResearchStatus(null);
-      onResearchIndicatorChange?.(null);
+      // 拉取失败时保留上一份状态，避免网络抖动误清结果提示。
     } finally {
       setResearchLoading(false);
     }
@@ -560,7 +564,26 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
   }, [characterId, open, refreshResearchStatus]);
 
   useEffect(() => {
-    if (!open || panel !== 'research' || !characterId || !researchStatus?.hasUnreadResult) return;
+    if (!open || panel !== 'research') return;
+    setResearchVisitToken((value) => value + 1);
+  }, [open, panel]);
+
+  useEffect(() => {
+    if (!open || !TECHNIQUE_RESEARCH_ENABLED || !characterId) return undefined;
+    const timer = window.setInterval(() => {
+      void refreshResearchStatus();
+    }, TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [characterId, open, refreshResearchStatus]);
+
+  useEffect(() => {
+    if (
+      researchVisitToken <= 0 ||
+      !open ||
+      panel !== 'research' ||
+      !characterId ||
+      !researchStatus?.hasUnreadResult
+    ) return;
     if (markingResearchViewedRef.current) return;
 
     markingResearchViewedRef.current = true;
@@ -575,7 +598,15 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
         markingResearchViewedRef.current = false;
       }
     })();
-  }, [characterId, onResearchIndicatorChange, open, panel, refreshResearchStatus, researchStatus?.hasUnreadResult]);
+  }, [
+    characterId,
+    onResearchIndicatorChange,
+    open,
+    panel,
+    refreshResearchStatus,
+    researchStatus?.hasUnreadResult,
+    researchVisitToken,
+  ]);
 
   const collectExchangeItems = useCallback(async (): Promise<Array<{ itemInstanceId: number; qty: number }>> => {
     if (!characterId) return [];

@@ -168,6 +168,22 @@ type TechniqueResearchStatusData = {
   resultStatus: TechniqueResearchResultStatus | null;
 };
 
+class TechniqueGenerationRollbackError extends Error {
+  code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = 'TechniqueGenerationRollbackError';
+    this.code = code;
+  }
+}
+
+const isTechniqueGenerationRollbackError = (
+  error: unknown,
+): error is TechniqueGenerationRollbackError => {
+  return error instanceof TechniqueGenerationRollbackError;
+};
+
 const WEEKLY_LIMIT = 1;
 const DRAFT_EXPIRE_HOURS = 24;
 const DEFAULT_REQUIRED_REALM = '凡人';
@@ -1323,11 +1339,11 @@ class TechniqueGenerationService {
           updated_at
         ) VALUES (
           $1, $2, $3, 'pending', $4, $5,
-          NOW() + ($6::int * INTERVAL '1 hour'),
+          NULL,
           NOW(), NOW()
         )
       `,
-      [generationId, characterId, weekKey, quality, costPoints, DRAFT_EXPIRE_HOURS],
+      [generationId, characterId, weekKey, quality, costPoints],
     );
 
     await query(
@@ -1562,6 +1578,7 @@ class TechniqueGenerationService {
             attempt_count = $3,
             model_name = $4,
             prompt_snapshot = $5::jsonb,
+            draft_expire_at = NOW() + ($6::int * INTERVAL '1 hour'),
             finished_at = NOW(),
             viewed_at = NULL,
             failed_viewed_at = NULL,
@@ -1570,7 +1587,7 @@ class TechniqueGenerationService {
             updated_at = NOW()
         WHERE id = $1
       `,
-      [generationId, draftTechniqueId, attemptCount, modelName, promptSnapshot],
+      [generationId, draftTechniqueId, attemptCount, modelName, promptSnapshot, DRAFT_EXPIRE_HOURS],
     );
 
     return {
@@ -1822,7 +1839,7 @@ class TechniqueGenerationService {
   }
 
   @Transactional
-  async publishGeneratedTechnique(args: {
+  private async publishGeneratedTechniqueTx(args: {
     characterId: number;
     userId: number;
     generationId: string;
@@ -1832,6 +1849,10 @@ class TechniqueGenerationService {
 
     await this.refundExpiredDraftJobsTx(characterId);
     await this.ensureResearchPointRowTx(characterId);
+
+    if (!getItemDefinitionById(GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID)) {
+      return { success: false, message: '系统缺少领悟功法书定义，请联系管理员', code: 'ITEM_DEF_MISSING' };
+    }
 
     const jobRes = await query(
       `
@@ -1930,13 +1951,6 @@ class TechniqueGenerationService {
       [generationId, draftTechniqueId],
     );
 
-    await refreshGeneratedTechniqueSnapshots();
-
-    const bookDef = getItemDefinitionById(GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID);
-    if (!bookDef) {
-      return { success: false, message: '系统缺少领悟功法书定义，请联系管理员', code: 'ITEM_DEF_MISSING' };
-    }
-
     const qualityText = asString(draftRow.quality) || '黄';
     const addRes = await addItemToInventory(characterId, userId, GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID, 1, {
       location: 'bag',
@@ -1951,8 +1965,13 @@ class TechniqueGenerationService {
     });
 
     if (!addRes.success || !addRes.itemIds || addRes.itemIds.length === 0) {
-      return { success: false, message: addRes.message || '发放领悟功法书失败', code: 'REWARD_FAILED' };
+      throw new TechniqueGenerationRollbackError(
+        addRes.message || '发放领悟功法书失败',
+        'REWARD_FAILED',
+      );
     }
+
+    await refreshGeneratedTechniqueSnapshots();
 
     return {
       success: true,
@@ -1963,6 +1982,26 @@ class TechniqueGenerationService {
         bookItemInstanceId: addRes.itemIds[0],
       },
     };
+  }
+
+  async publishGeneratedTechnique(args: {
+    characterId: number;
+    userId: number;
+    generationId: string;
+    customName: string;
+  }): Promise<ServiceResult<{ techniqueId: string; finalName: string; bookItemInstanceId: number }>> {
+    try {
+      return await this.publishGeneratedTechniqueTx(args);
+    } catch (error) {
+      if (isTechniqueGenerationRollbackError(error)) {
+        return {
+          success: false,
+          message: error.message,
+          code: error.code,
+        };
+      }
+      throw error;
+    }
   }
 }
 

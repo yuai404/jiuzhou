@@ -24,6 +24,7 @@ import type {
 } from '../../../../services/api';
 
 export type TechniqueResearchStatusData = NonNullable<TechniqueResearchStatusResponse['data']>;
+export const TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS = 20_000;
 
 export type TechniqueResearchIndicatorView = {
   badgeDot: boolean;
@@ -41,6 +42,12 @@ export const buildTechniqueResearchIndicator = (
 ): TechniqueResearchIndicatorView => {
   if (!status?.hasUnreadResult) return { badgeDot: false };
   return { badgeDot: true, tooltip: getTechniqueResearchIndicatorTooltip(status.resultStatus) };
+};
+
+export const resolveTechniqueResearchIndicatorStatus = (
+  status: TechniqueResearchStatusData | null,
+): TechniqueResearchResultStatusDto | null => {
+  return status?.hasUnreadResult ? status.resultStatus : null;
 };
 
 export const getTechniqueResearchIndicatorTooltip = (

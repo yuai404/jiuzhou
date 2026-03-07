@@ -15,7 +15,11 @@ import BagModal from './modules/BagModal';
 import TeamModal from './modules/TeamModal';
 import SkillFloatButton from './modules/SkillFloatButton';
 import TechniqueModal from './modules/TechniqueModal';
-import { getTechniqueResearchIndicatorTooltip } from './modules/TechniqueModal/researchShared';
+import {
+  TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS,
+  getTechniqueResearchIndicatorTooltip,
+  resolveTechniqueResearchIndicatorStatus,
+} from './modules/TechniqueModal/researchShared';
 import TaskModal from './modules/TaskModal';
 import SectModal from './modules/SectModal';
 import MarketModal from './modules/MarketModal';
@@ -1559,13 +1563,17 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     }
     try {
       const res = await getTechniqueResearchStatus(characterId);
-      if (!res.success || !res.data || !res.data.hasUnreadResult) {
+      if (!res.success || !res.data) {
+        return;
+      }
+      const nextStatus = resolveTechniqueResearchIndicatorStatus(res.data);
+      if (!nextStatus) {
         setTechniqueIndicatorStatus(null);
         return;
       }
-      setTechniqueIndicatorStatus(res.data.resultStatus);
+      setTechniqueIndicatorStatus(nextStatus);
     } catch {
-      setTechniqueIndicatorStatus(null);
+      // 保留现有红点，等待下次成功同步，避免瞬时失败误清提醒。
     }
   }, [characterId]);
 
@@ -1578,13 +1586,22 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   }, [refreshTechniqueIndicator]);
 
   useEffect(() => {
+    if (!TECHNIQUE_RESEARCH_ENABLED || !characterId) return undefined;
+    const timer = window.setInterval(() => {
+      void refreshTechniqueIndicator();
+    }, TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [characterId, refreshTechniqueIndicator]);
+
+  useEffect(() => {
     if (!TECHNIQUE_RESEARCH_ENABLED) return undefined;
     if (!characterId) return undefined;
     return gameSocket.onTechniqueResearchResult((payload) => {
       if (payload.characterId !== characterId) return;
       setTechniqueIndicatorStatus(payload.status);
+      void refreshTechniqueIndicator();
     });
-  }, [characterId]);
+  }, [characterId, refreshTechniqueIndicator]);
 
   const refreshAchievementIndicator = useCallback(async () => {
     try {
