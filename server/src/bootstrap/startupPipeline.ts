@@ -33,6 +33,7 @@ import {
   initializeTechniqueGenerationJobRunner,
   shutdownTechniqueGenerationJobRunner,
 } from "../services/techniqueGenerationJobRunner.js";
+import { getGameServer } from "../game/gameServer.js";
 
 export interface StartServerOptions {
   httpServer: HttpServer;
@@ -106,55 +107,69 @@ export const startServerWithPipeline = async (
  * 注册优雅关闭信号处理。
  */
 export const registerGracefulShutdown = (httpServer: HttpServer): void => {
+  let shutdownPromise: Promise<void> | null = null;
+
   const gracefulShutdown = async (signal: string): Promise<void> => {
-    console.log(`\n收到 ${signal} 信号，开始优雅关闭...`);
+    if (shutdownPromise) {
+      await shutdownPromise;
+      return;
+    }
 
-    // 1. 停止接受新请求
-    httpServer.close(() => {
-      console.log("✓ HTTP 服务已关闭");
-    });
+    shutdownPromise = (async () => {
+      console.log(`\n收到 ${signal} 信号，开始优雅关闭...`);
 
-    // 2. 停止所有后台任务和定时器
-    console.log("正在停止后台服务...");
+      // 1. 停止接受新请求
+      httpServer.close(() => {
+        console.log("✓ HTTP 服务已关闭");
+      });
 
-    await stopGameTimeService();
-    console.log("✓ 游戏时间服务已停止");
+      await getGameServer().shutdown();
+      console.log("✓ 游戏 Socket 服务已关闭");
 
-    stopArenaWeeklySettlementService();
-    console.log("✓ 竞技场结算服务已停止");
+      // 2. 停止所有后台任务和定时器
+      console.log("正在停止后台服务...");
 
-    stopCleanupWorker();
-    console.log("✓ 清理 Worker 已停止");
+      await stopGameTimeService();
+      console.log("✓ 游戏时间服务已停止");
 
-    stopBattleService();
-    console.log("✓ 战斗服务已停止");
+      stopArenaWeeklySettlementService();
+      console.log("✓ 竞技场结算服务已停止");
 
-    stopAllExecutionLoops();
-    console.log("✓ 挂机执行循环已停止");
+      stopCleanupWorker();
+      console.log("✓ 清理 Worker 已停止");
 
-    // 3. 关闭 Worker 池
-    await shutdownTechniqueGenerationJobRunner();
-    console.log("✓ 洞府研修 worker 协调器已关闭");
+      stopBattleService();
+      console.log("✓ 战斗服务已停止");
 
-    await shutdownWorkerPool();
-    console.log("✓ Worker 池已关闭");
+      stopAllExecutionLoops();
+      console.log("✓ 挂机执行循环已停止");
 
-    // 4. 等待现有操作完成（给一点时间让正在执行的操作完成）
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 3. 关闭 Worker 池
+      await shutdownTechniqueGenerationJobRunner();
+      console.log("✓ 洞府研修 worker 协调器已关闭");
 
-    // 5. 刷新所有缓冲区
-    await flushAllBuffers();
-    console.log("✓ 挂机缓冲区已刷写");
+      await shutdownWorkerPool();
+      console.log("✓ Worker 池已关闭");
 
-    // 6. 关闭外部连接
-    await closeRedis();
-    console.log("✓ Redis 连接已关闭");
+      // 4. 等待现有操作完成（给一点时间让正在执行的操作完成）
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    await pool.end();
-    console.log("✓ 数据库连接池已关闭");
+      // 5. 刷新所有缓冲区
+      await flushAllBuffers();
+      console.log("✓ 挂机缓冲区已刷写");
 
-    console.log("✓ 服务已完全关闭");
-    process.exit(0);
+      // 6. 关闭外部连接
+      await closeRedis();
+      console.log("✓ Redis 连接已关闭");
+
+      await pool.end();
+      console.log("✓ 数据库连接池已关闭");
+
+      console.log("✓ 服务已完全关闭");
+      process.exit(0);
+    })();
+
+    await shutdownPromise;
   };
 
   process.on("SIGTERM", () => void gracefulShutdown("SIGTERM"));

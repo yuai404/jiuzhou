@@ -15,6 +15,7 @@ import {
 } from "../services/characterComputedService.js";
 import { getRemainingCooldown } from "../services/battle/cooldownManager.js";
 import { syncBattleStateOnReconnect } from "../services/battle/index.js";
+import { AsyncShutdownGate } from "../utils/asyncShutdownGate.js";
 
 // 玩家会话
 interface PlayerSession {
@@ -57,6 +58,7 @@ interface OnlinePlayersDeltaPayload {
 
 const ONLINE_PLAYERS_EMIT_INTERVAL_MS = 3000;
 const CHARACTER_PUSH_DEBOUNCE_MS = 80;
+type AsyncSocketHandler<TArgs extends unknown[]> = (...args: TArgs) => Promise<void>;
 
 // 游戏服务器类
 class GameServer {
@@ -72,6 +74,8 @@ class GameServer {
     new Map();
   private characterPushInFlight: Set<number> = new Set();
   private characterPushQueued: Set<number> = new Set();
+  private readonly shutdownGate = new AsyncShutdownGate();
+  private shutdownPromise: Promise<void> | null = null;
 
   constructor(
     httpServer: HttpServer,
@@ -97,8 +101,13 @@ class GameServer {
 
   private setupEventHandlers() {
     this.io.on("connection", (socket: Socket) => {
+      if (this.shutdownGate.isShuttingDown()) {
+        socket.disconnect(true);
+        return;
+      }
+
       // 玩家认证并加入游戏
-      socket.on("game:auth", async (token: string) => {
+      socket.on("game:auth", this.createSocketTask(async (token: string) => {
         try {
           const { valid, decoded } = verifyToken(token);
           if (!valid || !decoded) {
@@ -175,15 +184,18 @@ class GameServer {
           console.error("游戏认证错误:", error);
           socket.emit("game:error", { message: "服务器错误" });
         }
-      });
+      }));
 
       socket.on("game:onlinePlayers:request", () => {
+        if (this.shutdownGate.isShuttingDown()) {
+          return;
+        }
         socket.emit("game:onlinePlayers", this.buildOnlinePlayersFullPayload());
       });
 
       socket.on(
         "chat:send",
-        async (payload: {
+        this.createSocketTask(async (payload: {
           channel?: unknown;
           content?: unknown;
           clientId?: unknown;
@@ -294,13 +306,13 @@ class GameServer {
           }
 
           socket.emit("chat:error", { message: "无效频道" });
-        },
+        }),
       );
 
       // 加点请求
       socket.on(
         "game:addPoint",
-        async (data: {
+        this.createSocketTask(async (data: {
           attribute: "jing" | "qi" | "shen";
           amount?: number;
         }) => {
@@ -340,11 +352,11 @@ class GameServer {
           } else {
             socket.emit("game:error", { message: "加点失败" });
           }
-        },
+        }),
       );
 
       // 请求刷新角色数据
-      socket.on("game:refresh", async () => {
+      socket.on("game:refresh", this.createSocketTask(async () => {
         const session = this.sessions.get(socket.id);
         if (!session) {
           socket.emit("game:error", { message: "未认证" });
@@ -355,20 +367,42 @@ class GameServer {
         session.character = character;
         session.lastUpdate = Date.now();
         socket.emit("game:character", { type: "full", character });
-      });
+      }));
 
       // 断开连接
       socket.on("disconnect", () => {
         const session = this.sessions.get(socket.id);
         if (session) {
-          void this.touchCharacterLastOfflineAt(session.userId);
+          if (!this.shutdownGate.isShuttingDown()) {
+            void this.runTrackedTask(async () => {
+              await this.touchCharacterLastOfflineAt(session.userId);
+            });
+          }
           this.cancelQueuedCharacterPush(session.userId);
           this.userSocketMap.delete(session.userId);
           this.sessions.delete(socket.id);
-          this.scheduleEmitOnlinePlayers(true);
+          if (!this.shutdownGate.isShuttingDown()) {
+            this.scheduleEmitOnlinePlayers(true);
+          }
         }
       });
     });
+  }
+
+  private createSocketTask<TArgs extends unknown[]>(
+    handler: AsyncSocketHandler<TArgs>,
+  ): (...args: TArgs) => void {
+    return (...args: TArgs) => {
+      void this.runTrackedTask(async () => {
+        await handler(...args);
+      });
+    };
+  }
+
+  private async runTrackedTask<T>(
+    task: () => Promise<T>,
+  ): Promise<T | undefined> {
+    return this.shutdownGate.run(task);
   }
 
   /**
@@ -415,6 +449,10 @@ class GameServer {
    *   - 若当前无任何变化（joined/left/updated 均为空），跳过广播以节省带宽
    */
   private emitOnlinePlayersNow(): void {
+    if (this.shutdownGate.isShuttingDown()) {
+      return;
+    }
+
     const current = this.buildCurrentOnlinePlayersMap();
     const prev = this.lastBroadcastedPlayers;
 
@@ -481,6 +519,10 @@ class GameServer {
   }
 
   private scheduleEmitOnlinePlayers(force: boolean = false): void {
+    if (this.shutdownGate.isShuttingDown()) {
+      return;
+    }
+
     if (this.onlinePlayersEmitTimer) {
       this.onlinePlayersEmitQueued = true;
       return;
@@ -532,6 +574,10 @@ class GameServer {
   private async loadCharacter(
     userId: number,
   ): Promise<CharacterAttributes | null> {
+    if (this.shutdownGate.isShuttingDown()) {
+      return null;
+    }
+
     try {
       await applyStaminaRecoveryByUserId(userId);
       const computed = await getCharacterComputedByUserId(userId);
@@ -617,6 +663,10 @@ class GameServer {
   }
 
   private scheduleCharacterPush(userId: number): void {
+    if (this.shutdownGate.isShuttingDown()) {
+      return;
+    }
+
     if (!Number.isFinite(userId) || userId <= 0) return;
 
     if (this.characterPushInFlight.has(userId)) {
@@ -666,46 +716,57 @@ class GameServer {
   }
 
   private async flushCharacterPush(userId: number): Promise<void> {
+    if (this.shutdownGate.isShuttingDown()) {
+      return;
+    }
+
     if (this.characterPushInFlight.has(userId)) {
       this.characterPushQueued.add(userId);
       return;
     }
 
-    this.characterPushInFlight.add(userId);
-    try {
-      const socketId = this.userSocketMap.get(userId);
-      if (!socketId) return;
+    const executed = await this.runTrackedTask(async () => {
+      this.characterPushInFlight.add(userId);
+      try {
+        const socketId = this.userSocketMap.get(userId);
+        if (!socketId) return;
 
-      const session = this.sessions.get(socketId);
-      const prevCharacter = session?.character ?? null;
-      const character = await this.loadCharacter(userId);
-      if (session) {
-        session.character = character;
-        session.lastUpdate = Date.now();
-      }
+        const session = this.sessions.get(socketId);
+        const prevCharacter = session?.character ?? null;
+        const character = await this.loadCharacter(userId);
+        if (session) {
+          session.character = character;
+          session.lastUpdate = Date.now();
+        }
 
-      const delta = this.diffCharacter(prevCharacter, character);
-      if (delta) {
-        // 增量推送：仅发送变化字段 + id 用于客户端校验
-        this.io.to(socketId).emit("game:character", {
-          type: "delta",
-          delta: { ...delta, id: character!.id },
-        });
-      } else {
-        // 全量推送：首次加载 / 角色为 null / 无变化时也发全量确保同步
-        this.io
-          .to(socketId)
-          .emit("game:character", { type: "full", character });
+        const delta = this.diffCharacter(prevCharacter, character);
+        if (delta) {
+          // 增量推送：仅发送变化字段 + id 用于客户端校验
+          this.io.to(socketId).emit("game:character", {
+            type: "delta",
+            delta: { ...delta, id: character!.id },
+          });
+        } else {
+          // 全量推送：首次加载 / 角色为 null / 无变化时也发全量确保同步
+          this.io
+            .to(socketId)
+            .emit("game:character", { type: "full", character });
+        }
+        if (this.shouldRefreshOnlinePlayers(prevCharacter, character)) {
+          this.scheduleEmitOnlinePlayers(false);
+        }
+      } finally {
+        this.characterPushInFlight.delete(userId);
+        if (this.characterPushQueued.has(userId)) {
+          this.characterPushQueued.delete(userId);
+          this.scheduleCharacterPush(userId);
+        }
       }
-      if (this.shouldRefreshOnlinePlayers(prevCharacter, character)) {
-        this.scheduleEmitOnlinePlayers(false);
-      }
-    } finally {
+    });
+
+    if (executed === undefined) {
       this.characterPushInFlight.delete(userId);
-      if (this.characterPushQueued.has(userId)) {
-        this.characterPushQueued.delete(userId);
-        this.scheduleCharacterPush(userId);
-      }
+      this.characterPushQueued.delete(userId);
     }
   }
 
@@ -735,6 +796,7 @@ class GameServer {
   }
 
   public emitToUser<T = any>(userId: number, event: string, data: T): boolean {
+    if (this.shutdownGate.isShuttingDown()) return false;
     const socketId = this.userSocketMap.get(userId);
     if (!socketId) return false;
     this.io.to(socketId).emit(event, data);
@@ -742,6 +804,7 @@ class GameServer {
   }
 
   public isUserOnline(userId: number): boolean {
+    if (this.shutdownGate.isShuttingDown()) return false;
     if (!Number.isFinite(userId) || userId <= 0) return false;
     const socketId = this.userSocketMap.get(userId);
     if (!socketId) return false;
@@ -759,6 +822,7 @@ class GameServer {
     event: string,
     data: T,
   ): boolean {
+    if (this.shutdownGate.isShuttingDown()) return false;
     // 查找角色对应的 session
     const session = Array.from(this.sessions.values()).find(
       (s) => s.character?.id === characterId,
@@ -778,6 +842,7 @@ class GameServer {
     userId: number,
     reason: string = "账号已在其他设备登录",
   ): void {
+    if (this.shutdownGate.isShuttingDown()) return;
     const socketId = this.userSocketMap.get(userId);
     if (!socketId) return;
     void this.touchCharacterLastOfflineAt(userId);
@@ -797,6 +862,40 @@ class GameServer {
   // 获取IO实例
   public getIO(): SocketServer {
     return this.io;
+  }
+
+  public async shutdown(): Promise<void> {
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
+    }
+
+    this.shutdownPromise = (async () => {
+      this.shutdownGate.beginShutdown();
+
+      if (this.onlinePlayersEmitTimer) {
+        clearTimeout(this.onlinePlayersEmitTimer);
+        this.onlinePlayersEmitTimer = null;
+      }
+      this.onlinePlayersEmitQueued = false;
+
+      for (const timer of this.characterPushTimers.values()) {
+        clearTimeout(timer);
+      }
+      this.characterPushTimers.clear();
+      this.characterPushQueued.clear();
+
+      await new Promise<void>((resolve) => {
+        this.io.close(() => resolve());
+      });
+      await this.shutdownGate.waitForIdle();
+
+      this.characterPushInFlight.clear();
+      this.lastBroadcastedPlayers.clear();
+      this.userSocketMap.clear();
+      this.sessions.clear();
+    })();
+
+    return this.shutdownPromise;
   }
 
   /**
