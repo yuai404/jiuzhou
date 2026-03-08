@@ -3,7 +3,7 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：承载洞府研修统计、生成中提示、放弃入口、草稿详情、失败结果与抄写入口。
- * 2. 做什么：复用 `researchShared` 的单一状态映射，避免组件内散落 `pending/generated_draft/failed` 判断。
+ * 2. 做什么：复用 `researchShared` 的单一状态映射与冷却格式化，避免组件内散落 `pending/generated_draft/failed/cooldown` 判断。
  * 3. 不做什么：不直接发请求、不持有 socket 订阅，也不管理主界面红点状态。
  *
  * 输入/输出：
@@ -15,11 +15,13 @@
  *
  * 关键边界条件与坑点：
  * 1. `pending` 时不能再允许重复点击“开始领悟”，否则会误导玩家可以并发生成。
- * 2. 草稿详情中的技能可能没有完整描述，卡片需要优雅回退到摘要文本，避免出现空白块。
+ * 2. 冷却展示必须仅消费共享纯函数，避免这里和按钮禁用条件各算一套剩余时间。
  */
 import { Button, Tag, Tooltip } from 'antd';
 import type { TechniqueResearchStatusData } from './researchShared';
 import {
+  formatTechniqueResearchCooldownRemaining,
+  isTechniqueResearchCoolingDown,
   resolveTechniqueResearchActionState,
   resolveTechniqueResearchPanelView,
 } from './researchShared';
@@ -74,6 +76,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({
 }) => {
   const panelView = resolveTechniqueResearchPanelView(status);
   const actionState = resolveTechniqueResearchActionState(status);
+  const coolingDown = isTechniqueResearchCoolingDown(status);
+  const cooldownText = status
+    ? (coolingDown ? `剩余${formatTechniqueResearchCooldownRemaining(status.cooldownRemainingSeconds)}` : '可开始')
+    : '--';
 
   return (
     <div className="tech-pane">
@@ -81,8 +87,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({
         <div className="tech-subtitle">洞府研修</div>
         <div className="tech-research-stats">
           <div className="tech-research-stat"><span>研修点</span><strong>{status?.pointsBalance ?? '--'}</strong></div>
-          <div className="tech-research-stat"><span>本周已用</span><strong>{status?.weeklyUsed ?? '--'}</strong></div>
-          <div className="tech-research-stat"><span>本周剩余</span><strong>{status?.weeklyRemaining ?? '--'}</strong></div>
+          <div className="tech-research-stat"><span>冷却时长</span><strong>{status ? `${status.cooldownHours}小时` : '--'}</strong></div>
+          <div className="tech-research-stat"><span>当前状态</span><strong>{cooldownText}</strong></div>
         </div>
 
         {/* <div className="tech-research-costs">
@@ -114,7 +120,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({
 
         <div className="tech-research-tips">
           <div>1. 先将多余功法书兑换为研修点，再进行领悟。</div>
-          <div>2. 推演完成后，主界面“功法”入口会出现红点提醒。</div>
+          <div>2. 每次开始领悟后会进入冷却，当前默认冷却时长为 {status?.cooldownHours ?? '--'} 小时。</div>
           <div>3. 结果进入研修页后即视为已查看，抄写前仍可在此处查看草稿详情。</div>
         </div>
 

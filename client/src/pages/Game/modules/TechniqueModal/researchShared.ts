@@ -3,7 +3,7 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：集中定义研修红点、结果态与面板主视图的映射，避免主界面与功法弹窗各写一套判断。
- * 2. 做什么：把服务端 `currentJob/hasUnreadResult/resultStatus` 收敛成稳定的前端展示语义与按钮可用态。
+ * 2. 做什么：把服务端 `currentJob/hasUnreadResult/resultStatus/cooldown*` 收敛成稳定的前端展示语义与按钮可用态。
  * 3. 不做什么：不处理 React 状态、不发起请求、不直接渲染 DOM。
  *
  * 输入/输出：
@@ -15,7 +15,7 @@
  *
  * 关键边界条件与坑点：
  * 1. `pending` 只表示生成中，不能亮红点；否则玩家会把“处理中”误解为“已完成待查看”。
- * 2. `failed` 与 `refunded` 对前端都归为失败结果态，保证退款类失败也有统一提示。
+ * 2. 冷却按钮禁用与冷却文案必须共用同一组纯函数，避免组件内各自计算导致显示与交互不一致。
  */
 import type {
   TechniqueResearchJobDto,
@@ -41,6 +41,10 @@ export type TechniqueResearchActionState = {
   canGenerate: boolean;
   pendingGenerationId: string | null;
 };
+
+const MINUTE_SECONDS = 60;
+const HOUR_SECONDS = 60 * MINUTE_SECONDS;
+const DAY_SECONDS = 24 * HOUR_SECONDS;
 
 export const buildTechniqueResearchIndicator = (
   status: TechniqueResearchStatusData | null,
@@ -88,6 +92,42 @@ export const resolveTechniqueResearchPanelView = (
   return { kind: 'empty' };
 };
 
+export const isTechniqueResearchCoolingDown = (
+  status: TechniqueResearchStatusData | null,
+): boolean => {
+  return (status?.cooldownRemainingSeconds ?? 0) > 0;
+};
+
+export const formatTechniqueResearchCooldownRemaining = (
+  cooldownRemainingSeconds: number,
+): string => {
+  const safeSeconds = Math.max(0, Math.floor(cooldownRemainingSeconds));
+  if (safeSeconds >= DAY_SECONDS) {
+    const days = Math.floor(safeSeconds / DAY_SECONDS);
+    const hours = Math.floor((safeSeconds % DAY_SECONDS) / HOUR_SECONDS);
+    const minutes = Math.floor((safeSeconds % HOUR_SECONDS) / MINUTE_SECONDS);
+    if (minutes > 0) return `${days}天${hours}小时${minutes}分`;
+    if (hours > 0) return `${days}天${hours}小时`;
+    return `${days}天`;
+  }
+
+  if (safeSeconds >= HOUR_SECONDS) {
+    const hours = Math.floor(safeSeconds / HOUR_SECONDS);
+    const minutes = Math.floor((safeSeconds % HOUR_SECONDS) / MINUTE_SECONDS);
+    if (minutes > 0) return `${hours}小时${minutes}分`;
+    return `${hours}小时`;
+  }
+
+  if (safeSeconds >= MINUTE_SECONDS) {
+    const minutes = Math.floor(safeSeconds / MINUTE_SECONDS);
+    const seconds = safeSeconds % MINUTE_SECONDS;
+    if (seconds > 0) return `${minutes}分${seconds}秒`;
+    return `${minutes}分`;
+  }
+
+  return `${safeSeconds}秒`;
+};
+
 export const resolveTechniqueResearchActionState = (
   status: TechniqueResearchStatusData | null,
 ): TechniqueResearchActionState => {
@@ -98,7 +138,7 @@ export const resolveTechniqueResearchActionState = (
   const canGenerate =
     status !== null &&
     panelView.kind !== 'pending' &&
-    status.weeklyRemaining > 0 &&
+    !isTechniqueResearchCoolingDown(status) &&
     status.pointsBalance >= minCost;
 
   return {

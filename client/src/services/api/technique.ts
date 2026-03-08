@@ -262,9 +262,9 @@ export interface TechniqueResearchStatusResponse {
   code?: string;
   data?: {
     pointsBalance: number;
-    weeklyLimit: number;
-    weeklyUsed: number;
-    weeklyRemaining: number;
+    cooldownHours: number;
+    cooldownUntil: string | null;
+    cooldownRemainingSeconds: number;
     generationCostByQuality: Record<'黄' | '玄' | '地' | '天', number>;
     currentDraft: TechniqueResearchDraftDto | null;
     draftExpireAt: string | null;

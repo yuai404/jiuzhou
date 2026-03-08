@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { TechniqueResearchStatusData } from '../researchShared';
-import { resolveTechniqueResearchActionState } from '../researchShared';
+import {
+  formatTechniqueResearchCooldownRemaining,
+  resolveTechniqueResearchActionState,
+} from '../researchShared';
 
 const buildStatus = (
   overrides: Partial<TechniqueResearchStatusData> = {},
 ): TechniqueResearchStatusData => ({
   pointsBalance: 20,
-  weeklyLimit: 199,
-  weeklyUsed: 1,
-  weeklyRemaining: 198,
+  cooldownHours: 72,
+  cooldownUntil: null,
+  cooldownRemainingSeconds: 0,
   generationCostByQuality: {
     黄: 10,
     玄: 20,
@@ -44,16 +47,34 @@ describe('researchShared', () => {
         preview: null,
         errorMessage: null,
       },
+      cooldownUntil: '2026-03-11T10:00:00.000Z',
+      cooldownRemainingSeconds: 259_200,
     }));
 
     expect(actionState.canGenerate).toBe(false);
     expect(actionState.pendingGenerationId).toBe('gen-1');
   });
 
-  it('resolveTechniqueResearchActionState: 无 pending 且资源充足时应允许开始领悟', () => {
+  it('resolveTechniqueResearchActionState: 冷却中时应禁用开始领悟', () => {
+    const actionState = resolveTechniqueResearchActionState(buildStatus({
+      cooldownUntil: '2026-03-11T10:00:00.000Z',
+      cooldownRemainingSeconds: 3_600,
+    }));
+
+    expect(actionState.canGenerate).toBe(false);
+    expect(actionState.pendingGenerationId).toBeNull();
+  });
+
+  it('resolveTechniqueResearchActionState: 无 pending 且资源充足且冷却结束时应允许开始领悟', () => {
     const actionState = resolveTechniqueResearchActionState(buildStatus());
 
     expect(actionState.canGenerate).toBe(true);
     expect(actionState.pendingGenerationId).toBeNull();
+  });
+
+  it('formatTechniqueResearchCooldownRemaining: 应输出紧凑冷却文案', () => {
+    expect(formatTechniqueResearchCooldownRemaining(172_800)).toBe('2天');
+    expect(formatTechniqueResearchCooldownRemaining(3_661)).toBe('1小时1分');
+    expect(formatTechniqueResearchCooldownRemaining(59)).toBe('59秒');
   });
 });

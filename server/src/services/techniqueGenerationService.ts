@@ -16,7 +16,7 @@
  *
  * 关键边界条件与坑点：
  * 1) 草稿默认 24h 过期，过期后自动退款并置为 refunded。
- * 2) 命名冲突与敏感词拒绝不重复扣费；仅系统异常回滚时触发退款。
+ * 2) 洞府研修采用统一冷却时间配置，状态接口与创建任务前校验必须复用同一模块，避免前后端展示与服务端拦截不一致。
  */
 import { randomUUID } from 'crypto';
 import { query } from '../config/database.js';
@@ -43,6 +43,10 @@ import {
   TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY,
   isSupportedTechniquePassiveKey,
 } from './shared/techniqueGenerationConstraints.js';
+import {
+  buildTechniqueResearchCooldownState,
+  formatTechniqueResearchCooldownRemaining,
+} from './shared/techniqueResearchCooldown.js';
 
 export type TechniqueGenerationStatus =
   | 'pending'
@@ -161,9 +165,9 @@ export type TechniqueResearchJobView = {
 
 type TechniqueResearchStatusData = {
   pointsBalance: number;
-  weeklyLimit: number;
-  weeklyUsed: number;
-  weeklyRemaining: number;
+  cooldownHours: number;
+  cooldownUntil: string | null;
+  cooldownRemainingSeconds: number;
   generationCostByQuality: Record<TechniqueQuality, number>;
   currentDraft: GeneratedDraftRow | null;
   draftExpireAt: string | null;
@@ -225,7 +229,6 @@ const isTechniqueGenerationRollbackError = (
   return error instanceof TechniqueGenerationRollbackError;
 };
 
-const WEEKLY_LIMIT = 199;
 const DRAFT_EXPIRE_HOURS = 24;
 const DEFAULT_REQUIRED_REALM = '凡人';
 const GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID = 'book-generated-technique';
@@ -989,8 +992,7 @@ class TechniqueGenerationService {
     await this.refundExpiredDraftJobsTx(characterId);
     await this.ensureResearchPointRowTx(characterId);
 
-    const weekKey = resolveWeekKey(new Date());
-    const [pointsRes, usedRes, draftRes, currentJobRes] = await Promise.all([
+    const [pointsRes, draftRes, currentJobRes] = await Promise.all([
       query(
         `
           SELECT balance_points
@@ -999,16 +1001,6 @@ class TechniqueGenerationService {
           LIMIT 1
         `,
         [characterId],
-      ),
-      query(
-        `
-          SELECT COUNT(*)::int AS cnt
-          FROM technique_generation_job
-          WHERE character_id = $1
-            AND week_key = $2
-            AND status IN ('pending', 'generated_draft', 'published')
-        `,
-        [characterId, weekKey],
       ),
       query(
         `
@@ -1087,8 +1079,6 @@ class TechniqueGenerationService {
     ]);
 
     const pointsBalance = Math.max(0, Math.floor(asNumber((pointsRes.rows[0] as Record<string, unknown> | undefined)?.balance_points, 0)));
-    const weeklyUsed = Math.max(0, Math.floor(asNumber((usedRes.rows[0] as Record<string, unknown> | undefined)?.cnt, 0)));
-    const weeklyRemaining = Math.max(0, WEEKLY_LIMIT - weeklyUsed);
 
     const draftRow = draftRes.rows[0] as Record<string, unknown> | undefined;
     const currentDraft: GeneratedDraftRow | null = draftRow
@@ -1125,15 +1115,16 @@ class TechniqueGenerationService {
           }
         : null,
     );
+    const cooldownState = buildTechniqueResearchCooldownState(currentJobState.currentJob?.startedAt ?? null);
 
     return {
       success: true,
       message: '获取成功',
       data: {
         pointsBalance,
-        weeklyLimit: WEEKLY_LIMIT,
-        weeklyUsed,
-        weeklyRemaining,
+        cooldownHours: cooldownState.cooldownHours,
+        cooldownUntil: cooldownState.cooldownUntil,
+        cooldownRemainingSeconds: cooldownState.cooldownRemainingSeconds,
         generationCostByQuality: { ...GENERATE_POINT_COST_BY_QUALITY },
         currentDraft,
         draftExpireAt: currentDraft?.draftExpireAt ?? null,
@@ -1293,21 +1284,26 @@ class TechniqueGenerationService {
       return { success: false, message: '角色不存在', code: 'CHARACTER_NOT_FOUND' };
     }
 
-    const weekKey = resolveWeekKey(new Date());
-    const usedRes = await query(
+    const latestJobRes = await query(
       `
-        SELECT COUNT(*)::int AS cnt
+        SELECT created_at
         FROM technique_generation_job
         WHERE character_id = $1
-          AND week_key = $2
-          AND status IN ('pending', 'generated_draft', 'published')
+        ORDER BY created_at DESC
+        LIMIT 1
       `,
-      [characterId, weekKey],
+      [characterId],
     );
-    const weeklyUsed = Math.max(0, Math.floor(asNumber((usedRes.rows[0] as Record<string, unknown> | undefined)?.cnt, 0)));
-    if (weeklyUsed >= WEEKLY_LIMIT) {
-      return { success: false, message: '本周领悟次数已用尽', code: 'WEEKLY_LIMIT_REACHED' };
+    const latestStartedAt = toIsoString((latestJobRes.rows[0] as Record<string, unknown> | undefined)?.created_at);
+    const cooldownState = buildTechniqueResearchCooldownState(latestStartedAt);
+    if (cooldownState.isCoolingDown) {
+      return {
+        success: false,
+        message: `洞府研修冷却中，还需等待${formatTechniqueResearchCooldownRemaining(cooldownState.cooldownRemainingSeconds)}`,
+        code: 'RESEARCH_COOLDOWN_ACTIVE',
+      };
     }
+    const weekKey = resolveWeekKey(new Date());
 
     const quality = resolveQualityByWeight();
     const costPoints = GENERATE_POINT_COST_BY_QUALITY[quality];
@@ -2067,9 +2063,9 @@ export const safeGetTechniqueGenerationStatus = async (characterId: number): Pro
         message: 'AI领悟系统未初始化',
         data: {
           pointsBalance: 0,
-          weeklyLimit: WEEKLY_LIMIT,
-          weeklyUsed: 0,
-          weeklyRemaining: WEEKLY_LIMIT,
+          cooldownHours: buildTechniqueResearchCooldownState(null).cooldownHours,
+          cooldownUntil: null,
+          cooldownRemainingSeconds: 0,
           generationCostByQuality: { ...GENERATE_POINT_COST_BY_QUALITY },
           currentDraft: null,
           draftExpireAt: null,
