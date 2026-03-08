@@ -1267,6 +1267,11 @@ export const getMonsterDefinitions = (): MonsterDefConfig[] => {
   return monsterDefCache;
 };
 
+export const getStaticMonsterDefinitions = (): MonsterDefConfig[] => {
+  const file = readJsonFile<MonsterDefFile>('monster_def.json');
+  return Array.isArray(file?.monsters) ? file.monsters : [];
+};
+
 export const getBountyDefinitions = (): BountyDefConfig[] => {
   if (bountyDefCache !== undefined) return bountyDefCache ?? [];
   const file = readJsonFile<BountyDefFile>('bounty_def.json');
@@ -1351,6 +1356,11 @@ export const getSkillDefinitions = (): SkillDefConfig[] => {
   const generatedDefs = getGeneratedSkillDefinitions();
   skillDefCache = [...staticDefs, ...generatedDefs];
   return skillDefCache;
+};
+
+export const getStaticSkillDefinitions = (): SkillDefConfig[] => {
+  const file = readJsonFile<SkillDefFile>('skill_def.json');
+  return Array.isArray(file?.skills) ? file.skills : [];
 };
 
 export const getTaskDefinitions = (): TaskDefConfig[] => {

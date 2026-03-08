@@ -2,21 +2,26 @@
  * AI 生成功法约束共享模块
  *
  * 作用（做什么 / 不做什么）：
- * 1) 做什么：集中维护生成功法被动词典、默认被动池与 key 校验，供服务层与本地联调脚本复用。
+ * 1) 做什么：集中维护生成功法的 prompt 约束、被动词典与结构化 Buff 校验入口，供服务层与本地联调脚本复用。
  * 2) 不做什么：不负责数据库读写、不负责 AI 调用、不负责业务状态机。
  *
  * 输入/输出：
- * - 输入：待校验的被动 key（unknown）。
- * - 输出：是否为系统支持 key（boolean），以及可复用的约束常量。
+ * - 输入：待校验的被动 key，以及待校验的结构化 Buff effect。
+ * - 输出：是否为系统支持 key（boolean）、结构化 Buff 校验结果，以及可复用的约束常量。
  *
  * 数据流/状态流：
- * 常量定义 -> 导出只读映射/列表 -> 业务模块按需引用并执行校验与回退。
+ * 常量定义/动态目录 -> 导出只读映射与校验入口 -> 业务模块按需引用并执行 prompt 拼装与结果校验。
  *
  * 关键边界条件与坑点：
  * 1) key 统一按 trim 后匹配，空字符串一律视为非法。
  * 2) 默认被动池中的 key 必须来自支持词典，否则会导致生成回退链路失效。
+ * 3) 结构化 Buff 的允许列表来自静态预定义数据，若直接手写会与运行时支持集合漂移。
  */
 import { REALM_ORDER } from './realmRules.js';
+import {
+  getTechniqueStructuredBuffCatalog,
+  validateTechniqueStructuredBuffEffect,
+} from './techniqueStructuredBuffCatalog.js';
 
 export type GeneratedTechniqueType = '武技' | '心法' | '法诀' | '身法' | '辅修';
 export type GeneratedTechniqueQuality = '黄' | '玄' | '地' | '天';
@@ -157,7 +162,7 @@ export const TECHNIQUE_PROMPT_GENERAL_RULES = [
   'valueType=combined 时必须同时提供 baseValue 与 scaleRate',
   'valueType=scale 时必须提供 scaleAttr 与 scaleRate',
   'technique.requiredRealm 必须来自 realmEnum',
-  'buff/debuff 必须使用结构化 Buff 字段（buffKind/attrKey/applyType/buffKey），禁止使用 buffId',
+  'buff/debuff 必须使用结构化 Buff 字段（buffKind/buffKey/attrKey/applyType），禁止使用 buffId，且 buffKey/attrKey 必须来自 allowedBuffConfigRules',
   'mark.markId 必须来自 allowedMarkIds',
   'effects 不支持 valueFormula，严禁返回该字段',
   'skills[*].upgrades 只允许使用 { layer, changes } 结构，不要返回 description/effectChanges/effectIndex',
@@ -207,33 +212,43 @@ export const TECHNIQUE_PROMPT_MARK_OPERATION_ENUM = ['apply', 'consume'] as cons
 export const TECHNIQUE_PROMPT_MARK_CONSUME_MODE_ENUM = ['all', 'fixed'] as const;
 export const TECHNIQUE_PROMPT_MARK_RESULT_TYPE_ENUM = ['damage', 'shield_self', 'heal_self'] as const;
 
-export const TECHNIQUE_PROMPT_BUFF_CONFIG_RULES = {
-  kindEnum: ['attr', 'dot', 'hot', 'dodge_next'],
-  commonRequired: ['type', 'buffKind'],
-  commonOptional: ['buffKey', 'value', 'duration', 'stacks'],
-  byKind: {
-    attr: {
-      required: ['attrKey'],
-      optional: ['applyType', 'value'],
-      notes: ['applyType 可选 flat/percent；未填时由服务端按属性默认规则推导'],
+const buildTechniquePromptBuffConfigRules = () => {
+  const catalog = getTechniqueStructuredBuffCatalog();
+  return {
+    kindEnum: [...catalog.kindEnum],
+    attrKeyEnum: [...catalog.attrKeyEnum],
+    applyTypeEnum: [...catalog.applyTypeEnum],
+    buffKeyEnumByType: {
+      buff: [...catalog.buffKeyEnumByType.buff],
+      debuff: [...catalog.buffKeyEnumByType.debuff],
     },
-    dot: {
-      required: [],
-      optional: ['valueType', 'scaleAttr', 'scaleRate', 'bonusTargetMaxQixueRate'],
-      notes: ['持续伤害模板（例如灼烧）'],
+    exampleByTypeAndKind: catalog.exampleByTypeAndKind,
+    commonRequired: ['type', 'buffKind', 'buffKey'],
+    commonOptional: ['value', 'duration', 'stacks'],
+    byKind: {
+      attr: {
+        required: ['attrKey'],
+        optional: ['applyType', 'value'],
+        notes: ['applyType 可选 flat/percent；未填时由服务端按属性默认规则推导'],
+      },
+      dot: {
+        required: [],
+        optional: ['valueType', 'scaleAttr', 'scaleRate', 'bonusTargetMaxQixueRate'],
+        notes: ['持续伤害模板（例如灼烧）'],
+      },
+      hot: {
+        required: [],
+        optional: ['valueType', 'scaleAttr', 'scaleRate'],
+        notes: ['持续治疗模板'],
+      },
+      dodge_next: {
+        required: [],
+        optional: ['stacks'],
+        notes: ['下一次闪避强化模板'],
+      },
     },
-    hot: {
-      required: [],
-      optional: ['valueType', 'scaleAttr', 'scaleRate'],
-      notes: ['持续治疗模板'],
-    },
-    dodge_next: {
-      required: [],
-      optional: ['stacks'],
-      notes: ['下一次闪避强化模板'],
-    },
-  },
-} as const;
+  } as const;
+};
 
 export const TECHNIQUE_PROMPT_NUMERIC_RANGES = {
   skill: {
@@ -394,6 +409,9 @@ export const TECHNIQUE_PROMPT_EFFECT_COMMON_FIELDS = {
   baseValue: '仅 combined 模式使用的固定基础值；与 scaleRate 配合',
   scaleAttr: `倍率引用属性，必须在 attributeKeyEnum 中（推荐：${TECHNIQUE_EFFECT_SCALE_ATTR_OPTIONS.join('/')}）`,
   scaleRate: '倍率系数（建议范围见 numericRanges.effect.scaleRate）',
+  buffKey: '结构化 Buff 键。buff/debuff 必填，且必须在 allowedBuffConfigRules.buffKeyEnumByType[type] 中',
+  attrKey: '属性 Buff 的属性键。buffKind=attr 时必填，且必须在 allowedBuffConfigRules.attrKeyEnum 中',
+  applyType: '属性 Buff 的叠加模式。若填写，必须在 allowedBuffConfigRules.applyTypeEnum 中',
   duration: '持续回合数（整数，建议范围见 numericRanges.effect.duration）',
   chance: '概率（0~1 浮点，建议范围见 numericRanges.effect.chance）',
   element: '元素（必须在 elementEnum 中）',
@@ -452,11 +470,13 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
   },
   buff: {
     meaning: '增益效果，使用结构化 Buff 配置（可扩展）',
-    required: ['type', 'buffKind'],
-    optional: ['buffKey', 'attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
+    required: ['type', 'buffKind', 'buffKey'],
+    optional: ['attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
     rules: [
       'buffKind 必须在 allowedBuffConfigRules.kindEnum 中',
-      'buffKind=attr 时必须提供 attrKey',
+      'buffKey 必须在 allowedBuffConfigRules.buffKeyEnumByType.buff 中',
+      'buffKind=attr 时必须提供 attrKey，且 attrKey 必须在 allowedBuffConfigRules.attrKeyEnum 中',
+      'applyType 如有填写，必须在 allowedBuffConfigRules.applyTypeEnum 中',
       'duration/stacks 建议为正整数（见 numericRanges.effect.duration / stacks）',
     ],
     defaultTemplate: {
@@ -472,9 +492,14 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
   },
   debuff: {
     meaning: '减益效果，使用结构化 Buff 配置（可扩展）',
-    required: ['type', 'buffKind'],
-    optional: ['buffKey', 'attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
-    rules: ['buffKind 必须在 allowedBuffConfigRules.kindEnum 中；buffKind=attr 时必须提供 attrKey'],
+    required: ['type', 'buffKind', 'buffKey'],
+    optional: ['attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
+    rules: [
+      'buffKind 必须在 allowedBuffConfigRules.kindEnum 中',
+      'buffKey 必须在 allowedBuffConfigRules.buffKeyEnumByType.debuff 中',
+      'buffKind=attr 时必须提供 attrKey，且 attrKey 必须在 allowedBuffConfigRules.attrKeyEnum 中',
+      'applyType 如有填写，必须在 allowedBuffConfigRules.applyTypeEnum 中',
+    ],
     defaultTemplate: {
       type: 'debuff',
       buffKind: 'dot',
@@ -655,7 +680,7 @@ export const TECHNIQUE_PROMPT_OUTPUT_CHECKLIST = [
   '所有 effect.type 必须在 effectTypeEnum 中',
   '任何 effect 不得出现 valueFormula 字段',
   'controlType 必须在 controlTypeEnum；markId 必须在 allowedMarkIds',
-  'buff/debuff 必须使用结构化 Buff 字段，不得使用 buffId',
+  'buff/debuff 必须使用结构化 Buff 字段，不得使用 buffId，且 buffKey/attrKey 必须命中预定义允许列表',
   'skills[*].upgrades 只能使用 upgradeSchema，禁止 description/effectChanges/effectIndex',
   'upgrades[*].changes 只能包含 upgradeAllowedChangeKeys 中的字段',
   'chance 必须在 0~1 且使用浮点比例表达',
@@ -669,6 +694,7 @@ export const buildTechniqueGeneratorPromptInput = (params: {
 }) => {
   const { quality, maxLayer, effectTypeEnum } = params;
   const skillCountRange = TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY[quality];
+  const promptBuffConfigRules = buildTechniquePromptBuffConfigRules();
   return {
     task: '生成完整功法定义',
     quality,
@@ -691,7 +717,7 @@ export const buildTechniqueGeneratorPromptInput = (params: {
       markOperationEnum: [...TECHNIQUE_PROMPT_MARK_OPERATION_ENUM],
       markConsumeModeEnum: [...TECHNIQUE_PROMPT_MARK_CONSUME_MODE_ENUM],
       markResultTypeEnum: [...TECHNIQUE_PROMPT_MARK_RESULT_TYPE_ENUM],
-      allowedBuffConfigRules: TECHNIQUE_PROMPT_BUFF_CONFIG_RULES,
+      allowedBuffConfigRules: promptBuffConfigRules,
       attributeKeyEnum: [...TECHNIQUE_EFFECT_SCALE_ATTR_OPTIONS],
       numericRanges: TECHNIQUE_PROMPT_NUMERIC_RANGES,
       effectCommonFields: TECHNIQUE_PROMPT_EFFECT_COMMON_FIELDS,
@@ -717,6 +743,8 @@ export const buildTechniqueGeneratorPromptInput = (params: {
     outputSchema: TECHNIQUE_PROMPT_OUTPUT_SCHEMA,
   };
 };
+
+export { validateTechniqueStructuredBuffEffect };
 
 export const isSupportedTechniquePassiveKey = (raw: unknown): boolean => {
   if (typeof raw !== 'string') return false;

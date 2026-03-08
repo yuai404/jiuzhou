@@ -21,8 +21,12 @@
  * 2) attrKey 会做别名映射与连字符归一，避免配置同义词导致运行时键不一致。
  */
 
-export type BuffKind = 'attr' | 'dot' | 'hot' | 'dodge_next' | (string & {});
-export type BuffApplyType = 'flat' | 'percent';
+export const STRUCTURED_BUFF_KIND_LIST = ['attr', 'dot', 'hot', 'dodge_next'] as const;
+export type SupportedBuffKind = typeof STRUCTURED_BUFF_KIND_LIST[number];
+export type BuffKind = SupportedBuffKind | (string & {});
+
+export const BUFF_APPLY_TYPE_LIST = ['flat', 'percent'] as const;
+export type BuffApplyType = typeof BUFF_APPLY_TYPE_LIST[number];
 
 export const DEFAULT_PERCENT_BUFF_ATTR_SET: ReadonlySet<string> = new Set([
   'wugong',
@@ -99,4 +103,3 @@ export function resolveSignedAttrValue(effectType: 'buff' | 'debuff', rawValue: 
   if (absValue <= 0) return 0;
   return effectType === 'debuff' ? -absValue : absValue;
 }
-

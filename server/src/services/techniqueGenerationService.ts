@@ -18,6 +18,7 @@
  * 2) 洞府研修采用统一冷却时间配置，状态接口与创建任务前校验必须复用同一模块，避免前后端展示与服务端拦截不一致。
  */
 import { randomUUID } from 'crypto';
+import type { SkillEffect } from '../battle/types.js';
 import { query } from '../config/database.js';
 import { Transactional } from '../decorators/transactional.js';
 import { addItemToInventory } from './inventory/index.js';
@@ -41,6 +42,7 @@ import {
   TECHNIQUE_PROMPT_SYSTEM_MESSAGE,
   TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY,
   isSupportedTechniquePassiveKey,
+  validateTechniqueStructuredBuffEffect,
 } from './shared/techniqueGenerationConstraints.js';
 import {
   buildTechniqueResearchCooldownState,
@@ -522,6 +524,16 @@ const validateCandidate = (
       const effectType = asString((effect as Record<string, unknown>).type);
       if (!DAMAGE_EFFECT_TYPE_SET.has(effectType)) {
         return { success: false, message: 'AI结果技能效果类型非法', code: 'GENERATOR_INVALID' };
+      }
+      if (effectType === 'buff' || effectType === 'debuff') {
+        const buffValidation = validateTechniqueStructuredBuffEffect(effect as SkillEffect);
+        if (!buffValidation.success) {
+          return {
+            success: false,
+            message: `AI结果技能效果包含未支持的结构化Buff配置：${buffValidation.reason}`,
+            code: 'GENERATOR_INVALID',
+          };
+        }
       }
     }
   }
