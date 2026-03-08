@@ -836,6 +836,17 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     return `共${qty}件`;
   }, [batchCandidates]);
   const useActionDisabled = loading || actionDisabled('use');
+  const growthHeader = (
+    <div className="bag-growth-header">
+      <div className="bag-growth-header-name" style={{ color: activeItem?.quality ? qualityColor[activeItem.quality] : undefined }}>
+        {activeItem?.name ?? '未选择'}
+      </div>
+      <div className="bag-growth-header-meta">
+        {activeItem?.equip?.equipSlot ? <span>{getEquipSlotLabel(activeItem.equip.equipSlot)}</span> : null}
+        {activeItem?.quality ? <span className={'bag-growth-quality-badge ' + qualityClass[activeItem.quality]}>{qualityLabelText[activeItem.quality]}</span> : null}
+      </div>
+    </div>
+  );
 
   return (
     <Modal
@@ -1388,15 +1399,20 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
             ]}
           />
 
-          <div className="bag-growth-header">
-            <div className="bag-growth-header-name" style={{ color: activeItem?.quality ? qualityColor[activeItem.quality] : undefined }}>
-              {activeItem?.name ?? '未选择'}
+          {growthMode === 'reroll' && rerollState && rerollState.affixes.length > 0 ? (
+            <div className="bag-reroll-overview-row">
+              {growthHeader}
+              <div className="bag-growth-summary-card bag-growth-summary-card--reroll">
+                <div className="bag-growth-summary-main">
+                  <span className="bag-growth-level">{rerollState.affixes.length}</span>
+                  <span className="bag-growth-arrow">条词条</span>
+                </div>
+                <div className="bag-growth-tip-muted">
+                  已锁定 {rerollState.lockIndexes.length}/{rerollState.maxLockCount}
+                </div>
+              </div>
             </div>
-            <div className="bag-growth-header-meta">
-              {activeItem?.equip?.equipSlot ? <span>{getEquipSlotLabel(activeItem.equip.equipSlot)}</span> : null}
-              {activeItem?.quality ? <span className={'bag-growth-quality-badge ' + qualityClass[activeItem.quality]}>{qualityLabelText[activeItem.quality]}</span> : null}
-            </div>
-          </div>
+          ) : growthHeader}
 
           {growthMode === 'enhance' && (enhanceState ? (
             <>
@@ -1644,16 +1660,6 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
           {growthMode === 'reroll' && (rerollState ? (
             rerollState.affixes.length > 0 ? (
               <>
-                <div className="bag-growth-summary-card">
-                  <div className="bag-growth-summary-main">
-                    <span className="bag-growth-level">{rerollState.affixes.length}</span>
-                    <span className="bag-growth-arrow">条词条</span>
-                  </div>
-                  <div className="bag-growth-tip-muted">
-                    已锁定 {rerollState.lockIndexes.length}/{rerollState.maxLockCount}
-                  </div>
-                </div>
-
                 <div className="bag-growth-cost-card">
                   <div className="bag-growth-cost-title">消耗</div>
                   <div className="bag-growth-cost-list">
