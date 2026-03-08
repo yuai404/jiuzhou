@@ -33,6 +33,7 @@ import {
 import { coerceAffixes as coerceItemMetaAffixes } from "../../shared/itemMetaFormat";
 import { ITEM_CATEGORY_LABELS } from "../../shared/itemTaxonomy";
 import type { GameItemCategory as SharedGameItemCategory } from "../../shared/itemTaxonomy";
+import { getLearnableTechniqueId } from "../../shared/learnableTechnique";
 import {
   resolveBagItemUseTargetType,
   type BagItemUseTargetType,
@@ -712,39 +713,6 @@ const hasLearnTechniqueEffect = (effectDefs: unknown): boolean => {
   return coerceEffectDefs(effectDefs).some((raw) => {
     return normalizeCategoryToken(raw.effect_type) === "learn_technique";
   });
-};
-
-export const getLearnableTechniqueId = (
-  def?: ItemDefLite,
-): string | null => {
-  const generatedTechniqueId =
-    typeof def?.generated_technique_id === "string"
-      ? def.generated_technique_id.trim()
-      : "";
-  if (generatedTechniqueId) return generatedTechniqueId;
-
-  for (const rawEffect of coerceEffectDefs(def?.effect_defs)) {
-    const effectType = normalizeCategoryToken(rawEffect.effect_type);
-    if (
-      effectType !== "learn_technique" &&
-      effectType !== "learn_generated_technique"
-    ) {
-      continue;
-    }
-
-    const params = toRecord(rawEffect.params);
-    const techniqueId =
-      typeof params.technique_id === "string" ? params.technique_id.trim() : "";
-    if (techniqueId) return techniqueId;
-
-    const generatedId =
-      typeof params.generated_technique_id === "string"
-        ? params.generated_technique_id.trim()
-        : "";
-    if (generatedId) return generatedId;
-  }
-
-  return null;
 };
 
 export const isTechniqueBookSubCategory = (

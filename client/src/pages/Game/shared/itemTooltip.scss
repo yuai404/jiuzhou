@@ -1,5 +1,8 @@
 @use './tooltipSurfaceShared';
 @use './itemQualityTag' as qualityTag;
+@use './techniqueSkillSection' as techniqueSkill;
+
+@include techniqueSkill.technique-skill-section();
 
 .item-tooltip-overlay,
 .item-tooltip-overlay-container {
@@ -25,6 +28,14 @@
 }
 
 .item-tooltip {
+  --technique-skill-title: var(--item-tooltip-title);
+  --technique-skill-text: var(--item-tooltip-text);
+  --technique-skill-muted: var(--item-tooltip-muted);
+  --technique-skill-border: var(--item-tooltip-section-border);
+  --technique-skill-surface: var(--item-tooltip-section-bg);
+  --technique-skill-card-bg: var(--item-tooltip-bg);
+  --technique-skill-accent: color-mix(in srgb, var(--item-tooltip-title) 78%, #1677ff);
+
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -97,10 +108,16 @@
 .item-tooltip-desc {
   color: var(--item-tooltip-text);
   font-weight: 700;
+  font-size: 12px;
   line-height: 1.5;
   padding-top: 8px;
   border-top: 1px solid var(--item-tooltip-divider);
   white-space: pre-wrap;
+}
+
+.item-tooltip-desc.is-technique-book {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .item-tooltip-section {

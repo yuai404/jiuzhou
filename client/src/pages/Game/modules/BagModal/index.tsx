@@ -62,10 +62,10 @@ import { getItemQualityMeta } from '../../shared/itemQuality';
 import InventoryItemCell from '../../shared/InventoryItemCell';
 import { EquipmentDetailAttrList } from './EquipmentDetailAttrList';
 import { SetBonusDisplay } from './SetBonusDisplay';
-import { TechniqueBookSkillSection } from './TechniqueBookSkillSection';
 import { getEquipmentGrowthFailModeText, useEquipmentGrowthPreview } from './useEquipmentGrowthPreview';
 import { useTechniqueBookSkills } from './useTechniqueBookSkills';
 import { collectEquipmentUnbindCandidates } from './equipmentUnbind';
+import { TechniqueSkillSection } from '../../shared/TechniqueSkillSection';
 import './index.scss';
 
 interface BagModalProps {
@@ -1064,7 +1064,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
 
                     {hasTechniqueBookSkills ? (
                       <div className="bag-detail-section">
-                        <TechniqueBookSkillSection
+                        <TechniqueSkillSection
                           skills={techniqueBookSkillsState.skills}
                           loading={techniqueBookSkillsState.loading}
                           error={techniqueBookSkillsState.error}

@@ -1,29 +1,32 @@
 import { useMemo } from 'react';
 import EquipmentAffixTooltipList from './EquipmentAffixTooltipList';
+import { TechniqueSkillSection } from './TechniqueSkillSection';
 import { formatSignedNumber, formatSignedPercent } from './formatAttr';
 import { PERCENT_ATTR_KEYS, coerceAffixes, formatScalar, limitLines, normalizeText } from './itemMetaFormat';
 import { getItemQualityMeta } from './itemQuality';
 import { getItemTaxonomyLabel } from './itemTaxonomy';
 import { buildSocketedGemDisplayGroups } from './socketedGemDisplay';
+import { useTechniqueSkillDetails } from './useTechniqueSkillDetails';
 import './itemTooltip.scss';
 
 /**
  * 作用：
- * - 统一“坊市风格”物品 Tooltip 的结构、文案映射与属性展示，避免坊市/仓库重复维护两套实现。
- * - 不做什么：不负责数据请求、图标解析、业务按钮行为，仅消费上游已经整理好的物品展示数据。
+ * - 统一“坊市风格”物品 Tooltip 的结构、文案映射、属性展示与功法书技能区，避免坊市/仓库重复维护两套实现。
+ * - 不做什么：不负责图标解析、业务按钮行为，也不决定物品能否学习功法，仅消费上游已整理好的展示数据。
  *
  * 输入/输出：
- * - 输入：`MarketTooltipItemData`，包含名称、品质、分类、词条、效果与基础属性等展示字段。
+ * - 输入：`MarketTooltipItemData`，包含名称、品质、分类、词条、效果、基础属性与可学习功法 ID。
  * - 输出：统一 `.item-tooltip-*` 结构的 React 节点，可直接作为 antd Tooltip/Drawer 内容。
  *
  * 数据流/状态流：
  * - 各业务模块（Market/Warehouse）先把各自 DTO 映射为 `MarketTooltipItemData`。
- * - 本组件只做纯展示计算（useMemo）并输出统一 UI，样式由 `itemTooltip.scss` 提供单一来源。
+ * - Tooltip 读取 `learnableTechniqueId` 后通过共享 Hook 查询技能详情，再交给共享技能区渲染。
  *
  * 边界条件与坑点：
  * - `equipReqRealm` 明确不进入 Tag 区，统一改为“装备信息”里的普通文本行，避免需求境界被误读成标签属性。
  * - `baseAttrs/effectDefs/affixes` 来自后端动态结构，组件仅做展示层容错解析，不改业务语义。
  * - 分类/部位/用途字段若为英文且无法映射，会自动隐藏，避免 Tooltip 出现技术字段噪声。
+ * - 功法书技能查询依赖 `learnableTechniqueId`，因此坊市生成功法书必须透传真实功法 ID，否则 tooltip 无法展示技能。
  */
 
 export type MarketTooltipCategory = string;
@@ -254,6 +257,7 @@ export type MarketTooltipItemData = {
   identified?: boolean;
   affixes?: unknown;
   socketedGems?: unknown;
+  learnableTechniqueId?: string | null;
 };
 
 const MarketItemTooltipContent: React.FC<{ item: MarketTooltipItemData }> = ({ item }) => {
@@ -280,8 +284,8 @@ const MarketItemTooltipContent: React.FC<{ item: MarketTooltipItemData }> = ({ i
 
     const equipSlot = translateEquipSlot(item.equipSlot);
     if (equipSlot) tags.push({ text: `部位：${equipSlot}` });
-    const useType = translateUseType(item.useType);
-    if (useType) tags.push({ text: `类型：${useType}` });
+    // const useType = translateUseType(item.useType);
+    // if (useType) tags.push({ text: `类型：${useType}` });
     return tags;
   }, [item.category, item.categoryLabel, item.equipSlot, item.quality, item.useType]);
 
@@ -322,6 +326,15 @@ const MarketItemTooltipContent: React.FC<{ item: MarketTooltipItemData }> = ({ i
       formatSignedPercent,
     });
   }, [isEquip, item.socketedGems]);
+  const normalizedLearnableTechniqueId =
+    typeof item.learnableTechniqueId === 'string' && item.learnableTechniqueId.trim().length > 0
+      ? item.learnableTechniqueId.trim()
+      : null;
+  const techniqueSkillState = useTechniqueSkillDetails({
+    techniqueId: normalizedLearnableTechniqueId,
+    enabled: true,
+  });
+  const shouldShowTechniqueSkills = item.category === 'consumable' && normalizedLearnableTechniqueId !== null;
 
   return (
     <div className="item-tooltip">
@@ -344,7 +357,11 @@ const MarketItemTooltipContent: React.FC<{ item: MarketTooltipItemData }> = ({ i
         </div>
       ) : null}
 
-      {!isEquip && desc ? <div className="item-tooltip-desc">{desc}</div> : null}
+      {!isEquip && desc ? (
+        <div className={`item-tooltip-desc${shouldShowTechniqueSkills ? ' is-technique-book' : ''}`}>
+          {desc}
+        </div>
+      ) : null}
 
       {equipMetaLines.length > 0 ? (
         <div className="item-tooltip-section">
@@ -422,6 +439,17 @@ const MarketItemTooltipContent: React.FC<{ item: MarketTooltipItemData }> = ({ i
               </div>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {shouldShowTechniqueSkills ? (
+        <div className="item-tooltip-section">
+          <TechniqueSkillSection
+            skills={techniqueSkillState.skills}
+            loading={techniqueSkillState.loading}
+            error={techniqueSkillState.error}
+            variant="tooltip"
+          />
         </div>
       ) : null}
     </div>

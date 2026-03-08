@@ -67,13 +67,13 @@ import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
 import InventoryItemCell from '../../shared/InventoryItemCell';
 import { EquipmentDetailAttrList } from './EquipmentDetailAttrList';
 import { SetBonusDisplay } from './SetBonusDisplay';
-import { TechniqueBookSkillSection } from './TechniqueBookSkillSection';
 import DisassembleModal from './DisassembleModal';
 import CraftModal from './CraftModal';
 import GemSynthesisModal from './GemSynthesisModal';
 import { getEquipmentGrowthFailModeText, useEquipmentGrowthPreview } from './useEquipmentGrowthPreview';
 import { useTechniqueBookSkills } from './useTechniqueBookSkills';
 import { collectEquipmentUnbindCandidates } from './equipmentUnbind';
+import { TechniqueSkillSection } from '../../shared/TechniqueSkillSection';
 import './MobileBagModal.scss';
 
 /* ─── 排序面板 ─── */
@@ -475,7 +475,7 @@ const ItemSheet: React.FC<SheetProps> = ({
 
           {hasTechniqueBookSkills && (
             <div className="mbag-sheet-section">
-              <TechniqueBookSkillSection
+              <TechniqueSkillSection
                 skills={techniqueBookSkillsState.skills}
                 loading={techniqueBookSkillsState.loading}
                 error={techniqueBookSkillsState.error}

@@ -49,6 +49,7 @@ export type MarketListingDto = {
   identified: boolean;
   affixes: unknown;
   socketedGems: unknown;
+  generatedTechniqueId: string | null;
   qty: number;
   unitPriceSpiritStones: number;
   sellerCharacterId: number;
@@ -217,6 +218,7 @@ const toListingDto = (
     affixes:
       normalizedAffixes.length > 0 ? normalizedAffixes : (row.affixes ?? []),
     socketedGems: row.socketed_gems ?? null,
+    generatedTechniqueId: generatedTechniqueBookDisplay?.generatedTechniqueId ?? null,
     qty: Number(row.qty),
     unitPriceSpiritStones: Number(row.unit_price_spirit_stones),
     sellerCharacterId: Number(row.seller_character_id),

@@ -24,6 +24,7 @@ export interface MarketListingDto {
   identified: boolean;
   affixes: unknown;
   socketedGems: unknown;
+  generatedTechniqueId: string | null;
   qty: number;
   unitPriceSpiritStones: number;
   sellerCharacterId: number;

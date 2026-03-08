@@ -1,0 +1,263 @@
+@mixin technique-skill-section() {
+  .technique-skill-section {
+    --technique-skill-title: var(--text-color, var(--game-tooltip-surface-text));
+    --technique-skill-text: var(--text-color, var(--game-tooltip-surface-text));
+    --technique-skill-muted: var(--text-secondary, var(--game-tooltip-surface-muted));
+    --technique-skill-border: var(--border-color-soft, var(--game-tooltip-surface-section-border));
+    --technique-skill-surface: var(--panel-bg-soft, var(--game-tooltip-surface-section-bg));
+    --technique-skill-card-bg: var(--panel-bg, var(--game-tooltip-surface-bg));
+    --technique-skill-accent: var(--primary-color, #1677ff);
+
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .technique-skill-section__title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--technique-skill-title);
+    letter-spacing: 0.02em;
+  }
+
+  .technique-skill-section__state {
+    padding: 8px 10px;
+    border: 1px solid var(--technique-skill-border);
+    border-radius: 10px;
+    background: var(--technique-skill-surface);
+    color: var(--technique-skill-muted);
+    font-size: 12px;
+    line-height: 1.45;
+
+    &.is-error {
+      border-color: color-mix(in srgb, #ff4d4f 28%, var(--technique-skill-border));
+      background: color-mix(in srgb, #ff4d4f 8%, var(--technique-skill-surface));
+      color: #ff4d4f;
+    }
+  }
+
+  .technique-skill-section__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .technique-skill-section__summary {
+    padding: 7px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--technique-skill-border);
+    background: color-mix(in srgb, var(--technique-skill-surface) 88%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .technique-skill-section__summary-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--technique-skill-text);
+    line-height: 1.35;
+  }
+
+  .technique-skill-section__inline .skill-inline-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .technique-skill-section__inline .skill-inline-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--technique-skill-muted);
+  }
+
+  .technique-skill-section__inline .skill-inline-row.is-description,
+  .technique-skill-section__inline .skill-inline-row.is-effect {
+    color: var(--technique-skill-text);
+  }
+
+  .technique-skill-section__inline .skill-inline-row.is-effect {
+    padding-left: 10px;
+    position: relative;
+  }
+
+  .technique-skill-section__inline .skill-inline-row.is-effect::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--technique-skill-accent);
+  }
+
+  .technique-skill-section__inline .skill-inline-label {
+    flex: 0 0 auto;
+    color: var(--technique-skill-muted);
+    font-size: 12px;
+  }
+
+  .technique-skill-section__inline .skill-inline-value {
+    min-width: 0;
+    color: inherit;
+    word-break: break-word;
+  }
+
+  .technique-skill-section__inline .skill-inline-empty {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--technique-skill-muted);
+  }
+
+  .technique-skill-section__card {
+    padding: 8px 10px;
+    border: 1px solid var(--technique-skill-border);
+    border-radius: 10px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--technique-skill-card-bg) 88%, transparent),
+      var(--technique-skill-surface)
+    );
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  }
+
+  .technique-skill-section__card--mobile,
+  .technique-skill-section__card--tooltip {
+    padding: 7px 9px;
+    border-radius: 10px;
+  }
+
+  .technique-skill-section__card .skill-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .technique-skill-section__card .skill-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .technique-skill-section__card .skill-card-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--technique-skill-text);
+    line-height: 1.3;
+  }
+
+  .technique-skill-section__card .skill-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .technique-skill-section__card .skill-card-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--technique-skill-card-bg) 78%, transparent);
+    border: 1px solid var(--technique-skill-border);
+  }
+
+  .technique-skill-section__card .skill-card-meta-label,
+  .technique-skill-section__card .skill-card-grid-label {
+    color: var(--technique-skill-muted);
+    font-size: 11px;
+  }
+
+  .technique-skill-section__card .skill-card-meta-value,
+  .technique-skill-section__card .skill-card-grid-value {
+    color: var(--technique-skill-text);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .technique-skill-section__card .skill-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    gap: 6px;
+  }
+
+  .technique-skill-section__card .skill-card-grid-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--technique-skill-surface) 75%, transparent);
+  }
+
+  .technique-skill-section__card .skill-card-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .technique-skill-section__card .skill-card-summary-row {
+    line-height: 1.45;
+    font-size: 12px;
+    color: var(--technique-skill-muted);
+    word-break: break-word;
+  }
+
+  .technique-skill-section__card .skill-card-summary-row.is-description {
+    color: var(--technique-skill-text);
+  }
+
+  .technique-skill-section__card .skill-card-summary-row.is-effect {
+    padding-left: 10px;
+    position: relative;
+  }
+
+  .technique-skill-section__card .skill-card-summary-row.is-effect::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--technique-skill-accent);
+  }
+
+  .technique-skill-section__card .skill-card-summary-empty {
+    color: var(--technique-skill-muted);
+    font-size: 12px;
+  }
+
+  .technique-skill-section--mobile,
+  .technique-skill-section--tooltip {
+    gap: 6px;
+  }
+
+  .technique-skill-section--mobile .technique-skill-section__title,
+  .technique-skill-section--tooltip .technique-skill-section__title {
+    font-size: 11px;
+  }
+
+  .technique-skill-section--mobile .technique-skill-section__list,
+  .technique-skill-section--tooltip .technique-skill-section__list {
+    gap: 6px;
+  }
+
+  .technique-skill-section--tooltip .technique-skill-section__summary {
+    padding: 6px 8px;
+    gap: 3px;
+  }
+
+  .technique-skill-section--tooltip .technique-skill-section__summary-name,
+  .technique-skill-section--tooltip .technique-skill-section__inline .skill-inline-row,
+  .technique-skill-section--tooltip .technique-skill-section__inline .skill-inline-label,
+  .technique-skill-section--tooltip .technique-skill-section__inline .skill-inline-empty {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+}

@@ -18,6 +18,7 @@ import MarketItemTooltipContent, {
   normalizeMarketTooltipCategory,
   type MarketTooltipItemData,
 } from '../../shared/MarketItemTooltipContent';
+import { getLearnableTechniqueId } from '../../shared/learnableTechnique';
 import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
 import './index.scss';
 
@@ -116,6 +117,7 @@ const buildWarehouseTooltipItem = (it: InventoryItemDto): MarketTooltipItemData 
     identified: Boolean(it.identified),
     affixes: it.affixes,
     socketedGems: it.socketed_gems ?? null,
+    learnableTechniqueId: getLearnableTechniqueId(def),
   };
 };
 

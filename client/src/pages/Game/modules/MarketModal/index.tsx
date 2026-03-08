@@ -18,6 +18,7 @@ import { getItemQualityMeta, normalizeItemQualityName } from '../../shared/itemQ
 import InventoryItemCell from '../../shared/InventoryItemCell';
 import { ITEM_CATEGORY_ALL_OPTION, ITEM_CATEGORY_LABELS, ITEM_CATEGORY_OPTIONS } from '../../shared/itemTaxonomy';
 import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
+import { getLearnableTechniqueId } from '../../shared/learnableTechnique';
 import MarketItemTooltipContent, {
   ITEM_TOOLTIP_CLASS_NAMES,
 } from '../../shared/MarketItemTooltipContent';
@@ -228,6 +229,7 @@ type ListingItem = {
   identified: boolean;
   affixes: unknown;
   socketedGems: string | SocketedGemEntry[] | null;
+  learnableTechniqueId: string | null;
   equipmentSummary: MarketEquipmentSummaryItem[];
   qty: number;
   unitPrice: number;
@@ -305,6 +307,10 @@ const buildListingItem = (dto: MarketListingDto): ListingItem => {
     identified: Boolean(dto.identified),
     affixes: dto.affixes ?? [],
     socketedGems,
+    learnableTechniqueId: getLearnableTechniqueId({
+      generated_technique_id: dto.generatedTechniqueId,
+      effect_defs: dto.effectDefs,
+    }),
     equipmentSummary: buildMarketEquipmentSummary({
       category,
       strengthenLevel,

@@ -1,6 +1,6 @@
 @use './rerollRollShared' as rerollRoll;
 @use './qualityTagShared' as qualityTag;
-@use './techniqueBookSkillShared' as techniqueBookSkill;
+@use '../../shared/techniqueSkillSection' as techniqueSkill;
 
 /* ═══════════════════════════════════════════════════
    MobileBagModal - 移动端背包界面样式
@@ -10,7 +10,7 @@
 /* ── 遮罩 ── */
 .mbag-overlay {
   @include rerollRoll.roll-theme-vars();
-  @include techniqueBookSkill.technique-book-skill-section();
+  @include techniqueSkill.technique-skill-section();
 
   position: fixed;
   inset: 0;
