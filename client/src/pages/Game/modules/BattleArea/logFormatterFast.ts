@@ -137,6 +137,20 @@ const buildTargetSummary = (target: BattleActionTargetDto): string => {
     parts.push(`消耗印记:${marksConsumed.join('、')}`);
   }
 
+  const momentumGained = (target.momentumGained ?? [])
+    .map((entry) => normalizeName(entry, ''))
+    .filter(Boolean);
+  if (momentumGained.length > 0) {
+    parts.push(`获得势:${momentumGained.join('、')}`);
+  }
+
+  const momentumConsumed = (target.momentumConsumed ?? [])
+    .map((entry) => normalizeName(entry, ''))
+    .filter(Boolean);
+  if (momentumConsumed.length > 0) {
+    parts.push(`消耗势:${momentumConsumed.join('、')}`);
+  }
+
   if (parts.length === 0) {
     return name;
   }

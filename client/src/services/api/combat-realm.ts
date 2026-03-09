@@ -54,6 +54,8 @@ export type BattleActionTargetDto = {
   buffsRemoved?: string[];
   marksApplied?: string[];
   marksConsumed?: string[];
+  momentumGained?: string[];
+  momentumConsumed?: string[];
   controlApplied?: string;
   controlResisted?: boolean;
 };

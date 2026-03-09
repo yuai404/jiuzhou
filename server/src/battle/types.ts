@@ -60,6 +60,8 @@ export interface BattleUnit {
   buffs: ActiveBuff[];
   // 战斗印记（如：虚蚀印记）
   marks?: ActiveMark[];
+  // 战斗势能（施法者侧连招资源）
+  momentum?: ActiveMomentum | null;
   
   // 技能与冷却
   skills: BattleSkill[];
@@ -156,6 +158,12 @@ export interface ActiveMark {
   remainingDuration: number;
 }
 
+export interface ActiveMomentum {
+  id: string;
+  stacks: number;
+  maxStacks: number;
+}
+
 // ============================================
 // Buff/Debuff
 // ============================================
@@ -250,7 +258,8 @@ export interface SkillEffect {
     | 'cleanse_control'
     | 'lifesteal'
     | 'control'
-    | 'mark';
+    | 'mark'
+    | 'momentum';
   value?: number;
   valueType?: 'flat' | 'percent' | 'scale' | 'combined';
   baseValue?: number;  // 固定基础值（用于 combined 模式）
@@ -273,12 +282,15 @@ export interface SkillEffect {
   element?: string;
   hit_count?: number;
   markId?: string;
-  operation?: 'apply' | 'consume';
+  operation?: 'apply' | 'consume' | 'gain';
   maxStacks?: number;
   consumeMode?: 'all' | 'fixed';
   consumeStacks?: number;
   perStackRate?: number;
   resultType?: 'damage' | 'shield_self' | 'heal_self';
+  momentumId?: string;
+  gainStacks?: number;
+  bonusType?: 'damage' | 'heal' | 'shield' | 'resource' | 'all';
 }
 
 interface SkillConditions {
@@ -395,6 +407,8 @@ export interface TargetResult {
   buffsRemoved?: string[];
   marksApplied?: string[];
   marksConsumed?: string[];
+  momentumGained?: string[];
+  momentumConsumed?: string[];
   controlApplied?: string;
   controlResisted?: boolean;
 }

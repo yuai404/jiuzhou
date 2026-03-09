@@ -32,6 +32,14 @@ const DISPEL_TYPE_LABEL: Record<string, string> = {
   all: '增益/减益',
 };
 
+const MOMENTUM_BONUS_LABEL: Record<string, string> = {
+  damage: '伤害',
+  heal: '治疗',
+  shield: '护盾',
+  resource: '资源',
+  all: '全部效果',
+};
+
 const ATTR_LABEL: Record<string, string> = {
   wugong: '物攻',
   fagong: '法攻',
@@ -389,6 +397,30 @@ const formatResourceEffect = (effect: Record<string, unknown>): string => {
   return `调整${resourceType} ${sign}${Math.abs(Math.floor(value))}`;
 };
 
+const formatMomentumEffect = (effect: Record<string, unknown>): string => {
+  const operation = toText(effect.operation).toLowerCase();
+  const gainStacks = toPositiveInt(effect.gainStacks || effect.stacks || effect.value) || 1;
+  const maxStacks = toPositiveInt(effect.maxStacks);
+  const perStackRate = toNumber(effect.perStackRate);
+  const bonusTypeRaw = toText(effect.bonusType);
+  const bonusType = MOMENTUM_BONUS_LABEL[bonusTypeRaw] || bonusTypeRaw;
+
+  if (operation === 'gain') {
+    const parts = [`获得势 ${gainStacks}层`];
+    if (maxStacks > 0) parts.push(`上限${maxStacks}层`);
+    return parts.join('，');
+  }
+
+  const consumeMode = toText(effect.consumeMode) === 'fixed' ? '固定层数' : '全部势';
+  const parts = [`消耗${consumeMode}`];
+  if (perStackRate !== null && perStackRate > 0) {
+    parts.push(`每层使${bonusType || '技能效果'}提高${formatPercent(perStackRate)}%`);
+  } else if (bonusType) {
+    parts.push(`强化${bonusType}`);
+  }
+  return parts.join('，');
+};
+
 export const formatSkillEffectLines = (effectsRaw: unknown, context: SkillEffectContext = {}): string[] => {
   if (!Array.isArray(effectsRaw)) return [];
 
@@ -449,6 +481,10 @@ export const formatSkillEffectLines = (effectsRaw: unknown, context: SkillEffect
     }
     if (type === 'resource') {
       lines.push(formatResourceEffect(effect));
+      continue;
+    }
+    if (type === 'momentum') {
+      lines.push(formatMomentumEffect(effect));
       continue;
     }
 

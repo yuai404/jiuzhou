@@ -26,6 +26,10 @@ import {
   TECHNIQUE_SKILL_MARK_ID_LIST,
   TECHNIQUE_SKILL_MARK_OPERATION_LIST,
   TECHNIQUE_SKILL_MARK_RESULT_TYPE_LIST,
+  TECHNIQUE_SKILL_MOMENTUM_BONUS_TYPE_LIST,
+  TECHNIQUE_SKILL_MOMENTUM_CONSUME_MODE_LIST,
+  TECHNIQUE_SKILL_MOMENTUM_ID_LIST,
+  TECHNIQUE_SKILL_MOMENTUM_OPERATION_LIST,
   TECHNIQUE_SKILL_RESOURCE_TARGET_LIST,
   TECHNIQUE_SKILL_RESOURCE_TYPE_LIST,
   TECHNIQUE_SKILL_SCALE_ATTR_LIST,
@@ -172,6 +176,10 @@ export const TECHNIQUE_PROMPT_MARK_ID_ENUM = TECHNIQUE_SKILL_MARK_ID_LIST;
 export const TECHNIQUE_PROMPT_MARK_OPERATION_ENUM = TECHNIQUE_SKILL_MARK_OPERATION_LIST;
 export const TECHNIQUE_PROMPT_MARK_CONSUME_MODE_ENUM = TECHNIQUE_SKILL_MARK_CONSUME_MODE_LIST;
 export const TECHNIQUE_PROMPT_MARK_RESULT_TYPE_ENUM = TECHNIQUE_SKILL_MARK_RESULT_TYPE_LIST;
+export const TECHNIQUE_PROMPT_MOMENTUM_ID_ENUM = TECHNIQUE_SKILL_MOMENTUM_ID_LIST;
+export const TECHNIQUE_PROMPT_MOMENTUM_OPERATION_ENUM = TECHNIQUE_SKILL_MOMENTUM_OPERATION_LIST;
+export const TECHNIQUE_PROMPT_MOMENTUM_CONSUME_MODE_ENUM = TECHNIQUE_SKILL_MOMENTUM_CONSUME_MODE_LIST;
+export const TECHNIQUE_PROMPT_MOMENTUM_BONUS_TYPE_ENUM = TECHNIQUE_SKILL_MOMENTUM_BONUS_TYPE_LIST;
 
 const buildTechniquePromptBuffConfigRules = () => {
   const catalog = getTechniqueStructuredBuffCatalog();
@@ -378,6 +386,9 @@ export const TECHNIQUE_PROMPT_EFFECT_COMMON_FIELDS = {
   element: '元素（必须在 elementEnum 中）',
   damageType: '伤害类型（必须在 damageTypeEnum 中）',
   target: '资源类效果目标（必须在 resourceTargetEnum 中）',
+  momentumId: '势能资源 ID，momentum 效果必填，必须在 momentumIdEnum 中',
+  gainStacks: '本次获得的势层数（整数，建议 1~99）',
+  bonusType: '消耗势后加成的效果类别，必须在 momentumBonusTypeEnum 中',
 } as const;
 
 export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
@@ -571,6 +582,25 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
       maxStacks: 5,
     },
   },
+  momentum: {
+    meaning: '势能效果（施法者自身连招资源）',
+    required: ['type', 'momentumId', 'operation'],
+    optional: ['gainStacks', 'maxStacks', 'consumeMode', 'consumeStacks', 'perStackRate', 'bonusType'],
+    rules: [
+      'momentumId 必须在 momentumIdEnum 中',
+      'operation 必须在 momentumOperationEnum 中',
+      'consumeMode 必须在 momentumConsumeModeEnum 中',
+      'bonusType 必须在 momentumBonusTypeEnum 中',
+      'gain 时建议填写 gainStacks，consume 时建议填写 consumeMode + perStackRate + bonusType',
+    ],
+    defaultTemplate: {
+      type: 'momentum',
+      momentumId: 'battle_momentum',
+      operation: 'gain',
+      gainStacks: 1,
+      maxStacks: 5,
+    },
+  },
 } as const;
 
 export const TECHNIQUE_PROMPT_OUTPUT_SCHEMA = {
@@ -682,6 +712,10 @@ export const buildTechniqueGeneratorPromptInput = (params: {
       markOperationEnum: [...TECHNIQUE_PROMPT_MARK_OPERATION_ENUM],
       markConsumeModeEnum: [...TECHNIQUE_PROMPT_MARK_CONSUME_MODE_ENUM],
       markResultTypeEnum: [...TECHNIQUE_PROMPT_MARK_RESULT_TYPE_ENUM],
+      momentumIdEnum: [...TECHNIQUE_PROMPT_MOMENTUM_ID_ENUM],
+      momentumOperationEnum: [...TECHNIQUE_PROMPT_MOMENTUM_OPERATION_ENUM],
+      momentumConsumeModeEnum: [...TECHNIQUE_PROMPT_MOMENTUM_CONSUME_MODE_ENUM],
+      momentumBonusTypeEnum: [...TECHNIQUE_PROMPT_MOMENTUM_BONUS_TYPE_ENUM],
       allowedBuffConfigRules: promptBuffConfigRules,
       attributeKeyEnum: [...TECHNIQUE_EFFECT_SCALE_ATTR_OPTIONS],
       numericRanges: TECHNIQUE_PROMPT_NUMERIC_RANGES,

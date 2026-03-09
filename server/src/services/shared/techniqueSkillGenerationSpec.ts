@@ -24,6 +24,12 @@ import {
   MARK_OPERATION_LIST,
   MARK_RESULT_TYPE_LIST,
 } from '../../battle/modules/mark.js';
+import {
+  MOMENTUM_BONUS_TYPE_LIST,
+  MOMENTUM_CONSUME_MODE_LIST,
+  MOMENTUM_ID_LIST,
+  MOMENTUM_OPERATION_LIST,
+} from '../../battle/modules/momentum.js';
 import { validateTechniqueStructuredBuffEffect } from './techniqueStructuredBuffCatalog.js';
 
 type TechniqueJsonPrimitive = string | number | boolean | null;
@@ -53,6 +59,7 @@ export const TECHNIQUE_SKILL_EFFECT_TYPE_LIST = [
   'lifesteal',
   'control',
   'mark',
+  'momentum',
 ] as const;
 
 export const TECHNIQUE_SKILL_TARGET_TYPE_LIST = [
@@ -103,6 +110,10 @@ export const TECHNIQUE_SKILL_MARK_ID_LIST = MARK_ID_LIST;
 export const TECHNIQUE_SKILL_MARK_OPERATION_LIST = MARK_OPERATION_LIST;
 export const TECHNIQUE_SKILL_MARK_CONSUME_MODE_LIST = MARK_CONSUME_MODE_LIST;
 export const TECHNIQUE_SKILL_MARK_RESULT_TYPE_LIST = MARK_RESULT_TYPE_LIST;
+export const TECHNIQUE_SKILL_MOMENTUM_ID_LIST = MOMENTUM_ID_LIST;
+export const TECHNIQUE_SKILL_MOMENTUM_OPERATION_LIST = MOMENTUM_OPERATION_LIST;
+export const TECHNIQUE_SKILL_MOMENTUM_CONSUME_MODE_LIST = MOMENTUM_CONSUME_MODE_LIST;
+export const TECHNIQUE_SKILL_MOMENTUM_BONUS_TYPE_LIST = MOMENTUM_BONUS_TYPE_LIST;
 
 export const TECHNIQUE_SKILL_UPGRADE_ALLOWED_CHANGE_KEYS = [
   'target_count',
@@ -134,6 +145,10 @@ const MARK_ID_SET = new Set<string>(TECHNIQUE_SKILL_MARK_ID_LIST);
 const MARK_OPERATION_SET = new Set<string>(TECHNIQUE_SKILL_MARK_OPERATION_LIST);
 const MARK_CONSUME_MODE_SET = new Set<string>(TECHNIQUE_SKILL_MARK_CONSUME_MODE_LIST);
 const MARK_RESULT_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_MARK_RESULT_TYPE_LIST);
+const MOMENTUM_ID_SET = new Set<string>(TECHNIQUE_SKILL_MOMENTUM_ID_LIST);
+const MOMENTUM_OPERATION_SET = new Set<string>(TECHNIQUE_SKILL_MOMENTUM_OPERATION_LIST);
+const MOMENTUM_CONSUME_MODE_SET = new Set<string>(TECHNIQUE_SKILL_MOMENTUM_CONSUME_MODE_LIST);
+const MOMENTUM_BONUS_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_MOMENTUM_BONUS_TYPE_LIST);
 const UPGRADE_ALLOWED_CHANGE_KEY_SET = new Set<string>(TECHNIQUE_SKILL_UPGRADE_ALLOWED_CHANGE_KEYS);
 
 const asString = (value: TechniqueJsonValue | undefined): string => {
@@ -383,6 +398,35 @@ export const validateTechniqueSkillEffect = (
         return validateValueExpression(effect);
       }
       return { success: true };
+    }
+
+    case 'momentum': {
+      const momentumIdValidation = validateOptionalEnumField('momentumId', effect.momentumId, MOMENTUM_ID_SET);
+      if (!momentumIdValidation.success) return momentumIdValidation;
+      if (effect.momentumId === undefined) {
+        return { success: false, reason: 'momentumId 缺失' };
+      }
+      const operationValidation = validateOptionalEnumField('operation', effect.operation, MOMENTUM_OPERATION_SET);
+      if (!operationValidation.success) return operationValidation;
+      if (effect.operation === undefined) {
+        return { success: false, reason: 'operation 缺失' };
+      }
+      const consumeModeValidation = validateOptionalEnumField('consumeMode', effect.consumeMode, MOMENTUM_CONSUME_MODE_SET);
+      if (!consumeModeValidation.success) return consumeModeValidation;
+      const bonusTypeValidation = validateOptionalEnumField('bonusType', effect.bonusType, MOMENTUM_BONUS_TYPE_SET);
+      if (!bonusTypeValidation.success) return bonusTypeValidation;
+
+      if (effect.operation === 'gain') {
+        if (effect.gainStacks === undefined) {
+          return { success: false, reason: 'gainStacks 缺失' };
+        }
+        return validateOptionalIntegerField('gainStacks', effect.gainStacks, 1, 99);
+      }
+
+      if (effect.bonusType === undefined) {
+        return { success: false, reason: 'bonusType 缺失' };
+      }
+      return validateRequiredNumberField('perStackRate', effect.perStackRate, 0, 5);
     }
 
     default:

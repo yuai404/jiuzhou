@@ -87,6 +87,7 @@ export const createUnit = (args: {
     shields: [],
     buffs: [],
     marks: [],
+    momentum: null,
     skills: [],
     skillCooldowns: {},
     setBonusEffects: args.setBonusEffects ?? [],

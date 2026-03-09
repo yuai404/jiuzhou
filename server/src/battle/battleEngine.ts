@@ -22,6 +22,7 @@ import { makeAIDecision, selectTargets } from './modules/ai.js';
 import { isFeared, isStunned } from './modules/control.js';
 import { triggerSetBonusEffects } from './modules/setBonus.js';
 import { decayUnitMarksAtRoundStart } from './modules/mark.js';
+import { decayUnitMomentumAtRoundEnd } from './modules/momentum.js';
 import {
   DEFAULT_PERCENT_BUFF_ATTR_SET,
   normalizeBuffApplyType,
@@ -424,6 +425,7 @@ export class BattleEngine {
         shields: [],
         buffs: [],
         marks: [],
+        momentum: null,
         skills: battleSkills,
         skillCooldowns: {},
         setBonusEffects: [],
@@ -567,6 +569,7 @@ export class BattleEngine {
       
       const buffLogs = processRoundEndBuffs(this.state, unit);
       this.state.logs.push(...buffLogs);
+      decayUnitMomentumAtRoundEnd(unit);
     }
     
     // 记录回合结束日志

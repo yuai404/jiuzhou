@@ -25,6 +25,12 @@ import { tryApplyControl, canUseSkill, isSilenced, isDisarmed } from './control.
 import { resolveTargets } from './target.js';
 import { triggerSetBonusEffects } from './setBonus.js';
 import { applyMarkStacks, consumeMarkStacks, resolveMarkEffectConfig } from './mark.js';
+import {
+  consumeMomentumStacks,
+  gainMomentumStacks,
+  resolveMomentumEffectConfig,
+  type MomentumBonusType,
+} from './momentum.js';
 import { applyReactiveTrueDamage, calculateReactiveDamageByRate } from './reactiveDamage.js';
 import { resolveSkillCostForResourceState } from '../../shared/skillCost.js';
 import {
@@ -58,6 +64,12 @@ type BuffRuntimeData = {
   reflectDamage?: ReflectDamageEffect;
 };
 
+type SkillExecutionContext = {
+  momentumBonusRateByType: Record<'damage' | 'heal' | 'shield' | 'resource', number>;
+  momentumGained: string[];
+  momentumConsumed: string[];
+};
+
 type BuffOrDebuffEffect = SkillEffect & { type: 'buff' | 'debuff' };
 
 function hasBuffRuntimeData(data: BuffRuntimeData): boolean {
@@ -67,6 +79,41 @@ function hasBuffRuntimeData(data: BuffRuntimeData): boolean {
     || data.reflectDamage
     || (Array.isArray(data.attrModifiers) && data.attrModifiers.length > 0)
   );
+}
+
+function createSkillExecutionContext(): SkillExecutionContext {
+  return {
+    momentumBonusRateByType: {
+      damage: 0,
+      heal: 0,
+      shield: 0,
+      resource: 0,
+    },
+    momentumGained: [],
+    momentumConsumed: [],
+  };
+}
+
+function applyContextBonus(value: number, bonusRate: number): number {
+  if (value === 0) return 0;
+  if (bonusRate <= 0) return Math.floor(value);
+  return Math.floor(value * (1 + bonusRate));
+}
+
+function addMomentumBonusToContext(
+  context: SkillExecutionContext,
+  bonusType: MomentumBonusType,
+  bonusRate: number,
+): void {
+  if (bonusRate <= 0) return;
+  if (bonusType === 'all') {
+    context.momentumBonusRateByType.damage += bonusRate;
+    context.momentumBonusRateByType.heal += bonusRate;
+    context.momentumBonusRateByType.shield += bonusRate;
+    context.momentumBonusRateByType.resource += bonusRate;
+    return;
+  }
+  context.momentumBonusRateByType[bonusType] += bonusRate;
 }
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
@@ -268,13 +315,15 @@ function executeDamageEffect(
   target: BattleUnit,
   skill: BattleSkill,
   effect: SkillEffect,
-  result: TargetResult
+  result: TargetResult,
+  context: SkillExecutionContext,
 ): DamageExecutionSummary {
   const damageType = resolveEffectDamageType(skill, effect);
   if (!damageType) return { attempted: false, landed: false };
 
   const hitCount = resolveDamageHitCount(effect);
-  const baseDamage = resolveDamageBaseValue(caster, target, effect, damageType);
+  const rawBaseDamage = resolveDamageBaseValue(caster, target, effect, damageType);
+  const baseDamage = applyContextBonus(rawBaseDamage, context.momentumBonusRateByType.damage);
   if (baseDamage <= 0) return { attempted: false, landed: false };
 
   let attempted = false;
@@ -402,6 +451,33 @@ function buildReflectDamageLogs(
   }, ...applied.extraLogs];
 }
 
+function processMomentumEffectsByOperation(
+  state: BattleState,
+  caster: BattleUnit,
+  skill: BattleSkill,
+  context: SkillExecutionContext,
+  operation: 'gain' | 'consume',
+): void {
+  for (const effect of skill.effects) {
+    if (effect.type !== 'momentum') continue;
+    const config = resolveMomentumEffectConfig({ ...effect });
+    if (!config || config.operation !== operation) continue;
+    if (typeof effect.chance === 'number' && !rollChance(state, effect.chance)) continue;
+
+    if (operation === 'consume') {
+      const consumed = consumeMomentumStacks(caster, config);
+      if (!consumed.consumed) continue;
+      addMomentumBonusToContext(context, consumed.bonusType, consumed.bonusRate);
+      context.momentumConsumed.push(consumed.text);
+      continue;
+    }
+
+    const gained = gainMomentumStacks(caster, config);
+    if (!gained.gained) continue;
+    context.momentumGained.push(gained.text);
+  }
+}
+
 /**
  * 执行技能
  */
@@ -459,6 +535,8 @@ export function executeSkill(
   if (targets.length === 0) {
     return { success: false, error: '没有有效目标' };
   }
+
+  const context = createSkillExecutionContext();
   
   // 先落主动作日志，再按触发时机追加触发日志，保证日志顺序符合战斗时序
   const targetResults: TargetResult[] = [];
@@ -475,10 +553,23 @@ export function executeSkill(
 
   const onSkillLogs = triggerSetBonusEffects(state, 'on_skill', caster);
   state.logs.push(...onSkillLogs);
+
+  processMomentumEffectsByOperation(state, caster, skill, context, 'consume');
   
   for (const target of targets) {
-    const result = executeSkillOnTarget(state, caster, target, skill);
+    const result = executeSkillOnTarget(state, caster, target, skill, context);
     targetResults.push(result);
+  }
+
+  processMomentumEffectsByOperation(state, caster, skill, context, 'gain');
+
+  if (targetResults.length > 0) {
+    if (context.momentumConsumed.length > 0) {
+      targetResults[0].momentumConsumed = [...context.momentumConsumed];
+    }
+    if (context.momentumGained.length > 0) {
+      targetResults[0].momentumGained = [...context.momentumGained];
+    }
   }
   
   return { success: true, log };
@@ -491,7 +582,8 @@ function executeSkillOnTarget(
   state: BattleState,
   caster: BattleUnit,
   target: BattleUnit,
-  skill: BattleSkill
+  skill: BattleSkill,
+  context: SkillExecutionContext,
 ): TargetResult {
   const result: TargetResult = {
     targetId: target.id,
@@ -512,7 +604,7 @@ function executeSkillOnTarget(
       continue;
     }
 
-    const summary = executeDamageEffect(state, caster, target, skill, effect, result);
+    const summary = executeDamageEffect(state, caster, target, skill, effect, result, context);
     attemptedDamage = attemptedDamage || summary.attempted;
     landedDamage = landedDamage || summary.landed;
   }
@@ -522,13 +614,13 @@ function executeSkillOnTarget(
 
   // 再处理非伤害技能效果
   for (const effect of skill.effects) {
-    if (effect.type === 'damage') continue;
+    if (effect.type === 'damage' || effect.type === 'momentum') continue;
     // 控制效果走独立命中流程，避免重复概率判定
     if (effect.type !== 'control' && typeof effect.chance === 'number' && !rollChance(state, effect.chance)) {
       continue;
     }
     
-    executeEffect(state, caster, target, skill, effect, result);
+    executeEffect(state, caster, target, skill, effect, result, context);
   }
   
   return result;
@@ -543,7 +635,8 @@ function executeEffect(
   target: BattleUnit,
   skill: BattleSkill,
   effect: SkillEffect,
-  result: TargetResult
+  result: TargetResult,
+  context: SkillExecutionContext,
 ): void {
   switch (effect.type) {
     case 'damage':
@@ -551,11 +644,11 @@ function executeEffect(
       break;
       
     case 'heal':
-      executeHealEffect(state, caster, target, effect, result);
+      executeHealEffect(state, caster, target, skill, effect, result, context);
       break;
       
     case 'shield':
-      executeShieldEffect(caster, target, skill, effect, result);
+      executeShieldEffect(caster, target, skill, effect, result, context);
       break;
       
     case 'buff':
@@ -568,11 +661,11 @@ function executeEffect(
       break;
       
     case 'resource':
-      executeResourceEffect(target, effect);
+      executeResourceEffect(target, effect, result, context);
       break;
 
     case 'restore_lingqi':
-      executeRestoreLingqiEffect(target, effect);
+      executeRestoreLingqiEffect(target, effect, result, context);
       break;
 
     case 'cleanse':
@@ -593,6 +686,9 @@ function executeEffect(
 
     case 'mark':
       executeMarkEffect(state, caster, target, skill, effect, result);
+      break;
+
+    case 'momentum':
       break;
   }
 }
@@ -697,17 +793,15 @@ function executeHealEffect(
   state: BattleState,
   caster: BattleUnit,
   target: BattleUnit,
+  skill: BattleSkill,
   effect: SkillEffect,
-  result: TargetResult
+  result: TargetResult,
+  context: SkillExecutionContext,
 ): void {
-  let healValue = effect.value || 0;
-  
-  if (effect.valueType === 'percent') {
-    healValue = Math.floor(target.currentAttrs.max_qixue * healValue);
-  } else if (effect.valueType === 'scale' && effect.scaleAttr && effect.scaleRate) {
-    const attrValue = (caster.currentAttrs as any)[effect.scaleAttr] || 0;
-    healValue = Math.floor(attrValue * effect.scaleRate);
-  }
+  let healValue = effect.valueType === 'percent'
+    ? Math.floor(target.currentAttrs.max_qixue * toFiniteNumber(effect.value, 0))
+    : resolveEffectValue(caster, skill, effect, 'fagong');
+  healValue = applyContextBonus(healValue, context.momentumBonusRateByType.heal);
   
   // 治疗加成
   const healBonus = Math.min(caster.currentAttrs.zhiliao, BATTLE_CONSTANTS.MAX_HEAL_BONUS);
@@ -737,9 +831,16 @@ function executeShieldEffect(
   target: BattleUnit,
   skill: BattleSkill,
   effect: SkillEffect,
-  result: TargetResult
+  result: TargetResult,
+  context: SkillExecutionContext,
 ): void {
-  const shieldValue = Math.max(1, resolveEffectValue(caster, skill, effect, 'max_qixue'));
+  const shieldValue = Math.max(
+    1,
+    applyContextBonus(
+      resolveEffectValue(caster, skill, effect, 'max_qixue'),
+      context.momentumBonusRateByType.shield,
+    ),
+  );
   const duration = Math.max(1, Math.floor(toFiniteNumber(effect.duration, 2)));
   
   addShield(target, {
@@ -908,11 +1009,20 @@ function executeControlEffect(
  */
 function executeRestoreLingqiEffect(
   target: BattleUnit,
-  effect: SkillEffect
+  effect: SkillEffect,
+  result: TargetResult,
+  context: SkillExecutionContext,
 ): void {
-  const value = Math.max(0, Math.floor(toFiniteNumber(effect.value, 0)));
+  const value = Math.max(
+    0,
+    applyContextBonus(
+      Math.floor(toFiniteNumber(effect.value, 0)),
+      context.momentumBonusRateByType.resource,
+    ),
+  );
   if (value <= 0) return;
   target.lingqi = Math.min(target.lingqi + value, target.currentAttrs.max_lingqi);
+  result.resources = [...(result.resources ?? []), { type: 'lingqi', amount: value }];
 }
 
 /**
@@ -920,20 +1030,25 @@ function executeRestoreLingqiEffect(
  */
 function executeResourceEffect(
   target: BattleUnit,
-  effect: SkillEffect
+  effect: SkillEffect,
+  result: TargetResult,
+  context: SkillExecutionContext,
 ): void {
-  const value = effect.value || 0;
+  const value = applyContextBonus(toFiniteNumber(effect.value, 0), context.momentumBonusRateByType.resource);
+  if (value === 0) return;
   
   if (effect.resourceType === 'lingqi') {
     target.lingqi = Math.min(
       target.lingqi + value,
       target.currentAttrs.max_lingqi
     );
+    result.resources = [...(result.resources ?? []), { type: 'lingqi', amount: Math.abs(Math.floor(value)) }];
   } else if (effect.resourceType === 'qixue') {
     target.qixue = Math.min(
       target.qixue + value,
       target.currentAttrs.max_qixue
     );
+    result.resources = [...(result.resources ?? []), { type: 'qixue', amount: Math.abs(Math.floor(value)) }];
   }
 }
 

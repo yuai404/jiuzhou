@@ -35,6 +35,18 @@ test('resource 效果应支持 ally 灵气回复机制', () => {
   assert.deepEqual(validation, { success: true });
 });
 
+test('momentum 效果应支持 gain 势机制', () => {
+  const validation = validateTechniqueSkillEffect({
+    type: 'momentum',
+    momentumId: 'battle_momentum',
+    operation: 'gain',
+    gainStacks: 1,
+    maxStacks: 5,
+  });
+
+  assert.deepEqual(validation, { success: true });
+});
+
 test('mark:consume 效果应支持引爆印记机制', () => {
   const effect: SkillEffect = {
     type: 'mark',
