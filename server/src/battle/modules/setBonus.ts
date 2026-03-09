@@ -17,6 +17,7 @@ import { addBuff, addShield } from './buff.js';
 import { applyDamage } from './damage.js';
 import { applyHealing } from './healing.js';
 import { applyMarkStacks, consumeMarkStacks, resolveMarkEffectConfig } from './mark.js';
+import { applyReactiveTrueDamage, calculateReactiveDamageByRate } from './reactiveDamage.js';
 import {
   convertRatingToPercent,
   getEffectiveLevelByRealm,
@@ -225,8 +226,7 @@ function applySetDamage(
    * - echo 设计为纯比例机制，不叠加 scale，避免与“固定值+比例”混合。
    */
   if (damageTypeRaw === 'reflect' || damageTypeRaw === 'echo') {
-    if (typeof sourceDamage !== 'number' || sourceDamage <= 0) return null;
-    damage += Math.floor(sourceDamage * normalizeRate(rawValue));
+    damage += calculateReactiveDamageByRate(sourceDamage ?? 0, normalizeRate(rawValue));
   } else {
     damage += Math.floor(rawValue);
   }
@@ -241,9 +241,39 @@ function applySetDamage(
   if (damage <= 0) return null;
 
   const damageType = normalizeDamageType(damageTypeRaw);
+  const reactiveDamageResult =
+    damageTypeRaw === 'reflect' || damageTypeRaw === 'echo'
+      ? applyReactiveTrueDamage(state, owner, target, damage)
+      : null;
+  const directDamageResult = reactiveDamageResult
+    ? null
+    : applyDirectSetDamage(state, owner, target, damage, damageType);
+  const finalDamageResult = reactiveDamageResult ?? directDamageResult;
+  if (!finalDamageResult) return null;
+
+  return {
+    targetResult: {
+      ...buildTargetResultBase(target),
+      hits: [finalDamageResult.hit],
+      damage: finalDamageResult.actualDamage,
+      shieldAbsorbed: finalDamageResult.shieldAbsorbed,
+    },
+    extraLogs: finalDamageResult.extraLogs,
+  };
+}
+
+function applyDirectSetDamage(
+  state: BattleState,
+  owner: BattleUnit,
+  target: BattleUnit,
+  damage: number,
+  damageType: 'physical' | 'magic' | 'true'
+) {
   const wasAlive = target.isAlive;
   const { actualDamage, shieldAbsorbed } = applyDamage(state, target, Math.max(1, damage), damageType);
-  owner.stats.damageDealt += Math.max(0, actualDamage);
+  const safeDamage = Math.max(0, actualDamage);
+  const safeShieldAbsorbed = Math.max(0, shieldAbsorbed);
+  owner.stats.damageDealt += safeDamage;
 
   const extraLogs: BattleLogEntry[] = [];
   if (wasAlive && !target.isAlive) {
@@ -258,23 +288,16 @@ function applySetDamage(
     });
   }
 
-  const safeDamage = Math.max(0, actualDamage);
-  const safeShieldAbsorbed = Math.max(0, shieldAbsorbed);
   return {
-    targetResult: {
-      ...buildTargetResultBase(target),
-      hits: [
-        {
-          index: 1,
-          damage: safeDamage,
-          isMiss: false,
-          isCrit: false,
-          isParry: false,
-          isElementBonus: false,
-          shieldAbsorbed: safeShieldAbsorbed,
-        },
-      ],
+    actualDamage: safeDamage,
+    shieldAbsorbed: safeShieldAbsorbed,
+    hit: {
+      index: 1,
       damage: safeDamage,
+      isMiss: false,
+      isCrit: false,
+      isParry: false,
+      isElementBonus: false,
       shieldAbsorbed: safeShieldAbsorbed,
     },
     extraLogs,

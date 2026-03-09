@@ -10,7 +10,9 @@ import type {
   AttrModifier,
   DotEffect,
   HotEffect,
+  ReflectDamageEffect,
   ActionLog,
+  BattleLogEntry,
   TargetHitResult,
   TargetResult
 } from '../types.js';
@@ -18,11 +20,12 @@ import { BATTLE_CONSTANTS } from '../types.js';
 import { rollChance } from '../utils/random.js';
 import { calculateDamage, applyDamage } from './damage.js';
 import { applyHealing, applyLifesteal } from './healing.js';
-import { addBuff, addShield, removeBuff } from './buff.js';
+import { addBuff, addShield, getUnitReflectDamageRate, removeBuff } from './buff.js';
 import { tryApplyControl, canUseSkill, isSilenced, isDisarmed } from './control.js';
 import { resolveTargets } from './target.js';
 import { triggerSetBonusEffects } from './setBonus.js';
 import { applyMarkStacks, consumeMarkStacks, resolveMarkEffectConfig } from './mark.js';
+import { applyReactiveTrueDamage, calculateReactiveDamageByRate } from './reactiveDamage.js';
 import { resolveSkillCostForResourceState } from '../../shared/skillCost.js';
 import {
   DEFAULT_PERCENT_BUFF_ATTR_SET,
@@ -52,12 +55,18 @@ type BuffRuntimeData = {
   attrModifiers?: AttrModifier[];
   dot?: DotEffect;
   hot?: HotEffect;
+  reflectDamage?: ReflectDamageEffect;
 };
 
 type BuffOrDebuffEffect = SkillEffect & { type: 'buff' | 'debuff' };
 
 function hasBuffRuntimeData(data: BuffRuntimeData): boolean {
-  return Boolean(data.dot || data.hot || (Array.isArray(data.attrModifiers) && data.attrModifiers.length > 0));
+  return Boolean(
+    data.dot
+    || data.hot
+    || data.reflectDamage
+    || (Array.isArray(data.attrModifiers) && data.attrModifiers.length > 0)
+  );
 }
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
@@ -89,6 +98,12 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 function resolveBurnTargetMaxQixueRate(effect: SkillEffect): number {
   const rate = toFiniteNumber(effect.bonusTargetMaxQixueRate, 0);
   return rate > 0 ? rate : 0;
+}
+
+function resolveReflectDamageEffect(effect: SkillEffect): ReflectDamageEffect | null {
+  const rate = toFiniteNumber(effect.value, 0);
+  if (rate <= 0) return null;
+  return { rate };
 }
 
 function getAttrValue(unit: BattleUnit, attrKey: string): number {
@@ -173,6 +188,11 @@ function buildBuffRuntimeData(
     return {
       attrModifiers: [{ attr: 'shanbi', value: 1 * stacks, mode: 'flat' }],
     };
+  }
+
+  if (buffKind === 'reflect_damage') {
+    const reflectDamage = resolveReflectDamageEffect(effect);
+    return reflectDamage ? { reflectDamage } : {};
   }
 
   if (buffKind !== 'attr') return {};
@@ -340,9 +360,46 @@ function executeDamageEffect(
       });
       state.logs.push(...onCritLogs);
     }
+
+    const reflectLogs = buildReflectDamageLogs(state, target, caster, actualDamage);
+    if (reflectLogs.length > 0) {
+      state.logs.push(...reflectLogs);
+    }
   }
 
   return { attempted, landed };
+}
+
+function buildReflectDamageLogs(
+  state: BattleState,
+  defender: BattleUnit,
+  attacker: BattleUnit,
+  actualDamage: number
+): BattleLogEntry[] {
+  if (actualDamage <= 0 || !attacker.isAlive) return [];
+
+  const reflectRate = getUnitReflectDamageRate(defender);
+  const reflectDamage = calculateReactiveDamageByRate(actualDamage, reflectRate);
+  if (reflectDamage <= 0) return [];
+
+  const applied = applyReactiveTrueDamage(state, defender, attacker, reflectDamage);
+  if (!applied) return [];
+
+  return [{
+    type: 'action',
+    round: state.roundCount,
+    actorId: defender.id,
+    actorName: defender.name,
+    skillId: `proc-${defender.id}-reflect-damage`,
+    skillName: '反弹伤害',
+    targets: [{
+      targetId: attacker.id,
+      targetName: attacker.name,
+      hits: [applied.hit],
+      damage: applied.actualDamage,
+      shieldAbsorbed: applied.shieldAbsorbed,
+    }],
+  }, ...applied.extraLogs];
 }
 
 /**
@@ -727,6 +784,7 @@ function executeBuffEffect(
     attrModifiers: runtimeData.attrModifiers,
     dot: runtimeData.dot,
     hot: runtimeData.hot,
+    reflectDamage: runtimeData.reflectDamage,
     tags: [],
     dispellable: true,
   }, duration, stacks);

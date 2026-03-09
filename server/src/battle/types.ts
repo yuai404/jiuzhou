@@ -174,6 +174,7 @@ export interface ActiveBuff {
   attrModifiers?: AttrModifier[];
   dot?: DotEffect;
   hot?: HotEffect;
+  reflectDamage?: ReflectDamageEffect;
   control?: string;
   
   tags: string[];
@@ -195,6 +196,10 @@ export interface DotEffect {
 
 export interface HotEffect {
   heal: number;
+}
+
+export interface ReflectDamageEffect {
+  rate: number;
 }
 
 // ============================================
@@ -252,7 +257,7 @@ export interface SkillEffect {
   scaleAttr?: string;
   scaleRate?: number;
   buffKey?: string;  // Buff唯一键（用于刷新/去重）
-  buffKind?: string; // 扩展型 Buff 类别（attr/dot/hot/dodge_next/...）
+  buffKind?: string; // 扩展型 Buff 类别（attr/dot/hot/dodge_next/reflect_damage/...）
   attrKey?: string;  // buffKind=attr 时的属性键
   applyType?: 'flat' | 'percent'; // buffKind=attr 时的叠加模式
   duration?: number;

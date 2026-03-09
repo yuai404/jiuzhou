@@ -2750,7 +2750,7 @@
       "id": "skill-taixi-huanzhou",
       "code": "xuanjia_shoushi",
       "name": "玄甲守势",
-      "description": "凝土成甲，建立稳定护盾并回补少量灵气。",
+      "description": "凝土成甲，建立稳定护盾并借反震之势回击来敌。",
       "icon": "/assets/skills/icon_skill_34.png",
       "source_type": "technique",
       "source_id": "tech-taixi-ningtai-jue",
@@ -2766,6 +2766,13 @@
           "scaleAttr": "max_qixue",
           "scaleRate": 0.1,
           "duration": 3
+        },
+        {
+          "type": "buff",
+          "duration": 3,
+          "value": 0.3,
+          "buffKey": "buff-reflect-damage",
+          "buffKind": "reflect_damage"
         },
         {
           "type": "restore_lingqi",
@@ -2787,6 +2794,13 @@
                 "scaleRate": 0.15,
                 "value": 65,
                 "duration": 3
+              },
+              {
+                "type": "buff",
+                "duration": 3,
+                "value": 0.45,
+                "buffKey": "buff-reflect-damage",
+                "buffKind": "reflect_damage"
               },
               {
                 "type": "restore_lingqi",

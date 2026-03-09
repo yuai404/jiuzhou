@@ -21,7 +21,7 @@
  * 2) attrKey 会做别名映射与连字符归一，避免配置同义词导致运行时键不一致。
  */
 
-export const STRUCTURED_BUFF_KIND_LIST = ['attr', 'dot', 'hot', 'dodge_next'] as const;
+export const STRUCTURED_BUFF_KIND_LIST = ['attr', 'dot', 'hot', 'dodge_next', 'reflect_damage'] as const;
 export type SupportedBuffKind = typeof STRUCTURED_BUFF_KIND_LIST[number];
 export type BuffKind = SupportedBuffKind | (string & {});
 

@@ -246,6 +246,11 @@ const buildTechniquePromptBuffConfigRules = () => {
         optional: ['stacks'],
         notes: ['下一次闪避强化模板'],
       },
+      reflect_damage: {
+        required: ['value'],
+        optional: [],
+        notes: ['受击后按本次实际受击伤害的比例反弹真伤，value 使用 0~1 浮点比例'],
+      },
     },
   } as const;
 };

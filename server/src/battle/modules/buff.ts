@@ -9,6 +9,7 @@ import type {
   ActiveBuff, 
   DotEffect,
   HotEffect,
+  ReflectDamageEffect,
   Shield,
   BattleLogEntry 
 } from '../types.js';
@@ -47,6 +48,7 @@ export function addBuff(
     existing.attrModifiers = buff.attrModifiers;
     existing.dot = buff.dot;
     existing.hot = buff.hot;
+    existing.reflectDamage = buff.reflectDamage;
     existing.control = buff.control;
     existing.tags = [...buff.tags];
     existing.dispellable = buff.dispellable;
@@ -237,6 +239,27 @@ function calculateHotHeal(hot: HotEffect, target: BattleUnit): number {
   heal *= (1 - healReduction);
   
   return Math.floor(Math.max(1, heal));
+}
+
+export function getUnitReflectDamageRate(unit: BattleUnit): number {
+  let totalRate = 0;
+
+  for (const buff of unit.buffs) {
+    const reflectDamage = buff.reflectDamage;
+    if (!reflectDamage) continue;
+
+    const rate = resolveReflectDamageRate(reflectDamage, buff.stacks);
+    if (rate <= 0) continue;
+    totalRate += rate;
+  }
+
+  return totalRate;
+}
+
+function resolveReflectDamageRate(reflectDamage: ReflectDamageEffect, stacks: number): number {
+  if (!Number.isFinite(reflectDamage.rate) || reflectDamage.rate <= 0) return 0;
+  const safeStacks = Math.max(1, Math.floor(stacks));
+  return reflectDamage.rate * safeStacks;
 }
 
 /**

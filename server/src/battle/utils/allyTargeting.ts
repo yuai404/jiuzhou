@@ -163,6 +163,7 @@ function resolveBuffIntent(effect: SkillEffect): BuffIntent {
   const buffKind = normalizeBuffKind(effect.buffKind);
   if (buffKind === 'hot') return 'healing';
   if (buffKind === 'dodge_next') return 'defense';
+  if (buffKind === 'reflect_damage') return 'defense';
   if (buffKind !== 'attr') return 'generic';
 
   const attrKey = normalizeBuffAttrKey(effect.attrKey);
