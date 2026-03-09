@@ -38,7 +38,9 @@ export type GeneratedSkillDefLite = {
   source_type: string;
   source_id?: string | null;
   cost_lingqi?: number;
+  cost_lingqi_rate?: number;
   cost_qixue?: number;
+  cost_qixue_rate?: number;
   cooldown?: number;
   target_type: string;
   target_count?: number;
@@ -152,7 +154,9 @@ export const reloadGeneratedTechniqueConfigStore = async (): Promise<void> => {
             s.source_type,
             s.source_id,
             s.cost_lingqi,
+            s.cost_lingqi_rate,
             s.cost_qixue,
+            s.cost_qixue_rate,
             s.cooldown,
             s.target_type,
             s.target_count,
@@ -235,7 +239,9 @@ export const reloadGeneratedTechniqueConfigStore = async (): Promise<void> => {
         source_type: asString(row.source_type) || 'technique',
         source_id: asString(row.source_id) || null,
         cost_lingqi: Math.max(0, Math.floor(asNumber(row.cost_lingqi, 0))),
+        cost_lingqi_rate: Math.max(0, asNumber(row.cost_lingqi_rate, 0)),
         cost_qixue: Math.max(0, Math.floor(asNumber(row.cost_qixue, 0))),
+        cost_qixue_rate: Math.max(0, asNumber(row.cost_qixue_rate, 0)),
         cooldown: Math.max(0, Math.floor(asNumber(row.cooldown, 0))),
         target_type: asString(row.target_type) || 'single_enemy',
         target_count: Math.max(1, Math.floor(asNumber(row.target_count, 1))),

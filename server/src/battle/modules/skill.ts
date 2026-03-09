@@ -23,6 +23,7 @@ import { tryApplyControl, canUseSkill, isSilenced, isDisarmed } from './control.
 import { resolveTargets } from './target.js';
 import { triggerSetBonusEffects } from './setBonus.js';
 import { applyMarkStacks, consumeMarkStacks, resolveMarkEffectConfig } from './mark.js';
+import { resolveSkillCostForResourceState } from '../../shared/skillCost.js';
 import {
   DEFAULT_PERCENT_BUFF_ATTR_SET,
   normalizeBuffApplyType,
@@ -37,6 +38,13 @@ interface SkillExecutionResult {
   log?: ActionLog;
   error?: string;
 }
+
+const resolveCasterSkillCost = (caster: BattleUnit, skill: BattleSkill) => {
+  return resolveSkillCostForResourceState(skill.cost, {
+    maxLingqi: caster.currentAttrs.max_lingqi,
+    maxQixue: caster.currentAttrs.max_qixue,
+  });
+};
 
 const PERCENT_BUFF_ATTR_SET = DEFAULT_PERCENT_BUFF_ATTR_SET;
 
@@ -366,19 +374,20 @@ export function executeSkill(
   }
   
   // 检查消耗
-  if (skill.cost.lingqi && caster.lingqi < skill.cost.lingqi) {
+  const cost = resolveCasterSkillCost(caster, skill);
+  if (cost.totalLingqi > 0 && caster.lingqi < cost.totalLingqi) {
     return { success: false, error: '灵气不足' };
   }
-  if (skill.cost.qixue && caster.qixue <= skill.cost.qixue) {
+  if (cost.totalQixue > 0 && caster.qixue <= cost.totalQixue) {
     return { success: false, error: '气血不足' };
   }
   
   // 扣除消耗
-  if (skill.cost.lingqi) {
-    caster.lingqi -= skill.cost.lingqi;
+  if (cost.totalLingqi > 0) {
+    caster.lingqi -= cost.totalLingqi;
   }
-  if (skill.cost.qixue) {
-    caster.qixue -= skill.cost.qixue;
+  if (cost.totalQixue > 0) {
+    caster.qixue -= cost.totalQixue;
   }
   
   // 设置冷却
@@ -908,8 +917,9 @@ export function getAvailableSkills(unit: BattleUnit): BattleSkill[] {
     if ((unit.skillCooldowns[skill.id] || 0) > 0) return false;
     
     // 检查消耗
-    if (skill.cost.lingqi && unit.lingqi < skill.cost.lingqi) return false;
-    if (skill.cost.qixue && unit.qixue <= skill.cost.qixue) return false;
+    const cost = resolveCasterSkillCost(unit, skill);
+    if (cost.totalLingqi > 0 && unit.lingqi < cost.totalLingqi) return false;
+    if (cost.totalQixue > 0 && unit.qixue <= cost.totalQixue) return false;
     
     // 检查触发类型
     if (skill.triggerType !== 'active') return false;

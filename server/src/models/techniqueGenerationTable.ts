@@ -85,6 +85,19 @@ const techniqueGenerationJobCompatibleColumns: readonly CompatibleColumnDefiniti
   },
 ];
 
+const generatedSkillDefCompatibleColumns: readonly CompatibleColumnDefinition[] = [
+  {
+    name: 'cost_lingqi_rate',
+    definition: 'cost_lingqi_rate NUMERIC(8,4) NOT NULL DEFAULT 0',
+    comment: '按最大灵气比例消耗（0.1=10%）',
+  },
+  {
+    name: 'cost_qixue_rate',
+    definition: 'cost_qixue_rate NUMERIC(8,4) NOT NULL DEFAULT 0',
+    comment: '按最大气血比例消耗（0.1=10%）',
+  },
+];
+
 const characterResearchPointsTableSQL = `
 CREATE TABLE IF NOT EXISTS character_research_points (
   character_id BIGINT PRIMARY KEY REFERENCES characters(id) ON DELETE CASCADE,
@@ -163,7 +176,9 @@ CREATE TABLE IF NOT EXISTS generated_skill_def (
   description TEXT,
   icon VARCHAR(255),
   cost_lingqi INTEGER NOT NULL DEFAULT 0,
+  cost_lingqi_rate NUMERIC(8,4) NOT NULL DEFAULT 0,
   cost_qixue INTEGER NOT NULL DEFAULT 0,
+  cost_qixue_rate NUMERIC(8,4) NOT NULL DEFAULT 0,
   cooldown INTEGER NOT NULL DEFAULT 0,
   target_type VARCHAR(32) NOT NULL,
   target_count INTEGER NOT NULL DEFAULT 1,
@@ -299,6 +314,14 @@ export const getTechniqueGenerationCompatibilityQueries = (): string[] => [
     generatedTechniqueDefCompatibleColumns,
   ),
   ...generatedTechniqueDefIndexQueries,
+  ...buildCompatibleColumnMigrationQueries(
+    'generated_skill_def',
+    generatedSkillDefCompatibleColumns,
+  ),
+  ...buildCompatibleColumnCommentQueries(
+    'generated_skill_def',
+    generatedSkillDefCompatibleColumns,
+  ),
   ...buildCompatibleColumnMigrationQueries(
     'technique_generation_job',
     techniqueGenerationJobCompatibleColumns,

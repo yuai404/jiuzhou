@@ -24,7 +24,7 @@ import {
 } from "../characterComputedService.js";
 import { normalizeRealmKeepingUnknown } from "../shared/realmRules.js";
 import { attachSetBonusEffectsToCharacterData } from "./shared/effects.js";
-import { getCharacterBattleSkillData } from "./shared/skills.js";
+import { getCharacterBattleSkillData, toBattleSkill } from "./shared/skills.js";
 
 export async function buildCharacterBattleSnapshot(
   characterId: number,
@@ -75,24 +75,7 @@ export async function buildCharacterBattleSnapshot(
     element: characterData.attribute_element,
   };
 
-  const skills: BattleSkill[] = skillDataList.map((data) => ({
-    id: data.id,
-    name: data.name,
-    source: "innate" as const,
-    cost: {
-      lingqi: data.cost_lingqi || 0,
-      qixue: data.cost_qixue || 0,
-    },
-    cooldown: data.cooldown || 0,
-    targetType: (data.target_type ||
-      "single_enemy") as BattleSkill["targetType"],
-    targetCount: data.target_count || 1,
-    damageType: data.damage_type as BattleSkill["damageType"],
-    element: data.element || "none",
-    effects: data.effects || [],
-    triggerType: "active" as const,
-    aiPriority: data.ai_priority || 50,
-  }));
+  const skills: BattleSkill[] = skillDataList.map((data) => toBattleSkill(data));
 
   return {
     baseAttrs,

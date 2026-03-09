@@ -4,6 +4,7 @@
  */
 
 import type { BattleState, BattleUnit, BattleSkill, BattleAttrs } from '../types.js';
+import { resolveSkillCostForResourceState } from '../../shared/skillCost.js';
 
 interface ValidationResult {
   valid: boolean;
@@ -145,12 +146,16 @@ export function validateSkillUse(
   }
   
   // 检查消耗
-  if (skill.cost.lingqi && unit.lingqi < skill.cost.lingqi) {
-    return { valid: false, error: `灵气不足: 需要${skill.cost.lingqi}，当前${unit.lingqi}` };
+  const cost = resolveSkillCostForResourceState(skill.cost, {
+    maxLingqi: unit.currentAttrs.max_lingqi,
+    maxQixue: unit.currentAttrs.max_qixue,
+  });
+  if (cost.totalLingqi > 0 && unit.lingqi < cost.totalLingqi) {
+    return { valid: false, error: `灵气不足: 需要${cost.totalLingqi}，当前${unit.lingqi}` };
   }
   
-  if (skill.cost.qixue && unit.qixue <= skill.cost.qixue) {
-    return { valid: false, error: `气血不足: 需要${skill.cost.qixue}，当前${unit.qixue}` };
+  if (cost.totalQixue > 0 && unit.qixue <= cost.totalQixue) {
+    return { valid: false, error: `气血不足: 需要高于${cost.totalQixue}，当前${unit.qixue}` };
   }
   
   // 检查目标合法性

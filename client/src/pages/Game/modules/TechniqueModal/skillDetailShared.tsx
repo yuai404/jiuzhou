@@ -19,6 +19,7 @@
  */
 import type { ReactNode } from 'react';
 import type { TechniqueResearchJobDto } from '../../../../services/api';
+import { buildSkillCostEntries, normalizeSkillCost } from '../../shared/skillCost';
 import {
   formatDamageTypeLabel,
   formatElementLabel,
@@ -31,7 +32,9 @@ export type TechniqueSkillDetailLike = {
   icon: string;
   description?: string;
   cost_lingqi?: number;
+  cost_lingqi_rate?: number;
   cost_qixue?: number;
+  cost_qixue_rate?: number;
   cooldown?: number;
   target_type?: string;
   target_count?: number;
@@ -91,7 +94,9 @@ export const mapResearchPreviewSkillToDetail = (skill: TechniqueResearchPreviewS
   icon: skill.icon || '',
   description: skill.description || undefined,
   cost_lingqi: skill.costLingqi || undefined,
+  cost_lingqi_rate: skill.costLingqiRate || undefined,
   cost_qixue: skill.costQixue || undefined,
+  cost_qixue_rate: skill.costQixueRate || undefined,
   cooldown: skill.cooldown || undefined,
   target_type: skill.targetType || undefined,
   target_count: skill.targetCount || undefined,
@@ -102,16 +107,19 @@ export const mapResearchPreviewSkillToDetail = (skill: TechniqueResearchPreviewS
 
 export const getSkillDetailItems = (skill: TechniqueSkillDetailLike): SkillDetailItem[] => {
   const items: SkillDetailItem[] = [];
+  const costEntries = buildSkillCostEntries(normalizeSkillCost({
+    costLingqi: skill.cost_lingqi,
+    costLingqiRate: skill.cost_lingqi_rate,
+    costQixue: skill.cost_qixue,
+    costQixueRate: skill.cost_qixue_rate,
+  }));
 
   if (skill.description) {
     items.push({ label: '描述', value: skill.description });
   }
-  if (skill.cost_lingqi && skill.cost_lingqi > 0) {
-    items.push({ label: '灵气消耗', value: String(skill.cost_lingqi) });
-  }
-  if (skill.cost_qixue && skill.cost_qixue > 0) {
-    items.push({ label: '气血消耗', value: String(skill.cost_qixue) });
-  }
+  costEntries.forEach((entry) => {
+    items.push({ label: `${entry.label}消耗`, value: entry.value });
+  });
   if (skill.cooldown && skill.cooldown > 0) {
     items.push({ label: '冷却回合', value: `${skill.cooldown}回合` });
   }
@@ -135,8 +143,14 @@ export const getSkillDetailItems = (skill: TechniqueSkillDetailLike): SkillDetai
 
 export const getSkillCardSections = (skill: TechniqueSkillDetailLike): SkillCardSection => {
   const metaItems: SkillCardSection['metaItems'] = [];
-  if (skill.cost_lingqi && skill.cost_lingqi > 0) metaItems.push({ label: '灵气', value: String(skill.cost_lingqi) });
-  if (skill.cost_qixue && skill.cost_qixue > 0) metaItems.push({ label: '气血', value: String(skill.cost_qixue) });
+  buildSkillCostEntries(normalizeSkillCost({
+    costLingqi: skill.cost_lingqi,
+    costLingqiRate: skill.cost_lingqi_rate,
+    costQixue: skill.cost_qixue,
+    costQixueRate: skill.cost_qixue_rate,
+  })).forEach((entry) => {
+    metaItems.push({ label: entry.label, value: entry.value });
+  });
   if (skill.cooldown && skill.cooldown > 0) metaItems.push({ label: '冷却', value: `${skill.cooldown}回合` });
 
   const gridItems: SkillCardSection['gridItems'] = [];

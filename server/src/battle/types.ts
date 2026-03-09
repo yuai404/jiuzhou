@@ -2,6 +2,8 @@
  * 九州修仙录 - 战斗系统类型定义
  */
 
+import type { SkillCostValue } from '../shared/skillCost.js';
+
 // ============================================
 // 怪物AI配置
 // ============================================
@@ -204,7 +206,7 @@ export interface BattleSkill {
   source: 'innate' | 'technique' | 'equipment' | 'item';
   sourceId?: string;
   
-  cost: SkillCost;
+  cost: SkillCostValue;
   cooldown: number;
   
   targetType: SkillTargetType;
@@ -218,11 +220,6 @@ export interface BattleSkill {
   
   triggerType: 'active' | 'passive' | 'counter' | 'chase';
   aiPriority: number;
-}
-
-interface SkillCost {
-  lingqi?: number;
-  qixue?: number;
 }
 
 type SkillTargetType = 

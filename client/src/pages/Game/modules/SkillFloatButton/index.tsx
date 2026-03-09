@@ -4,6 +4,7 @@ import { getCharacterTechniqueStatus, resolveAssetUrl, type CharacterSkillSlotDt
 import { resolveIconUrl } from '../../shared/resolveIcon';
 import { gameSocket } from '../../../../services/gameSocket';
 import { readIsMobileViewport } from '../../shared/responsive';
+import { buildSkillCostEntries, normalizeSkillCost, resolveSkillCostRequirement } from '../../shared/skillCost';
 import { formatSkillEffectLines } from '../skillEffectFormatter';
 import './index.scss';
 
@@ -15,7 +16,9 @@ type SkillItem = {
   icon: string;
   equipped: boolean;
   costLingqi: number;
+  costLingqiRate: number;
   costQixue: number;
+  costQixueRate: number;
   description: string | null;
   targetType: string;
   targetCount: number;
@@ -38,6 +41,10 @@ type BattleUnitWithCooldownDto = {
   id?: unknown;
   lingqi?: unknown;
   qixue?: unknown;
+  currentAttrs?: {
+    max_lingqi?: unknown;
+    max_qixue?: unknown;
+  };
   skillCooldowns?: SkillCooldownMapDto;
   buffs?: unknown;
 };
@@ -72,6 +79,8 @@ type SkillControlState = {
 type SkillResourceState = {
   lingqi: number;
   qixue: number;
+  maxLingqi: number;
+  maxQixue: number;
 };
 
 type SkillAvailabilityReason =
@@ -135,18 +144,27 @@ const resolveSkillAvailability = (
       message: '被缴械中，无法释放物理技能',
     };
   }
-  if (skill.costLingqi > 0 && resourceState.lingqi < skill.costLingqi) {
+  const resolvedCost = resolveSkillCostRequirement(
+    normalizeSkillCost({
+      costLingqi: skill.costLingqi,
+      costLingqiRate: skill.costLingqiRate,
+      costQixue: skill.costQixue,
+      costQixueRate: skill.costQixueRate,
+    }),
+    resourceState,
+  );
+  if (resolvedCost.totalLingqi > 0 && resourceState.lingqi < resolvedCost.totalLingqi) {
     return {
       available: false,
       reason: 'insufficient_lingqi',
-      message: `灵气不足：需要${skill.costLingqi}，当前${resourceState.lingqi}`,
+      message: `灵气不足：需要${resolvedCost.totalLingqi}，当前${resourceState.lingqi}`,
     };
   }
-  if (skill.costQixue > 0 && resourceState.qixue <= skill.costQixue) {
+  if (resolvedCost.totalQixue > 0 && resourceState.qixue <= resolvedCost.totalQixue) {
     return {
       available: false,
       reason: 'insufficient_qixue',
-      message: `气血不足：需要高于${skill.costQixue}，当前${resourceState.qixue}`,
+      message: `气血不足：需要高于${resolvedCost.totalQixue}，当前${resourceState.qixue}`,
     };
   }
   return {
@@ -160,7 +178,9 @@ type AvailableSkillDto = {
   skillId: string;
   cooldown: number;
   costLingqi?: number;
+  costLingqiRate?: number;
   costQixue?: number;
+  costQixueRate?: number;
   description?: string | null;
   targetType?: string;
   targetCount?: number;
@@ -220,13 +240,15 @@ const buildSkillItems = (
       .map((s) => [String(s?.skillId ?? '').trim(), Math.max(0, Math.floor(Number(s?.cooldown) || 0))] as const)
       .filter((x) => Boolean(x[0])),
   );
-  const costBySkillId = new Map<string, { costLingqi: number; costQixue: number }>(
+  const costBySkillId = new Map<string, { costLingqi: number; costLingqiRate: number; costQixue: number; costQixueRate: number }>(
     (available ?? [])
       .map((s) => [
         String(s?.skillId ?? '').trim(),
         {
           costLingqi: Math.max(0, Math.floor(Number(s?.costLingqi) || 0)),
+          costLingqiRate: Math.max(0, Number(s?.costLingqiRate) || 0),
           costQixue: Math.max(0, Math.floor(Number(s?.costQixue) || 0)),
+          costQixueRate: Math.max(0, Number(s?.costQixueRate) || 0),
         },
       ] as const)
       .filter((x) => Boolean(x[0])),
@@ -266,7 +288,9 @@ const buildSkillItems = (
     icon: resolveSkillIcon('icon_skill_01.png'),
     equipped: true,
     costLingqi: 0,
+    costLingqiRate: 0,
     costQixue: 0,
+    costQixueRate: 0,
     description: null,
     targetType: 'single_enemy',
     targetCount: 1,
@@ -305,7 +329,9 @@ const buildSkillItems = (
       icon,
       equipped: true,
       costLingqi: cost?.costLingqi ?? 0,
+      costLingqiRate: cost?.costLingqiRate ?? 0,
       costQixue: cost?.costQixue ?? 0,
+      costQixueRate: cost?.costQixueRate ?? 0,
       description: info?.description ?? null,
       targetType: info?.targetType ?? (prevOne?.targetType ?? ''),
       targetCount: info?.targetCount ?? (prevOne?.targetCount ?? 1),
@@ -359,6 +385,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   const { message } = App.useApp();
   const initialLingqi = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.lingqi) || 0));
   const initialQixue = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.qixue) || 0));
+  const initialMaxLingqi = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.maxLingqi) || 0));
+  const initialMaxQixue = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.maxQixue) || 0));
   const [open, setOpen] = useState(false);
   const [characterId, setCharacterId] = useState<number | null>(() => gameSocket.getCharacter()?.id ?? null);
   const [skills, setSkills] = useState<SkillItem[]>(() => buildSkillItems([], [], []));
@@ -367,6 +395,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   const [skillResourceState, setSkillResourceState] = useState<SkillResourceState>({
     lingqi: initialLingqi,
     qixue: initialQixue,
+    maxLingqi: initialMaxLingqi,
+    maxQixue: initialMaxQixue,
   });
   const [controlState, setControlState] = useState<SkillControlState>(EMPTY_SKILL_CONTROL_STATE);
   const [localTurn, setLocalTurn] = useState(1);
@@ -389,6 +419,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   const skillsRef = useRef<SkillItem[]>(skills);
   const myLingqiRef = useRef<number>(initialLingqi);
   const myQixueRef = useRef<number>(initialQixue);
+  const myMaxLingqiRef = useRef<number>(initialMaxLingqi);
+  const myMaxQixueRef = useRef<number>(initialMaxQixue);
   const controlStateRef = useRef<SkillControlState>(EMPTY_SKILL_CONTROL_STATE);
   const lastAutoActionKeyRef = useRef<string | null>(null);
   const lastAutoAttemptKeyRef = useRef<string | null>(null);
@@ -426,12 +458,19 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       setCharacterId(c?.id ?? null);
       const nextLingqi = Math.max(0, Math.floor(Number(c?.lingqi) || 0));
       const nextQixue = Math.max(0, Math.floor(Number(c?.qixue) || 0));
+      const nextMaxLingqi = Math.max(0, Math.floor(Number(c?.maxLingqi) || 0));
+      const nextMaxQixue = Math.max(0, Math.floor(Number(c?.maxQixue) || 0));
       myLingqiRef.current = nextLingqi;
       myQixueRef.current = nextQixue;
+      myMaxLingqiRef.current = nextMaxLingqi;
+      myMaxQixueRef.current = nextMaxQixue;
       setSkillResourceState((prev) =>
-        prev.lingqi === nextLingqi && prev.qixue === nextQixue
+        prev.lingqi === nextLingqi
+        && prev.qixue === nextQixue
+        && prev.maxLingqi === nextMaxLingqi
+        && prev.maxQixue === nextMaxQixue
           ? prev
-          : { lingqi: nextLingqi, qixue: nextQixue },
+          : { lingqi: nextLingqi, qixue: nextQixue, maxLingqi: nextMaxLingqi, maxQixue: nextMaxQixue },
       );
     });
     return () => {
@@ -555,14 +594,21 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
 
       const nextLingqi = Number(myUnit?.lingqi) || 0;
       const nextQixue = Number(myUnit?.qixue) || 0;
+      const nextMaxLingqi = Number(myUnit.currentAttrs?.max_lingqi) || myMaxLingqiRef.current;
+      const nextMaxQixue = Number(myUnit.currentAttrs?.max_qixue) || myMaxQixueRef.current;
       const lingqiChanged = myLingqiRef.current !== nextLingqi;
       const qixueChanged = myQixueRef.current !== nextQixue;
       myLingqiRef.current = nextLingqi;
       myQixueRef.current = nextQixue;
+      myMaxLingqiRef.current = nextMaxLingqi;
+      myMaxQixueRef.current = nextMaxQixue;
       setSkillResourceState((prev) =>
-        prev.lingqi === nextLingqi && prev.qixue === nextQixue
+        prev.lingqi === nextLingqi
+        && prev.qixue === nextQixue
+        && prev.maxLingqi === nextMaxLingqi
+        && prev.maxQixue === nextMaxQixue
           ? prev
-          : { lingqi: nextLingqi, qixue: nextQixue },
+          : { lingqi: nextLingqi, qixue: nextQixue, maxLingqi: nextMaxLingqi, maxQixue: nextMaxQixue },
       );
 
       if (lingqiChanged || qixueChanged) {
@@ -646,7 +692,12 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       if (!target) return false;
       const skillAvailability = resolveSkillAvailability(
         target,
-        { lingqi: myLingqiRef.current, qixue: myQixueRef.current },
+        {
+          lingqi: myLingqiRef.current,
+          qixue: myQixueRef.current,
+          maxLingqi: myMaxLingqiRef.current,
+          maxQixue: myMaxQixueRef.current,
+        },
         controlStateRef.current,
       );
       if (!skillAvailability.available) {
@@ -731,7 +782,12 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       if (!autoRelease || !isBattleRunning || !isMyTurn || isCasting) return;
 
       const equipped = skillsRef.current.filter((s) => s.equipped);
-      const resourceState = { lingqi: myLingqiRef.current, qixue: myQixueRef.current };
+      const resourceState = {
+        lingqi: myLingqiRef.current,
+        qixue: myQixueRef.current,
+        maxLingqi: myMaxLingqiRef.current,
+        maxQixue: myMaxQixueRef.current,
+      };
       const currentControlState = controlStateRef.current;
       let ok = false;
       for (const s of equipped) {
@@ -849,7 +905,13 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
             damageType: s.damageType,
             element: s.element,
           });
-          const hasCost = s.costLingqi > 0 || s.costQixue > 0;
+          const costEntries = buildSkillCostEntries(normalizeSkillCost({
+            costLingqi: s.costLingqi,
+            costLingqiRate: s.costLingqiRate,
+            costQixue: s.costQixue,
+            costQixueRate: s.costQixueRate,
+          }));
+          const hasCost = costEntries.length > 0;
           const hasCooldown = s.cooldownTurns > 0;
           const elementLabel = formatElement(s.element);
           const hasElement = elementLabel !== '无';
@@ -862,8 +924,14 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
                   <div className="skill-fab-tooltip-row">
                     <span className="skill-fab-tooltip-label">消耗</span>
                     <span className="skill-fab-tooltip-value">
-                      {s.costLingqi > 0 && <span className="skill-fab-tooltip-chip is-lingqi">灵气 {s.costLingqi}</span>}
-                      {s.costQixue > 0 && <span className="skill-fab-tooltip-chip is-qixue">气血 {s.costQixue}</span>}
+                      {costEntries.map((entry) => (
+                        <span
+                          key={`${s.id}-${entry.key}`}
+                          className={`skill-fab-tooltip-chip ${entry.key === 'lingqi' ? 'is-lingqi' : 'is-qixue'}`}
+                        >
+                          {entry.label} {entry.value}
+                        </span>
+                      ))}
                     </span>
                   </div>
                 )}

@@ -86,7 +86,9 @@ export type TechniqueGenerationCandidate = {
     icon: string | null;
     sourceType: 'technique';
     costLingqi: number;
+    costLingqiRate: number;
     costQixue: number;
+    costQixueRate: number;
     cooldown: number;
     targetType: 'self' | 'single_enemy' | 'single_ally' | 'all_enemy' | 'all_ally' | 'random_enemy' | 'random_ally';
     targetCount: number;
@@ -124,7 +126,9 @@ export type TechniquePreview = {
     description: string;
     icon: string | null;
     costLingqi: number;
+    costLingqiRate: number;
     costQixue: number;
+    costQixueRate: number;
     cooldown: number;
     targetType: string;
     targetCount: number;
@@ -369,7 +373,9 @@ const toTechniquePreviewSkills = (raw: unknown): TechniquePreview['skills'] => {
       description: asString(row.description),
       icon: asString(row.icon) || null,
       costLingqi: Math.max(0, Math.floor(asNumber(row.costLingqi ?? row.cost_lingqi, 0))),
+      costLingqiRate: Math.max(0, asNumber(row.costLingqiRate ?? row.cost_lingqi_rate, 0)),
       costQixue: Math.max(0, Math.floor(asNumber(row.costQixue ?? row.cost_qixue, 0))),
+      costQixueRate: Math.max(0, asNumber(row.costQixueRate ?? row.cost_qixue_rate, 0)),
       cooldown: Math.max(0, Math.floor(asNumber(row.cooldown, 0))),
       targetType: asString(row.targetType ?? row.target_type),
       targetCount: Math.max(1, Math.floor(asNumber(row.targetCount ?? row.target_count, 1))),
@@ -508,6 +514,15 @@ const validateCandidate = (
     if (skill.costLingqi < 0 || skill.costLingqi > 80) {
       return { success: false, message: 'AI结果技能消耗越界', code: 'GENERATOR_INVALID' };
     }
+    if (skill.costLingqiRate < 0 || skill.costLingqiRate > 1) {
+      return { success: false, message: 'AI结果技能灵气比例消耗越界', code: 'GENERATOR_INVALID' };
+    }
+    if (skill.costQixue < 0 || skill.costQixue > 120) {
+      return { success: false, message: 'AI结果技能气血消耗越界', code: 'GENERATOR_INVALID' };
+    }
+    if (skill.costQixueRate < 0 || skill.costQixueRate >= 1) {
+      return { success: false, message: 'AI结果技能气血比例消耗越界', code: 'GENERATOR_INVALID' };
+    }
     if (skill.targetCount < 1 || skill.targetCount > 6) {
       return { success: false, message: 'AI结果技能目标数量越界', code: 'GENERATOR_INVALID' };
     }
@@ -584,7 +599,9 @@ const sanitizeCandidateFromModel = (raw: unknown, quality: TechniqueQuality): Te
       icon: typeof row.icon === 'string' ? row.icon : null,
       sourceType: 'technique' as const,
       costLingqi: Math.floor(clamp(asNumber(row.costLingqi, 10), 0, 80)),
+      costLingqiRate: clamp(asNumber(row.costLingqiRate, 0), 0, 1),
       costQixue: Math.floor(clamp(asNumber(row.costQixue, 0), 0, 120)),
+      costQixueRate: clamp(asNumber(row.costQixueRate, 0), 0, 0.95),
       cooldown: Math.floor(clamp(asNumber(row.cooldown, 1), 0, 6)),
       targetType: toTargetType(row.targetType),
       targetCount: Math.floor(clamp(asNumber(row.targetCount, 1), 1, 6)),
@@ -1047,7 +1064,9 @@ class TechniqueGenerationService {
                   'description', s.description,
                   'icon', s.icon,
                   'costLingqi', s.cost_lingqi,
+                  'costLingqiRate', s.cost_lingqi_rate,
                   'costQixue', s.cost_qixue,
+                  'costQixueRate', s.cost_qixue_rate,
                   'cooldown', s.cooldown,
                   'targetType', s.target_type,
                   'targetCount', s.target_count,
@@ -1327,7 +1346,9 @@ class TechniqueGenerationService {
             description,
             icon,
             cost_lingqi,
+            cost_lingqi_rate,
             cost_qixue,
+            cost_qixue_rate,
             cooldown,
             target_type,
             target_count,
@@ -1345,11 +1366,11 @@ class TechniqueGenerationService {
             $1, $2,
             'technique', $3,
             $4, $5, $6, $7,
-            $8, $9, $10,
-            $11, $12, $13,
-            $14, $15::jsonb,
-            $16, $17,
-            $18::jsonb,
+            $8, $9, $10, $11,
+            $12, $13, $14,
+            $15, $16, $17::jsonb,
+            $18, $19,
+            $20::jsonb,
             true, 1, NOW(), NOW()
           )
         `,
@@ -1362,7 +1383,9 @@ class TechniqueGenerationService {
           skill.description,
           skill.icon,
           skill.costLingqi,
+          skill.costLingqiRate,
           skill.costQixue,
+          skill.costQixueRate,
           skill.cooldown,
           skill.targetType,
           skill.targetCount,
@@ -1463,7 +1486,9 @@ class TechniqueGenerationService {
             description: skill.description,
             icon: skill.icon,
             costLingqi: skill.costLingqi,
+            costLingqiRate: skill.costLingqiRate,
             costQixue: skill.costQixue,
+            costQixueRate: skill.costQixueRate,
             cooldown: skill.cooldown,
             targetType: skill.targetType,
             targetCount: skill.targetCount,

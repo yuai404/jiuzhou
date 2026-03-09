@@ -11,7 +11,9 @@ const createPreviewSkill = (): NonNullable<TechniqueResearchJobDto['preview']>['
   description: '惊鸿步的第1式。',
   icon: '/assets/skills/icon_skill_01.png',
   costLingqi: 12,
+  costLingqiRate: 0.15,
   costQixue: 0,
+  costQixueRate: 0,
   cooldown: 1,
   targetType: 'single_enemy',
   targetCount: 1,
@@ -46,6 +48,7 @@ describe('skillDetailShared', () => {
       icon: '/assets/skills/icon_skill_01.png',
       description: '惊鸿步的第1式。',
       cost_lingqi: 12,
+      cost_lingqi_rate: 0.15,
       cooldown: 1,
       target_type: 'single_enemy',
       target_count: 1,
@@ -58,7 +61,7 @@ describe('skillDetailShared', () => {
     const sections = getSkillCardSections(mapResearchPreviewSkillToDetail(createPreviewSkill()));
 
     expect(sections.metaItems).toStrictEqual([
-      { label: '灵气', value: '12' },
+      { label: '灵气', value: '12 + 15%最大灵气' },
       { label: '冷却', value: '1回合' },
     ]);
 

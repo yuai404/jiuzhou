@@ -367,7 +367,9 @@ export type SkillDefConfig = {
   source_type: string;
   source_id?: string | null;
   cost_lingqi?: number;
+  cost_lingqi_rate?: number;
   cost_qixue?: number;
+  cost_qixue_rate?: number;
   cooldown?: number;
   target_type: string;
   target_count?: number;

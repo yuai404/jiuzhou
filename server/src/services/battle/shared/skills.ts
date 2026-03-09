@@ -29,6 +29,7 @@ import type { SkillData } from "../../../battle/battleFactory.js";
 import type { SkillDefConfig } from "../../staticConfigLoader.js";
 import { getSkillDefinitions } from "../../staticConfigLoader.js";
 import { characterTechniqueService } from "../../characterTechniqueService.js";
+import { normalizeSkillCost } from "../../../shared/skillCost.js";
 import {
   toNumber,
   toRecord,
@@ -76,11 +77,14 @@ export function cloneSkillEffectList(raw: unknown): SkillEffect[] {
 
 /** 静态配置行 -> 战斗用 SkillData */
 export function toBattleSkillData(row: SkillDefConfig): SkillData {
+  const cost = normalizeSkillCost(row);
   return {
     id: String(row.id),
     name: String(row.name || row.id),
-    cost_lingqi: Math.max(0, Math.floor(Number(row.cost_lingqi ?? 0) || 0)),
-    cost_qixue: Math.max(0, Math.floor(Number(row.cost_qixue ?? 0) || 0)),
+    cost_lingqi: cost.lingqi ?? 0,
+    cost_lingqi_rate: cost.lingqiRate ?? 0,
+    cost_qixue: cost.qixue ?? 0,
+    cost_qixue_rate: cost.qixueRate ?? 0,
     cooldown: Math.max(0, Math.floor(Number(row.cooldown ?? 0) || 0)),
     target_type: String(row.target_type || "single_enemy"),
     target_count: Math.max(1, Math.floor(Number(row.target_count ?? 1) || 1)),
@@ -99,7 +103,9 @@ export function toBattleSkill(skill: SkillData): BattleSkill {
     source: "innate",
     cost: {
       lingqi: skill.cost_lingqi,
+      lingqiRate: skill.cost_lingqi_rate,
       qixue: skill.cost_qixue,
+      qixueRate: skill.cost_qixue_rate,
     },
     cooldown: skill.cooldown,
     targetType: normalizeSkillTargetType(skill.target_type),
@@ -176,7 +182,9 @@ export function parseSkillUpgradeRules(raw: unknown): SkillUpgradeRule[] {
 export function applySkillUpgradeChanges(
   base: {
     cost_lingqi: number;
+    cost_lingqi_rate: number;
     cost_qixue: number;
+    cost_qixue_rate: number;
     cooldown: number;
     target_count: number;
     effects: unknown[];
@@ -203,10 +211,18 @@ export function applySkillUpgradeChanges(
       Math.floor(base.cost_lingqi + costLingqiDelta),
     );
   }
+  const costLingqiRateDelta = toNumber(changes.cost_lingqi_rate);
+  if (costLingqiRateDelta !== null) {
+    base.cost_lingqi_rate = Math.max(0, base.cost_lingqi_rate + costLingqiRateDelta);
+  }
 
   const costQixueDelta = toNumber(changes.cost_qixue);
   if (costQixueDelta !== null) {
     base.cost_qixue = Math.max(0, Math.floor(base.cost_qixue + costQixueDelta));
+  }
+  const costQixueRateDelta = toNumber(changes.cost_qixue_rate);
+  if (costQixueRateDelta !== null) {
+    base.cost_qixue_rate = Math.max(0, base.cost_qixue_rate + costQixueRateDelta);
   }
 
   const aiPriorityDelta = toNumber(changes.ai_priority);
@@ -281,7 +297,9 @@ export async function getCharacterBattleSkillData(
 
     const skillData = {
       cost_lingqi: Math.max(0, Math.floor(Number(row.cost_lingqi ?? 0) || 0)),
+      cost_lingqi_rate: Math.max(0, Number(row.cost_lingqi_rate ?? 0) || 0),
       cost_qixue: Math.max(0, Math.floor(Number(row.cost_qixue ?? 0) || 0)),
+      cost_qixue_rate: Math.max(0, Number(row.cost_qixue_rate ?? 0) || 0),
       cooldown: Math.max(0, Math.floor(Number(row.cooldown ?? 0) || 0)),
       target_count: Math.max(1, Math.floor(Number(row.target_count ?? 1) || 1)),
       effects: cloneSkillEffectList(
@@ -302,7 +320,9 @@ export async function getCharacterBattleSkillData(
       id: String(row.id),
       name: String(row.name || row.id),
       cost_lingqi: skillData.cost_lingqi,
+      cost_lingqi_rate: skillData.cost_lingqi_rate,
       cost_qixue: skillData.cost_qixue,
+      cost_qixue_rate: skillData.cost_qixue_rate,
       cooldown: skillData.cooldown,
       target_type: String(row.target_type || "single_enemy"),
       target_count: skillData.target_count,

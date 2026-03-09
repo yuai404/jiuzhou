@@ -203,7 +203,9 @@ export interface SkillData {
   id: string;
   name: string;
   cost_lingqi: number;
+  cost_lingqi_rate: number;
   cost_qixue: number;
+  cost_qixue_rate: number;
   cooldown: number;
   target_type: string;
   target_count: number;
@@ -492,7 +494,9 @@ function convertSkillData(data: SkillData): BattleSkill {
     source: 'innate',
     cost: {
       lingqi: data.cost_lingqi || 0,
+      lingqiRate: data.cost_lingqi_rate || 0,
       qixue: data.cost_qixue || 0,
+      qixueRate: data.cost_qixue_rate || 0,
     },
     cooldown: data.cooldown || 0,
     targetType: (data.target_type || 'single_enemy') as any,

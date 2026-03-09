@@ -46,7 +46,9 @@ export type SkillDefRow = {
   source_type: string;
   source_id: string | null;
   cost_lingqi: number;
+  cost_lingqi_rate: number;
   cost_qixue: number;
+  cost_qixue_rate: number;
   cooldown: number;
   target_type: string;
   target_count: number;
@@ -198,7 +200,9 @@ export const getSkillsByTechniqueId = async (techniqueId: string): Promise<Skill
       source_type: entry.source_type,
       source_id: entry.source_id ?? null,
       cost_lingqi: Number(entry.cost_lingqi ?? 0),
+      cost_lingqi_rate: Number(entry.cost_lingqi_rate ?? 0),
       cost_qixue: Number(entry.cost_qixue ?? 0),
+      cost_qixue_rate: Number(entry.cost_qixue_rate ?? 0),
       cooldown: Number(entry.cooldown ?? 0),
       target_type: entry.target_type,
       target_count: Number(entry.target_count ?? 1),

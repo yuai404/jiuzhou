@@ -45,7 +45,9 @@ export type SkillDefDto = {
   source_type: string;
   source_id: string | null;
   cost_lingqi: number;
+  cost_lingqi_rate: number;
   cost_qixue: number;
+  cost_qixue_rate: number;
   cooldown: number;
   target_type: string;
   target_count: number;
@@ -126,7 +128,9 @@ export interface CharacterTechniqueStatusResponse {
       // 完整技能数据
       description: string | null;
       costLingqi: number;
+      costLingqiRate: number;
       costQixue: number;
+      costQixueRate: number;
       cooldown: number;
       targetType: string;
       targetCount: number;
@@ -244,7 +248,9 @@ export type TechniqueResearchJobDto = {
       description: string;
       icon: string | null;
       costLingqi: number;
+      costLingqiRate: number;
       costQixue: number;
+      costQixueRate: number;
       cooldown: number;
       targetType: string;
       targetCount: number;

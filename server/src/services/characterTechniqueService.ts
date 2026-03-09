@@ -233,7 +233,9 @@ type AvailableSkillEntry = {
   skillIcon: string;
   description: string | null;
   costLingqi: number;
+  costLingqiRate: number;
   costQixue: number;
+  costQixueRate: number;
   cooldown: number;
   targetType: string;
   targetCount: number;
@@ -321,7 +323,9 @@ const loadAvailableSkillEntries = async (characterId: number): Promise<Available
         skillIcon: String(skillDef.icon || ''),
         description: typeof skillDef.description === 'string' ? skillDef.description : null,
         costLingqi: Number(skillDef.cost_lingqi ?? 0) || 0,
+        costLingqiRate: Number(skillDef.cost_lingqi_rate ?? 0) || 0,
         costQixue: Number(skillDef.cost_qixue ?? 0) || 0,
+        costQixueRate: Number(skillDef.cost_qixue_rate ?? 0) || 0,
         cooldown: Number(skillDef.cooldown ?? 0) || 0,
         targetType: String(skillDef.target_type || ''),
         targetCount: Number(skillDef.target_count ?? 1) || 1,
@@ -889,7 +893,9 @@ class CharacterTechniqueService {
     // 完整技能数据
     description: string | null;
     costLingqi: number;
+    costLingqiRate: number;
     costQixue: number;
+    costQixueRate: number;
     cooldown: number;
     targetType: string;
     targetCount: number;
@@ -905,7 +911,9 @@ class CharacterTechniqueService {
       techniqueName: row.techniqueName,
       description: row.description,
       costLingqi: row.costLingqi,
+      costLingqiRate: row.costLingqiRate,
       costQixue: row.costQixue,
+      costQixueRate: row.costQixueRate,
       cooldown: row.cooldown,
       targetType: row.targetType,
       targetCount: row.targetCount,
@@ -1174,7 +1182,9 @@ class CharacterTechniqueService {
       techniqueName: string;
       description: string | null;
       costLingqi: number;
+      costLingqiRate: number;
       costQixue: number;
+      costQixueRate: number;
       cooldown: number;
       targetType: string;
       targetCount: number;

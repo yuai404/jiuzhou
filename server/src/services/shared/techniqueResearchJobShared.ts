@@ -33,7 +33,9 @@ export type TechniqueResearchPreviewSkill = {
   description: string;
   icon: string | null;
   costLingqi: number;
+  costLingqiRate: number;
   costQixue: number;
+  costQixueRate: number;
   cooldown: number;
   targetType: string;
   targetCount: number;

@@ -54,7 +54,9 @@ type TechniqueSkill = {
   // 完整技能数据用于Tooltip显示
   description?: string;
   cost_lingqi?: number;
+  cost_lingqi_rate?: number;
   cost_qixue?: number;
+  cost_qixue_rate?: number;
   cooldown?: number;
   target_type?: string;
   target_count?: number;
@@ -349,7 +351,9 @@ const buildTechniqueView = (
           // 保存完整技能数据用于Tooltip
           description: def?.description ?? undefined,
           cost_lingqi: def?.cost_lingqi ?? undefined,
+          cost_lingqi_rate: def?.cost_lingqi_rate ?? undefined,
           cost_qixue: def?.cost_qixue ?? undefined,
+          cost_qixue_rate: def?.cost_qixue_rate ?? undefined,
           cooldown: def?.cooldown ?? undefined,
           target_type: def?.target_type ?? undefined,
           target_count: def?.target_count ?? undefined,
@@ -533,7 +537,9 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
           // 完整技能数据
           description: s.description ?? undefined,
           cost_lingqi: s.costLingqi ?? undefined,
+          cost_lingqi_rate: s.costLingqiRate ?? undefined,
           cost_qixue: s.costQixue ?? undefined,
+          cost_qixue_rate: s.costQixueRate ?? undefined,
           cooldown: s.cooldown ?? undefined,
           target_type: s.targetType ?? undefined,
           target_count: s.targetCount ?? undefined,

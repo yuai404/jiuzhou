@@ -39,7 +39,9 @@ const mapSkillToDetail = (skill: SkillDefDto): TechniqueSkillDetailLike => ({
   icon: skill.icon || '',
   description: skill.description || undefined,
   cost_lingqi: skill.cost_lingqi || undefined,
+  cost_lingqi_rate: skill.cost_lingqi_rate || undefined,
   cost_qixue: skill.cost_qixue || undefined,
+  cost_qixue_rate: skill.cost_qixue_rate || undefined,
   cooldown: skill.cooldown || undefined,
   target_type: skill.target_type || undefined,
   target_count: skill.target_count || undefined,
@@ -95,4 +97,3 @@ export const useTechniqueSkillDetails = ({
     error,
   };
 };
-
