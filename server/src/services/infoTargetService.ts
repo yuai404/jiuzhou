@@ -171,7 +171,7 @@ const PERCENT_ATTR_KEYS = new Set<string>([
 const formatPercent = (value: number): string => {
   const percent = value * 100;
   const fixed = Math.abs(percent - Math.round(percent)) < 1e-9 ? percent.toFixed(0) : percent.toFixed(2);
-  const trimmed = fixed.replace(/\.?0+$/, '') || '0';
+  const trimmed = fixed.includes('.') ? fixed.replace(/\.?0+$/, '') || '0' : fixed;
   return `${trimmed}%`;
 };
 

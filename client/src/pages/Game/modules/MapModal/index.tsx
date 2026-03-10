@@ -108,6 +108,12 @@ const MapModal: React.FC<MapModalProps> = ({ open, onClose, initialCategory, onE
   }, [open]);
 
   useEffect(() => {
+    if (open) return;
+    setDetailById({});
+    setDetailLoading(false);
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     let cancelled = false;
     setListLoading(true);

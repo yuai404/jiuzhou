@@ -69,7 +69,9 @@ CREATE TABLE IF NOT EXISTS partner_recruit_job (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+`;
 
+const partnerRecruitJobCommentAndIndexSQL = `
 COMMENT ON TABLE partner_recruit_job IS 'AI 伙伴招募任务表';
 COMMENT ON COLUMN partner_recruit_job.id IS '招募任务ID';
 COMMENT ON COLUMN partner_recruit_job.status IS '任务状态：pending/generated_draft/accepted/failed/refunded/discarded';
@@ -105,5 +107,6 @@ export const initPartnerRecruitTables = async (): Promise<void> => {
     ALTER TABLE partner_recruit_job
     ALTER COLUMN quality_rolled SET NOT NULL
   `);
+  await query(partnerRecruitJobCommentAndIndexSQL);
   console.log('✓ AI 伙伴招募表检测完成');
 };
