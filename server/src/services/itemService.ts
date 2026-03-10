@@ -24,6 +24,7 @@ import { lockCharacterInventoryMutex } from './inventoryMutex.js';
 import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { shouldValidateTechniqueLearnRealm } from './shared/techniqueLearnRule.js';
 import {
   applyCharacterResourceDeltaByCharacterId,
   getCharacterComputedByCharacterId,
@@ -579,7 +580,10 @@ class ItemService {
         }
   
         const requiredRealm = String(techniqueDef.required_realm || '').trim();
-        if (!isRealmSufficient(charRow.realm, requiredRealm, charRow.sub_realm)) {
+        if (
+          shouldValidateTechniqueLearnRealm({ effectType: 'learn_generated_technique', itemDefId }) &&
+          !isRealmSufficient(charRow.realm, requiredRealm, charRow.sub_realm)
+        ) {
           return { success: false, message: `境界不足，需要达到${requiredRealm}` };
         }
   

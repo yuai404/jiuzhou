@@ -9,6 +9,7 @@ import { updateAchievementProgress } from './achievementService.js';
 import { isCharacterInBattle } from './battle/index.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { shouldValidateTechniqueLearnRealm } from './shared/techniqueLearnRule.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
 import { getItemDefinitionById, getItemDefinitionsByIds, getSkillDefinitions, getTechniqueDefinitions, getTechniqueLayerDefinitions } from './staticConfigLoader.js';
 
@@ -532,7 +533,10 @@ class CharacterTechniqueService {
     const requiredRealm = typeof techniqueDef.required_realm === 'string' ? techniqueDef.required_realm.trim() : '';
     const currentRealm = charResult.rows[0].realm;
     const currentSubRealm = charResult.rows[0].sub_realm;
-    if (!isRealmSufficient(currentRealm, requiredRealm, currentSubRealm)) {
+    if (
+      shouldValidateTechniqueLearnRealm({ obtainedFrom }) &&
+      !isRealmSufficient(currentRealm, requiredRealm, currentSubRealm)
+    ) {
       return { success: false, message: `境界不足，需要达到${requiredRealm}` };
     }
 
