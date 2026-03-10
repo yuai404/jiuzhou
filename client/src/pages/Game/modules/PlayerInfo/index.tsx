@@ -1,9 +1,10 @@
-import { App, Button, Progress, Upload } from 'antd';
+import { App, Button, Progress, Tooltip, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import { UserOutlined, LoadingOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
 import { resolveAvatarUrl, getRealmOverview, uploadAvatar, addAttributePoint, removeAttributePoint, type RealmOverviewDto } from '../../../../services/api';
+import { CHARACTER_PRIMARY_ATTR_META_LIST } from '../../shared/characterPrimaryAttrMeta';
 import { formatPercent, formatRecovery } from '../../shared/formatAttr';
 import './index.scss';
 
@@ -338,16 +339,29 @@ const PlayerInfo: React.FC = () => {
         </div>
 
         <div className="base-rows">
-          {([
-            { key: 'jing' as const, label: '精' },
-            { key: 'qi' as const, label: '气' },
-            { key: 'shen' as const, label: '神' },
-          ]).map((row) => (
+          {CHARACTER_PRIMARY_ATTR_META_LIST.map((row) => (
             <div key={row.key} className="base-row">
-              <div className="base-left">
-                <span className="base-label">{row.label}</span>
-                <span className="base-value">{character[row.key]}</span>
-              </div>
+              <Tooltip
+                placement="topLeft"
+                title={(
+                  <div className="primary-attr-tooltip">
+                    <div className="primary-attr-tooltip-title">{row.label}</div>
+                    <div className="primary-attr-tooltip-summary">{row.summary}</div>
+                    <div className="primary-attr-tooltip-effects">
+                      {row.effects.map((effect) => (
+                        <div key={effect} className="primary-attr-tooltip-effect">
+                          {effect}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              >
+                <div className="base-left base-left--tooltip">
+                  <span className="base-label">{row.label}</span>
+                  <span className="base-value">{character[row.key]}</span>
+                </div>
+              </Tooltip>
               <div className="base-actions">
                 <Button
                   size="small"

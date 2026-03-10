@@ -306,6 +306,18 @@
   min-width: 0;
 }
 
+.base-left--tooltip {
+  cursor: help;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+}
+
 .base-label {
   font-size: 12px;
   font-weight: 700;
@@ -351,6 +363,38 @@
     > span { line-height: 1; }
     .anticon { font-size: 12px; }
   }
+}
+
+.primary-attr-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(260px, calc(100vw - 32px));
+}
+
+.primary-attr-tooltip-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: inherit;
+}
+
+.primary-attr-tooltip-summary {
+  font-size: 12px;
+  line-height: 1.5;
+  color: inherit;
+  opacity: 0.88;
+}
+
+.primary-attr-tooltip-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.primary-attr-tooltip-effect {
+  font-size: 12px;
+  line-height: 1.5;
+  color: inherit;
 }
 /* SCSS_APPEND_5 */
 
