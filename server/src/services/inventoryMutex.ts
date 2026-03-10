@@ -1,5 +1,5 @@
-import type { QueryResult } from 'pg';
-import { isInTransaction, query } from '../config/database.js';
+import type { PoolClient, QueryResult } from 'pg';
+import { getTransactionClient, isInTransaction, query } from '../config/database.js';
 
 /**
  * Inventory Mutex — 角色背包互斥锁工具
@@ -11,8 +11,10 @@ import { isInTransaction, query } from '../config/database.js';
  * 输入/输出：
  * - lockCharacterInventoryMutex(characterId)
  *   输入角色 ID，输出为 Promise<void>（成功即表示已拿到互斥锁）。
- *   内部使用 `query()` 自动走事务连接（调用方须处于事务上下文）。
- * - lockCharacterInventoryMutexes(characterIds)
+ *   内部从当前事务上下文提取连接并加锁，调用方须处于事务上下文。
+ * - lockCharacterInventoryMutexByClient(client, characterId)
+ *   输入显式事务连接与角色 ID，在已持有 client 的长调用链中避免重复依赖上下文推断。
+ * - lockCharacterInventoryMutexes(characterIds) / lockCharacterInventoryMutexesByClient(client, characterIds)
  *   输入角色 ID 列表，内部先去重排序后逐个加锁，输出 Promise<void>。
  *
  * 数据流/状态流：
@@ -29,6 +31,8 @@ const INVENTORY_MUTEX_NAMESPACE = 3101;
 const INVENTORY_MUTEX_RETRY_INTERVAL_MS = 50;
 const INVENTORY_MUTEX_MAX_WAIT_MS = 45000;
 
+type InventoryMutexQueryRunner = Pick<PoolClient, 'query'>;
+
 const normalizeCharacterIds = (characterIds: number[]): number[] =>
   [...new Set(characterIds)]
     .filter((id) => Number.isInteger(id) && id > 0)
@@ -42,32 +46,23 @@ const sleep = async (ms: number): Promise<void> => {
  * 尝试获取单个角色背包互斥锁（非阻塞）
  * 使用统一 query() 入口，自动走事务连接
  */
-const tryLockCharacterInventoryMutex = async (
+const tryLockCharacterInventoryMutexWithRunner = async (
+  runner: InventoryMutexQueryRunner,
   characterId: number
 ): Promise<boolean> => {
   const sql = 'SELECT pg_try_advisory_xact_lock($1::integer, $2::integer) AS locked';
   const params: [number, number] = [INVENTORY_MUTEX_NAMESPACE, characterId];
-  const result = await query(sql, params) as unknown as QueryResult<{ locked: boolean }>;
+  const result = await runner.query(sql, params) as QueryResult<{ locked: boolean }>;
   return result.rows[0]?.locked === true;
 };
 
-/**
- * 获取单个角色背包互斥锁（阻塞轮询直到成功或超时）
- * 使用统一 query() 入口，无需传入 client
- */
-export const lockCharacterInventoryMutex = async (
-  characterId: number
+const waitForCharacterInventoryMutexWithRunner = async (
+  runner: InventoryMutexQueryRunner,
+  characterId: number,
 ): Promise<void> => {
-  if (!Number.isInteger(characterId) || characterId <= 0) {
-    throw new Error(`角色背包互斥锁参数错误: characterId=${String(characterId)}`);
-  }
-  if (!isInTransaction()) {
-    throw new Error('角色背包互斥锁必须在事务上下文中获取，请通过 @Transactional 方法调用');
-  }
-
   const startAt = Date.now();
   while (true) {
-    const locked = await tryLockCharacterInventoryMutex(characterId);
+    const locked = await tryLockCharacterInventoryMutexWithRunner(runner, characterId);
     if (locked) return;
 
     const waitedMs = Date.now() - startAt;
@@ -82,13 +77,66 @@ export const lockCharacterInventoryMutex = async (
 };
 
 /**
+ * 获取单个角色背包互斥锁（阻塞轮询直到成功或超时）
+ * 使用统一 query() 入口，无需传入 client
+ */
+export const lockCharacterInventoryMutexByClient = async (
+  client: PoolClient,
+  characterId: number
+): Promise<void> => {
+  if (!Number.isInteger(characterId) || characterId <= 0) {
+    throw new Error(`角色背包互斥锁参数错误: characterId=${String(characterId)}`);
+  }
+  await waitForCharacterInventoryMutexWithRunner(client, characterId);
+};
+
+/**
+ * 获取单个角色背包互斥锁（从当前事务上下文自动提取连接）
+ */
+export const lockCharacterInventoryMutex = async (
+  characterId: number
+): Promise<void> => {
+  if (!Number.isInteger(characterId) || characterId <= 0) {
+    throw new Error(`角色背包互斥锁参数错误: characterId=${String(characterId)}`);
+  }
+  if (!isInTransaction()) {
+    throw new Error('角色背包互斥锁必须在事务上下文中获取，请通过 @Transactional 方法调用');
+  }
+  const client = getTransactionClient();
+  if (!client) {
+    throw new Error('角色背包互斥锁获取失败：事务连接不存在');
+  }
+  await lockCharacterInventoryMutexByClient(client, characterId);
+};
+
+/**
  * 获取多个角色背包互斥锁（按升序逐个加锁，避免死锁）
  */
-export const lockCharacterInventoryMutexes = async (
+export const lockCharacterInventoryMutexesByClient = async (
+  client: PoolClient,
   characterIds: number[]
 ): Promise<void> => {
   const ids = normalizeCharacterIds(characterIds);
   for (const characterId of ids) {
-    await lockCharacterInventoryMutex(characterId);
+    await lockCharacterInventoryMutexByClient(client, characterId);
+  }
+};
+
+/**
+ * 获取多个角色背包互斥锁（从当前事务上下文自动提取连接）
+ */
+export const lockCharacterInventoryMutexes = async (
+  characterIds: number[]
+): Promise<void> => {
+  if (!isInTransaction()) {
+    throw new Error('角色背包互斥锁必须在事务上下文中获取，请通过 @Transactional 方法调用');
+  }
+  const client = getTransactionClient();
+  if (!client) {
+    throw new Error('角色背包互斥锁获取失败：事务连接不存在');
+  }
+  const ids = normalizeCharacterIds(characterIds);
+  for (const characterId of ids) {
+    await lockCharacterInventoryMutexByClient(client, characterId);
   }
 };

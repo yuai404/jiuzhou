@@ -1,7 +1,7 @@
 import { query } from '../config/database.js';
 import { itemService } from './itemService.js';
 import type { PoolClient } from 'pg';
-import { ensureMainQuestProgressForNewChapters, updateSectionProgress } from './mainQuest/index.js';
+import { ensureMainQuestProgressForNewChapters, updateSectionProgress, updateSectionProgressBatch } from './mainQuest/index.js';
 import { updateAchievementProgress } from './achievementService.js';
 import { Transactional } from '../decorators/transactional.js';
 import {
@@ -993,8 +993,10 @@ export const recordGatherResourceEvent = async (characterId: number, resourceId:
 
   await applyTaskEvent(characterId, { type: 'gather_resource', resourceId: rid, count: c });
 
-  await updateSectionProgress(characterId, { type: 'gather_resource', resourceId: rid, count: c });
-  await updateSectionProgress(characterId, { type: 'collect', itemId: rid, count: c });
+  await updateSectionProgressBatch(characterId, [
+    { type: 'gather_resource', resourceId: rid, count: c },
+    { type: 'collect', itemId: rid, count: c },
+  ]);
 
   await updateAchievementProgress(characterId, `gather:resource:${rid}`, c);
   await updateAchievementProgress(characterId, `item:obtain:${rid}`, c);

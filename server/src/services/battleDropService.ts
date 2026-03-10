@@ -7,8 +7,8 @@
  * 3. 分发物品、装备给玩家（组队按战利品条目独立ROLL点分配）
  * 4. 装备通过装备生成模块生成
  */
-import { query } from '../config/database.js';
-import { Transactional } from '../decorators/transactional.js';
+import type { PoolClient } from 'pg';
+import { query, withTransactionAuto } from '../config/database.js';
 import { itemService, CreateItemOptions } from './itemService.js';
 import { sendSystemMail, type MailAttachItem } from './mailService.js';
 import { recordCollectItemEvent } from './taskService.js';
@@ -31,7 +31,7 @@ import {
   applyMonsterRealmDropQtyMultiplier,
   shouldApplyDropQuantityMultiplier,
 } from './shared/dropQuantityMultiplier.js';
-import { lockCharacterInventoryMutexes } from './inventoryMutex.js';
+import { lockCharacterInventoryMutexesByClient } from './inventoryMutex.js';
 import {
   addCharacterRewardDelta,
   applyCharacterRewardDeltas,
@@ -369,8 +369,19 @@ class BattleDropService {
    * @param participants 参与战斗的玩家列表
    * @param isVictory 是否胜利
    */
-  @Transactional
   async distributeBattleRewards(
+    monsters: MonsterData[],
+    participants: BattleParticipant[],
+    isVictory: boolean,
+    options: DistributeBattleRewardsOptions = {}
+  ): Promise<DistributeResult> {
+    return withTransactionAuto((client) =>
+      this.distributeBattleRewardsInTransaction(client, monsters, participants, isVictory, options),
+    );
+  }
+
+  private async distributeBattleRewardsInTransaction(
+    client: PoolClient,
     monsters: MonsterData[],
     participants: BattleParticipant[],
     isVictory: boolean,
@@ -540,7 +551,7 @@ class BattleDropService {
     if (requiresInventoryMutation && participantCharacterIds.length > 0) {
       // 这里只拿背包互斥锁，不提前锁 characters。
       // 角色资源改为在所有入包完成后统一落库，避免“先 characters 行锁、后背包锁”的反向等待。
-      await lockCharacterInventoryMutexes(participantCharacterIds);
+      await lockCharacterInventoryMutexesByClient(client, participantCharacterIds);
     }
     
     // 3. 先汇总经验和银两，等所有入包流程结束后再统一写回，缩短 characters 行锁持有时长。

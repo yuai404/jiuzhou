@@ -17,6 +17,7 @@
  */
 import { query } from '../../config/database.js';
 import { asString, asNumber, asArray, asObject } from '../shared/typeCoercion.js';
+import { lockCharacterInventoryMutex } from '../inventoryMutex.js';
 import {
   getEnabledMainQuestSectionById,
   getEnabledMainQuestSectionsSorted,
@@ -35,6 +36,10 @@ export const completeCurrentSectionLegacy = async (
   const cid = Number(characterId);
   if (!Number.isFinite(uid) || uid <= 0) return { success: false, message: '未登录' };
   if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在' };
+
+  // 统一成“先背包互斥锁，再主线进度行锁”的顺序，
+  // 避免与采集/拾取这类先背包后记任务的事务形成锁顺序反转。
+  await lockCharacterInventoryMutex(cid);
 
   const progressRes = await query(
     `SELECT current_chapter_id, current_section_id, section_status, completed_chapters, completed_sections

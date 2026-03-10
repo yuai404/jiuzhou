@@ -15,12 +15,11 @@
  */
 import { query } from '../../config/database.js';
 import { Transactional } from '../../decorators/transactional.js';
-import { getRealmOrderIndex } from '../shared/realmRules.js';
 import {
   getMainQuestChapterById,
   getMainQuestSectionById,
 } from '../staticConfigLoader.js';
-import { asString, asNumber, asArray, asObject, asStringArray } from '../shared/typeCoercion.js';
+import { asString, asNumber, asStringArray } from '../shared/typeCoercion.js';
 import {
   getEnabledMainQuestSectionsSorted,
 } from './shared/questConfig.js';
@@ -28,6 +27,7 @@ import { getMainQuestProgressLegacy } from './progress.js';
 import { getChapterListLegacy, getSectionListLegacy } from './chapterList.js';
 import { startDialogueLegacy, advanceDialogueLegacy, selectDialogueChoiceLegacy } from './dialogue.js';
 import { completeCurrentSectionLegacy } from './sectionComplete.js';
+import { updateSectionProgressByEvent } from './progressUpdater.js';
 import type { DialogueState } from '../dialogueService.js';
 import type {
   MainQuestProgressDto,
@@ -160,145 +160,7 @@ class MainQuestService {
 
   @Transactional
   async updateProgress(characterId: number, event: MainQuestProgressEvent): Promise<{ success: boolean; message: string; updated: boolean; completed: boolean }> {
-    const cid = Number(characterId);
-    if (!Number.isFinite(cid) || cid <= 0) return { success: false, message: '角色不存在', updated: false, completed: false };
-
-    const progressRes = await query(
-      `SELECT current_section_id, section_status, objectives_progress
-       FROM character_main_quest_progress
-       WHERE character_id = $1 FOR UPDATE`,
-      [cid],
-    );
-    if (!progressRes.rows?.[0]) {
-      return { success: false, message: '主线进度不存在', updated: false, completed: false };
-    }
-
-    const progress = progressRes.rows[0] as {
-      current_section_id?: unknown;
-      section_status?: unknown;
-      objectives_progress?: unknown;
-    };
-    if (asString(progress.section_status) !== 'objectives') {
-      return { success: true, message: '当前不在目标阶段', updated: false, completed: false };
-    }
-
-    const sectionId = asString(progress.current_section_id).trim();
-    if (!sectionId) {
-      return { success: false, message: '当前任务节不存在', updated: false, completed: false };
-    }
-
-    const sectionDef = getMainQuestSectionById(sectionId);
-    if (!sectionDef) {
-      return { success: false, message: '任务节配置不存在', updated: false, completed: false };
-    }
-
-    const objectives = asArray<{ id?: unknown; type?: unknown; target?: unknown; params?: unknown }>(sectionDef.objectives);
-    if (objectives.length === 0) {
-      return { success: true, message: '无目标', updated: false, completed: false };
-    }
-
-    const currentProgress = asObject(progress.objectives_progress) as Record<string, number>;
-    let updated = false;
-
-    for (const obj of objectives) {
-      const oid = asString(obj.id).trim();
-      const otype = asString(obj.type).trim();
-      const target = Math.max(1, Math.floor(asNumber(obj.target, 1)));
-      if (!oid || !otype) continue;
-
-      const current = asNumber(currentProgress[oid], 0);
-      if (current >= target) continue;
-
-      const params = asObject(obj.params);
-      let matched = false;
-
-      if (otype === 'talk_npc' && event.type === 'talk_npc') {
-        const requiredNpcId = asString(params.npc_id).trim();
-        matched = !requiredNpcId || requiredNpcId === event.npcId;
-      } else if (otype === 'kill_monster' && event.type === 'kill_monster') {
-        const requiredMonsterId = asString(params.monster_id).trim();
-        matched = !requiredMonsterId || requiredMonsterId === event.monsterId;
-      } else if (otype === 'gather_resource' && event.type === 'gather_resource') {
-        const requiredResourceId = asString(params.resource_id).trim();
-        matched = !requiredResourceId || requiredResourceId === event.resourceId;
-      } else if (otype === 'collect' && event.type === 'collect') {
-        const requiredItemId = asString(params.item_id).trim();
-        matched = !requiredItemId || requiredItemId === event.itemId;
-      } else if (otype === 'dungeon_clear' && event.type === 'dungeon_clear') {
-        const requiredDungeonId = asString(params.dungeon_id).trim();
-        const requiredDifficultyId = asString(params.difficulty_id).trim();
-        const dungeonMatch = !requiredDungeonId || requiredDungeonId === event.dungeonId;
-        const difficultyMatch = !requiredDifficultyId || requiredDifficultyId === (event.difficultyId ?? '');
-        matched = dungeonMatch && difficultyMatch;
-      } else if (otype === 'craft_item' && event.type === 'craft_item') {
-        const requiredRecipeId = asString(params.recipe_id).trim();
-        const requiredRecipeType = asString(params.recipe_type).trim();
-        const requiredCraftKind = asString(params.craft_kind).trim();
-        const requiredItemId = asString(params.item_id).trim();
-
-        const recipeIdMatch = !requiredRecipeId || requiredRecipeId === (event.recipeId ?? '');
-        const recipeTypeMatch = !requiredRecipeType || requiredRecipeType === (event.recipeType ?? '');
-        const craftKindMatch = !requiredCraftKind || requiredCraftKind === (event.craftKind ?? '');
-        const itemIdMatch = !requiredItemId || requiredItemId === (event.itemId ?? '');
-
-        matched = recipeIdMatch && recipeTypeMatch && craftKindMatch && itemIdMatch;
-      } else if (otype === 'reach' && event.type === 'reach') {
-        const requiredRoomId = asString(params.room_id).trim();
-        matched = !requiredRoomId || requiredRoomId === event.roomId;
-      } else if (otype === 'upgrade_technique' && event.type === 'upgrade_technique') {
-        const requiredTechniqueId = asString(params.technique_id).trim();
-        const requiredLayer = asNumber(params.layer, 0);
-        const techniqueMatch = !requiredTechniqueId || requiredTechniqueId === event.techniqueId;
-        const layerMatch = requiredLayer <= 0 || event.layer >= requiredLayer;
-        matched = techniqueMatch && layerMatch;
-      } else if (otype === 'upgrade_realm' && event.type === 'upgrade_realm') {
-        const requiredRealm = asString(params.realm).trim();
-        if (!requiredRealm) {
-          matched = true;
-        } else {
-          const requiredIndex = getRealmOrderIndex(requiredRealm);
-          const eventIndex = getRealmOrderIndex(event.realm);
-          matched = requiredIndex > 0 && eventIndex >= requiredIndex;
-        }
-      }
-
-      if (matched) {
-        const increment = event.type === 'talk_npc' || event.type === 'reach' || event.type === 'upgrade_technique' || event.type === 'upgrade_realm' ? 1 : ('count' in event ? event.count : 1);
-        currentProgress[oid] = Math.min(target, current + increment);
-        updated = true;
-      }
-    }
-
-    if (!updated) {
-      return { success: true, message: '无匹配目标', updated: false, completed: false };
-    }
-
-    const allCompleted = objectives.every((obj) => {
-      const oid = asString(obj.id).trim();
-      const target = Math.max(1, Math.floor(asNumber(obj.target, 1)));
-      return currentProgress[oid] >= target;
-    });
-
-    if (allCompleted) {
-      await query(
-        `UPDATE character_main_quest_progress
-         SET section_status = 'turnin',
-             objectives_progress = $2::jsonb,
-             updated_at = NOW()
-         WHERE character_id = $1`,
-        [cid, JSON.stringify(currentProgress)],
-      );
-      return { success: true, message: '目标已全部完成', updated: true, completed: true };
-    }
-
-    await query(
-      `UPDATE character_main_quest_progress
-       SET objectives_progress = $2::jsonb,
-           updated_at = NOW()
-       WHERE character_id = $1`,
-      [cid, JSON.stringify(currentProgress)],
-    );
-    return { success: true, message: '进度已更新', updated: true, completed: false };
+    return updateSectionProgressByEvent(characterId, event);
   }
 
   @Transactional

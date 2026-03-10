@@ -9,6 +9,8 @@
  * 2) 类型和实例分别来自 types.ts 和 service.ts。
  */
 import { mainQuestService } from './service.js';
+import { withTransactionAuto } from '../../config/database.js';
+import { updateSectionProgressByEvents } from './progressUpdater.js';
 
 export { mainQuestService } from './service.js';
 export type { MainQuestProgressDto, MainQuestProgressEvent, SectionStatus, RewardResult } from './types.js';
@@ -31,6 +33,12 @@ export const selectDialogueChoice = (userId: number, characterId: number, choice
 
 export const updateSectionProgress = (characterId: number, event: import('./types.js').MainQuestProgressEvent) =>
   mainQuestService.updateProgress(characterId, event);
+
+export const updateSectionProgressBatch = (
+  characterId: number,
+  events: import('./types.js').MainQuestProgressEvent[],
+) =>
+  withTransactionAuto(() => updateSectionProgressByEvents(characterId, events));
 
 export const completeCurrentSection = (userId: number, characterId: number) =>
   mainQuestService.completeCurrentSection(userId, characterId);
