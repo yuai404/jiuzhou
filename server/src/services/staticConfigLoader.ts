@@ -2,11 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
+  getGeneratedPartnerDefinitions,
+  reloadGeneratedPartnerConfigStore,
+} from './generatedPartnerConfigStore.js';
+import {
   getGeneratedSkillDefinitions,
   getGeneratedTechniqueDefinitions,
   getGeneratedTechniqueLayerDefinitions,
   reloadGeneratedTechniqueConfigStore,
 } from './generatedTechniqueConfigStore.js';
+import type { TechniqueUsageScope } from './shared/techniqueUsageScope.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -364,6 +369,7 @@ export type TechniqueDefConfig = {
   sort_weight?: number;
   version?: number;
   enabled?: boolean;
+  usage_scope?: TechniqueUsageScope;
 };
 
 export type SkillDefConfig = {
@@ -783,6 +789,10 @@ export type PartnerDefConfig = {
   level_attr_gains?: Partial<PartnerBaseAttrConfig>;
   enabled?: boolean;
   sort_weight?: number;
+  created_by_character_id?: number;
+  source_job_id?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type PartnerDefFile = {
@@ -1512,7 +1522,7 @@ export const getPartnerDefinitions = (): PartnerDefConfig[] => {
   if (!Array.isArray(file.partners)) {
     throw new Error('partner_def.json 缺少 partners 数组');
   }
-  partnerDefCache = file.partners;
+  partnerDefCache = [...file.partners, ...getGeneratedPartnerDefinitions()];
   return partnerDefCache;
 };
 
@@ -1550,6 +1560,18 @@ export const refreshGeneratedTechniqueSnapshots = async (): Promise<void> => {
   techniqueDefCache = undefined;
   skillDefCache = undefined;
   techniqueLayerCache = undefined;
+};
+
+/**
+ * 刷新 AI 伙伴缓存并清空伙伴相关静态快照。
+ *
+ * 注意：
+ * - 动态伙伴定义通过数据库落库，生成后不会自动进入同步内存缓存；
+ * - 招募成功后必须主动刷新，否则现有伙伴服务无法通过 `partner_def_id` 读到新定义。
+ */
+export const refreshGeneratedPartnerSnapshots = async (): Promise<void> => {
+  await reloadGeneratedPartnerConfigStore();
+  partnerDefCache = undefined;
 };
 
 /**

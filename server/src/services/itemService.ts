@@ -25,6 +25,7 @@ import { buildEquipmentDisplayBaseAttrs } from './equipmentGrowthRules.js';
 import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { shouldValidateTechniqueLearnRealm } from './shared/techniqueLearnRule.js';
+import { isCharacterVisibleTechniqueDefinition } from './shared/techniqueUsageScope.js';
 import { resolveTechniqueBookLearning } from './shared/techniqueBookRules.js';
 import {
   applyCharacterResourceDeltaByCharacterId,
@@ -607,7 +608,11 @@ class ItemService {
           continue;
         }
   
-        const techniqueDef = getTechniqueDefinitions().find((entry) => entry.id === techniqueId && entry.enabled !== false) ?? null;
+        const techniqueDef = getTechniqueDefinitions().find((entry) => (
+          entry.id === techniqueId &&
+          entry.enabled !== false &&
+          isCharacterVisibleTechniqueDefinition(entry)
+        )) ?? null;
         if (!techniqueDef) {
           return { success: false, message: '目标功法不存在或未开放' };
         }
@@ -675,7 +680,11 @@ class ItemService {
         }
 
         const techniqueDef =
-          getTechniqueDefinitions().find((entry) => entry.id === generatedTechniqueId && entry.enabled !== false) ?? null;
+          getTechniqueDefinitions().find((entry) => (
+            entry.id === generatedTechniqueId &&
+            entry.enabled !== false &&
+            isCharacterVisibleTechniqueDefinition(entry)
+          )) ?? null;
         if (!techniqueDef) {
           return { success: false, message: '目标生成功法不存在或未发布' };
         }

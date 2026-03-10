@@ -1,14 +1,21 @@
 import { App, Button, Drawer, Empty, InputNumber, Modal, Progress, Skeleton, Tag } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   activatePartner,
+  confirmPartnerRecruitDraft,
+  discardPartnerRecruitDraft,
+  generatePartnerRecruitDraft,
   getPartnerOverview,
+  getPartnerRecruitStatus,
   getPartnerTechniqueUpgradeCost,
   injectPartnerExp,
   learnPartnerTechnique,
+  markPartnerRecruitResultViewed,
   type PartnerBookDto,
   type PartnerDetailDto,
   type PartnerOverviewDto,
+  type PartnerRecruitPreviewDto,
+  type PartnerRecruitStatusDto,
   type PartnerTechniqueDto,
   type PartnerTechniqueUpgradeCostDto,
   upgradePartnerTechnique,
@@ -35,12 +42,22 @@ import {
   resolvePartnerBookLabel,
   type PartnerPanelKey,
 } from './partnerShared';
+import {
+  buildPartnerRecruitIndicator,
+  formatPartnerRecruitCooldownRemaining,
+  PARTNER_RECRUIT_STATUS_POLL_INTERVAL_MS,
+  resolvePartnerRecruitActionState,
+  resolvePartnerRecruitPanelView,
+  shouldPollPartnerRecruitStatus,
+} from './partnerRecruitShared';
 import './index.scss';
 
 interface PartnerModalProps {
   open: boolean;
   onClose: () => void;
 }
+
+type RecruitStatusRefreshMode = 'initial' | 'background';
 
 /**
  * 伙伴系统主弹窗。
@@ -68,11 +85,13 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const [actionKey, setActionKey] = useState('');
   const [panel, setPanel] = useState<PartnerPanelKey>('overview');
   const [overview, setOverview] = useState<PartnerOverviewDto | null>(null);
+  const [recruitStatus, setRecruitStatus] = useState<PartnerRecruitStatusDto | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
   const [injectExpValue, setInjectExpValue] = useState<number | null>(null);
   const [techniqueResultText, setTechniqueResultText] = useState('');
   const [techniqueUpgradeCosts, setTechniqueUpgradeCosts] = useState<Record<string, PartnerTechniqueUpgradeCostDto | null>>({});
   const [expandedTechniqueSkills, setExpandedTechniqueSkills] = useState<Record<string, boolean>>({});
+  const markingRecruitViewedRef = useRef(false);
 
   const refreshOverview = useCallback(async () => {
     if (!open) return;
@@ -91,10 +110,27 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     }
   }, [message, open]);
 
+  const refreshRecruitStatus = useCallback(async (mode: RecruitStatusRefreshMode = 'background') => {
+    if (!open) return;
+    try {
+      const res = await getPartnerRecruitStatus();
+      if (!res.success || !res.data) {
+        throw new Error(getUnifiedApiErrorMessage(res, '获取招募状态失败'));
+      }
+      setRecruitStatus(res.data);
+    } catch (error) {
+      if (mode === 'initial') {
+        setRecruitStatus(null);
+        message.error(getUnifiedApiErrorMessage(error as { message?: string }, '获取招募状态失败'));
+      }
+    }
+  }, [message, open]);
+
   useEffect(() => {
     if (!open) {
       setPanel('overview');
       setOverview(null);
+      setRecruitStatus(null);
       setSelectedPartnerId(null);
       setInjectExpValue(null);
       setTechniqueResultText('');
@@ -103,8 +139,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       setActionKey('');
       return;
     }
-    void refreshOverview();
-  }, [open, refreshOverview]);
+    void Promise.all([refreshOverview(), refreshRecruitStatus('initial')]);
+  }, [open, refreshOverview, refreshRecruitStatus]);
 
   useEffect(() => {
     if (!overview) {
@@ -127,6 +163,10 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     if (!overview || selectedPartnerId === null) return null;
     return overview.partners.find((partner) => partner.id === selectedPartnerId) ?? null;
   }, [overview, selectedPartnerId]);
+
+  const recruitIndicator = useMemo(() => buildPartnerRecruitIndicator(recruitStatus), [recruitStatus]);
+  const recruitPanelView = useMemo(() => resolvePartnerRecruitPanelView(recruitStatus), [recruitStatus]);
+  const recruitActionState = useMemo(() => resolvePartnerRecruitActionState(recruitStatus), [recruitStatus]);
 
   const characterExp = overview?.characterExp ?? 0;
 
@@ -153,6 +193,46 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     const suggestedExp = expToNextLevel > 0 ? Math.min(characterExp, expToNextLevel) : Math.min(characterExp, 1);
     setInjectExpValue(suggestedExp > 0 ? suggestedExp : null);
   }, [characterExp, expToNextLevel, selectedPartner]);
+
+  useEffect(() => {
+    if (!open || !shouldPollPartnerRecruitStatus(recruitStatus)) return undefined;
+    const timer = window.setInterval(() => {
+      void refreshRecruitStatus();
+    }, PARTNER_RECRUIT_STATUS_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [open, recruitStatus, refreshRecruitStatus]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const unsubscribe = gameSocket.onPartnerRecruitResult((payload) => {
+      const currentCharacterId = gameSocket.getCharacter()?.id ?? null;
+      if (!currentCharacterId || payload.characterId !== currentCharacterId) return;
+      if (payload.status === 'generated_draft') {
+        message.success(payload.message);
+      } else {
+        message.warning(payload.errorMessage || payload.message);
+      }
+      void refreshRecruitStatus();
+    });
+    return unsubscribe;
+  }, [message, open, refreshRecruitStatus]);
+
+  useEffect(() => {
+    if (!open || panel !== 'recruit' || !recruitStatus?.hasUnreadResult || markingRecruitViewedRef.current) {
+      return;
+    }
+    markingRecruitViewedRef.current = true;
+    void (async () => {
+      try {
+        await markPartnerRecruitResultViewed();
+        await refreshRecruitStatus();
+      } catch (error) {
+        message.warning(getUnifiedApiErrorMessage(error as { message?: string }, '同步招募已读状态失败'));
+      } finally {
+        markingRecruitViewedRef.current = false;
+      }
+    })();
+  }, [message, open, panel, recruitStatus?.hasUnreadResult, refreshRecruitStatus]);
 
   useEffect(() => {
     if (!open || panel !== 'technique' || !selectedPartner) {
@@ -265,6 +345,51 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       setActionKey('');
     }
   }, [message, refreshOverview, selectedPartner]);
+
+  const handleGenerateRecruit = useCallback(async () => {
+    if (!recruitActionState.canGenerate) return;
+    setActionKey('recruit-generate');
+    try {
+      const res = await generatePartnerRecruitDraft();
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '开始招募失败'));
+      message.success(res.message || '伙伴招募已开始');
+      await refreshRecruitStatus();
+      gameSocket.refreshCharacter();
+    } catch (error) {
+      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '开始招募失败'));
+    } finally {
+      setActionKey('');
+    }
+  }, [message, recruitActionState.canGenerate, refreshRecruitStatus]);
+
+  const handleConfirmRecruit = useCallback(async (generationId: string) => {
+    setActionKey(`recruit-confirm-${generationId}`);
+    try {
+      const res = await confirmPartnerRecruitDraft(generationId);
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '确认收下失败'));
+      message.success(res.message || '已确认收下伙伴');
+      await Promise.all([refreshRecruitStatus(), refreshOverview()]);
+      gameSocket.refreshCharacter();
+    } catch (error) {
+      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '确认收下失败'));
+    } finally {
+      setActionKey('');
+    }
+  }, [message, refreshOverview, refreshRecruitStatus]);
+
+  const handleDiscardRecruit = useCallback(async (generationId: string) => {
+    setActionKey(`recruit-discard-${generationId}`);
+    try {
+      const res = await discardPartnerRecruitDraft(generationId);
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '放弃预览失败'));
+      message.success(res.message || '已放弃本次预览');
+      await refreshRecruitStatus();
+    } catch (error) {
+      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '放弃预览失败'));
+    } finally {
+      setActionKey('');
+    }
+  }, [message, refreshRecruitStatus]);
 
   const toggleTechniqueSkills = useCallback((techniqueId: string) => {
     setExpandedTechniqueSkills((current) => ({
@@ -647,12 +772,183 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     );
   };
 
+  const renderRecruitPreview = (preview: PartnerRecruitPreviewDto) => {
+    return (
+      <div className="partner-recruit-preview-card">
+        <div className="partner-current-top">
+          <img className="partner-avatar" src={resolvePartnerAvatar(preview.avatar)} alt={preview.name} />
+          <div className="partner-current-main">
+            <div className="partner-name">{preview.name}</div>
+            <div className="partner-tag-row">
+              <Tag color="gold">{preview.quality}</Tag>
+              <Tag color="blue">{formatPartnerElementLabel(preview.element)}</Tag>
+              <Tag color="cyan">{preview.role}</Tag>
+              <Tag color="purple">功法槽 {preview.slotCount}</Tag>
+            </div>
+            <div className="partner-meta">{preview.description}</div>
+          </div>
+        </div>
+        <div className="partner-combat-grid">
+          {([
+            ['max_qixue', preview.baseAttrs.max_qixue],
+            ['wugong', preview.baseAttrs.wugong],
+            ['fagong', preview.baseAttrs.fagong],
+            ['wufang', preview.baseAttrs.wufang],
+            ['fafang', preview.baseAttrs.fafang],
+            ['sudu', preview.baseAttrs.sudu],
+          ] as const).map(([key, value]) => (
+            <div key={key} className="partner-stat-item">
+              <div className="partner-stat-label">{getPartnerAttrLabel(key)}</div>
+              <div className="partner-stat-value">{formatPartnerAttrValue(key, value)}</div>
+              <div className="partner-recruit-growth-line">
+                每级 +{formatPartnerAttrValue(key, preview.levelAttrGains[key])}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="partner-section-title">天生功法</div>
+        <div className="partner-technique-grid">
+          {preview.innateTechniques.map((technique) => (
+            <div key={technique.techniqueId} className="partner-technique-card">
+              <div className="partner-card-body">
+                <div className="partner-technique-head">
+                  <img className="partner-technique-icon" src={resolvePartnerAvatar(technique.icon)} alt={technique.name} />
+                  <div className="partner-card-main">
+                    <div className="partner-technique-name">{technique.name}</div>
+                    <div className="partner-technique-desc">{technique.description || '暂无描述'}</div>
+                  </div>
+                </div>
+                <div className="partner-tag-row">
+                  <Tag color="gold">{technique.quality}</Tag>
+                  <Tag color="purple">天生功法</Tag>
+                </div>
+                <div className="partner-technique-lines">
+                  {technique.skillNames.length > 0 ? (
+                    technique.skillNames.map((skillName) => (
+                      <span key={skillName} className="partner-technique-passive-pill">{skillName}</span>
+                    ))
+                  ) : (
+                    <div>暂无显式技能</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderRecruitPanel = () => {
+    const cooldownText = recruitStatus
+      ? formatPartnerRecruitCooldownRemaining(recruitStatus.cooldownRemainingSeconds)
+      : '';
+
+    return (
+      <div className="partner-pane-card">
+        <div className="partner-section-title">
+          <span>AI 伙伴招募</span>
+          {recruitStatus ? <Tag color="gold">消耗灵石 {recruitStatus.spiritStoneCost.toLocaleString()}</Tag> : null}
+        </div>
+
+        <div className="partner-recruit-meta-grid">
+          <div className="partner-recruit-meta-card">
+            <div className="partner-stat-label">招募规则</div>
+            <div className="partner-meta">每次招募会生成一名专属伙伴预览，确认后才会正式入队。</div>
+          </div>
+          <div className="partner-recruit-meta-card">
+            <div className="partner-stat-label">冷却状态</div>
+            <div className="partner-meta">
+              {recruitStatus && recruitStatus.cooldownRemainingSeconds > 0
+                ? `冷却中，还需等待 ${cooldownText}`
+                : `当前可招募，冷却 ${recruitStatus?.cooldownHours ?? 12} 小时`}
+            </div>
+          </div>
+        </div>
+
+        {recruitPanelView.kind === 'pending' ? (
+          <div className="partner-recruit-state-card">
+            <div className="partner-section-title">生成中</div>
+            <div className="partner-meta">
+              正在推演新的伙伴灵识与天生功法，请稍候片刻。任务编号：{recruitPanelView.job.generationId}
+            </div>
+            <Button loading disabled>
+              正在招募中
+            </Button>
+          </div>
+        ) : null}
+
+        {recruitPanelView.kind === 'draft' ? (
+          <div className="partner-recruit-state-card">
+            <div className="partner-section-title">
+              <span>生成结果</span>
+              {recruitPanelView.job.previewExpireAt ? (
+                <Tag color="orange">保留至 {new Date(recruitPanelView.job.previewExpireAt).toLocaleString()}</Tag>
+              ) : null}
+            </div>
+            {renderRecruitPreview(recruitPanelView.preview)}
+            <div className="partner-action-row">
+              <Button
+                type="primary"
+                loading={actionKey === `recruit-confirm-${recruitPanelView.job.generationId}`}
+                onClick={() => {
+                  void handleConfirmRecruit(recruitPanelView.job.generationId);
+                }}
+              >
+                确认收下
+              </Button>
+              <Button
+                danger
+                loading={actionKey === `recruit-discard-${recruitPanelView.job.generationId}`}
+                onClick={() => {
+                  void handleDiscardRecruit(recruitPanelView.job.generationId);
+                }}
+              >
+                放弃预览
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {recruitPanelView.kind === 'failed' ? (
+          <div className="partner-recruit-state-card">
+            <div className="partner-section-title">招募结果</div>
+            <div className="partner-meta">{recruitPanelView.errorMessage}</div>
+          </div>
+        ) : null}
+
+        {recruitPanelView.kind === 'empty' ? (
+          <div className="partner-recruit-state-card">
+            <div className="partner-section-title">开始招募</div>
+            <div className="partner-meta">
+              消耗灵石后异步生成伙伴形象、属性与天生功法。生成失败会自动退款。
+            </div>
+          </div>
+        ) : null}
+
+        <div className="partner-action-row">
+          <Button
+            type="primary"
+            loading={actionKey === 'recruit-generate'}
+            disabled={!recruitActionState.canGenerate}
+            onClick={() => {
+              void handleGenerateRecruit();
+            }}
+          >
+            开始招募
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const renderBody = () => {
     const panelContent = (() => {
       if (panel === 'partners') return renderPartnerListPanel();
       if (panel === 'overview') return renderOverviewPanel();
       if (panel === 'upgrade') return renderUpgradePanel();
-      return renderTechniquePanel();
+      if (panel === 'technique') return renderTechniquePanel();
+      return renderRecruitPanel();
     })();
 
     return (
@@ -671,7 +967,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   className="partner-left-item partner-mobile-menu-item"
                   onClick={() => setPanel(item.value)}
                 >
-                  {item.label}
+                  <span className="partner-menu-label">
+                    {item.label}
+                    {item.value === 'recruit' && recruitIndicator.badgeDot ? (
+                      <span className="partner-menu-dot" />
+                    ) : null}
+                  </span>
                 </Button>
               ))}
             </div>
@@ -684,7 +985,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   className="partner-left-item"
                   onClick={() => setPanel(item.value)}
                 >
-                  {item.label}
+                  <span className="partner-menu-label">
+                    {item.label}
+                    {item.value === 'recruit' && recruitIndicator.badgeDot ? (
+                      <span className="partner-menu-dot" />
+                    ) : null}
+                  </span>
                 </Button>
               ))}
             </div>

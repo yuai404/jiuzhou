@@ -11,6 +11,7 @@ import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { shouldValidateTechniqueLearnRealm } from './shared/techniqueLearnRule.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
 import { getItemDefinitionById, getSkillDefinitions, getTechniqueDefinitions } from './staticConfigLoader.js';
+import { isCharacterVisibleTechniqueDefinition } from './shared/techniqueUsageScope.js';
 import {
   getItemMetaMap,
   getTechniqueLayerByTechniqueAndLayerStatic,
@@ -90,6 +91,7 @@ const getTechniqueDefMap = () => {
   return new Map(
     getTechniqueDefinitions()
       .filter((entry) => entry.enabled !== false)
+      .filter((entry) => isCharacterVisibleTechniqueDefinition(entry))
       .map((entry) => [entry.id, entry] as const),
   );
 };

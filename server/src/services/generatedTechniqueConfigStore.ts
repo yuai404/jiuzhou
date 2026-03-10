@@ -7,6 +7,7 @@
  * 3) 允许服务在发布后主动刷新缓存，避免重启可见性延迟。
  */
 import { query } from '../config/database.js';
+import { normalizeTechniqueUsageScope, type TechniqueUsageScope } from './shared/techniqueUsageScope.js';
 
 export type GeneratedTechniqueDefLite = {
   id: string;
@@ -27,6 +28,7 @@ export type GeneratedTechniqueDefLite = {
   sort_weight?: number;
   version?: number;
   enabled?: boolean;
+  usage_scope?: TechniqueUsageScope;
 };
 
 export type GeneratedSkillDefLite = {
@@ -131,6 +133,7 @@ export const reloadGeneratedTechniqueConfigStore = async (): Promise<void> => {
             required_realm,
             attribute_type,
             attribute_element,
+            usage_scope,
             tags,
             description,
             long_desc,
@@ -214,6 +217,7 @@ export const reloadGeneratedTechniqueConfigStore = async (): Promise<void> => {
         required_realm: asString(row.required_realm) || '凡人',
         attribute_type: asString(row.attribute_type) || 'physical',
         attribute_element: asString(row.attribute_element) || 'none',
+        usage_scope: normalizeTechniqueUsageScope(row.usage_scope),
         tags: asJsonArray<string>(row.tags).map((x) => asString(x)).filter(Boolean),
         description: typeof row.description === 'string' ? row.description : null,
         long_desc: typeof row.long_desc === 'string' ? row.long_desc : null,

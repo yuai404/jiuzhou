@@ -27,6 +27,7 @@ import { getItemDefinitionById, getTechniqueDefinitions, refreshGeneratedTechniq
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { buildTechniqueResearchJobState } from './shared/techniqueResearchJobShared.js';
 import { normalizeTechniqueName, validateTechniqueCustomName, getTechniqueNameRulesView } from './shared/techniqueNameRules.js';
+import { isCharacterVisibleTechniqueDefinition } from './shared/techniqueUsageScope.js';
 import { generateTechniqueCandidateWithIcons } from './shared/techniqueGenerationExecution.js';
 import {
   buildTechniqueTextModelPayload,
@@ -1876,6 +1877,7 @@ class TechniqueGenerationService {
     }
 
     const staticConflict = getTechniqueDefinitions().some((entry) => {
+      if (!isCharacterVisibleTechniqueDefinition(entry)) return false;
       const entryId = asString((entry as { id?: unknown }).id);
       if (entryId === draftTechniqueId) return false;
       const entryName = asString((entry as { name?: unknown }).name);

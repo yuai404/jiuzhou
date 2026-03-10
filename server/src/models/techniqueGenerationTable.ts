@@ -34,6 +34,11 @@ const buildCompatibleColumnCommentQueries = (
 
 const generatedTechniqueDefCompatibleColumns: readonly CompatibleColumnDefinition[] = [
   {
+    name: 'usage_scope',
+    definition: "usage_scope VARCHAR(32) NOT NULL DEFAULT 'character_only'",
+    comment: '功法作用域：character_only / partner_only',
+  },
+  {
     name: 'display_name',
     definition: 'display_name VARCHAR(64)',
     comment: '玩家自定义展示名',
@@ -151,6 +156,7 @@ CREATE TABLE IF NOT EXISTS generated_technique_def (
   required_realm VARCHAR(64) NOT NULL,
   attribute_type VARCHAR(16) NOT NULL,
   attribute_element VARCHAR(16) NOT NULL,
+  usage_scope VARCHAR(32) NOT NULL DEFAULT 'character_only',
   tags JSONB NOT NULL DEFAULT '[]'::jsonb,
   description TEXT,
   long_desc TEXT,

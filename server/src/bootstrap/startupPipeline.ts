@@ -28,11 +28,18 @@ import {
   initializeWorkerPool,
   shutdownWorkerPool,
 } from "../workers/workerPool.js";
-import { refreshGeneratedTechniqueSnapshots } from "../services/staticConfigLoader.js";
+import {
+  refreshGeneratedPartnerSnapshots,
+  refreshGeneratedTechniqueSnapshots,
+} from "../services/staticConfigLoader.js";
 import {
   initializeTechniqueGenerationJobRunner,
   shutdownTechniqueGenerationJobRunner,
 } from "../services/techniqueGenerationJobRunner.js";
+import {
+  initializePartnerRecruitJobRunner,
+  shutdownPartnerRecruitJobRunner,
+} from "../services/partnerRecruitJobRunner.js";
 import { getGameServer } from "../game/gameServer.js";
 
 export interface StartServerOptions {
@@ -61,6 +68,7 @@ export const startServerWithPipeline = async (
 
   await initTables();
   await refreshGeneratedTechniqueSnapshots();
+  await refreshGeneratedPartnerSnapshots();
   await clearAllAvatarsOnce();
   await itemDataCleanupService.cleanupUndefinedItemDataOnStartup();
 
@@ -80,6 +88,8 @@ export const startServerWithPipeline = async (
   console.log(`✓ Worker 池已就绪（${workerCount} 个 Worker）\n`);
   await initializeTechniqueGenerationJobRunner();
   console.log("✓ 洞府研修 worker 协调器已就绪\n");
+  await initializePartnerRecruitJobRunner();
+  console.log("✓ AI 伙伴招募 worker 协调器已就绪\n");
 
   await initGameTimeService();
   await initArenaWeeklySettlementService();
@@ -147,6 +157,9 @@ export const registerGracefulShutdown = (httpServer: HttpServer): void => {
       // 3. 关闭 Worker 池
       await shutdownTechniqueGenerationJobRunner();
       console.log("✓ 洞府研修 worker 协调器已关闭");
+
+      await shutdownPartnerRecruitJobRunner();
+      console.log("✓ AI 伙伴招募 worker 协调器已关闭");
 
       await shutdownWorkerPool();
       console.log("✓ Worker 池已关闭");

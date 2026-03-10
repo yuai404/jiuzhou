@@ -24,6 +24,7 @@ import { initInsightTables } from './insightTable.js';
 import { initTechniqueGenerationTables } from './techniqueGenerationTable.js';
 import { initFeatureUnlockTables } from './featureUnlockTable.js';
 import { initPartnerTables } from './partnerTable.js';
+import { initPartnerRecruitTables } from './partnerRecruitTable.js';
 import { loadAllSeeds } from '../services/seedService.js';
 
 // 用户表结构定义
@@ -165,6 +166,9 @@ export const initTables = async (): Promise<void> => {
 
   // 初始化伙伴系统表
   await initPartnerTables();
+
+  // 初始化 AI 伙伴招募表
+  await initPartnerRecruitTables();
     
   // 加载种子数据
   await loadAllSeeds();

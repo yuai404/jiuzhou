@@ -1,5 +1,6 @@
 import { getItemDefinitionsByIds, getSkillDefinitions, getTechniqueDefinitions, getTechniqueLayerDefinitions } from './staticConfigLoader.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import { isCharacterVisibleTechniqueDefinition } from './shared/techniqueUsageScope.js';
 
 export type TechniqueDefRow = {
   id: string;
@@ -138,6 +139,7 @@ const mapTechniqueDefRow = (entry: TechniqueDefEntry): TechniqueDefRow => {
 export const getEnabledTechniqueDefs = async (): Promise<TechniqueDefRow[]> => {
   const rows = getTechniqueDefinitions()
     .filter((entry) => entry.enabled !== false)
+    .filter((entry) => isCharacterVisibleTechniqueDefinition(entry))
     .map((entry) => mapTechniqueDefRow(entry))
     .sort((left, right) => right.sort_weight - left.sort_weight || right.quality_rank - left.quality_rank || left.id.localeCompare(right.id));
   return rows;
@@ -146,13 +148,17 @@ export const getEnabledTechniqueDefs = async (): Promise<TechniqueDefRow[]> => {
 export const getTechniqueDefById = async (techniqueId: string): Promise<TechniqueDefRow | null> => {
   const id = String(techniqueId || '').trim();
   if (!id) return null;
-  const entry = getTechniqueDefinitions().find((row) => row.id === id && row.enabled !== false);
+  const entry = getTechniqueDefinitions().find((row) => row.id === id && row.enabled !== false && isCharacterVisibleTechniqueDefinition(row));
   if (!entry) return null;
   return mapTechniqueDefRow(entry);
 };
 
 export const getTechniqueLayersByTechniqueId = async (techniqueId: string): Promise<TechniqueLayerRow[]> => {
-  const techniqueDef = getTechniqueDefinitions().find((entry) => entry.id === techniqueId && entry.enabled !== false) ?? null;
+  const techniqueDef = getTechniqueDefinitions().find((entry) => (
+    entry.id === techniqueId &&
+    entry.enabled !== false &&
+    isCharacterVisibleTechniqueDefinition(entry)
+  )) ?? null;
   const qualityMultiplier = resolveTechniqueCostMultiplierByQuality(techniqueDef?.quality);
   const rows = getTechniqueLayerDefinitions()
     .filter((entry) => entry.enabled !== false)

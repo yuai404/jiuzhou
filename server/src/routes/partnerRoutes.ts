@@ -22,6 +22,8 @@ import { requireCharacter } from '../middleware/auth.js';
 import { sendResult } from '../middleware/response.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import { itemService } from '../services/itemService.js';
+import { enqueuePartnerRecruitJob } from '../services/partnerRecruitJobRunner.js';
+import { partnerRecruitService } from '../services/partnerRecruitService.js';
 import { partnerService } from '../services/partnerService.js';
 import { getItemDefinitionById } from '../services/staticConfigLoader.js';
 import { resolveTechniqueBookLearning } from '../services/shared/techniqueBookRules.js';
@@ -45,6 +47,78 @@ const parseNonEmptyText = (value: unknown): string | null => {
 router.get('/overview', asyncHandler(async (req, res) => {
   const characterId = req.characterId!;
   const result = await partnerService.getOverview(characterId);
+  return sendResult(res, result);
+}));
+
+router.get('/recruit/status', asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const result = await partnerRecruitService.getRecruitStatus(characterId);
+  return sendResult(res, result);
+}));
+
+router.post('/recruit/generate', asyncHandler(async (req, res) => {
+  const userId = req.userId!;
+  const characterId = req.characterId!;
+  const quality = partnerRecruitService.resolveQualityForNewRecruit();
+  const result = await partnerRecruitService.createRecruitJob(characterId, quality);
+  if (!result.success || !result.data) {
+    return sendResult(res, result);
+  }
+
+  try {
+    await enqueuePartnerRecruitJob({
+      generationId: result.data.generationId,
+      characterId,
+      quality,
+      userId,
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : '未知异常';
+    await partnerRecruitService.forceRefundPendingRecruitJob(
+      characterId,
+      result.data.generationId,
+      `伙伴招募任务投递失败：${reason}`,
+    );
+    return sendResult(res, {
+      success: false,
+      message: '伙伴招募启动失败，已自动退还灵石',
+    });
+  }
+
+  return sendResult(res, result);
+}));
+
+router.post('/recruit/:generationId/confirm', asyncHandler(async (req, res) => {
+  const userId = req.userId!;
+  const characterId = req.characterId!;
+  const generationId = parseNonEmptyText(req.params?.generationId);
+  if (!generationId) {
+    sendResult(res, { success: false, message: 'generationId 参数无效' });
+    return;
+  }
+
+  const result = await partnerRecruitService.confirmRecruitDraft(characterId, generationId);
+  if (result.success) {
+    await safePushCharacterUpdate(userId);
+  }
+  return sendResult(res, result);
+}));
+
+router.post('/recruit/:generationId/discard', asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const generationId = parseNonEmptyText(req.params?.generationId);
+  if (!generationId) {
+    sendResult(res, { success: false, message: 'generationId 参数无效' });
+    return;
+  }
+
+  const result = await partnerRecruitService.discardRecruitDraft(characterId, generationId);
+  return sendResult(res, result);
+}));
+
+router.post('/recruit/mark-result-viewed', asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const result = await partnerRecruitService.markResultViewed(characterId);
   return sendResult(res, result);
 }));
 

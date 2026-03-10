@@ -183,6 +183,23 @@ export interface TechniqueResearchResultPayload {
 
 type TechniqueResearchResultListener = (data: TechniqueResearchResultPayload) => void;
 
+export interface PartnerRecruitResultPayload {
+  characterId: number;
+  generationId: string;
+  status: 'generated_draft' | 'failed';
+  hasUnreadResult: true;
+  message: string;
+  preview?: {
+    name: string;
+    quality: '黄' | '玄' | '地' | '天';
+    role: string;
+    element: string;
+  };
+  errorMessage?: string;
+}
+
+type PartnerRecruitResultListener = (data: PartnerRecruitResultPayload) => void;
+
 export interface OnlinePlayerDto {
   id: number;
   nickname: string;
@@ -211,6 +228,7 @@ class GameSocketService {
   private idleUpdateListeners: Set<IdleUpdateListener> = new Set();
   private idleFinishedListeners: Set<IdleFinishedListener> = new Set();
   private techniqueResearchResultListeners: Set<TechniqueResearchResultListener> = new Set();
+  private partnerRecruitResultListeners: Set<PartnerRecruitResultListener> = new Set();
   private currentCharacter: CharacterData | null = null;
   private currentOnlinePlayers: OnlinePlayersPayloadDto | null = null;
   /** 本地在线玩家索引，用于增量合并 delta 消息 */
@@ -303,6 +321,10 @@ class GameSocketService {
 
     this.socket.on("techniqueResearchResult", (data: TechniqueResearchResultPayload) => {
       this.notifyTechniqueResearchResultListeners(data);
+    });
+
+    this.socket.on("partnerRecruitResult", (data: PartnerRecruitResultPayload) => {
+      this.notifyPartnerRecruitResultListeners(data);
     });
 
     this.socket.on("chat:message", (data: ChatMessageDto) => {
@@ -491,6 +513,11 @@ class GameSocketService {
     return () => this.techniqueResearchResultListeners.delete(listener);
   }
 
+  onPartnerRecruitResult(listener: PartnerRecruitResultListener): () => void {
+    this.partnerRecruitResultListeners.add(listener);
+    return () => this.partnerRecruitResultListeners.delete(listener);
+  }
+
   onChatMessage(listener: ChatMessageListener): () => void {
     this.chatMessageListeners.add(listener);
     return () => this.chatMessageListeners.delete(listener);
@@ -604,6 +631,10 @@ class GameSocketService {
 
   private notifyTechniqueResearchResultListeners(data: TechniqueResearchResultPayload): void {
     this.techniqueResearchResultListeners.forEach((listener) => listener(data));
+  }
+
+  private notifyPartnerRecruitResultListeners(data: PartnerRecruitResultPayload): void {
+    this.partnerRecruitResultListeners.forEach((listener) => listener(data));
   }
 
   private notifyChatMessageListeners(message: ChatMessageDto): void {

@@ -251,6 +251,11 @@ export interface PartnerRewardDto {
   partnerAvatar: string | null;
 }
 
+export interface CreatePartnerInstanceResult {
+  reward: PartnerRewardDto;
+  activated: boolean;
+}
+
 export interface PartnerResult<T = undefined> {
   success: boolean;
   message: string;
@@ -838,6 +843,100 @@ const buildPartnerRewardDto = (
   partnerName: normalizeText(definition.name) || definition.id,
   partnerAvatar: normalizeText(definition.avatar) || null,
 });
+
+/**
+ * 创建伙伴实例共享入口。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1) 做什么：把“根据伙伴定义创建实例”收敛成单入口，供初始伙伴发放与 AI 招募确认复用。
+ * 2) 做什么：统一处理成长初值、首个伙伴自动出战、来源字段写入，避免两条获得链路各写一套插入 SQL。
+ * 3) 不做什么：不负责功能解锁、不负责招募扣费，也不刷新前端总览。
+ *
+ * 输入/输出：
+ * - 输入：角色ID、伙伴定义、来源字段、可选昵称。
+ * - 输出：新伙伴奖励 DTO 与是否自动出战。
+ *
+ * 数据流/状态流：
+ * starter reward / recruit confirm -> createPartnerInstanceFromDefinition -> character_partner -> partnerService/buildActivePartnerBattleMember。
+ *
+ * 关键边界条件与坑点：
+ * 1) 插入前必须校验所有天生功法都能在统一功法入口读到，否则战斗构建会在运行时爆炸。
+ * 2) `is_active` 只在角色当前没有出战伙伴时自动置真，避免后获得伙伴抢占现有出战位。
+ */
+const createPartnerInstanceFromDefinition = async (params: {
+  characterId: number;
+  definition: PartnerDefConfig;
+  obtainedFrom: string;
+  obtainedRefId?: string;
+  nickname?: string;
+}): Promise<CreatePartnerInstanceResult> => {
+  const { characterId, definition, obtainedFrom, obtainedRefId, nickname } = params;
+  const hasActivePartnerRes = await query(
+    `
+      SELECT 1
+      FROM character_partner
+      WHERE character_id = $1 AND is_active = TRUE
+      LIMIT 1
+    `,
+    [characterId],
+  );
+  const growthValues = Object.fromEntries(
+    PARTNER_GROWTH_KEYS.map((key) => [key, 1000]),
+  ) as PartnerGrowthValues;
+
+  const innateTechniqueIds = getPartnerInnateTechniqueIds(definition);
+  for (const techniqueId of innateTechniqueIds) {
+    const techniqueMeta = getPartnerTechniqueStaticMeta(techniqueId, 1);
+    if (!techniqueMeta) {
+      throw new Error(`伙伴天生功法不存在: ${techniqueId}`);
+    }
+  }
+
+  const activated = hasActivePartnerRes.rows.length <= 0;
+  const insertResult = await query(
+    `
+      INSERT INTO character_partner (
+        character_id,
+        partner_def_id,
+        nickname,
+        level,
+        progress_exp,
+        growth_max_qixue,
+        growth_wugong,
+        growth_fagong,
+        growth_wufang,
+        growth_fafang,
+        growth_sudu,
+        is_active,
+        obtained_from,
+        obtained_ref_id,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, 1, 0, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+      RETURNING id
+    `,
+    [
+      characterId,
+      definition.id,
+      normalizeText(nickname) || normalizeText(definition.name) || definition.id,
+      growthValues.max_qixue,
+      growthValues.wugong,
+      growthValues.fagong,
+      growthValues.wufang,
+      growthValues.fafang,
+      growthValues.sudu,
+      activated,
+      obtainedFrom,
+      normalizeText(obtainedRefId) || null,
+    ],
+  );
+  const partnerId = normalizeInteger(insertResult.rows[0]?.id, 1);
+  return {
+    reward: buildPartnerRewardDto(partnerId, definition),
+    activated,
+  };
+};
 
 class PartnerService {
   async listLearnTechniqueBooks(characterId: number): Promise<PartnerBookDto[]> {
@@ -1539,69 +1638,23 @@ class PartnerService {
     if (!definition) {
       throw new Error('未找到可发放的初始伙伴模板');
     }
+    const created = await createPartnerInstanceFromDefinition({
+      characterId: params.characterId,
+      definition,
+      obtainedFrom: params.obtainedFrom,
+      obtainedRefId: params.obtainedRefId,
+    });
+    return created.reward;
+  }
 
-    const hasActivePartnerRes = await query(
-      `
-        SELECT 1
-        FROM character_partner
-        WHERE character_id = $1 AND is_active = TRUE
-        LIMIT 1
-      `,
-      [params.characterId],
-    );
-    const growthValues = Object.fromEntries(
-      PARTNER_GROWTH_KEYS.map((key) => [key, 1000]),
-    ) as PartnerGrowthValues;
-
-    const insertResult = await query(
-      `
-        INSERT INTO character_partner (
-          character_id,
-          partner_def_id,
-          nickname,
-          level,
-          progress_exp,
-          growth_max_qixue,
-          growth_wugong,
-          growth_fagong,
-          growth_wufang,
-          growth_fafang,
-          growth_sudu,
-          is_active,
-          obtained_from,
-          obtained_ref_id,
-          created_at,
-          updated_at
-        )
-        VALUES ($1, $2, $3, 1, 0, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
-        RETURNING id
-      `,
-      [
-        params.characterId,
-        definition.id,
-        normalizeText(definition.name) || definition.id,
-        growthValues.max_qixue,
-        growthValues.wugong,
-        growthValues.fagong,
-        growthValues.wufang,
-        growthValues.fafang,
-        growthValues.sudu,
-        hasActivePartnerRes.rows.length <= 0,
-        params.obtainedFrom,
-        normalizeText(params.obtainedRefId) || null,
-      ],
-    );
-    const partnerId = normalizeInteger(insertResult.rows[0]?.id, 1);
-
-    const innateTechniqueIds = getPartnerInnateTechniqueIds(definition);
-    for (const techniqueId of innateTechniqueIds) {
-      const techniqueMeta = getPartnerTechniqueStaticMeta(techniqueId, 1);
-      if (!techniqueMeta) {
-        throw new Error(`伙伴天生功法不存在: ${techniqueId}`);
-      }
-    }
-
-    return buildPartnerRewardDto(partnerId, definition);
+  async createPartnerInstanceFromDefinition(params: {
+    characterId: number;
+    definition: PartnerDefConfig;
+    obtainedFrom: string;
+    obtainedRefId?: string;
+    nickname?: string;
+  }): Promise<CreatePartnerInstanceResult> {
+    return createPartnerInstanceFromDefinition(params);
   }
 }
 

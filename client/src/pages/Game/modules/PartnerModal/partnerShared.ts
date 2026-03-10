@@ -31,13 +31,14 @@ import { DEFAULT_ICON, resolveIconUrl } from '../../shared/resolveIcon';
 import { getAttrLabel, isPercentAttrKey } from '../../shared/attrDisplay';
 import { formatTechniquePassiveAmount } from '../../shared/techniquePassiveDisplay';
 
-export type PartnerPanelKey = 'partners' | 'overview' | 'upgrade' | 'technique';
+export type PartnerPanelKey = 'partners' | 'overview' | 'upgrade' | 'technique' | 'recruit';
 
 export const PARTNER_PANEL_OPTIONS: Array<{ value: PartnerPanelKey; label: string }> = [
   { value: 'partners', label: '伙伴列表' },
   { value: 'overview', label: '总览' },
   { value: 'upgrade', label: '升级' },
   { value: 'technique', label: '功法' },
+  { value: 'recruit', label: '招募' },
 ];
 
 export const PARTNER_GROWTH_ATTRS: Array<keyof PartnerDetailDto['growth']> = [
@@ -93,6 +94,7 @@ const PARTNER_OBTAINED_FROM_LABELS: Record<string, string> = {
   main_quest: '主线任务',
   main_quest_section: '主线章节',
   main_quest_chapter: '主线章节奖励',
+  partner_recruit: 'AI招募',
 };
 
 export const getPartnerAttrLabel = (

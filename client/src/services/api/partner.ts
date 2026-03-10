@@ -120,6 +120,70 @@ export type PartnerDetailDto = {
   techniques: PartnerTechniqueDto[];
 };
 
+export type PartnerRecruitPreviewTechniqueDto = {
+  techniqueId: string;
+  name: string;
+  description: string;
+  quality: string;
+  icon: string | null;
+  skillNames: string[];
+};
+
+export type PartnerRecruitPreviewDto = {
+  partnerDefId: string;
+  name: string;
+  description: string;
+  avatar: string | null;
+  quality: string;
+  element: string;
+  role: string;
+  slotCount: number;
+  baseAttrs: PartnerGrowthDto;
+  levelAttrGains: PartnerGrowthDto;
+  innateTechniques: PartnerRecruitPreviewTechniqueDto[];
+};
+
+export type PartnerRecruitJobStatusDto =
+  | 'pending'
+  | 'generated_draft'
+  | 'accepted'
+  | 'failed'
+  | 'refunded'
+  | 'discarded';
+
+export type PartnerRecruitResultStatusDto = 'generated_draft' | 'failed' | null;
+
+export type PartnerRecruitJobDto = {
+  generationId: string;
+  status: PartnerRecruitJobStatusDto;
+  startedAt: string;
+  finishedAt: string | null;
+  previewExpireAt: string | null;
+  preview: PartnerRecruitPreviewDto | null;
+  errorMessage: string | null;
+};
+
+export type PartnerRecruitStatusDto = {
+  featureCode: CharacterFeatureCode;
+  unlocked: true;
+  spiritStoneCost: number;
+  cooldownHours: number;
+  cooldownUntil: string | null;
+  cooldownRemainingSeconds: number;
+  currentJob: PartnerRecruitJobDto | null;
+  hasUnreadResult: boolean;
+  resultStatus: PartnerRecruitResultStatusDto;
+};
+
+export type PartnerRecruitConfirmResponseDto = {
+  generationId: string;
+  partnerId: number;
+  partnerDefId: string;
+  partnerName: string;
+  partnerAvatar: string | null;
+  activated: boolean;
+};
+
 export type PartnerOverviewDto = {
   featureCode: CharacterFeatureCode;
   activePartnerId: number | null;
@@ -181,6 +245,42 @@ export interface PartnerUpgradeTechniqueResponse {
   };
 }
 
+export interface PartnerRecruitStatusResponse {
+  success: boolean;
+  message: string;
+  data?: PartnerRecruitStatusDto;
+}
+
+export interface PartnerRecruitGenerateResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    generationId: string;
+  };
+}
+
+export interface PartnerRecruitConfirmResponse {
+  success: boolean;
+  message: string;
+  data?: PartnerRecruitConfirmResponseDto;
+}
+
+export interface PartnerRecruitDiscardResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    generationId: string;
+  };
+}
+
+export interface PartnerRecruitViewedResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    generationId: string | null;
+  };
+}
+
 export const getPartnerOverview = (): Promise<PartnerOverviewResponse> => {
   return api.get('/partner/overview');
 };
@@ -217,4 +317,28 @@ export const upgradePartnerTechnique = (
   techniqueId: string,
 ): Promise<PartnerUpgradeTechniqueResponse> => {
   return api.post('/partner/upgrade-technique', { partnerId, techniqueId });
+};
+
+export const getPartnerRecruitStatus = (): Promise<PartnerRecruitStatusResponse> => {
+  return api.get('/partner/recruit/status');
+};
+
+export const generatePartnerRecruitDraft = (): Promise<PartnerRecruitGenerateResponse> => {
+  return api.post('/partner/recruit/generate');
+};
+
+export const confirmPartnerRecruitDraft = (
+  generationId: string,
+): Promise<PartnerRecruitConfirmResponse> => {
+  return api.post(`/partner/recruit/${generationId}/confirm`);
+};
+
+export const discardPartnerRecruitDraft = (
+  generationId: string,
+): Promise<PartnerRecruitDiscardResponse> => {
+  return api.post(`/partner/recruit/${generationId}/discard`);
+};
+
+export const markPartnerRecruitResultViewed = (): Promise<PartnerRecruitViewedResponse> => {
+  return api.post('/partner/recruit/mark-result-viewed');
 };

@@ -18,6 +18,7 @@
  */
 import { getGeneratedTechniqueDefinitionById } from '../generatedTechniqueConfigStore.js';
 import { getTechniqueDefinitions } from '../staticConfigLoader.js';
+import { isCharacterVisibleTechniqueDefinition } from './techniqueUsageScope.js';
 
 const GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID = 'book-generated-technique';
 
@@ -54,7 +55,11 @@ export const resolveGeneratedTechniqueBookDisplay = (
   const generatedTechniqueDef = getGeneratedTechniqueDefinitionById(generatedTechniqueId);
   const fallbackTechniqueDef =
     generatedTechniqueDef ??
-    getTechniqueDefinitions().find((entry) => entry.id === generatedTechniqueId && entry.enabled !== false) ??
+    getTechniqueDefinitions().find((entry) => (
+      entry.id === generatedTechniqueId &&
+      entry.enabled !== false &&
+      isCharacterVisibleTechniqueDefinition(entry)
+    )) ??
     null;
   const generatedTechniqueName =
     asString(fallbackTechniqueDef?.name) || asString(metadata.generatedTechniqueName);
