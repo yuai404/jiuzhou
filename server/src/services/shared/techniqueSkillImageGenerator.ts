@@ -54,7 +54,7 @@ const DEFAULT_MAX_SKILLS = 4;
 const DEFAULT_IMAGE_RESPONSE_FORMAT = 'b64_json';
 const LOCAL_IMAGE_PREFIX = '/uploads/techniques';
 const DASHSCOPE_SYNC_IMAGE_PATH = '/api/v1/services/aigc/multimodal-generation/generation';
-export const TECHNIQUE_SKILL_IMAGE_OUTPUT_MAX_EDGE = 384;
+export const TECHNIQUE_SKILL_IMAGE_OUTPUT_MAX_EDGE = 256;
 export const TECHNIQUE_SKILL_IMAGE_OUTPUT_WEBP_QUALITY = 82;
 
 const asString = (raw: unknown): string => (typeof raw === 'string' ? raw.trim() : '');
