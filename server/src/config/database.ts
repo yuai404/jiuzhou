@@ -29,6 +29,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Pool as PgPool, PoolClient, QueryResult, QueryResultRow } from 'pg';
+import { resolveDatabaseConnectionString } from './databaseConnection.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ const { Pool } = pg;
 
 // 是否启用查询日志（生产环境关闭）
 const ENABLE_QUERY_LOG = process.env.DB_LOG === 'true';
+const DATABASE_CONNECTION_STRING = resolveDatabaseConnectionString(process.env);
 
 /**
  * 严格写入事务模式：
@@ -46,11 +48,7 @@ const STRICT_WRITE_TRANSACTION = true;
 
 // 数据库连接池
 export const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '6060'),
-  database: process.env.DB_NAME || 'jiuzshou_s',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'zlf981216',
+  connectionString: DATABASE_CONNECTION_STRING,
   max: 100,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,

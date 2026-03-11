@@ -2,10 +2,11 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { resolveDatabaseConnectionString } from "./src/config/databaseConnection.ts";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: resolveDatabaseConnectionString(process.env),
   },
 });

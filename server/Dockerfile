@@ -80,6 +80,7 @@ COPY --from=builder /app/server/dist ./dist
 COPY --from=builder /app/server/prisma ./prisma
 COPY --from=builder /app/server/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/server/scripts/prismaCli.mjs ./scripts/prismaCli.mjs
+COPY --from=builder /app/server/src/config/databaseConnection.ts ./src/config/databaseConnection.ts
 COPY server/src/data ./src/data
 COPY server/package.json ./package.json
 
