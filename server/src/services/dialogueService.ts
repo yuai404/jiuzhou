@@ -1,5 +1,6 @@
 import { query } from '../config/database.js';
 import { itemService } from './itemService.js';
+import { assertServiceSuccess } from './shared/assertServiceSuccess.js';
 import { getDialogueDefinitions } from './staticConfigLoader.js';
 
 export type DialogueNodeType = 'narration' | 'npc' | 'player' | 'choice' | 'system' | 'action';
@@ -186,7 +187,7 @@ export const applyDialogueEffectsTx = async (
             location: 'bag',
             obtainedFrom: 'dialogue',
           });
-          if (!result.success) throw new Error(result.message);
+          assertServiceSuccess(result);
           results.push({ type: 'item', itemDefId, quantity: qty });
         }
         continue;

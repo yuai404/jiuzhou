@@ -18,6 +18,7 @@ import {
   getItemDefinitionById,
   getTechniqueDefinitions,
 } from '../staticConfigLoader.js';
+import { assertServiceSuccess } from '../shared/assertServiceSuccess.js';
 import { asString, asNumber, asArray } from '../shared/typeCoercion.js';
 import type { RewardResult } from './types.js';
 
@@ -68,7 +69,7 @@ export const grantSectionRewards = async (
       location: 'bag',
       obtainedFrom: 'main_quest',
     });
-    if (!result.success) throw new Error(result.message);
+    assertServiceSuccess(result);
     results.push({ type: 'item', itemDefId, quantity, itemName: itemName || undefined, itemIcon: itemIcon || undefined });
   }
 
