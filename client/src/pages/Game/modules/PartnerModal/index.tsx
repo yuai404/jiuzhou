@@ -858,13 +858,19 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       : '';
     const cooldownStatusText = !recruitStatus
       ? '--'
+      : !recruitStatus.unlocked
+        ? '未开放'
       : coolingDown
         ? `剩余${cooldownText}`
         : '可招募';
-    const shouldShowSpiritStoneCost = (recruitStatus?.spiritStoneCost ?? 0) > 0;
-    const cooldownRuleText = recruitStatus?.cooldownHours === 0
-      ? '当前环境已关闭伙伴招募冷却，可连续招募。'
-      : `每次开始招募后会进入冷却，当前默认冷却时长为 ${recruitStatus?.cooldownHours} 小时。`;
+    const shouldShowSpiritStoneCost = Boolean(recruitStatus?.unlocked) && (recruitStatus?.spiritStoneCost ?? 0) > 0;
+    const cooldownRuleText = !recruitStatus
+      ? '--'
+      : !recruitStatus.unlocked
+        ? `需达到境界：${recruitStatus.unlockRealm}`
+        : recruitStatus.cooldownHours === 0
+          ? '当前环境已关闭伙伴招募冷却，可连续招募。'
+          : `每次开始招募后会进入冷却，当前默认冷却时长为 ${recruitStatus.cooldownHours} 小时。`;
 
     return (
       <div className="partner-pane-card">
@@ -896,6 +902,13 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
             <Button loading disabled>
               正在招募中
             </Button>
+          </div>
+        ) : null}
+
+        {recruitPanelView.kind === 'locked' ? (
+          <div className="partner-recruit-state-card">
+            <div className="partner-section-title">暂未开放</div>
+            <div className="partner-meta">伙伴招募需达到 {recruitPanelView.unlockRealm} 后开放。</div>
           </div>
         ) : null}
 

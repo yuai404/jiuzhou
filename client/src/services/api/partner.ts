@@ -167,7 +167,8 @@ export type PartnerRecruitJobDto = {
 
 export type PartnerRecruitStatusDto = {
   featureCode: CharacterFeatureCode;
-  unlocked: true;
+  unlockRealm: string;
+  unlocked: boolean;
   spiritStoneCost: number;
   cooldownHours: number;
   cooldownUntil: string | null;

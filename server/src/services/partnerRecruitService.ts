@@ -43,6 +43,11 @@ import {
   type PartnerRecruitPreviewDto,
 } from './shared/partnerRecruitJobShared.js';
 import {
+  buildPartnerRecruitStatusDto,
+  type PartnerRecruitJobDto,
+  type PartnerRecruitStatusDto,
+} from './shared/partnerRecruitStatus.js';
+import {
   buildPartnerRecruitCooldownState,
   buildPartnerRecruitPreviewExpireAt,
   buildPartnerRecruitPromptInput,
@@ -82,27 +87,7 @@ export type ServiceResult<T = unknown> = {
   code?: string;
 };
 
-export interface PartnerRecruitJobDto {
-  generationId: string;
-  status: PartnerRecruitJobStatus;
-  startedAt: string;
-  finishedAt: string | null;
-  previewExpireAt: string | null;
-  preview: PartnerRecruitPreviewDto | null;
-  errorMessage: string | null;
-}
-
-export interface PartnerRecruitStatusDto {
-  unlocked: true;
-  featureCode: string;
-  spiritStoneCost: number;
-  cooldownHours: number;
-  cooldownUntil: string | null;
-  cooldownRemainingSeconds: number;
-  currentJob: PartnerRecruitJobDto | null;
-  hasUnreadResult: boolean;
-  resultStatus: 'generated_draft' | 'failed' | null;
-}
+export type { PartnerRecruitJobDto, PartnerRecruitStatusDto } from './shared/partnerRecruitStatus.js';
 
 export interface PartnerRecruitConfirmResponse {
   generationId: string;
@@ -629,9 +614,33 @@ class PartnerRecruitService {
   }
 
   async getRecruitStatus(characterId: number): Promise<ServiceResult<PartnerRecruitStatusDto>> {
-    const unlockState = await this.assertPartnerRecruitUnlocked(characterId, false);
+    const featureUnlocked = await isFeatureUnlocked(characterId, PARTNER_SYSTEM_FEATURE_CODE);
+    if (!featureUnlocked) {
+      return { success: false, message: '伙伴系统尚未解锁', code: 'PARTNER_SYSTEM_LOCKED' };
+    }
+
+    const unlockState = await this.getPartnerRecruitUnlockStateTx(characterId, false);
     if (!unlockState.success || !unlockState.data) {
       return { success: false, message: unlockState.message, code: unlockState.code };
+    }
+
+    if (!unlockState.data.unlocked) {
+      const cooldownState = buildPartnerRecruitCooldownState(null);
+      return {
+        success: true,
+        message: '获取成功',
+        data: buildPartnerRecruitStatusDto({
+          featureCode: PARTNER_SYSTEM_FEATURE_CODE,
+          unlockState: unlockState.data,
+          spiritStoneCost: PARTNER_RECRUIT_SPIRIT_STONES_COST,
+          cooldownHours: cooldownState.cooldownHours,
+          cooldownUntil: cooldownState.cooldownUntil,
+          cooldownRemainingSeconds: cooldownState.cooldownRemainingSeconds,
+          currentJob: null,
+          hasUnreadResult: false,
+          resultStatus: null,
+        }),
+      };
     }
 
     await this.discardExpiredDraftJobsTx(characterId);
@@ -656,9 +665,9 @@ class PartnerRecruitService {
     return {
       success: true,
       message: '获取成功',
-      data: {
-        unlocked: true,
-        featureCode: unlockState.data.featureCode,
+      data: buildPartnerRecruitStatusDto({
+        featureCode: PARTNER_SYSTEM_FEATURE_CODE,
+        unlockState: unlockState.data,
         spiritStoneCost: PARTNER_RECRUIT_SPIRIT_STONES_COST,
         cooldownHours: cooldownState.cooldownHours,
         cooldownUntil: cooldownState.cooldownUntil,
@@ -666,7 +675,7 @@ class PartnerRecruitService {
         currentJob: jobState.currentJob,
         hasUnreadResult: jobState.hasUnreadResult,
         resultStatus: jobState.resultStatus,
-      },
+      }),
     };
   }
 

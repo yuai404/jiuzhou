@@ -34,6 +34,7 @@ export type PartnerRecruitIndicatorView = {
 
 export type PartnerRecruitPanelView =
   | { kind: 'empty' }
+  | { kind: 'locked'; unlockRealm: string }
   | { kind: 'pending'; job: PartnerRecruitJobDto }
   | { kind: 'draft'; job: PartnerRecruitJobDto; preview: NonNullable<PartnerRecruitJobDto['preview']> }
   | { kind: 'failed'; job: PartnerRecruitJobDto; errorMessage: string };
@@ -77,6 +78,12 @@ export const getPartnerRecruitIndicatorTooltip = (
 export const resolvePartnerRecruitPanelView = (
   status: PartnerRecruitStatusData | null,
 ): PartnerRecruitPanelView => {
+  if (status && !status.unlocked) {
+    return {
+      kind: 'locked',
+      unlockRealm: status.unlockRealm,
+    };
+  }
   const job = status?.currentJob ?? null;
   if (!job) return { kind: 'empty' };
   if (job.status === 'pending') return { kind: 'pending', job };
@@ -113,13 +120,17 @@ export const resolvePartnerRecruitActionState = (
   const panelView = resolvePartnerRecruitPanelView(status);
   const canGenerate =
     status !== null &&
+    status.unlocked &&
     panelView.kind !== 'pending' &&
     panelView.kind !== 'draft' &&
     !isPartnerRecruitCoolingDown(status);
 
   return {
     canGenerate,
-    showGenerateButton: panelView.kind !== 'pending' && panelView.kind !== 'draft',
+    showGenerateButton:
+      panelView.kind !== 'locked'
+      && panelView.kind !== 'pending'
+      && panelView.kind !== 'draft',
     pendingGenerationId: panelView.kind === 'pending' ? panelView.job.generationId : null,
   };
 };
