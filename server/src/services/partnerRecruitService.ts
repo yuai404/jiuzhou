@@ -58,6 +58,10 @@ import {
   type PartnerRecruitQuality,
   validatePartnerRecruitDraft,
 } from './shared/partnerRecruitRules.js';
+import {
+  buildPartnerRecruitUnlockState,
+  type PartnerRecruitUnlockState,
+} from './shared/partnerRecruitUnlock.js';
 import { generatePartnerRecruitAvatar } from './shared/partnerRecruitAvatarGenerator.js';
 import { generateTechniqueCandidateWithIcons } from './shared/techniqueGenerationExecution.js';
 import { callConfiguredTextModel } from './ai/openAITextClient.js';
@@ -474,11 +478,59 @@ const buildRecruitPreviewByPartnerDefId = (
 };
 
 class PartnerRecruitService {
-  private async assertPartnerSystemUnlocked(characterId: number): Promise<ServiceResult<{ featureCode: string }>> {
-    const unlocked = await isFeatureUnlocked(characterId, PARTNER_SYSTEM_FEATURE_CODE);
-    if (!unlocked) {
+  private async getPartnerRecruitUnlockStateTx(
+    characterId: number,
+    lockRow: boolean,
+  ): Promise<ServiceResult<PartnerRecruitUnlockState>> {
+    const queryText = lockRow
+      ? `
+        SELECT realm, sub_realm
+        FROM characters
+        WHERE id = $1
+        FOR UPDATE
+      `
+      : `
+        SELECT realm, sub_realm
+        FROM characters
+        WHERE id = $1
+      `;
+    const characterRes = await query(queryText, [characterId]);
+    if (characterRes.rows.length === 0) {
+      return { success: false, message: '角色不存在', code: 'CHARACTER_NOT_FOUND' };
+    }
+
+    const row = characterRes.rows[0] as { realm?: string | null; sub_realm?: string | null };
+    return {
+      success: true,
+      message: '获取伙伴招募开放态成功',
+      data: buildPartnerRecruitUnlockState(
+        typeof row.realm === 'string' ? row.realm.trim() : '',
+        typeof row.sub_realm === 'string' && row.sub_realm.trim() ? row.sub_realm.trim() : null,
+      ),
+    };
+  }
+
+  private async assertPartnerRecruitUnlocked(
+    characterId: number,
+    lockRow: boolean,
+  ): Promise<ServiceResult<{ featureCode: string }>> {
+    const featureUnlocked = await isFeatureUnlocked(characterId, PARTNER_SYSTEM_FEATURE_CODE);
+    if (!featureUnlocked) {
       return { success: false, message: '伙伴系统尚未解锁', code: 'PARTNER_SYSTEM_LOCKED' };
     }
+
+    const unlockState = await this.getPartnerRecruitUnlockStateTx(characterId, lockRow);
+    if (!unlockState.success || !unlockState.data) {
+      return { success: false, message: unlockState.message, code: unlockState.code };
+    }
+    if (!unlockState.data.unlocked) {
+      return {
+        success: false,
+        message: `伙伴招募需达到${unlockState.data.unlockRealm}后开放`,
+        code: 'PARTNER_RECRUIT_REALM_LOCKED',
+      };
+    }
+
     return {
       success: true,
       message: 'ok',
@@ -577,7 +629,7 @@ class PartnerRecruitService {
   }
 
   async getRecruitStatus(characterId: number): Promise<ServiceResult<PartnerRecruitStatusDto>> {
-    const unlockState = await this.assertPartnerSystemUnlocked(characterId);
+    const unlockState = await this.assertPartnerRecruitUnlocked(characterId, false);
     if (!unlockState.success || !unlockState.data) {
       return { success: false, message: unlockState.message, code: unlockState.code };
     }
@@ -622,7 +674,7 @@ class PartnerRecruitService {
   private async createRecruitJobTx(characterId: number, quality: PartnerRecruitQuality): Promise<ServiceResult<{ generationId: string }>> {
     await this.discardExpiredDraftJobsTx(characterId);
 
-    const unlockState = await this.assertPartnerSystemUnlocked(characterId);
+    const unlockState = await this.assertPartnerRecruitUnlocked(characterId, true);
     if (!unlockState.success) {
       return { success: false, message: unlockState.message, code: unlockState.code };
     }
@@ -951,7 +1003,7 @@ class PartnerRecruitService {
 
   @Transactional
   async confirmRecruitDraft(characterId: number, generationId: string): Promise<ServiceResult<PartnerRecruitConfirmResponse>> {
-    const unlockState = await this.assertPartnerSystemUnlocked(characterId);
+    const unlockState = await this.assertPartnerRecruitUnlocked(characterId, true);
     if (!unlockState.success) {
       return { success: false, message: unlockState.message, code: unlockState.code };
     }
