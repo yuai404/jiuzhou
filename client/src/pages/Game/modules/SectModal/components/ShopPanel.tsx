@@ -8,7 +8,11 @@ import { Button, InputNumber } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import type { SectShopItemDto } from '../../../../../services/api';
 import { resolveIcon } from '../../BagModal/bagShared';
-import { SECT_SHOP_BATCH_BUY_INPUT_MAX } from '../constants';
+import {
+  calcSectShopMaxBuyCount,
+  formatSectShopPurchaseLimitLabel,
+  normalizeSectShopPurchaseLimit,
+} from '../shopPurchaseLimit';
 
 interface ShopPanelProps {
   loading: boolean;
@@ -28,31 +32,6 @@ const normalizeShopItemName = (name: string, qty: number): string => {
   const suffixPattern = new RegExp(`\\s*[xX×]\\s*${qtyText}$`);
   const cleaned = trimmed.replace(suffixPattern, '').trim();
   return cleaned || trimmed;
-};
-
-/**
- * 将后端字段归一化为“每天最多可兑换次数”。
- * 约定：
- * 1) <= 0 或非法值 = 不限购；
- * 2) 限购存在时，前端输入上限仍会再叠加本地批量输入上限。
- */
-const resolveDailyLimit = (rawLimit: number | undefined): number => {
-  if (!Number.isFinite(rawLimit)) return 0;
-  const safe = Math.floor(rawLimit as number);
-  if (safe <= 0) return 0;
-  return safe;
-};
-
-/**
- * 计算当前可兑换次数上限。
- * 输入：个人贡献、单次兑换消耗、每日限购（0 表示不限）。
- * 输出：本次请求允许提交的最大 quantity（>=0）。
- */
-const calcMaxBuyCount = (myContribution: number, costContribution: number, dailyLimit: number): number => {
-  const maxByContribution =
-    costContribution > 0 ? Math.max(0, Math.floor(myContribution / costContribution)) : SECT_SHOP_BATCH_BUY_INPUT_MAX;
-  const maxByDailyLimit = dailyLimit > 0 ? Math.max(0, dailyLimit) : SECT_SHOP_BATCH_BUY_INPUT_MAX;
-  return Math.max(0, Math.min(SECT_SHOP_BATCH_BUY_INPUT_MAX, maxByContribution, maxByDailyLimit));
 };
 
 const clampBuyCount = (value: number, maxCount: number): number => {
@@ -87,8 +66,8 @@ const ShopPanel: React.FC<ShopPanelProps> = ({ loading, myContribution, shopItem
     setBuyCountMap((prev) => {
       const next: Record<string, number> = {};
       for (const item of shopItems) {
-        const dailyLimit = resolveDailyLimit(item.limitDaily);
-        const maxCount = calcMaxBuyCount(myContribution, item.costContribution, dailyLimit);
+        const purchaseLimit = normalizeSectShopPurchaseLimit(item.purchaseLimit);
+        const maxCount = calcSectShopMaxBuyCount(myContribution, item.costContribution, purchaseLimit);
         if (maxCount <= 1) continue;
         next[item.id] = clampBuyCount(prev[item.id] ?? 1, maxCount);
       }
@@ -133,8 +112,9 @@ const ShopPanel: React.FC<ShopPanelProps> = ({ loading, myContribution, shopItem
             const unitQty = normalizeUnitQty(item.qty);
             const loadingKey = `shop-buy-${item.id}`;
             const isLoading = actionLoadingKey === loadingKey;
-            const dailyLimit = resolveDailyLimit(item.limitDaily);
-            const maxBuyCount = calcMaxBuyCount(myContribution, item.costContribution, dailyLimit);
+            const purchaseLimit = normalizeSectShopPurchaseLimit(item.purchaseLimit);
+            const purchaseLimitLabel = formatSectShopPurchaseLimitLabel(purchaseLimit);
+            const maxBuyCount = calcSectShopMaxBuyCount(myContribution, item.costContribution, purchaseLimit);
             const affordable = maxBuyCount >= 1;
             const canBatchBuy = maxBuyCount > 1;
             const buyCount = canBatchBuy ? clampBuyCount(buyCountMap[item.id] ?? 1, maxBuyCount) : 1;
@@ -165,9 +145,9 @@ const ShopPanel: React.FC<ShopPanelProps> = ({ loading, myContribution, shopItem
                     <div className="sect-shop-item-name">{displayName}</div>
                     <div className="sect-shop-item-meta">
                       <span className="sect-shop-qty">数量 x{unitQty}</span>
-                      {dailyLimit > 0 && (
-                        <span className="sect-shop-limit">每日限购 {dailyLimit}</span>
-                      )}
+                      {purchaseLimitLabel ? (
+                        <span className="sect-shop-limit">{purchaseLimitLabel}</span>
+                      ) : null}
                     </div>
                   </div>
                   {canBatchBuy ? (

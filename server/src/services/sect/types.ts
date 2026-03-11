@@ -131,6 +131,14 @@ export interface SubmitSectQuestResult extends Result {
   status?: SectQuest['status'];
 }
 
+export type ShopPurchaseLimitKind = 'daily' | 'rolling_days';
+
+export interface ShopPurchaseLimit {
+  kind: ShopPurchaseLimitKind;
+  maxCount: number;
+  windowDays: number;
+}
+
 export interface ShopItem {
   id: string;
   name: string;
@@ -138,7 +146,7 @@ export interface ShopItem {
   itemDefId: string;
   itemIcon?: string | null;
   qty: number;
-  limitDaily?: number;
+  purchaseLimit?: ShopPurchaseLimit;
 }
 
 interface SectListItem {

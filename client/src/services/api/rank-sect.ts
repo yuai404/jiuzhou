@@ -327,13 +327,19 @@ export const getSectLogs = (limit: number = 50): Promise<SectLogsResponse> => {
   return api.get('/sect/logs', { params: { limit } });
 };
 
+export type SectShopPurchaseLimitDto = {
+  kind: 'daily' | 'rolling_days';
+  maxCount: number;
+  windowDays: number;
+};
+
 export type SectShopItemDto = {
   id: string;
   name: string;
   costContribution: number;
   itemDefId: string;
   qty: number;
-  limitDaily?: number;
+  purchaseLimit?: SectShopPurchaseLimitDto;
   itemIcon?: string | null;
 };
 

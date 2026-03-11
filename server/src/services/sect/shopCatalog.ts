@@ -5,7 +5,7 @@
  * - 集中维护宗门商店的商品定义、图标补齐与限购常量，避免商品规则散落在购买流程与测试里重复声明。
  * - 对外输出可直接下发前端的商品列表，以及少量会被服务层/测试复用的商品标识常量。
  * 不做：
- * - 不处理贡献扣除、每日限购校验、发货与日志落库。
+ * - 不处理贡献扣除、周期限购校验、发货与日志落库。
  * - 不处理路由层入参与响应拼装。
  *
  * 输入/输出：
@@ -18,14 +18,18 @@
  * - 服务层与测试统一消费这里的配置，确保“配置源”只有一份。
  *
  * 关键边界条件与坑点：
- * 1) `limitDaily <= 0` 代表不限购，因此这里只给真实限购商品显式配置该字段。
+ * 1) 不限购商品应直接省略 `purchaseLimit`，避免“0 是否代表不限购”的规则散落到调用方。
  * 2) icon 解析失败时返回 null，前端继续走现有占位图逻辑，避免在这里引入展示层兜底。
  */
 import { getItemDefinitionById } from '../staticConfigLoader.js';
+import { createDailyShopPurchaseLimit, createRollingDaysShopPurchaseLimit } from './shopPurchaseLimit.js';
 import type { ShopItem } from './types.js';
 
 type BaseShopItem = Omit<ShopItem, 'itemIcon'>;
 
+export const CHUNYANG_GONG_SHOP_ITEM_ID = 'sect-shop-004';
+export const CHUNYANG_GONG_LIMIT_WINDOW_DAYS = 30;
+export const CHUNYANG_GONG_LIMIT_MAX_COUNT = 1;
 export const TECHNIQUE_FRAGMENT_SHOP_ITEM_ID = 'sect-shop-005';
 export const TECHNIQUE_FRAGMENT_DAILY_LIMIT = 500;
 export const BAG_EXPAND_SHOP_ITEM_ID = 'sect-shop-007';
@@ -42,14 +46,21 @@ const resolveShopItemIcon = (itemDefId: string): string | null => {
 
 const SHOP_BASE: BaseShopItem[] = [
   { id: 'sect-shop-001', name: '淬灵石×10', costContribution: 100, itemDefId: 'enhance-001', qty: 10 },
-  { id: 'sect-shop-004', name: '《纯阳功》×1', costContribution: 2200, itemDefId: 'book-chunyang-gong', qty: 1 },
+  {
+    id: CHUNYANG_GONG_SHOP_ITEM_ID,
+    name: '《纯阳功》×1',
+    costContribution: 2200,
+    itemDefId: 'book-chunyang-gong',
+    qty: 1,
+    purchaseLimit: createRollingDaysShopPurchaseLimit(CHUNYANG_GONG_LIMIT_WINDOW_DAYS, CHUNYANG_GONG_LIMIT_MAX_COUNT),
+  },
   {
     id: TECHNIQUE_FRAGMENT_SHOP_ITEM_ID,
     name: '功法残页×1',
     costContribution: 50,
     itemDefId: 'mat-gongfa-canye',
     qty: 1,
-    limitDaily: TECHNIQUE_FRAGMENT_DAILY_LIMIT,
+    purchaseLimit: createDailyShopPurchaseLimit(TECHNIQUE_FRAGMENT_DAILY_LIMIT),
   },
   { id: 'sect-shop-006', name: '灵墨×5', costContribution: 1800, itemDefId: 'mat-lingmo', qty: 5 },
   {
@@ -58,7 +69,7 @@ const SHOP_BASE: BaseShopItem[] = [
     costContribution: 1000,
     itemDefId: 'scroll-003',
     qty: 1,
-    limitDaily: REROLL_SCROLL_DAILY_LIMIT,
+    purchaseLimit: createDailyShopPurchaseLimit(REROLL_SCROLL_DAILY_LIMIT),
   },
   {
     id: BAG_EXPAND_SHOP_ITEM_ID,
@@ -66,7 +77,7 @@ const SHOP_BASE: BaseShopItem[] = [
     costContribution: 10000,
     itemDefId: 'func-001',
     qty: 1,
-    limitDaily: BAG_EXPAND_DAILY_LIMIT,
+    purchaseLimit: createDailyShopPurchaseLimit(BAG_EXPAND_DAILY_LIMIT),
   },
 ];
 

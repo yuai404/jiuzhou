@@ -6,7 +6,7 @@
  *
  * 数据流：
  * - 查询商店：返回商品列表（带图标）
- * - 购买商品：检查贡献 → 检查每日限购 → 扣除贡献 → 发放物品 → 记录任务进度 → 记录日志
+ * - 购买商品：检查贡献 → 检查周期限购 → 扣除贡献 → 发放物品 → 记录任务进度 → 记录日志
  *
  * 边界条件：
  * 1) 购买操作使用 @Transactional 保证原子性；扣除贡献后若发物品失败，必须抛业务异常触发整笔回滚
@@ -19,6 +19,10 @@ import { itemService } from '../itemService.js';
 import { assertMember, getCharacterUserId, toNumber } from './db.js';
 import { recordSectShopBuyEventTx } from './quests.js';
 import { BAG_EXPAND_SHOP_ITEM_ID, SECT_SHOP_ITEMS } from './shopCatalog.js';
+import {
+  buildShopPurchaseLimitExceededMessage,
+  buildShopPurchaseLimitWindowCondition,
+} from './shopPurchaseLimit.js';
 import type { BuyResult, ShopItem } from './types.js';
 
 /**
@@ -96,11 +100,7 @@ class SectShopService {
     const shopItemUnitQty = Math.max(1, Math.floor(shopItem.qty));
     const shopItemLogName = normalizeShopItemLogName(shopItem.name, shopItemUnitQty);
     const isBagExpandItem = shopItem.id === BAG_EXPAND_SHOP_ITEM_ID;
-    const dailyLimitRaw = shopItem.limitDaily;
-    const dailyLimit =
-      typeof dailyLimitRaw === 'number' && Number.isInteger(dailyLimitRaw)
-        ? Math.max(0, dailyLimitRaw)
-        : 0;
+    const purchaseLimit = shopItem.purchaseLimit;
     if (isBagExpandItem && q !== 1) return { success: false, message: '该商品每次仅可兑换1个' };
 
     const member = await assertMember(characterId);
@@ -118,30 +118,30 @@ class SectShopService {
       return { success: false, message: '未加入宗门' };
     }
 
-    if (dailyLimit > 0) {
+    if (purchaseLimit) {
+      const purchaseLimitWindow = buildShopPurchaseLimitWindowCondition(purchaseLimit, 2);
       const limitResult = await query(
         `
           SELECT content
           FROM sect_log
           WHERE log_type = 'shop_buy'
-            -- 限购按角色+日期统计，不按宗门隔离，避免通过退宗/换宗门重置次数。
+            -- 限购按角色统计，不按宗门隔离，避免通过退宗/换宗门重置次数。
             AND operator_id = $1
-            AND created_at::date = CURRENT_DATE
+            AND ${purchaseLimitWindow.sql}
         `,
-        [characterId]
+        [characterId, ...purchaseLimitWindow.params]
       );
-      const usedToday = (limitResult.rows as Array<{ content: string | null }>).reduce((sum, row) => {
+      const usedCount = (limitResult.rows as Array<{ content: string | null }>).reduce((sum, row) => {
         const content = typeof row.content === 'string' ? row.content : '';
         const totalQty = extractShopBuyItemQtyFromLogContent(content, shopItemLogName);
         if (totalQty <= 0) return sum;
         return sum + Math.ceil(totalQty / shopItemUnitQty);
       }, 0);
-      if (usedToday + q > dailyLimit) {
-        if (dailyLimit <= 1) {
-          return { success: false, message: '该商品今日已兑换' };
-        }
-        const remain = Math.max(0, dailyLimit - usedToday);
-        return { success: false, message: `该商品今日最多兑换${dailyLimit}个（剩余${remain}个）` };
+      if (usedCount + q > purchaseLimit.maxCount) {
+        return {
+          success: false,
+          message: buildShopPurchaseLimitExceededMessage(purchaseLimit, usedCount),
+        };
       }
     }
 
