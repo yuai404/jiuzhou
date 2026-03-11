@@ -1,6 +1,6 @@
 /**
  * 作用：
- * - 校验新的防御减伤机制是否符合“攻防对抗曲线”预期，避免减伤回归到旧的高收益形态。
+ * - 校验新的防御减伤机制是否符合“攻击 × K / (防御 + K)”预期，避免战斗流程继续读取旧曲线参数。
  * - 同时覆盖纯函数与伤害流程集成，保证公式与实战结算一致。
  *
  * 输入/输出：
@@ -122,50 +122,60 @@ function assertClose(actual: number, expected: number, message: string): void {
   assert.ok(Math.abs(actual - expected) < 1e-10, `${message}: actual=${actual}, expected=${expected}`);
 }
 
-function expectedDefenseReduction(defense: number, attack: number): number {
-  return defense / (
-    defense
-    + attack * BATTLE_CONSTANTS.DEFENSE_ATTACK_FACTOR
-    + BATTLE_CONSTANTS.DEFENSE_BASE_OFFSET
-  );
+function expectedDefenseReduction(defense: number): number {
+  return defense / (defense + BATTLE_CONSTANTS.DEFENSE_DAMAGE_K);
 }
 
-test('物理攻防相等时减伤应位于20%-30%并匹配公式', () => {
-  const attacker = createUnit('attacker-1', { wugong: 180 });
+test('物理防御结算应匹配 K 固定的新公式', () => {
   const defender = createUnit('defender-1', { wufang: 180 });
-  const reduction = calculateDefenseReductionRate(attacker, defender, 'physical');
-  const expected = expectedDefenseReduction(180, 180);
+  const reduction = calculateDefenseReductionRate(defender, 'physical');
+  const expected = expectedDefenseReduction(180);
 
-  assert.ok(reduction >= 0.2 && reduction <= 0.3, `减伤率应在20%-30%，当前=${reduction}`);
+  assert.ok(reduction > 0 && reduction < 0.2, `减伤率应低于20%，当前=${reduction}`);
   assertClose(reduction, expected, '攻防相等场景公式偏差');
 });
 
-test('防御高于攻击时减伤应提升但不会接近免伤', () => {
-  const baselineAttacker = createUnit('attacker-2', { wugong: 180 });
+test('防御提升时减伤应同步提升，但仍受固定 K 限制', () => {
   const baselineDefender = createUnit('defender-2', { wufang: 180 });
   const higherDefenseDefender = createUnit('defender-3', { wufang: 260 });
 
-  const baselineReduction = calculateDefenseReductionRate(baselineAttacker, baselineDefender, 'physical');
-  const higherDefenseReduction = calculateDefenseReductionRate(baselineAttacker, higherDefenseDefender, 'physical');
-  const expected = expectedDefenseReduction(260, 180);
+  const baselineReduction = calculateDefenseReductionRate(baselineDefender, 'physical');
+  const higherDefenseReduction = calculateDefenseReductionRate(higherDefenseDefender, 'physical');
+  const expected = expectedDefenseReduction(260);
 
   assert.ok(higherDefenseReduction > baselineReduction, '防御提升后减伤应同步提升');
   assert.ok(higherDefenseReduction < 0.5, `减伤不应接近免伤，当前=${higherDefenseReduction}`);
   assertClose(higherDefenseReduction, expected, '高防场景公式偏差');
 });
 
-test('攻击高于防御时减伤应明显下降', () => {
-  const equalAttacker = createUnit('attacker-4', { wugong: 180 });
-  const equalDefender = createUnit('defender-4', { wufang: 180 });
-  const highAttackAttacker = createUnit('attacker-5', { wugong: 260 });
+test('同一防御下最终伤害应按固定倍率线性缩放', () => {
+  const attacker = createUnit('attacker-4', {
+    mingzhong: 1,
+    baoji: 0,
+    wugong: 260,
+  });
+  const defender = createUnit('defender-4', {
+    shanbi: 0,
+    zhaojia: 0,
+    kangbao: 0,
+    wufang: 180,
+  });
+  const state = createState(attacker, defender);
+  const damageRate = 1 - expectedDefenseReduction(180);
 
-  const equalReduction = calculateDefenseReductionRate(equalAttacker, equalDefender, 'physical');
-  const highAttackReduction = calculateDefenseReductionRate(highAttackAttacker, equalDefender, 'physical');
-  const expected = expectedDefenseReduction(180, 260);
+  const lowDamageResult = calculateDamage(state, attacker, defender, {
+    damageType: 'physical',
+    element: 'none',
+    baseDamage: 180,
+  });
+  const highDamageResult = calculateDamage(state, attacker, defender, {
+    damageType: 'physical',
+    element: 'none',
+    baseDamage: 260,
+  });
 
-  assert.ok(highAttackReduction < equalReduction, '攻击提升后减伤应下降');
-  assert.ok(highAttackReduction < 0.2, `高攻压制场景减伤应低于20%，当前=${highAttackReduction}`);
-  assertClose(highAttackReduction, expected, '高攻场景公式偏差');
+  assert.equal(lowDamageResult.damage, Math.floor(180 * damageRate));
+  assert.equal(highDamageResult.damage, Math.floor(260 * damageRate));
 });
 
 test('真实伤害不受防御减伤影响', () => {
@@ -208,9 +218,9 @@ test('法术伤害应读取 fagong/fafang，不应混用物理攻防', () => {
   });
   const state = createState(attacker, defender);
 
-  const magicReduction = calculateDefenseReductionRate(attacker, defender, 'magic');
-  const physicalReduction = calculateDefenseReductionRate(attacker, defender, 'physical');
-  const expectedMagicReduction = expectedDefenseReduction(100, 200);
+  const magicReduction = calculateDefenseReductionRate(defender, 'magic');
+  const physicalReduction = calculateDefenseReductionRate(defender, 'physical');
+  const expectedMagicReduction = expectedDefenseReduction(100);
   const expectedDamage = Math.floor(200 * (1 - expectedMagicReduction));
 
   const damageResult = calculateDamage(state, attacker, defender, {
@@ -247,7 +257,7 @@ test('暴伤减免应降低暴击后的最终倍率，且最低不会低于1倍'
   });
 
   assert.equal(result.isCrit, true);
-  assert.equal(result.damage, 340);
+  assert.equal(result.damage, 293);
 });
 
 test('暴伤减免高于暴伤收益时，暴击伤害应被钳制为1倍', () => {

@@ -64,7 +64,7 @@ export function calculateDamage(
 
   // 3. 防御减伤（真实伤害跳过）
   if (profile.damageType !== 'true') {
-    const defenseReduction = calculateDefenseReductionRate(attacker, defender, profile.damageType);
+    const defenseReduction = calculateDefenseReductionRate(defender, profile.damageType);
     damage *= (1 - defenseReduction);
   }
 

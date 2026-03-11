@@ -516,9 +516,8 @@ export const BATTLE_CONSTANTS = {
   
   BASE_LINGQI_REGEN: 10,
 
-  // 防御减伤曲线参数：减伤 = 防御 / (防御 + 攻击 * 系数 + 常量偏移)
-  DEFENSE_ATTACK_FACTOR: 2.5,
-  DEFENSE_BASE_OFFSET: 60,
+  // 防御结算常量：最终伤害倍率 = K / (防御 + K)
+  DEFENSE_DAMAGE_K: 1200,
   
   ELEMENT_COUNTER: {
     'jin': 'mu',
