@@ -3,7 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProper
 import { getCharacterTechniqueStatus, resolveAssetUrl, type CharacterSkillSlotDto } from '../../../../services/api';
 import { resolveIconUrl } from '../../shared/resolveIcon';
 import { gameSocket } from '../../../../services/gameSocket';
-import { readIsMobileViewport } from '../../shared/responsive';
+import { readIsMobileViewport, useIsMobile } from '../../shared/responsive';
 import { buildSkillCostEntries, normalizeSkillCost, resolveSkillCostRequirement } from '../../shared/skillCost';
 import { formatSkillEffectLines } from '../skillEffectFormatter';
 import './index.scss';
@@ -33,7 +33,7 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 const FAB_SIZE_DESKTOP = 72;
 const FAB_SIZE_MOBILE = 48;
-const getFabSize = () => (readIsMobileViewport() ? FAB_SIZE_MOBILE : FAB_SIZE_DESKTOP);
+const resolveFabSize = (isMobile: boolean): number => (isMobile ? FAB_SIZE_MOBILE : FAB_SIZE_DESKTOP);
 
 type SkillCooldownMapDto = Record<string, unknown>;
 
@@ -383,6 +383,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   onCastSkill
 }) => {
   const { message } = App.useApp();
+  const isMobile = useIsMobile();
   const initialLingqi = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.lingqi) || 0));
   const initialQixue = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.qixue) || 0));
   const initialMaxLingqi = Math.max(0, Math.floor(Number(gameSocket.getCharacter()?.maxLingqi) || 0));
@@ -409,7 +410,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   }));
   const [pos, setPos] = useState(() => {
     if (typeof window === 'undefined') return { x: 16, y: 160 };
-    return { x: Math.max(16, window.innerWidth - getFabSize() - 16), y: Math.round(window.innerHeight * 0.55) };
+    const fabSize = resolveFabSize(readIsMobileViewport());
+    return { x: Math.max(16, window.innerWidth - fabSize - 16), y: Math.round(window.innerHeight * 0.55) };
   });
 
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -484,8 +486,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       const h = window.innerHeight;
       setViewport({ w, h });
       setPos((p) => ({
-        x: clamp(p.x, 0, Math.max(0, w - getFabSize())),
-        y: clamp(p.y, 0, Math.max(0, h - getFabSize())),
+        x: clamp(p.x, 0, Math.max(0, w - resolveFabSize(readIsMobileViewport()))),
+        y: clamp(p.y, 0, Math.max(0, h - resolveFabSize(readIsMobileViewport()))),
       }));
     };
     window.addEventListener('resize', onResize);
@@ -493,8 +495,8 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   }, []);
 
   const expandDirection: ExpandDirection = useMemo(() => {
-    return pos.x + getFabSize() / 2 >= viewport.w / 2 ? 'left' : 'right';
-  }, [pos.x, viewport.w]);
+    return pos.x + resolveFabSize(isMobile) / 2 >= viewport.w / 2 ? 'left' : 'right';
+  }, [isMobile, pos.x, viewport.w]);
 
   const refreshSkillConfig = useCallback(async () => {
     if (!characterId) {
@@ -851,8 +853,9 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
     const dy = e.clientY - dragRef.current.startY;
     if (!dragRef.current.moved && Math.hypot(dx, dy) >= 4) dragRef.current.moved = true;
 
-    const nextX = clamp(dragRef.current.startPosX + dx, 0, Math.max(0, viewport.w - getFabSize()));
-    const nextY = clamp(dragRef.current.startPosY + dy, 0, Math.max(0, viewport.h - getFabSize()));
+    const fabSize = resolveFabSize(isMobile);
+    const nextX = clamp(dragRef.current.startPosX + dx, 0, Math.max(0, viewport.w - fabSize));
+    const nextY = clamp(dragRef.current.startPosY + dy, 0, Math.max(0, viewport.h - fabSize));
     setPos({ x: nextX, y: nextY });
     e.preventDefault();
   };
@@ -875,7 +878,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
   const renderPanel = () => (
     <div
       ref={panelRef}
-      className={`skill-fab-panel ${expandDirection === 'left' ? 'is-left' : 'is-right'}`}
+      className={`skill-fab-panel ${expandDirection === 'left' ? 'is-left' : 'is-right'} ${isMobile ? 'is-mobile' : ''}`}
       style={
         {
           ['--skill-fab-shift-x' as string]: `${panelShift.x}px`,
@@ -885,126 +888,130 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       role="group"
       aria-label="技能栏"
     >
-      <button
-        type="button"
-        className={`skill-fab-tile skill-fab-action ${autoRelease ? 'is-on' : ''}`}
-        onClick={() => onAutoModeChange?.(!autoRelease)}
-      >
-        <div className="skill-fab-tile-label">自动</div>
-        <div className="skill-fab-tile-sub">{autoRelease ? '开启' : '关闭'}</div>
-      </button>
-      {skills
-        .filter((s) => s.equipped)
-        .map((s) => {
-          const skillAvailability = resolveSkillAvailability(s, skillResourceState, controlState);
-          const waitingForTurn = turn != null && isBattleRunning && !isMyTurn;
-          const disabledByAvailability = !skillAvailability.available;
-          const isDisabled = isCasting || waitingForTurn || disabledByAvailability;
-          const unavailableReason = disabledByAvailability ? skillAvailability.message : null;
-          const effectLines = formatSkillEffectLines(s.effects, {
-            damageType: s.damageType,
-            element: s.element,
-          });
-          const costEntries = buildSkillCostEntries(normalizeSkillCost({
-            costLingqi: s.costLingqi,
-            costLingqiRate: s.costLingqiRate,
-            costQixue: s.costQixue,
-            costQixueRate: s.costQixueRate,
-          }));
-          const hasCost = costEntries.length > 0;
-          const hasCooldown = s.cooldownTurns > 0;
-          const elementLabel = formatElement(s.element);
-          const hasElement = elementLabel !== '无';
-          const targetLabel = formatTargetType(s.targetType) + (s.targetCount > 1 ? `×${s.targetCount}` : '');
-          const tooltipTitle = (
-            <div className="skill-fab-tooltip-content">
-              <div className="skill-fab-tooltip-title">{s.name}</div>
-              <div className="skill-fab-tooltip-meta">
-                {hasCost && (
-                  <div className="skill-fab-tooltip-row">
-                    <span className="skill-fab-tooltip-label">消耗</span>
-                    <span className="skill-fab-tooltip-value">
-                      {costEntries.map((entry) => (
-                        <span
-                          key={`${s.id}-${entry.key}`}
-                          className={`skill-fab-tooltip-chip ${entry.key === 'lingqi' ? 'is-lingqi' : 'is-qixue'}`}
-                        >
-                          {entry.label} {entry.value}
+      <div className="skill-fab-panel-scroll-shell">
+        <div className="skill-fab-panel-rail">
+          <button
+            type="button"
+            className={`skill-fab-tile skill-fab-action ${autoRelease ? 'is-on' : ''}`}
+            onClick={() => onAutoModeChange?.(!autoRelease)}
+          >
+            <div className="skill-fab-tile-label">自动</div>
+            <div className="skill-fab-tile-sub">{autoRelease ? '开启' : '关闭'}</div>
+          </button>
+          {skills
+            .filter((s) => s.equipped)
+            .map((s) => {
+              const skillAvailability = resolveSkillAvailability(s, skillResourceState, controlState);
+              const waitingForTurn = turn != null && isBattleRunning && !isMyTurn;
+              const disabledByAvailability = !skillAvailability.available;
+              const isDisabled = isCasting || waitingForTurn || disabledByAvailability;
+              const unavailableReason = disabledByAvailability ? skillAvailability.message : null;
+              const effectLines = formatSkillEffectLines(s.effects, {
+                damageType: s.damageType,
+                element: s.element,
+              });
+              const costEntries = buildSkillCostEntries(normalizeSkillCost({
+                costLingqi: s.costLingqi,
+                costLingqiRate: s.costLingqiRate,
+                costQixue: s.costQixue,
+                costQixueRate: s.costQixueRate,
+              }));
+              const hasCost = costEntries.length > 0;
+              const hasCooldown = s.cooldownTurns > 0;
+              const elementLabel = formatElement(s.element);
+              const hasElement = elementLabel !== '无';
+              const targetLabel = formatTargetType(s.targetType) + (s.targetCount > 1 ? `×${s.targetCount}` : '');
+              const tooltipTitle = (
+                <div className="skill-fab-tooltip-content">
+                  <div className="skill-fab-tooltip-title">{s.name}</div>
+                  <div className="skill-fab-tooltip-meta">
+                    {hasCost && (
+                      <div className="skill-fab-tooltip-row">
+                        <span className="skill-fab-tooltip-label">消耗</span>
+                        <span className="skill-fab-tooltip-value">
+                          {costEntries.map((entry) => (
+                            <span
+                              key={`${s.id}-${entry.key}`}
+                              className={`skill-fab-tooltip-chip ${entry.key === 'lingqi' ? 'is-lingqi' : 'is-qixue'}`}
+                            >
+                              {entry.label} {entry.value}
+                            </span>
+                          ))}
                         </span>
-                      ))}
-                    </span>
-                  </div>
-                )}
-                {hasCooldown && (
-                  <div className="skill-fab-tooltip-row">
-                    <span className="skill-fab-tooltip-label">冷却</span>
-                    <span className="skill-fab-tooltip-value">{s.cooldownTurns}回合</span>
-                  </div>
-                )}
-                <div className="skill-fab-tooltip-row">
-                  <span className="skill-fab-tooltip-label">类型</span>
-                  <span className="skill-fab-tooltip-value">
-                    <span className="skill-fab-tooltip-chip">{formatDamageType(s.damageType)}</span>
-                    <span className="skill-fab-tooltip-chip">{targetLabel}</span>
-                    {hasElement && <span className="skill-fab-tooltip-chip is-element">{elementLabel}</span>}
-                  </span>
-                </div>
-                {unavailableReason ? (
-                  <div className="skill-fab-tooltip-row is-unusable">
-                    <span className="skill-fab-tooltip-label">状态</span>
-                    <span className="skill-fab-tooltip-value">
-                      <span className="skill-fab-tooltip-chip is-unusable">{unavailableReason}</span>
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-              {effectLines.length > 0 && (
-                <div className="skill-fab-tooltip-effects">
-                  {effectLines.map((line, idx) => (
-                    <div key={`${s.id}-effect-${idx}`} className="skill-fab-tooltip-effect-line">
-                      {line}
+                      </div>
+                    )}
+                    {hasCooldown && (
+                      <div className="skill-fab-tooltip-row">
+                        <span className="skill-fab-tooltip-label">冷却</span>
+                        <span className="skill-fab-tooltip-value">{s.cooldownTurns}回合</span>
+                      </div>
+                    )}
+                    <div className="skill-fab-tooltip-row">
+                      <span className="skill-fab-tooltip-label">类型</span>
+                      <span className="skill-fab-tooltip-value">
+                        <span className="skill-fab-tooltip-chip">{formatDamageType(s.damageType)}</span>
+                        <span className="skill-fab-tooltip-chip">{targetLabel}</span>
+                        {hasElement && <span className="skill-fab-tooltip-chip is-element">{elementLabel}</span>}
+                      </span>
                     </div>
-                  ))}
+                    {unavailableReason ? (
+                      <div className="skill-fab-tooltip-row is-unusable">
+                        <span className="skill-fab-tooltip-label">状态</span>
+                        <span className="skill-fab-tooltip-value">
+                          <span className="skill-fab-tooltip-chip is-unusable">{unavailableReason}</span>
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                  {effectLines.length > 0 && (
+                    <div className="skill-fab-tooltip-effects">
+                      {effectLines.map((line, idx) => (
+                        <div key={`${s.id}-effect-${idx}`} className="skill-fab-tooltip-effect-line">
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {s.description ? <div className="skill-fab-tooltip-desc">{s.description}</div> : null}
                 </div>
-              )}
-              {s.description ? <div className="skill-fab-tooltip-desc">{s.description}</div> : null}
-            </div>
-          );
-          return (
-            <Tooltip
-              key={s.id}
-              title={tooltipTitle}
-              placement={expandDirection === 'left' ? 'left' : 'right'}
-              overlayClassName={SKILL_FAB_TOOLTIP_CLASS_NAMES.root}
-              classNames={SKILL_FAB_TOOLTIP_CLASS_NAMES}
-            >
-              <span style={{ display: 'inline-block' }}>
-                <button
-                  type="button"
-                  className={`skill-fab-tile skill-fab-skill-tile ${skillAvailability.reason === 'cooldown' ? 'is-cd' : ''} ${waitingForTurn && skillAvailability.available ? 'is-waiting' : ''} ${!skillAvailability.available && skillAvailability.reason !== 'cooldown' ? 'is-unusable' : ''}`}
-                  onClick={() => void castSkill(s.id, true)}
-                  disabled={isDisabled}
+              );
+              return (
+                <Tooltip
+                  key={s.id}
+                  title={tooltipTitle}
+                  placement={isMobile ? 'top' : (expandDirection === 'left' ? 'left' : 'right')}
+                  overlayClassName={SKILL_FAB_TOOLTIP_CLASS_NAMES.root}
+                  classNames={SKILL_FAB_TOOLTIP_CLASS_NAMES}
                 >
-                  {s.icon ? <img className="skill-fab-tile-icon" src={s.icon} alt={s.name} /> : <div className="skill-fab-tile-icon" />}
-                  <div className="skill-fab-tile-name">{s.name}</div>
-                  {s.cooldownLeft > 0 ? <div className="skill-fab-tile-cd">{s.cooldownLeft}</div> : null}
-                  {isCasting ? <div className="skill-fab-tile-casting">...</div> : null}
-                </button>
-              </span>
-            </Tooltip>
-          );
-        })}
-      {turn != null ? (
-        <button type="button" className="skill-fab-tile skill-fab-action" disabled>
-          <div className="skill-fab-tile-label">回合</div>
-          <div className="skill-fab-tile-sub">{turn}</div>
-        </button>
-      ) : (
-        <button type="button" className="skill-fab-tile skill-fab-action" onClick={nextLocalTurn}>
-          <div className="skill-fab-tile-label">回合</div>
-          <div className="skill-fab-tile-sub">+1（{localTurn}）</div>
-        </button>
-      )}
+                  <span style={{ display: 'inline-block' }}>
+                    <button
+                      type="button"
+                      className={`skill-fab-tile skill-fab-skill-tile ${skillAvailability.reason === 'cooldown' ? 'is-cd' : ''} ${waitingForTurn && skillAvailability.available ? 'is-waiting' : ''} ${!skillAvailability.available && skillAvailability.reason !== 'cooldown' ? 'is-unusable' : ''}`}
+                      onClick={() => void castSkill(s.id, true)}
+                      disabled={isDisabled}
+                    >
+                      {s.icon ? <img className="skill-fab-tile-icon" src={s.icon} alt={s.name} /> : <div className="skill-fab-tile-icon" />}
+                      <div className="skill-fab-tile-name">{s.name}</div>
+                      {s.cooldownLeft > 0 ? <div className="skill-fab-tile-cd">{s.cooldownLeft}</div> : null}
+                      {isCasting ? <div className="skill-fab-tile-casting">...</div> : null}
+                    </button>
+                  </span>
+                </Tooltip>
+              );
+            })}
+          {turn != null ? (
+            <button type="button" className="skill-fab-tile skill-fab-action" disabled>
+              <div className="skill-fab-tile-label">回合</div>
+              <div className="skill-fab-tile-sub">{turn}</div>
+            </button>
+          ) : (
+            <button type="button" className="skill-fab-tile skill-fab-action" onClick={nextLocalTurn}>
+              <div className="skill-fab-tile-label">回合</div>
+              <div className="skill-fab-tile-sub">+1（{localTurn}）</div>
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 

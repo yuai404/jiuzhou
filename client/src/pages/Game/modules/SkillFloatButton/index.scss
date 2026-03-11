@@ -200,13 +200,20 @@ body.theme-dark .skill-fab-tooltip-chip.is-unusable {
   position: absolute;
   top: 50%;
   transform: translate(calc(var(--skill-fab-shift-x, 0px)), calc(-50% + var(--skill-fab-shift-y, 0px)));
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 10px;
   padding: 0;
   background: transparent;
   border: none;
   box-shadow: none;
+}
+
+.skill-fab-panel-rail {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.skill-fab-panel-scroll-shell {
+  display: flex;
 }
 
 .skill-fab-panel.is-right {
@@ -219,6 +226,7 @@ body.theme-dark .skill-fab-tooltip-chip.is-unusable {
 
 .skill-fab-tile {
   position: relative;
+  flex: 0 0 auto;
   width: 66px;
   height: 66px;
   border-radius: 12px;
@@ -346,16 +354,44 @@ body.theme-dark .skill-fab-tooltip-chip.is-unusable {
   .skill-fab {
     width: 48px;
     height: 48px;
+    z-index: 110;
   }
 
   .skill-fab-main {
     width: 48px;
     height: 48px;
     font-size: 16px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
   }
 
   .skill-fab-panel {
+    max-width: calc(100vw - 16px);
+  }
+
+  .skill-fab-panel.is-mobile .skill-fab-panel-scroll-shell {
+    max-width: calc(100vw - 16px);
+    padding: 4px 4px 6px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .skill-fab-panel.is-mobile .skill-fab-panel-scroll-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .skill-fab-panel.is-mobile .skill-fab-panel-rail {
+    max-width: max-content;
     gap: 6px;
+    padding: 0 2px;
+    scroll-snap-type: x proximity;
+  }
+
+  .skill-fab-panel.is-mobile .skill-fab-panel-rail > * {
+    scroll-snap-align: start;
   }
 
   .skill-fab-tile {
@@ -364,6 +400,11 @@ body.theme-dark .skill-fab-tooltip-chip.is-unusable {
     border-radius: 10px;
     gap: 3px;
     padding: 4px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  }
+
+  .skill-fab-action.is-on {
+    box-shadow: 0 2px 8px rgba(22, 119, 255, 0.14);
   }
 
   .skill-fab-tile-icon {
