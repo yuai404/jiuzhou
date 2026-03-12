@@ -1,8 +1,42 @@
 .team-modal {
+  /**
+   * 模块作用：
+   * - 统一 TeamModal 右上角关闭按钮的占位与偏移，避免各面板头部各自手写留白后再次出现重叠。
+   * - 不做：不改变队伍业务按钮逻辑，只约束弹窗壳层的头部安全区与关闭按钮位置。
+   *
+   * 输入/输出：
+   * - 输入：Ant Design Modal 默认关闭按钮、`team-pane-top` 头部容器。
+   * - 输出：共享的关闭按钮尺寸/偏移变量，以及所有头部统一复用的右侧预留宽度。
+   *
+   * 数据流/状态流：
+   * - `Modal` 渲染默认关闭按钮 -> 本模块 CSS 变量统一计算点击区域与视觉偏移。
+   * - `team-pane-top` / `team-top-row` 直接消费同一份预留宽度，保证“创建队伍”等右侧操作不进入关闭按钮覆盖区。
+   *
+   * 关键边界条件与坑点：
+   * 1. 桌面端 `title={null}` 时，关闭按钮仍是绝对定位，若头部不主动预留宽度，右侧操作按钮会被覆盖。
+   * 2. 移动端宽度更紧，关闭按钮预留必须跟随同一变量缩放，否则桌面修好了、移动端仍可能复发。
+   */
+  --team-modal-close-size: 32px;
+  --team-modal-close-offset: 12px;
+  --team-modal-close-reserve: calc(var(--team-modal-close-size) + var(--team-modal-close-offset) + 12px);
+
   .ant-modal-content {
     padding: 0;
     border-radius: 14px;
     overflow: hidden;
+  }
+
+  .ant-modal-close {
+    top: var(--team-modal-close-offset);
+    inset-inline-end: var(--team-modal-close-offset);
+    width: var(--team-modal-close-size);
+    height: var(--team-modal-close-size);
+    color: var(--text-tertiary);
+  }
+
+  .ant-modal-close:hover {
+    color: var(--text-color);
+    background: var(--hover-bg);
   }
 }
 
@@ -91,7 +125,7 @@
 
 .team-pane-top {
   flex: 0 0 auto;
-  padding: 12px 14px;
+  padding: 12px var(--team-modal-close-reserve) 12px 14px;
   border-bottom: 1px solid var(--border-color-soft);
   background: var(--panel-bg);
   display: flex;
@@ -363,6 +397,12 @@
 }
 
 @media screen and (max-width: 768px) {
+  .team-modal {
+    --team-modal-close-size: 30px;
+    --team-modal-close-offset: 10px;
+    --team-modal-close-reserve: calc(var(--team-modal-close-size) + var(--team-modal-close-offset) + 10px);
+  }
+
   .team-modal .ant-modal {
     width: calc(100vw - 16px) !important;
     max-width: calc(100vw - 16px);
