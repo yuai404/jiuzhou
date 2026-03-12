@@ -35,6 +35,8 @@ const createPartner = (params: {
   nickname: params.name,
   name: params.name,
   description: `${params.name} 描述`,
+  tradeStatus: 'none',
+  marketListingId: null,
   avatar: null,
   element: 'mu',
   role: '剑修',

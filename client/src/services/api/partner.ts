@@ -46,6 +46,8 @@ export type PartnerBaseAttrsDto = Omit<PartnerComputedAttrsDto, 'qixue' | 'lingq
 
 export type PartnerPassiveAttrsDto = Record<string, number>;
 
+export type PartnerTradeStatus = 'none' | 'market_listed';
+
 export type PartnerTechniqueSkillDto = {
   id: string;
   name: string;
@@ -102,11 +104,12 @@ export type PartnerBookDto = {
   qty: number;
 };
 
-export type PartnerDetailDto = {
+export type PartnerDisplayDto = {
   id: number;
   partnerDefId: string;
   name: string;
   nickname: string;
+  description: string;
   avatar: string | null;
   element: string;
   role: string;
@@ -120,6 +123,11 @@ export type PartnerDetailDto = {
   growth: PartnerGrowthDto;
   computedAttrs: PartnerComputedAttrsDto;
   techniques: PartnerTechniqueDto[];
+};
+
+export type PartnerDetailDto = PartnerDisplayDto & {
+  tradeStatus: PartnerTradeStatus;
+  marketListingId: number | null;
 };
 
 export type PartnerRecruitPreviewTechniqueDto = {

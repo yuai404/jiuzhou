@@ -1,4 +1,5 @@
 import api from './core';
+import type { PartnerDisplayDto } from './partner';
 
 export type MarketSort = 'timeDesc' | 'priceAsc' | 'priceDesc' | 'qtyDesc';
 
@@ -62,6 +63,39 @@ export interface MarketTradeRecordsResponse {
   data?: { records: MarketTradeRecordDto[]; total: number };
 }
 
+export type PartnerMarketSort = 'timeDesc' | 'priceAsc' | 'priceDesc' | 'levelDesc';
+
+export interface MarketPartnerListingDto {
+  id: number;
+  partner: PartnerDisplayDto;
+  unitPriceSpiritStones: number;
+  sellerCharacterId: number;
+  sellerName: string;
+  listedAt: number;
+}
+
+export interface MarketPartnerListingsResponse {
+  success: boolean;
+  message: string;
+  data?: { listings: MarketPartnerListingDto[]; total: number };
+}
+
+export interface MarketPartnerTradeRecordDto {
+  id: number;
+  type: '买入' | '卖出';
+  partner: PartnerDisplayDto;
+  unitPriceSpiritStones: number;
+  totalPriceSpiritStones: number;
+  counterparty: string;
+  time: number;
+}
+
+export interface MarketPartnerTradeRecordsResponse {
+  success: boolean;
+  message: string;
+  data?: { records: MarketPartnerTradeRecordDto[]; total: number };
+}
+
 export const getMarketListings = (params?: {
   category?: string;
   quality?: string;
@@ -104,6 +138,51 @@ export const getMarketTradeRecords = (params?: {
   pageSize?: number;
 }): Promise<MarketTradeRecordsResponse> => {
   return api.get('/market/records', { params });
+};
+
+export const getPartnerMarketListings = (params?: {
+  quality?: string;
+  element?: string;
+  query?: string;
+  sort?: PartnerMarketSort;
+  page?: number;
+  pageSize?: number;
+}): Promise<MarketPartnerListingsResponse> => {
+  return api.get('/market/partner-listings', { params });
+};
+
+export const getMyPartnerMarketListings = (params?: {
+  status?: 'active' | 'sold' | 'cancelled';
+  page?: number;
+  pageSize?: number;
+}): Promise<MarketPartnerListingsResponse> => {
+  return api.get('/market/partner-my-listings', { params });
+};
+
+export const createPartnerMarketListing = (body: {
+  partnerId: number;
+  unitPriceSpiritStones: number;
+}): Promise<{ success: boolean; message: string; data?: { listingId: number } }> => {
+  return api.post('/market/partner/list', body);
+};
+
+export const cancelPartnerMarketListing = (
+  listingId: number,
+): Promise<{ success: boolean; message: string }> => {
+  return api.post('/market/partner/cancel', { listingId });
+};
+
+export const buyPartnerMarketListing = (
+  listingId: number,
+): Promise<{ success: boolean; message: string }> => {
+  return api.post('/market/partner/buy', { listingId });
+};
+
+export const getPartnerMarketTradeRecords = (params?: {
+  page?: number;
+  pageSize?: number;
+}): Promise<MarketPartnerTradeRecordsResponse> => {
+  return api.get('/market/partner-records', { params });
 };
 
 // ============================================

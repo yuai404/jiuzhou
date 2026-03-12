@@ -57,3 +57,13 @@ export const calculateMarketListingRefundFee = (
   if (remainingQty >= originalQty) return listingFeeSilver;
   return (listingFeeSilver * BigInt(remainingQty)) / BigInt(originalQty);
 };
+
+export const getTaxAmount = (
+  totalPrice: bigint,
+  taxRate: number,
+): bigint => {
+  if (totalPrice <= 0n) return 0n;
+  if (!Number.isFinite(taxRate) || taxRate <= 0) return 0n;
+  const rate = Math.max(0, Math.min(100, taxRate));
+  return (totalPrice * BigInt(Math.floor(rate * 100))) / 10000n;
+};

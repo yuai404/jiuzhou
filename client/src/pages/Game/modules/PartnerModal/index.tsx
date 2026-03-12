@@ -2,6 +2,7 @@ import { App, Button, Drawer, Empty, InputNumber, Modal, Progress, Segmented, Sk
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   activatePartner,
+  createPartnerMarketListing,
   confirmPartnerRecruitDraft,
   dismissPartner,
   discardPartnerRecruitDraft,
@@ -24,6 +25,7 @@ import {
 import { gameSocket } from '../../../../services/gameSocket';
 import { getUnifiedApiErrorMessage } from '../../../../services/api';
 import { DEFAULT_ICON as partnerIcon } from '../../shared/resolveIcon';
+import { dispatchPartnerChangedEvent, PARTNER_CHANGED_EVENT } from '../../shared/partnerTradeEvents';
 import { useIsMobile } from '../../shared/responsive';
 import { getSkillCardSections } from '../TechniqueModal/skillDetailShared';
 import {
@@ -73,7 +75,7 @@ type RecruitStatusRefreshMode = 'initial' | 'background';
  *
  * 输入/输出：
  * - 输入：`open`、`onClose`。
- * - 输出：伙伴系统完整交互 UI；写操作后通过 socket 刷新角色，并触发 `inventory:changed` 事件同步其他模块。
+ * - 输出：伙伴系统完整交互 UI；写操作后通过 socket 刷新角色，并触发 `partner:changed` / `inventory:changed` 同步相关模块。
  *
  * 数据流/状态流：
  * open -> getPartnerOverview -> 选中伙伴 -> 激活/灌注/学习/升层 -> refreshOverview -> UI 更新。
@@ -95,6 +97,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const [techniqueResultText, setTechniqueResultText] = useState('');
   const [techniqueUpgradeCosts, setTechniqueUpgradeCosts] = useState<Record<string, PartnerTechniqueUpgradeCostDto | null>>({});
   const [expandedTechniqueSkills, setExpandedTechniqueSkills] = useState<Record<string, boolean>>({});
+  const [sellPriceValue, setSellPriceValue] = useState<number | null>(null);
+  const [sellModalOpen, setSellModalOpen] = useState(false);
   const markingRecruitViewedRef = useRef(false);
 
   const refreshOverview = useCallback(async () => {
@@ -140,6 +144,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       setTechniqueResultText('');
       setTechniqueUpgradeCosts({});
       setExpandedTechniqueSkills({});
+      setSellPriceValue(null);
+      setSellModalOpen(false);
       setActionKey('');
       return;
     }
@@ -159,10 +165,20 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     setExpandedTechniqueSkills({});
   }, [selectedPartnerId]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const handler = () => {
+      void refreshOverview();
+    };
+    window.addEventListener(PARTNER_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(PARTNER_CHANGED_EVENT, handler);
+  }, [open, refreshOverview]);
+
   const selectedPartner = useMemo<PartnerDetailDto | null>(() => {
     if (!overview || selectedPartnerId === null) return null;
     return overview.partners.find((partner) => partner.id === selectedPartnerId) ?? null;
   }, [overview, selectedPartnerId]);
+  const selectedPartnerListed = selectedPartner?.tradeStatus === 'market_listed';
 
   const recruitIndicator = useMemo(() => buildPartnerRecruitIndicator(recruitStatus), [recruitStatus]);
   const recruitPanelView = useMemo(() => resolvePartnerRecruitPanelView(recruitStatus), [recruitStatus]);
@@ -282,6 +298,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '切换出战失败'));
       message.success(res.message || '已切换出战伙伴');
       await refreshOverview();
+      dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
     } catch (error) {
       message.error(getUnifiedApiErrorMessage(error as { message?: string }, '切换出战失败'));
@@ -297,6 +314,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '伙伴下阵失败'));
       message.success(res.message || '已将伙伴下阵');
       await refreshOverview();
+      dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
     } catch (error) {
       message.error(getUnifiedApiErrorMessage(error as { message?: string }, '伙伴下阵失败'));
@@ -304,6 +322,33 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       setActionKey('');
     }
   }, [message, refreshOverview]);
+
+  const handleSellPartner = useCallback(async () => {
+    if (!selectedPartner) return;
+    const price = Math.max(0, Math.floor(Number(sellPriceValue) || 0));
+    if (price <= 0) {
+      message.warning('请输入有效的挂牌价格');
+      return;
+    }
+    setActionKey(`sell-${selectedPartner.id}`);
+    try {
+      const res = await createPartnerMarketListing({
+        partnerId: selectedPartner.id,
+        unitPriceSpiritStones: price,
+      });
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '挂牌失败'));
+      message.success(res.message || '已挂牌到坊市');
+      setSellModalOpen(false);
+      setSellPriceValue(null);
+      dispatchPartnerChangedEvent();
+      await refreshOverview();
+      gameSocket.refreshCharacter();
+    } catch (error) {
+      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '挂牌失败'));
+    } finally {
+      setActionKey('');
+    }
+  }, [message, refreshOverview, selectedPartner, sellPriceValue]);
 
   const handleInjectExp = useCallback(async () => {
     if (!selectedPartner) return;
@@ -318,6 +363,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '灌注失败'));
       message.success(res.message || '灌注成功');
       await refreshOverview();
+      dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
     } catch (error) {
       message.error(getUnifiedApiErrorMessage(error as { message?: string }, '灌注失败'));
@@ -335,6 +381,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       message.success(res.message || '学习成功');
       setTechniqueResultText(formatPartnerLearnResult(res.data.learnedTechnique, res.data.replacedTechnique));
       await refreshOverview();
+      dispatchPartnerChangedEvent();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error) {
       message.error(getUnifiedApiErrorMessage(error as { message?: string }, '学习失败'));
@@ -352,6 +399,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       message.success(res.message || '升层成功');
       setTechniqueResultText(`修炼成功：${res.data.updatedTechnique.name} 已提升至第 ${res.data.newLayer} 层`);
       await refreshOverview();
+      dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch (error) {
@@ -384,6 +432,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '确认招募失败'));
       message.success(res.message || '已确认招募伙伴');
       await Promise.all([refreshRecruitStatus(), refreshOverview()]);
+      dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
     } catch (error) {
       message.error(getUnifiedApiErrorMessage(error as { message?: string }, '确认招募失败'));
@@ -472,12 +521,14 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   <div className="partner-tag-row">
                     <Tag color={partner.isActive ? 'green' : 'default'}>{partner.isActive ? '已出战' : '待命中'}</Tag>
                     <Tag color="gold">{partner.quality}</Tag>
+                    {partner.tradeStatus === 'market_listed' ? <Tag color="orange">坊市中</Tag> : null}
                   </div>
                 </div>
                 <div className="partner-action-row partner-list-action-row">
                   <Button
                     type={partner.isActive ? 'default' : 'primary'}
                     loading={actionKey === `${partner.isActive ? 'dismiss' : 'activate'}-${partner.id}`}
+                    disabled={partner.tradeStatus === 'market_listed'}
                     onClick={(event) => {
                       event.stopPropagation();
                       if (partner.isActive) {
@@ -517,9 +568,25 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
               <Tag color={selectedPartner.isActive ? 'green' : 'default'}>{selectedPartner.isActive ? '当前出战' : '未出战'}</Tag>
               <Tag color="blue">等级 {selectedPartner.level}</Tag>
               <Tag color="gold">{selectedPartner.quality}</Tag>
+              {selectedPartner.tradeStatus === 'market_listed' ? <Tag color="orange">坊市中</Tag> : null}
             </div>
             <div className="partner-role-line">
               {formatPartnerElementLabel(selectedPartner.element)} · {selectedPartner.role} · 功法槽 {selectedPartner.slotCount}
+            </div>
+            {selectedPartner.tradeStatus === 'market_listed' ? (
+              <div className="partner-meta partner-meta--warning">已在坊市挂单，无法出战、灌注或修炼功法。</div>
+            ) : null}
+            <div className="partner-summary-actions">
+              <Button
+                disabled={selectedPartner.isActive || selectedPartner.tradeStatus === 'market_listed'}
+                loading={actionKey === `sell-${selectedPartner.id}`}
+                onClick={() => {
+                  setSellPriceValue(null);
+                  setSellModalOpen(true);
+                }}
+              >
+                挂牌出售
+              </Button>
             </div>
           </div>
         </div>
@@ -594,7 +661,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
             <Button
               type="primary"
               loading={actionKey === `inject-${selectedPartner.id}`}
-              disabled={characterExp <= 0}
+              disabled={characterExp <= 0 || selectedPartnerListed}
               onClick={() => {
                 void handleInjectExp();
               }}
@@ -734,7 +801,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                       <Button
                         type="primary"
                         loading={actionKey === `upgrade-${technique.techniqueId}`}
-                        disabled={!upgradeCost}
+                        disabled={!upgradeCost || selectedPartnerListed}
                         onClick={() => {
                           void handleUpgradeTechnique(technique);
                         }}
@@ -782,6 +849,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   <Button
                     type="primary"
                     loading={actionKey === `learn-${book.itemInstanceId}`}
+                    disabled={selectedPartnerListed}
                     onClick={() => {
                       void handleLearnTechnique(book);
                     }}
@@ -1060,39 +1128,79 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     );
   };
 
+  const sellPartnerModal = selectedPartner ? (
+    <Modal
+      open={sellModalOpen}
+      title="挂牌出售伙伴"
+      onCancel={() => {
+        setSellModalOpen(false);
+      }}
+      onOk={() => {
+        void handleSellPartner();
+      }}
+      okText="确认挂牌"
+      cancelText="取消"
+      confirmLoading={actionKey === `sell-${selectedPartner.id}`}
+      destroyOnHidden
+    >
+      <div className="partner-sell-modal">
+        <div className="partner-sell-modal__target">
+          当前伙伴：{selectedPartner.nickname || selectedPartner.name}（等级 {selectedPartner.level}）
+        </div>
+        <div className="partner-sell-modal__hint">
+          已上架的伙伴无法继续出战、灌注或修炼功法，购买后会转移完整伙伴实例。
+        </div>
+        <InputNumber<number>
+          min={1}
+          value={sellPriceValue}
+          onChange={(value) => setSellPriceValue(value)}
+          controls={false}
+          style={{ width: '100%' }}
+          placeholder="请输入挂牌价格（灵石）"
+        />
+      </div>
+    </Modal>
+  ) : null;
+
   if (isMobile) {
     return (
-      <Drawer
-        open={open}
-        onClose={onClose}
-        placement="bottom"
-        closeIcon={null}
-        title={null}
-        destroyOnHidden
-        className="partner-modal"
-        rootClassName="partner-modal-wrap"
-        styles={{ wrapper: { height: 'auto', maxHeight: 'calc(100dvh - 96px)' }, body: { padding: 0 } }}
-      >
-        {renderBody()}
-      </Drawer>
+      <>
+        <Drawer
+          open={open}
+          onClose={onClose}
+          placement="bottom"
+          closeIcon={null}
+          title={null}
+          destroyOnHidden
+          className="partner-modal"
+          rootClassName="partner-modal-wrap"
+          styles={{ wrapper: { height: 'auto', maxHeight: 'calc(100dvh - 96px)' }, body: { padding: 0 } }}
+        >
+          {renderBody()}
+        </Drawer>
+        {sellPartnerModal}
+      </>
     );
   }
 
   return (
-    <Modal
-      open={open}
-      onCancel={onClose}
-      footer={null}
-      title={null}
-      centered
-      width="min(900px, calc(100vw - 16px))"
-      className="partner-modal"
-      wrapClassName="partner-modal-wrap"
-      destroyOnHidden
-      maskClosable
-    >
-      {renderBody()}
-    </Modal>
+    <>
+      <Modal
+        open={open}
+        onCancel={onClose}
+        footer={null}
+        title={null}
+        centered
+        width="min(900px, calc(100vw - 16px))"
+        className="partner-modal"
+        wrapClassName="partner-modal-wrap"
+        destroyOnHidden
+        maskClosable
+      >
+        {renderBody()}
+      </Modal>
+      {sellPartnerModal}
+    </>
   );
 };
 

@@ -3,15 +3,29 @@ import { SearchOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveIconUrl, DEFAULT_ICON as coin01 } from '../../shared/resolveIcon';
 import {
+  buyPartnerMarketListing,
   buyMarketListing,
+  cancelPartnerMarketListing,
   cancelMarketListing,
+  createPartnerMarketListing,
   createMarketListing,
   getInventoryItems,
+  getMyPartnerMarketListings,
   getMarketListings,
+  getPartnerMarketListings,
+  getPartnerMarketTradeRecords,
+  getPartnerOverview,
   getMarketTradeRecords,
   getMyMarketListings,
 } from '../../../../services/api';
-import type { MarketListingDto, MarketTradeRecordDto } from '../../../../services/api';
+import type {
+  MarketListingDto,
+  MarketPartnerListingDto,
+  MarketPartnerTradeRecordDto,
+  MarketTradeRecordDto,
+  PartnerDetailDto,
+  PartnerDisplayDto,
+} from '../../../../services/api';
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
 import { useIsMobile } from '../../shared/responsive';
 import { getItemQualityMeta, normalizeItemQualityName } from '../../shared/itemQuality';
@@ -19,6 +33,14 @@ import InventoryItemCell from '../../shared/InventoryItemCell';
 import { ITEM_CATEGORY_ALL_OPTION, ITEM_CATEGORY_LABELS, ITEM_CATEGORY_OPTIONS } from '../../shared/itemTaxonomy';
 import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
 import { getLearnableTechniqueId } from '../../shared/learnableTechnique';
+import {
+  formatPartnerAttrValue,
+  formatPartnerElementLabel,
+  getPartnerAttrLabel,
+  getPartnerVisibleCombatAttrs,
+  resolvePartnerAvatar,
+} from '../../shared/partnerDisplay';
+import { dispatchPartnerChangedEvent, PARTNER_CHANGED_EVENT } from '../../shared/partnerTradeEvents';
 import MarketItemTooltipContent, {
   ITEM_TOOLTIP_CLASS_NAMES,
 } from '../../shared/MarketItemTooltipContent';
@@ -47,6 +69,7 @@ import type { SocketedGemEntry } from '../../shared/socketedGemDisplay';
 import './index.scss';
 
 type MarketPanel = 'market' | 'my' | 'list' | 'records';
+type MarketAssetType = 'item' | 'partner';
 
 type ItemQuality = '黄' | '玄' | '地' | '天';
 
@@ -243,6 +266,15 @@ type ListingItem = {
   listedAt: number;
 };
 
+type PartnerListingItem = {
+  id: number;
+  partner: PartnerDisplayDto;
+  unitPrice: number;
+  seller: string;
+  sellerCharacterId: number;
+  listedAt: number;
+};
+
 type TradeRecordType = '买入' | '卖出';
 
 type TradeRecord = {
@@ -253,6 +285,16 @@ type TradeRecord = {
   icon: string;
   qty: number;
   unitPrice: number;
+  counterparty: string;
+  time: number;
+};
+
+type PartnerTradeRecord = {
+  id: number;
+  type: TradeRecordType;
+  partner: PartnerDisplayDto;
+  unitPrice: number;
+  totalPrice: number;
   counterparty: string;
   time: number;
 };
@@ -344,6 +386,29 @@ const buildTradeRecord = (dto: MarketTradeRecordDto): TradeRecord => {
   };
 };
 
+const buildPartnerListingItem = (dto: MarketPartnerListingDto): PartnerListingItem => {
+  return {
+    id: Number(dto.id),
+    partner: dto.partner,
+    unitPrice: Number(dto.unitPriceSpiritStones) || 0,
+    seller: String(dto.sellerName ?? ''),
+    sellerCharacterId: Number(dto.sellerCharacterId) || 0,
+    listedAt: Number(dto.listedAt) || 0,
+  };
+};
+
+const buildPartnerTradeRecord = (dto: MarketPartnerTradeRecordDto): PartnerTradeRecord => {
+  return {
+    id: Number(dto.id),
+    type: dto.type === '卖出' ? '卖出' : '买入',
+    partner: dto.partner,
+    unitPrice: Number(dto.unitPriceSpiritStones) || 0,
+    totalPrice: Number(dto.totalPriceSpiritStones) || 0,
+    counterparty: String(dto.counterparty ?? ''),
+    time: Number(dto.time) || 0,
+  };
+};
+
 const parseMaybeNumber = (v: string) => {
   const s = String(v ?? '').trim();
   if (!s) return null;
@@ -362,6 +427,21 @@ const calculateListingFeeSilver = (priceInput: string, qtyInput: string): number
   const safeQty = Math.floor(qty);
   if (safeUnitPrice <= 0 || safeQty <= 0) return null;
   return safeUnitPrice * safeQty * MARKET_LISTING_FEE_SILVER_PER_SPIRIT_STONE;
+};
+
+const buildPartnerCombatPreview = (partner: PartnerDisplayDto): string[] => {
+  return getPartnerVisibleCombatAttrs(partner.computedAttrs)
+    .slice(0, 4)
+    .map((entry) => `${getPartnerAttrLabel(entry.key)} ${formatPartnerAttrValue(entry.key, entry.value)}`);
+};
+
+const buildPartnerTechniquePreview = (partner: PartnerDisplayDto): string => {
+  const names = partner.techniques.slice(0, 3).map((technique) => technique.name);
+  if (names.length <= 0) return '暂无功法';
+  if (partner.techniques.length > 3) {
+    return `${names.join(' / ')} 等 ${partner.techniques.length} 门`;
+  }
+  return names.join(' / ');
 };
 
 interface MarketModalProps {
@@ -388,6 +468,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     return () => unsubscribe();
   }, []);
 
+  const [assetType, setAssetType] = useState<MarketAssetType>('item');
   const [panel, setPanel] = useState<MarketPanel>('market');
   const isMobile = useIsMobile();
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -398,6 +479,10 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
   const [quality, setQuality] = useState<ItemQuality | 'all'>('all');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [partnerQuery, setPartnerQuery] = useState('');
+  const [partnerSort, setPartnerSort] = useState<'timeDesc' | 'priceAsc' | 'priceDesc' | 'levelDesc'>('timeDesc');
+  const [partnerQuality, setPartnerQuality] = useState<'all' | '黄' | '玄' | '地' | '天'>('all');
+  const [partnerElement, setPartnerElement] = useState<'all' | 'none' | 'jin' | 'mu' | 'shui' | 'huo' | 'tu' | 'an'>('all');
 
   const pageSize = 8;
   const [marketPage, setMarketPage] = useState(1);
@@ -413,17 +498,31 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketListings, setMarketListings] = useState<ListingItem[]>([]);
   const [marketTotal, setMarketTotal] = useState(0);
+  const [partnerMarketLoading, setPartnerMarketLoading] = useState(false);
+  const [partnerMarketListings, setPartnerMarketListings] = useState<PartnerListingItem[]>([]);
+  const [partnerMarketTotal, setPartnerMarketTotal] = useState(0);
 
   const [myLoading, setMyLoading] = useState(false);
   const [myListings, setMyListings] = useState<ListingItem[]>([]);
   const [myTotal, setMyTotal] = useState(0);
+  const [myPartnerLoading, setMyPartnerLoading] = useState(false);
+  const [myPartnerListings, setMyPartnerListings] = useState<PartnerListingItem[]>([]);
+  const [myPartnerTotal, setMyPartnerTotal] = useState(0);
 
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [records, setRecords] = useState<TradeRecord[]>([]);
   const [recordsTotal, setRecordsTotal] = useState(0);
+  const [partnerRecordsLoading, setPartnerRecordsLoading] = useState(false);
+  const [partnerRecords, setPartnerRecords] = useState<PartnerTradeRecord[]>([]);
+  const [partnerRecordsTotal, setPartnerRecordsTotal] = useState(0);
   const [marketTooltipPlacement, setMarketTooltipPlacement] = useState<MarketTooltipPlacement>('right');
   const [mobileListingPreview, setMobileListingPreview] = useState<MobileListingPreview | null>(null);
   const [buyDialogListing, setBuyDialogListing] = useState<ListingItem | null>(null);
+  const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(false);
+  const [partnerOverview, setPartnerOverview] = useState<PartnerDetailDto[]>([]);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
+  const [partnerListPrice, setPartnerListPrice] = useState('');
+  const [partnerListingActionLoading, setPartnerListingActionLoading] = useState(false);
   const resolveMarketTooltipPlacement = useCallback((event: React.MouseEvent<HTMLElement>) => {
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
     if (!viewportHeight) return;
@@ -491,9 +590,45 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     [resetMarketPage],
   );
 
+  const handlePartnerSortChange = useCallback(
+    (value: 'timeDesc' | 'priceAsc' | 'priceDesc' | 'levelDesc') => {
+      setPartnerSort(value);
+      resetMarketPage();
+    },
+    [resetMarketPage],
+  );
+
+  const handlePartnerQueryChange = useCallback(
+    (value: string) => {
+      setPartnerQuery(value);
+      resetMarketPage();
+    },
+    [resetMarketPage],
+  );
+
+  const handlePartnerQualityChange = useCallback(
+    (value: 'all' | '黄' | '玄' | '地' | '天') => {
+      setPartnerQuality(value);
+      resetMarketPage();
+    },
+    [resetMarketPage],
+  );
+
+  const handlePartnerElementChange = useCallback(
+    (value: 'all' | 'none' | 'jin' | 'mu' | 'shui' | 'huo' | 'tu' | 'an') => {
+      setPartnerElement(value);
+      resetMarketPage();
+    },
+    [resetMarketPage],
+  );
+
   const selectedBagItem = useMemo(
     () => (selectedBagId === null ? null : bagItems.find((b) => b.id === selectedBagId) ?? null),
     [bagItems, selectedBagId],
+  );
+  const selectedPartner = useMemo(
+    () => (selectedPartnerId === null ? null : partnerOverview.find((partner) => partner.id === selectedPartnerId) ?? null),
+    [partnerOverview, selectedPartnerId],
   );
   const mobilePreviewListing = useMemo(() => {
     if (!mobileListingPreview) return null;
@@ -590,7 +725,89 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     [pageSize, messageRef],
   );
 
+  const refreshPartnerMarket = useCallback(
+    async (page: number) => {
+      setPartnerMarketLoading(true);
+      try {
+        const res = await getPartnerMarketListings({
+          quality: partnerQuality,
+          element: partnerElement,
+          query: partnerQuery.trim(),
+          sort: partnerSort,
+          page,
+          pageSize,
+        });
+        if (!res.success || !res.data) throw new Error(res.message || '获取伙伴坊市失败');
+        setPartnerMarketListings(res.data.listings.map(buildPartnerListingItem));
+        setPartnerMarketTotal(Number(res.data.total) || 0);
+      } catch (error: unknown) {
+        void 0;
+        setPartnerMarketListings([]);
+        setPartnerMarketTotal(0);
+      } finally {
+        setPartnerMarketLoading(false);
+      }
+    },
+    [pageSize, partnerElement, partnerQuality, partnerQuery, partnerSort],
+  );
+
+  const refreshMyPartnerListings = useCallback(
+    async (page: number) => {
+      setMyPartnerLoading(true);
+      try {
+        const res = await getMyPartnerMarketListings({ status: 'active', page, pageSize });
+        if (!res.success || !res.data) throw new Error(res.message || '获取我的伙伴上架失败');
+        setMyPartnerListings(res.data.listings.map(buildPartnerListingItem));
+        setMyPartnerTotal(Number(res.data.total) || 0);
+      } catch (error: unknown) {
+        void 0;
+        setMyPartnerListings([]);
+        setMyPartnerTotal(0);
+      } finally {
+        setMyPartnerLoading(false);
+      }
+    },
+    [pageSize],
+  );
+
+  const refreshPartnerRecords = useCallback(
+    async (page: number) => {
+      setPartnerRecordsLoading(true);
+      try {
+        const res = await getPartnerMarketTradeRecords({ page, pageSize });
+        if (!res.success || !res.data) throw new Error(res.message || '获取伙伴交易记录失败');
+        setPartnerRecords(res.data.records.map(buildPartnerTradeRecord));
+        setPartnerRecordsTotal(Number(res.data.total) || 0);
+      } catch (error: unknown) {
+        void 0;
+        setPartnerRecords([]);
+        setPartnerRecordsTotal(0);
+      } finally {
+        setPartnerRecordsLoading(false);
+      }
+    },
+    [pageSize],
+  );
+
+  const refreshPartnerOverview = useCallback(async () => {
+    setPartnerOverviewLoading(true);
+    try {
+      const res = await getPartnerOverview();
+      if (!res.success || !res.data) throw new Error(res.message || '获取伙伴总览失败');
+      const nextPartners = res.data.partners;
+      setPartnerOverview(nextPartners);
+      setSelectedPartnerId((prev) => (prev !== null && nextPartners.some((partner) => partner.id === prev) ? prev : nextPartners[0]?.id ?? null));
+    } catch (error: unknown) {
+      void 0;
+      setPartnerOverview([]);
+      setSelectedPartnerId(null);
+    } finally {
+      setPartnerOverviewLoading(false);
+    }
+  }, []);
+
   const resetAll = () => {
+    setAssetType('item');
     setPanel('market');
     setCategory('all');
     setQuery('');
@@ -598,12 +815,19 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     setQuality('all');
     setMinPrice('');
     setMaxPrice('');
+    setPartnerQuery('');
+    setPartnerSort('timeDesc');
+    setPartnerQuality('all');
+    setPartnerElement('all');
     setMarketPage(1);
     setMyPage(1);
     setRecordPage(1);
     setSelectedBagId(null);
     setListPrice('');
     setListQty('1');
+    setPartnerListPrice('');
+    setPartnerOverview([]);
+    setSelectedPartnerId(null);
     setMobileFilterOpen(false);
     setMobileListingPreview(null);
     setBuyDialogListing(null);
@@ -611,12 +835,12 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
 
   const menuItems = useMemo(
     () => [
-      { key: 'market' as const, label: '坊市', shortLabel: '坊市' },
+      { key: 'market' as const, label: assetType === 'item' ? '坊市' : '伙伴坊市', shortLabel: assetType === 'item' ? '坊市' : '伙伴坊市' },
       { key: 'my' as const, label: '我的上架', shortLabel: '我的上架' },
-      { key: 'list' as const, label: '物品上架', shortLabel: '物品上架' },
-      { key: 'records' as const, label: '售卖记录', shortLabel: '售卖记录' },
+      { key: 'list' as const, label: assetType === 'item' ? '物品上架' : '伙伴上架', shortLabel: assetType === 'item' ? '物品上架' : '伙伴上架' },
+      { key: 'records' as const, label: assetType === 'item' ? '售卖记录' : '伙伴记录', shortLabel: assetType === 'item' ? '售卖记录' : '伙伴记录' },
     ],
-    [],
+    [assetType],
   );
   const menuKeys = useMemo(() => menuItems.map((it) => it.key), [menuItems]);
   const menuOptions = useMemo(
@@ -627,6 +851,13 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     value: option.value as MarketCategory,
     label: option.label,
   }));
+  const assetOptions = useMemo(
+    () => [
+      { value: 'item' as const, label: '物品坊市' },
+      { value: 'partner' as const, label: '伙伴坊市' },
+    ],
+    [],
+  );
   const sortOptions = useMemo(
     () => [
       { value: 'timeDesc', label: '最新上架' },
@@ -646,12 +877,74 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     ],
     [],
   );
+  const partnerSortOptions = useMemo(
+    () => [
+      { value: 'timeDesc', label: '最新上架' },
+      { value: 'priceAsc', label: '价格升序' },
+      { value: 'priceDesc', label: '价格降序' },
+      { value: 'levelDesc', label: '等级降序' },
+    ],
+    [],
+  );
+  const partnerQualityOptions = qualityOptions;
+  const partnerElementOptions = useMemo(
+    () => [
+      { value: 'all', label: '全部属性' },
+      { value: 'none', label: '无属性' },
+      { value: 'jin', label: '金' },
+      { value: 'mu', label: '木' },
+      { value: 'shui', label: '水' },
+      { value: 'huo', label: '火' },
+      { value: 'tu', label: '土' },
+      { value: 'an', label: '暗' },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    if (!open || assetType !== 'item') return;
+    setMarketPage(1);
+    void refreshMarket(1);
+  }, [assetType, category, maxPrice, minPrice, open, quality, query, refreshMarket, sort]);
+
+  useEffect(() => {
+    if (!open || assetType !== 'partner') return;
+    setMarketPage(1);
+    void refreshPartnerMarket(1);
+  }, [assetType, open, partnerElement, partnerQuality, partnerQuery, partnerSort, refreshPartnerMarket]);
 
   useEffect(() => {
     if (!open) return;
-    setMarketPage(1);
-    void refreshMarket(1);
-  }, [category, maxPrice, minPrice, open, quality, query, refreshMarket, sort]);
+    if (panel === 'market') {
+      if (assetType === 'item') {
+        void refreshMarket(marketPage);
+      } else {
+        void refreshPartnerMarket(marketPage);
+      }
+      return;
+    }
+    if (panel === 'my') {
+      if (assetType === 'item') {
+        void refreshMy(myPage);
+      } else {
+        void refreshMyPartnerListings(myPage);
+      }
+      return;
+    }
+    if (panel === 'list') {
+      if (assetType === 'item') {
+        void refreshBag();
+      } else {
+        void refreshPartnerOverview();
+      }
+      return;
+    }
+    if (assetType === 'item') {
+      void refreshRecords(recordPage);
+    } else {
+      void refreshPartnerRecords(recordPage);
+    }
+  }, [assetType, marketPage, myPage, open, panel, recordPage, refreshBag, refreshMarket, refreshMy, refreshMyPartnerListings, refreshPartnerMarket, refreshPartnerOverview, refreshPartnerRecords, refreshRecords]);
 
   useEffect(() => {
     if (!isMobile) setMobileFilterOpen(false);
@@ -663,26 +956,55 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     setMobileListingPreview(null);
   }, [mobileListingPreview, mobilePreviewListing]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const handler = () => {
+      if (assetType !== 'partner') return;
+      if (panel === 'market') void refreshPartnerMarket(marketPage);
+      if (panel === 'my') void refreshMyPartnerListings(myPage);
+      if (panel === 'list') void refreshPartnerOverview();
+      if (panel === 'records') void refreshPartnerRecords(recordPage);
+    };
+    window.addEventListener(PARTNER_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(PARTNER_CHANGED_EVENT, handler);
+  }, [assetType, marketPage, myPage, open, panel, recordPage, refreshMyPartnerListings, refreshPartnerMarket, refreshPartnerOverview, refreshPartnerRecords]);
+
   const handlePanelChange = useCallback(
     (nextPanel: MarketPanel) => {
       setPanel(nextPanel);
       if (nextPanel === 'market') {
         setMarketPage(1);
-        void refreshMarket(1);
+        if (assetType === 'item') {
+          void refreshMarket(1);
+        } else {
+          void refreshPartnerMarket(1);
+        }
       }
       if (nextPanel === 'my') {
         setMyPage(1);
-        void refreshMy(1);
+        if (assetType === 'item') {
+          void refreshMy(1);
+        } else {
+          void refreshMyPartnerListings(1);
+        }
       }
       if (nextPanel === 'list') {
-        void refreshBag();
+        if (assetType === 'item') {
+          void refreshBag();
+        } else {
+          void refreshPartnerOverview();
+        }
       }
       if (nextPanel === 'records') {
         setRecordPage(1);
-        void refreshRecords(1);
+        if (assetType === 'item') {
+          void refreshRecords(1);
+        } else {
+          void refreshPartnerRecords(1);
+        }
       }
     },
-    [refreshBag, refreshMarket, refreshMy, refreshRecords],
+    [assetType, refreshBag, refreshMarket, refreshMy, refreshMyPartnerListings, refreshPartnerMarket, refreshPartnerOverview, refreshPartnerRecords, refreshRecords],
   );
 
   const buyListing = useCallback(
@@ -756,6 +1078,151 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
       void 0;
     }
   }, [listPrice, listQty, marketPage, myPage, refreshBag, refreshMarket, refreshMy, selectedBagItem]);
+
+  const buyPartnerListing = useCallback(
+    async (row: PartnerListingItem) => {
+      if (characterId !== null && row.sellerCharacterId === characterId) return;
+      try {
+        const res = await buyPartnerMarketListing(row.id);
+        if (!res.success) throw new Error(res.message || '购买失败');
+        messageRef.current.success(res.message || '购买成功');
+        dispatchPartnerChangedEvent();
+        gameSocket.refreshCharacter();
+        await Promise.all([
+          refreshPartnerMarket(marketPage),
+          refreshMyPartnerListings(myPage),
+          refreshPartnerRecords(recordPage),
+          refreshPartnerOverview(),
+        ]);
+      } catch (error: unknown) {
+        void 0;
+      }
+    },
+    [characterId, marketPage, myPage, recordPage, refreshMyPartnerListings, refreshPartnerMarket, refreshPartnerOverview, refreshPartnerRecords],
+  );
+
+  const unlistPartner = useCallback(
+    async (row: PartnerListingItem) => {
+      try {
+        const res = await cancelPartnerMarketListing(row.id);
+        if (!res.success) throw new Error(res.message || '下架失败');
+        messageRef.current.success(res.message || '下架成功');
+        dispatchPartnerChangedEvent();
+        gameSocket.refreshCharacter();
+        await Promise.all([
+          refreshPartnerMarket(marketPage),
+          refreshMyPartnerListings(myPage),
+          refreshPartnerOverview(),
+        ]);
+      } catch (error: unknown) {
+        void 0;
+      }
+    },
+    [marketPage, myPage, refreshMyPartnerListings, refreshPartnerMarket, refreshPartnerOverview],
+  );
+
+  const doListPartner = useCallback(async () => {
+    if (!selectedPartner) return;
+    if (selectedPartner.isActive || selectedPartner.tradeStatus === 'market_listed') return;
+    const price = parseMaybeNumber(partnerListPrice);
+    if (!price || price <= 0) return;
+
+    setPartnerListingActionLoading(true);
+    try {
+      const res = await createPartnerMarketListing({
+        partnerId: selectedPartner.id,
+        unitPriceSpiritStones: Math.floor(price),
+      });
+      if (!res.success) throw new Error(res.message || '上架失败');
+      messageRef.current.success(res.message || '上架成功');
+      setPanel('my');
+      setPartnerListPrice('');
+      dispatchPartnerChangedEvent();
+      gameSocket.refreshCharacter();
+      await Promise.all([
+        refreshPartnerMarket(marketPage),
+        refreshMyPartnerListings(myPage),
+        refreshPartnerOverview(),
+      ]);
+    } catch (error: unknown) {
+      void 0;
+    } finally {
+      setPartnerListingActionLoading(false);
+    }
+  }, [marketPage, myPage, partnerListPrice, refreshMyPartnerListings, refreshPartnerMarket, refreshPartnerOverview, selectedPartner]);
+
+  const renderPartnerFilters = () => {
+    const hasAdvancedFilters =
+      partnerSort !== 'timeDesc' || partnerQuality !== 'all' || partnerElement !== 'all';
+
+    return (
+      <>
+        <div className="market-filters">
+          <Select
+            value={partnerSort}
+            onChange={handlePartnerSortChange}
+            options={partnerSortOptions}
+          />
+          <Input
+            value={partnerQuery}
+            onChange={(e) => handlePartnerQueryChange(e.target.value)}
+            placeholder="搜索伙伴/卖家"
+            allowClear
+            suffix={<SearchOutlined />}
+          />
+          <Select
+            value={partnerQuality}
+            onChange={handlePartnerQualityChange}
+            options={partnerQualityOptions}
+          />
+          <Select
+            value={partnerElement}
+            onChange={handlePartnerElementChange}
+            options={partnerElementOptions}
+          />
+        </div>
+        <div className="market-filters-mobile">
+          <div className="market-filters-mobile-search">
+            <Input
+              value={partnerQuery}
+              onChange={(e) => handlePartnerQueryChange(e.target.value)}
+              placeholder="搜索伙伴/卖家"
+              allowClear
+              suffix={<SearchOutlined />}
+            />
+            <Button
+              className="market-filter-toggle"
+              type={mobileFilterOpen || hasAdvancedFilters ? 'primary' : 'default'}
+              onClick={() => setMobileFilterOpen((prev) => !prev)}
+            >
+              筛选
+            </Button>
+          </div>
+          {mobileFilterOpen ? (
+            <div className="market-filters-mobile-panel">
+              <div className="market-filters-mobile-grid market-filters-mobile-grid--partner">
+                <Select
+                  value={partnerSort}
+                  onChange={handlePartnerSortChange}
+                  options={partnerSortOptions}
+                />
+                <Select
+                  value={partnerQuality}
+                  onChange={handlePartnerQualityChange}
+                  options={partnerQualityOptions}
+                />
+                <Select
+                  value={partnerElement}
+                  onChange={handlePartnerElementChange}
+                  options={partnerElementOptions}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </>
+    );
+  };
 
   const renderMarketFilters = () => {
     const hasAdvancedFilters =
@@ -860,11 +1327,36 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     );
   };
 
+  const renderPaneHeader = (title: string) => (
+    <div className="market-pane-top">
+      <div className="market-pane-head-row">
+        <div className="market-title">{title}</div>
+        <Segmented
+          className="market-asset-switch"
+          value={assetType}
+          options={assetOptions}
+          onChange={(value) => {
+            if (value !== 'item' && value !== 'partner') return;
+            setAssetType(value);
+            setPanel('market');
+            setMarketPage(1);
+            setMyPage(1);
+            setRecordPage(1);
+            setMobileFilterOpen(false);
+            if (value === 'item') {
+              void refreshMarket(1);
+            } else {
+              void refreshPartnerMarket(1);
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
+
   const renderMarket = () => (
     <div className="market-pane">
-      <div className="market-pane-top">
-        <div className="market-title">坊市</div>
-      </div>
+      {renderPaneHeader('坊市')}
       <div className="market-pane-body">
         <div className="market-market-filters-wrap">{renderMarketFilters()}</div>
         <div className="market-pane-scroll">
@@ -1023,11 +1515,94 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     </div>
   );
 
+  const renderPartnerMarket = () => (
+    <div className="market-pane">
+      {renderPaneHeader('伙伴坊市')}
+      <div className="market-pane-body">
+        <div className="market-market-filters-wrap">{renderPartnerFilters()}</div>
+        <div className="market-pane-scroll">
+          <div className="market-mobile-list">
+            {partnerMarketLoading && partnerMarketListings.length === 0 ? <div className="market-empty">加载中...</div> : null}
+            {partnerMarketListings.map((row) => {
+              const combatPreview = buildPartnerCombatPreview(row.partner);
+              const techniquePreview = buildPartnerTechniquePreview(row.partner);
+              return (
+                <div key={row.id} className="market-mobile-card market-mobile-card--partner">
+                  <div className="market-mobile-card-head">
+                    <img className="market-partner-avatar" src={resolvePartnerAvatar(row.partner.avatar)} alt={row.partner.name} />
+                    <div className="market-mobile-head-main">
+                      <div className="market-item-name">{row.partner.nickname || row.partner.name}</div>
+                      <div className="market-partner-subtitle">{row.partner.name} · 等级 {row.partner.level}</div>
+                      <div className="market-item-tags">
+                        <Tag className="market-tag">{row.partner.quality}</Tag>
+                        <Tag className="market-tag">{formatPartnerElementLabel(row.partner.element)}</Tag>
+                        <Tag className="market-tag">{row.partner.role}</Tag>
+                        {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
+                      </div>
+                    </div>
+                    <div className="market-mobile-price">
+                      <div className="market-mobile-price-label">一口价</div>
+                      <div className="market-mobile-price-value">{row.unitPrice.toLocaleString()} 灵石</div>
+                    </div>
+                  </div>
+                  <div className="market-partner-preview-list">
+                    {combatPreview.map((line) => (
+                      <div key={line} className="market-partner-preview-chip">{line}</div>
+                    ))}
+                  </div>
+                  <div className="market-partner-technique-line">{techniquePreview}</div>
+                  <div className="market-mobile-card-foot">
+                    <div className="market-mobile-meta-line">
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">卖家</span>
+                        <span className="market-mobile-meta-v">{row.seller}</span>
+                      </span>
+                      <span className="market-mobile-meta-item">
+                        <span className="market-mobile-meta-k">时间</span>
+                        <span className="market-mobile-meta-v">
+                          {row.listedAt > 0 ? new Date(row.listedAt).toLocaleString('zh-CN', { hour12: false }) : '-'}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="market-mobile-actions">
+                      <Button
+                        type="primary"
+                        size="small"
+                        disabled={characterId !== null && row.sellerCharacterId === characterId}
+                        onClick={() => {
+                          void buyPartnerListing(row);
+                        }}
+                      >
+                        购买伙伴
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!partnerMarketLoading && partnerMarketListings.length === 0 ? <div className="market-empty">暂无上架伙伴</div> : null}
+          </div>
+        </div>
+        <div className="market-pagination-bar">
+          <Pagination
+            current={marketPage}
+            pageSize={pageSize}
+            total={partnerMarketTotal}
+            onChange={(p) => {
+              setMarketPage(p);
+              void refreshPartnerMarket(p);
+            }}
+            showSizeChanger={false}
+            hideOnSinglePage
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   const renderMyListings = () => (
     <div className="market-pane">
-      <div className="market-pane-top">
-        <div className="market-title">我的上架</div>
-      </div>
+      {renderPaneHeader('我的上架')}
       <div className="market-pane-body">
         <div className="market-pane-scroll">
           {isMobile ? (
@@ -1163,6 +1738,78 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
             onChange={(p) => {
               setMyPage(p);
               void refreshMy(p);
+            }}
+            showSizeChanger={false}
+            hideOnSinglePage
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderMyPartnerListings = () => (
+    <div className="market-pane">
+      {renderPaneHeader('我的上架')}
+      <div className="market-pane-body">
+        <div className="market-pane-scroll">
+          <div className="market-mobile-list">
+            {myPartnerLoading && myPartnerListings.length === 0 ? <div className="market-empty">加载中...</div> : null}
+            {myPartnerListings.map((row) => (
+              <div key={row.id} className="market-mobile-card market-mobile-card--partner">
+                <div className="market-mobile-card-head">
+                  <img className="market-partner-avatar" src={resolvePartnerAvatar(row.partner.avatar)} alt={row.partner.name} />
+                  <div className="market-mobile-head-main">
+                    <div className="market-item-name">{row.partner.nickname || row.partner.name}</div>
+                    <div className="market-partner-subtitle">{row.partner.name} · 等级 {row.partner.level}</div>
+                    <div className="market-item-tags">
+                      <Tag className="market-tag">{row.partner.quality}</Tag>
+                      <Tag className="market-tag">{formatPartnerElementLabel(row.partner.element)}</Tag>
+                      <Tag className="market-tag">{row.partner.role}</Tag>
+                    </div>
+                  </div>
+                  <div className="market-mobile-price">
+                    <div className="market-mobile-price-label">一口价</div>
+                    <div className="market-mobile-price-value">{row.unitPrice.toLocaleString()} 灵石</div>
+                  </div>
+                </div>
+                <div className="market-partner-preview-list">
+                  {buildPartnerCombatPreview(row.partner).map((line) => (
+                    <div key={line} className="market-partner-preview-chip">{line}</div>
+                  ))}
+                </div>
+                <div className="market-mobile-card-foot">
+                  <div className="market-mobile-meta-line">
+                    <span className="market-mobile-meta-item">
+                      <span className="market-mobile-meta-k">时间</span>
+                      <span className="market-mobile-meta-v">
+                        {row.listedAt > 0 ? new Date(row.listedAt).toLocaleString('zh-CN', { hour12: false }) : '-'}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="market-mobile-actions">
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        void unlistPartner(row);
+                      }}
+                    >
+                      下架
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!myPartnerLoading && myPartnerListings.length === 0 ? <div className="market-empty">暂无上架伙伴</div> : null}
+          </div>
+        </div>
+        <div className="market-pagination-bar">
+          <Pagination
+            current={myPage}
+            pageSize={pageSize}
+            total={myPartnerTotal}
+            onChange={(p) => {
+              setMyPage(p);
+              void refreshMyPartnerListings(p);
             }}
             showSizeChanger={false}
             hideOnSinglePage
@@ -1369,11 +2016,126 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     );
   };
 
+  const renderPartnerListItem = () => {
+    const price = parseMaybeNumber(partnerListPrice);
+    const canList =
+      !!selectedPartner &&
+      !selectedPartner.isActive &&
+      selectedPartner.tradeStatus === 'none' &&
+      !!price &&
+      price > 0;
+    const selectionList = (
+      <div className="market-partner-list">
+        {partnerOverviewLoading && partnerOverview.length === 0 ? <div className="market-empty">加载中...</div> : null}
+        {partnerOverview.map((partner) => (
+          <div
+            key={partner.id}
+            className={`market-mobile-card market-mobile-card--partner market-partner-sell-card${selectedPartnerId === partner.id ? ' is-selected' : ''}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelectedPartnerId(partner.id)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              setSelectedPartnerId(partner.id);
+            }}
+          >
+            <div className="market-mobile-card-head">
+              <img className="market-partner-avatar" src={resolvePartnerAvatar(partner.avatar)} alt={partner.name} />
+              <div className="market-mobile-head-main">
+                <div className="market-item-name">{partner.nickname || partner.name}</div>
+                <div className="market-partner-subtitle">{partner.name} · 等级 {partner.level}</div>
+                <div className="market-item-tags">
+                  <Tag className="market-tag">{partner.quality}</Tag>
+                  <Tag className="market-tag">{formatPartnerElementLabel(partner.element)}</Tag>
+                  <Tag className="market-tag">{partner.role}</Tag>
+                  {partner.isActive ? <Tag color="green">当前出战</Tag> : null}
+                  {partner.tradeStatus === 'market_listed' ? <Tag color="gold">坊市中</Tag> : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {!partnerOverviewLoading && partnerOverview.length === 0 ? <div className="market-empty">暂无伙伴</div> : null}
+      </div>
+    );
+    const actionBar = (
+      <div className="market-partner-action-bar">
+        <div className="market-partner-action-bar__main">
+          <div className="market-partner-action-bar__title">
+            {selectedPartner ? `当前选择：${selectedPartner.nickname || selectedPartner.name}` : '请选择一个伙伴'}
+          </div>
+          {selectedPartner ? (
+            <div className="market-item-tags">
+              <Tag className="market-tag">{selectedPartner.quality}</Tag>
+              <Tag className="market-tag">{formatPartnerElementLabel(selectedPartner.element)}</Tag>
+              <Tag className="market-tag">{selectedPartner.role}</Tag>
+              <Tag className="market-tag">等级 {selectedPartner.level}</Tag>
+              {selectedPartner.isActive ? <Tag color="green">当前出战</Tag> : null}
+              {selectedPartner.tradeStatus === 'market_listed' ? <Tag color="gold">坊市中</Tag> : null}
+            </div>
+          ) : null}
+          {selectedPartner?.isActive ? (
+            <div className="market-list-locked-tip">出战中的伙伴不可上架，请先下阵。</div>
+          ) : null}
+          {selectedPartner?.tradeStatus === 'market_listed' ? (
+            <div className="market-list-locked-tip">该伙伴已在坊市挂单中，无法重复上架。</div>
+          ) : null}
+        </div>
+        <div className="market-partner-action-bar__form">
+          <div className="market-list-row">
+            <div className="market-list-k">一口价（灵石）</div>
+            <Input
+              value={partnerListPrice}
+              onChange={(e) => setPartnerListPrice(e.target.value)}
+              inputMode="numeric"
+              placeholder="请输入伙伴售价"
+            />
+          </div>
+          <div className="market-list-row">
+            <div className="market-list-k">手续费（银两）</div>
+            <div className="market-list-v">
+              {price && price > 0 ? `${(Math.floor(price) * MARKET_LISTING_FEE_SILVER_PER_SPIRIT_STONE).toLocaleString()} 银两` : '--'}
+            </div>
+          </div>
+          <div className="market-list-fee-tip">未卖出下架会退还手续费</div>
+          <div className="market-list-actions">
+            <Button
+              type="primary"
+              disabled={!canList}
+              loading={partnerListingActionLoading}
+              onClick={() => {
+                void doListPartner();
+              }}
+            >
+              确认上架
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="market-pane">
+        {renderPaneHeader('伙伴上架')}
+        <div className="market-pane-body">
+          <div className="market-pane-scroll">
+            <div className="market-partner-sell-layout">
+              {actionBar}
+              <div className="market-partner-mobile-section">
+                <div className="market-list-detail-title market-partner-mobile-title">选择伙伴</div>
+                {selectionList}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderRecords = () => (
     <div className="market-pane">
-      <div className="market-pane-top">
-        <div className="market-title">售卖记录</div>
-      </div>
+      {renderPaneHeader('售卖记录')}
       <div className="market-pane-body">
         <div className="market-pane-scroll">
           {isMobile ? (
@@ -1472,11 +2234,80 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
     </div>
   );
 
+  const renderPartnerRecordsPanel = () => (
+    <div className="market-pane">
+      {renderPaneHeader('伙伴记录')}
+      <div className="market-pane-body">
+        <div className="market-pane-scroll">
+          <div className="market-mobile-list">
+            {partnerRecordsLoading && partnerRecords.length === 0 ? <div className="market-empty">加载中...</div> : null}
+            {partnerRecords.map((row) => (
+              <div key={row.id} className="market-mobile-card market-mobile-card--partner">
+                <div className="market-mobile-card-head">
+                  <img className="market-partner-avatar" src={resolvePartnerAvatar(row.partner.avatar)} alt={row.partner.name} />
+                  <div className="market-mobile-head-main">
+                    <div className="market-item-name">{row.partner.nickname || row.partner.name}</div>
+                    <div className="market-partner-subtitle">{row.partner.name} · 等级 {row.partner.level}</div>
+                    <div className="market-item-tags">
+                      <Tag className={`market-tag market-tag-record ${row.type === '买入' ? 'buy' : 'sell'}`}>{row.type}</Tag>
+                      <Tag className="market-tag">{row.partner.quality}</Tag>
+                      <Tag className="market-tag">{formatPartnerElementLabel(row.partner.element)}</Tag>
+                    </div>
+                  </div>
+                  <div className="market-mobile-price">
+                    <div className="market-mobile-price-label">成交价</div>
+                    <div className="market-mobile-price-value">{row.totalPrice.toLocaleString()} 灵石</div>
+                  </div>
+                </div>
+                <div className="market-mobile-meta-line">
+                  <span className="market-mobile-meta-item">
+                    <span className="market-mobile-meta-k">单价</span>
+                    <span className="market-mobile-meta-v">{row.unitPrice.toLocaleString()} 灵石</span>
+                  </span>
+                  <span className="market-mobile-meta-item">
+                    <span className="market-mobile-meta-k">对方</span>
+                    <span className="market-mobile-meta-v">{row.counterparty}</span>
+                  </span>
+                  <span className="market-mobile-meta-item">
+                    <span className="market-mobile-meta-k">时间</span>
+                    <span className="market-mobile-meta-v">
+                      {row.time > 0 ? new Date(row.time).toLocaleString('zh-CN', { hour12: false }) : '-'}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {partnerRecords.length === 0 && !partnerRecordsLoading ? <div className="market-empty">暂无记录</div> : null}
+        <div className="market-pagination-bar">
+          <Pagination
+            current={recordPage}
+            pageSize={pageSize}
+            total={partnerRecordsTotal}
+            onChange={(p) => {
+              setRecordPage(p);
+              void refreshPartnerRecords(p);
+            }}
+            showSizeChanger={false}
+            hideOnSinglePage
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   const panelContent = () => {
-    if (panel === 'market') return renderMarket();
-    if (panel === 'my') return renderMyListings();
-    if (panel === 'list') return renderListItem();
-    return renderRecords();
+    if (assetType === 'item') {
+      if (panel === 'market') return renderMarket();
+      if (panel === 'my') return renderMyListings();
+      if (panel === 'list') return renderListItem();
+      return renderRecords();
+    }
+    if (panel === 'market') return renderPartnerMarket();
+    if (panel === 'my') return renderMyPartnerListings();
+    if (panel === 'list') return renderPartnerListItem();
+    return renderPartnerRecordsPanel();
   };
 
   return (
@@ -1534,7 +2365,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
         <div className="market-right">{panelContent()}</div>
       </div>
 
-      {isMobile ? (
+      {isMobile && assetType === 'item' ? (
         <Drawer
           placement="bottom"
           open={Boolean(mobilePreviewListing)}
@@ -1581,15 +2412,17 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
         </Drawer>
       ) : null}
 
-      <MarketBuyDialog
-        open={buyDialogListing !== null}
-        listing={buyDialogListing}
-        onCancel={() => setBuyDialogListing(null)}
-        onConfirm={(qty) => {
-          if (!buyDialogListing) return;
-          void buyListing(buyDialogListing, qty);
-        }}
-      />
+      {assetType === 'item' ? (
+        <MarketBuyDialog
+          open={buyDialogListing !== null}
+          listing={buyDialogListing}
+          onCancel={() => setBuyDialogListing(null)}
+          onConfirm={(qty) => {
+            if (!buyDialogListing) return;
+            void buyListing(buyDialogListing, qty);
+          }}
+        />
+      ) : null}
     </Modal>
   );
 };

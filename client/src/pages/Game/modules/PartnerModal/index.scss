@@ -190,6 +190,43 @@
   font-size: 12px;
 }
 
+.partner-meta--warning {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--warning-color, #d48806) 36%, var(--border-color) 64%);
+  background: color-mix(in srgb, var(--warning-color, #d48806) 10%, var(--panel-bg) 90%);
+  color: color-mix(in srgb, var(--warning-color, #d48806) 84%, var(--text-color) 16%);
+}
+
+.partner-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.partner-summary-actions .ant-btn {
+  min-width: 104px;
+}
+
+.partner-sell-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.partner-sell-modal__target {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.partner-sell-modal__hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
 .partner-list-card {
   padding: 14px;
   display: flex;
@@ -224,14 +261,12 @@
   display: flex;
   gap: 10px;
   cursor: pointer;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease;
   min-width: 0;
 }
 
 .partner-list-item.is-selected {
   border-color: var(--primary-color);
-  box-shadow: 0 10px 24px rgba(24, 144, 255, 0.16);
-  transform: translateY(-1px);
 }
 
 .partner-list-item.is-active {
@@ -843,7 +878,8 @@
   .partner-action-row .ant-btn,
   .partner-quick-actions .ant-btn,
   .partner-book-card .ant-btn,
-  .partner-technique-upgrade .ant-btn {
+  .partner-technique-upgrade .ant-btn,
+  .partner-summary-actions .ant-btn {
     width: 100%;
   }
 

@@ -901,6 +901,56 @@ model market_trade_record {
   @@index([seller_character_id, created_at(sort: Desc)], map: "idx_market_trade_record_seller_time")
 }
 
+model market_partner_listing {
+  id                       BigInt   @id @default(autoincrement())
+  seller_user_id           Int
+  seller_character_id      Int
+  partner_id               Int
+  partner_snapshot         Json
+  partner_def_id           String   @db.VarChar(64)
+  partner_name             String   @db.VarChar(64)
+  partner_nickname         String   @db.VarChar(64)
+  partner_quality          String   @db.VarChar(8)
+  partner_element          String   @db.VarChar(16)
+  partner_level            Int
+  unit_price_spirit_stones BigInt
+  status                   String   @default("active") @db.VarChar(16)
+  buyer_user_id            Int?
+  buyer_character_id       Int?
+  listed_at                DateTime @default(now()) @db.Timestamptz(6)
+  sold_at                  DateTime? @db.Timestamptz(6)
+  cancelled_at             DateTime? @db.Timestamptz(6)
+  updated_at               DateTime @default(now()) @db.Timestamptz(6)
+  listing_fee_silver       BigInt   @default(0)
+
+  @@index([partner_id], map: "idx_market_partner_listing_partner")
+  @@index([seller_character_id], map: "idx_market_partner_listing_seller_character")
+  @@index([buyer_character_id], map: "idx_market_partner_listing_buyer_character")
+  @@index([status, listed_at(sort: Desc)], map: "idx_market_partner_listing_status_listed_at")
+  @@index([partner_quality], map: "idx_market_partner_listing_quality")
+  @@index([partner_element], map: "idx_market_partner_listing_element")
+}
+
+model market_partner_trade_record {
+  id                        BigInt   @id @default(autoincrement())
+  listing_id                BigInt?
+  buyer_user_id             Int
+  buyer_character_id        Int
+  seller_user_id            Int
+  seller_character_id       Int
+  partner_id                Int
+  partner_def_id            String   @db.VarChar(64)
+  partner_snapshot          Json
+  unit_price_spirit_stones  BigInt
+  total_price_spirit_stones BigInt
+  tax_spirit_stones         BigInt   @default(0)
+  created_at                DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([buyer_character_id, created_at(sort: Desc)], map: "idx_market_partner_trade_record_buyer_time")
+  @@index([seller_character_id, created_at(sort: Desc)], map: "idx_market_partner_trade_record_seller_time")
+  @@index([partner_def_id], map: "idx_market_partner_trade_record_partner_def")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model month_card_claim_record {
   id                   BigInt     @id @default(autoincrement())

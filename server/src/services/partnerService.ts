@@ -29,9 +29,7 @@ import {
   getPartnerGrowthConfig,
   getItemDefinitionById,
   getSkillDefinitions,
-  getTechniqueDefinitions,
   type PartnerDefConfig,
-  type TechniqueDefConfig,
 } from './staticConfigLoader.js';
 import type {
   CharacterData,
@@ -40,57 +38,58 @@ import type {
 import { toBattleSkillData } from './battle/shared/skills.js';
 import { resolveGeneratedTechniqueBookDisplay } from './shared/generatedTechniqueBookView.js';
 import {
-  calcPartnerUpgradeExpByTargetLevel,
   PARTNER_GROWTH_KEYS,
-  buildPartnerBattleAttrs,
   listReplaceablePartnerTechniqueIds,
-  mergePartnerTechniquePassives,
   resolvePartnerInjectPlan,
   type PartnerGrowthValues,
   type PartnerLearnedTechniqueState,
 } from './shared/partnerRules.js';
 import { setCharacterPartnerActivation } from './shared/partnerActivation.js';
+import {
+  attachPartnerTradeState,
+  buildEffectivePartnerTechniqueEntries,
+  buildPartnerDisplay,
+  buildPartnerDetails,
+  buildPartnerTechniqueDto,
+  findEffectivePartnerTechniqueEntry,
+  getPartnerInnateTechniqueIds,
+  getPartnerTechniqueStaticMeta,
+  loadPartnerRows,
+  loadPartnerTechniqueRows,
+  loadSinglePartnerRow,
+  normalizeInteger,
+  normalizeText,
+  type PartnerComputedAttrsDto,
+  type PartnerDetailDto,
+  type PartnerDisplayDto,
+  type PartnerGrowthDto,
+  type PartnerPassiveAttrsDto,
+  type PartnerRow,
+  type PartnerTechniqueDto,
+  type PartnerTechniqueStaticMeta,
+  type PartnerTechniqueRow,
+  type PartnerTechniqueSkillDto,
+} from './shared/partnerView.js';
+import { loadPartnerMarketTradeStateMap, loadActivePartnerMarketListing } from './shared/partnerMarketState.js';
 import { resolveTechniqueBookLearning } from './shared/techniqueBookRules.js';
 import {
   getItemMetaMap,
   getTechniqueLayerByTechniqueAndLayerStatic,
-  getTechniqueLayersByTechniqueIdStatic,
   resolveTechniqueCostMultiplierByQuality,
   scaleTechniqueBaseCostByQuality,
 } from './shared/techniqueUpgradeRules.js';
 
+export type {
+  PartnerComputedAttrsDto,
+  PartnerDetailDto,
+  PartnerDisplayDto,
+  PartnerGrowthDto,
+  PartnerPassiveAttrsDto,
+  PartnerTechniqueDto,
+  PartnerTechniqueSkillDto,
+} from './shared/partnerView.js';
+
 const STARTER_PARTNER_DEF_ID = 'partner-qingmu-xiaoou';
-
-type PartnerRow = {
-  id: number;
-  character_id: number;
-  partner_def_id: string;
-  nickname: string;
-  level: number;
-  progress_exp: number;
-  growth_max_qixue: number;
-  growth_wugong: number;
-  growth_fagong: number;
-  growth_wufang: number;
-  growth_fafang: number;
-  growth_sudu: number;
-  is_active: boolean;
-  obtained_from: string;
-  obtained_ref_id: string | null;
-  created_at: Date;
-  updated_at: Date;
-};
-
-type PartnerTechniqueRow = {
-  id: number;
-  partner_id: number;
-  technique_id: string;
-  current_layer: number;
-  is_innate: boolean;
-  learned_from_item_def_id: string | null;
-  created_at: Date;
-  updated_at: Date;
-};
 
 type CharacterPartnerContextRow = {
   characterId: number;
@@ -100,80 +99,6 @@ type CharacterPartnerContextRow = {
   realm: string;
   subRealm: string | null;
 };
-
-export interface PartnerGrowthDto {
-  max_qixue: number;
-  wugong: number;
-  fagong: number;
-  wufang: number;
-  fafang: number;
-  sudu: number;
-}
-
-export interface PartnerComputedAttrsDto {
-  qixue: number;
-  max_qixue: number;
-  lingqi: number;
-  max_lingqi: number;
-  wugong: number;
-  fagong: number;
-  wufang: number;
-  fafang: number;
-  mingzhong: number;
-  shanbi: number;
-  zhaojia: number;
-  baoji: number;
-  baoshang: number;
-  jianbaoshang: number;
-  kangbao: number;
-  zengshang: number;
-  zhiliao: number;
-  jianliao: number;
-  xixue: number;
-  lengque: number;
-  sudu: number;
-  kongzhi_kangxing: number;
-  jin_kangxing: number;
-  mu_kangxing: number;
-  shui_kangxing: number;
-  huo_kangxing: number;
-  tu_kangxing: number;
-  qixue_huifu: number;
-  lingqi_huifu: number;
-}
-
-export type PartnerPassiveAttrsDto = Record<string, number>;
-
-export interface PartnerTechniqueSkillDto {
-  id: string;
-  name: string;
-  icon: string;
-  description?: string;
-  cost_lingqi?: number;
-  cost_lingqi_rate?: number;
-  cost_qixue?: number;
-  cost_qixue_rate?: number;
-  cooldown?: number;
-  target_type?: string;
-  target_count?: number;
-  damage_type?: string | null;
-  element?: string;
-  effects?: unknown[];
-}
-
-export interface PartnerTechniqueDto {
-  techniqueId: string;
-  name: string;
-  description: string | null;
-  icon: string | null;
-  quality: string;
-  currentLayer: number;
-  maxLayer: number;
-  isInnate: boolean;
-  skillIds: string[];
-  skills: PartnerTechniqueSkillDto[];
-  passiveAttrs: PartnerPassiveAttrsDto;
-}
 
 export interface PartnerTechniqueUpgradeCostDto {
   currentLayer: number;
@@ -199,27 +124,6 @@ export interface PartnerBookDto {
   techniqueName: string;
   quality: string;
   qty: number;
-}
-
-export interface PartnerDetailDto {
-  id: number;
-  partnerDefId: string;
-  nickname: string;
-  name: string;
-  description: string;
-  avatar: string | null;
-  element: string;
-  role: string;
-  quality: string;
-  level: number;
-  progressExp: number;
-  nextLevelCostExp: number;
-  slotCount: number;
-  isActive: boolean;
-  obtainedFrom: string | null;
-  growth: PartnerGrowthDto;
-  computedAttrs: PartnerComputedAttrsDto;
-  techniques: PartnerTechniqueDto[];
 }
 
 export interface PartnerOverviewDto {
@@ -268,55 +172,11 @@ export interface PartnerBattleMember {
   skills: SkillData[];
 }
 
-type PartnerTechniqueStaticMeta = {
-  definition: TechniqueDefConfig;
-  currentLayer: number;
-  maxLayer: number;
-  skillIds: string[];
-  passiveAttrs: Array<{ key: string; value: number }>;
-};
-
-type EffectivePartnerTechniqueEntry = {
-  row: PartnerTechniqueRow | null;
-  techniqueId: string;
-  currentLayer: number;
-  isInnate: boolean;
-  learnedFromItemDefId: string | null;
-};
-
-const normalizeInteger = (value: unknown, minimum: number = 0): number => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return minimum;
-  return Math.max(minimum, Math.floor(parsed));
-};
-
-const normalizeText = (value: unknown): string => {
-  return typeof value === 'string' ? value.trim() : '';
-};
-
 const randomIntInclusive = (min: number, max: number): number => {
   const lower = Math.min(min, max);
   const upper = Math.max(min, max);
   return Math.floor(Math.random() * (upper - lower + 1)) + lower;
 };
-
-const toPartnerGrowth = (row: PartnerRow): PartnerGrowthValues => ({
-  max_qixue: normalizeInteger(row.growth_max_qixue),
-  wugong: normalizeInteger(row.growth_wugong),
-  fagong: normalizeInteger(row.growth_fagong),
-  wufang: normalizeInteger(row.growth_wufang),
-  fafang: normalizeInteger(row.growth_fafang),
-  sudu: normalizeInteger(row.growth_sudu),
-});
-
-const toPartnerGrowthDto = (growth: PartnerGrowthValues): PartnerGrowthDto => ({
-  max_qixue: growth.max_qixue,
-  wugong: growth.wugong,
-  fagong: growth.fagong,
-  wufang: growth.wufang,
-  fafang: growth.fafang,
-  sudu: growth.sudu,
-});
 
 type PartnerItemInstanceRow = {
   id: number;
@@ -343,7 +203,14 @@ const loadCharacterPartnerContext = async (
     [characterId],
   );
   if (result.rows.length <= 0) return null;
-  const row = result.rows[0] as Record<string, unknown>;
+  const row = result.rows[0] as {
+    id: number | string | bigint | null;
+    user_id: number | string | bigint | null;
+    exp: number | string | bigint | null;
+    spirit_stones: number | string | bigint | null;
+    realm: string | null;
+    sub_realm: string | null;
+  };
   return {
     characterId: normalizeInteger(row.id),
     userId: normalizeInteger(row.user_id),
@@ -354,176 +221,16 @@ const loadCharacterPartnerContext = async (
   };
 };
 
-const loadPartnerRows = async (
-  characterId: number,
-  forUpdate: boolean,
-): Promise<PartnerRow[]> => {
-  const lockSql = forUpdate ? 'FOR UPDATE' : '';
-  const result = await query(
-    `
-      SELECT *
-      FROM character_partner
-      WHERE character_id = $1
-      ORDER BY is_active DESC, created_at ASC, id ASC
-      ${lockSql}
-    `,
-    [characterId],
+const buildPartnerDetailWithTradeState = async (params: {
+  row: PartnerRow;
+  definition: PartnerDefConfig;
+  techniqueRows: PartnerTechniqueRow[];
+}): Promise<PartnerDetailDto> => {
+  const tradeStateMap = await loadPartnerMarketTradeStateMap([params.row.id]);
+  return attachPartnerTradeState(
+    buildPartnerDisplay(params),
+    tradeStateMap.get(params.row.id),
   );
-  return result.rows as PartnerRow[];
-};
-
-const loadSinglePartnerRow = async (
-  characterId: number,
-  partnerId: number,
-  forUpdate: boolean,
-): Promise<PartnerRow | null> => {
-  const lockSql = forUpdate ? 'FOR UPDATE' : '';
-  const result = await query(
-    `
-      SELECT *
-      FROM character_partner
-      WHERE id = $1 AND character_id = $2
-      LIMIT 1
-      ${lockSql}
-    `,
-    [partnerId, characterId],
-  );
-  if (result.rows.length <= 0) return null;
-  return result.rows[0] as PartnerRow;
-};
-
-const loadPartnerTechniqueRows = async (
-  partnerIds: number[],
-  forUpdate: boolean,
-): Promise<Map<number, PartnerTechniqueRow[]>> => {
-  const normalizedPartnerIds = [
-    ...new Set(
-      partnerIds.map((partnerId) => normalizeInteger(partnerId)).filter((partnerId) => partnerId > 0),
-    ),
-  ];
-  const resultMap = new Map<number, PartnerTechniqueRow[]>();
-  if (normalizedPartnerIds.length <= 0) return resultMap;
-
-  const lockSql = forUpdate ? 'FOR UPDATE' : '';
-  const result = await query(
-    `
-      SELECT *
-      FROM character_partner_technique
-      WHERE partner_id = ANY($1)
-      ORDER BY created_at ASC, id ASC
-      ${lockSql}
-    `,
-    [normalizedPartnerIds],
-  );
-
-  for (const rawRow of result.rows as PartnerTechniqueRow[]) {
-    const partnerId = normalizeInteger(rawRow.partner_id);
-    const currentList = resultMap.get(partnerId) ?? [];
-    currentList.push(rawRow);
-    resultMap.set(partnerId, currentList);
-  }
-  return resultMap;
-};
-
-const getPartnerTechniqueStaticMeta = (
-  techniqueId: string,
-  currentLayerRaw: unknown,
-): PartnerTechniqueStaticMeta | null => {
-  const normalizedTechniqueId = normalizeText(techniqueId);
-  if (!normalizedTechniqueId) return null;
-
-  const definition =
-    getTechniqueDefinitions().find(
-      (entry) => entry.id === normalizedTechniqueId && entry.enabled !== false,
-    ) ?? null;
-  if (!definition) return null;
-
-  const layerRows = getTechniqueLayersByTechniqueIdStatic(normalizedTechniqueId);
-  const maxLayer = Math.max(
-    normalizeInteger(definition.max_layer, 1),
-    layerRows[layerRows.length - 1]?.layer ?? 1,
-  );
-  const currentLayer = Math.min(
-    Math.max(1, normalizeInteger(currentLayerRaw, 1)),
-    maxLayer,
-  );
-  const activeLayerRows = layerRows.filter((entry) => entry.layer <= currentLayer);
-  const skillIds = [
-    ...new Set(
-      activeLayerRows.flatMap((entry) =>
-        entry.unlockSkillIds
-          .map((skillId) => normalizeText(skillId))
-          .filter((skillId) => skillId.length > 0),
-      ),
-    ),
-  ];
-  const passiveAttrs = activeLayerRows.flatMap((entry) =>
-    entry.passives
-      .map((passive) => ({
-        key: normalizeText(passive.key),
-        value: Number(passive.value) || 0,
-      }))
-      .filter((passive) => passive.key.length > 0),
-  );
-
-  return {
-    definition,
-    currentLayer,
-    maxLayer,
-    skillIds,
-    passiveAttrs,
-  };
-};
-
-const toPartnerPassiveAttrsDto = (
-  passiveAttrs: Array<{ key: string; value: number }>,
-): PartnerPassiveAttrsDto => {
-  const merged: PartnerPassiveAttrsDto = {};
-  for (const passive of passiveAttrs) {
-    const key = normalizeText(passive.key);
-    if (!key) continue;
-    const value = Number(passive.value) || 0;
-    merged[key] = Number(merged[key] ?? 0) + value;
-  }
-  return merged;
-};
-
-const toPartnerComputedAttrsDto = (
-  finalAttrs: Record<string, number | string | undefined>,
-): PartnerComputedAttrsDto => {
-  const maxQixue = normalizeInteger(finalAttrs.max_qixue, 1);
-  const maxLingqi = normalizeInteger(finalAttrs.max_lingqi);
-  return {
-    qixue: maxQixue,
-    max_qixue: maxQixue,
-    lingqi: maxLingqi,
-    max_lingqi: maxLingqi,
-    wugong: Number(finalAttrs.wugong) || 0,
-    fagong: Number(finalAttrs.fagong) || 0,
-    wufang: Number(finalAttrs.wufang) || 0,
-    fafang: Number(finalAttrs.fafang) || 0,
-    mingzhong: Number(finalAttrs.mingzhong) || 0,
-    shanbi: Number(finalAttrs.shanbi) || 0,
-    zhaojia: Number(finalAttrs.zhaojia) || 0,
-    baoji: Number(finalAttrs.baoji) || 0,
-    baoshang: Number(finalAttrs.baoshang) || 0,
-    jianbaoshang: Number(finalAttrs.jianbaoshang) || 0,
-    kangbao: Number(finalAttrs.kangbao) || 0,
-    zengshang: Number(finalAttrs.zengshang) || 0,
-    zhiliao: Number(finalAttrs.zhiliao) || 0,
-    jianliao: Number(finalAttrs.jianliao) || 0,
-    xixue: Number(finalAttrs.xixue) || 0,
-    lengque: Number(finalAttrs.lengque) || 0,
-    sudu: Math.max(1, Number(finalAttrs.sudu) || 1),
-    kongzhi_kangxing: Number(finalAttrs.kongzhi_kangxing) || 0,
-    jin_kangxing: Number(finalAttrs.jin_kangxing) || 0,
-    mu_kangxing: Number(finalAttrs.mu_kangxing) || 0,
-    shui_kangxing: Number(finalAttrs.shui_kangxing) || 0,
-    huo_kangxing: Number(finalAttrs.huo_kangxing) || 0,
-    tu_kangxing: Number(finalAttrs.tu_kangxing) || 0,
-    qixue_huifu: Number(finalAttrs.qixue_huifu) || 0,
-    lingqi_huifu: Number(finalAttrs.lingqi_huifu) || 0,
-  };
 };
 
 const loadPartnerBooks = async (characterId: number): Promise<PartnerBookDto[]> => {
@@ -575,199 +282,6 @@ const loadPartnerBooks = async (characterId: number): Promise<PartnerBookDto[]> 
   }
 
   return books;
-};
-
-const buildPartnerTechniqueDto = (
-  entry: EffectivePartnerTechniqueEntry,
-  meta: PartnerTechniqueStaticMeta,
-): PartnerTechniqueDto => {
-  const skillDefinitionMap = new Map(
-    getSkillDefinitions()
-      .filter((entry) => entry.enabled !== false)
-      .map((entry) => [entry.id, entry] as const),
-  );
-  const skills = meta.skillIds
-    .map((skillId) => skillDefinitionMap.get(skillId))
-    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
-    .map((entry) => ({
-      id: entry.id,
-      name: normalizeText(entry.name) || entry.id,
-      icon: normalizeText(entry.icon) || '',
-      description: normalizeText(entry.description) || undefined,
-      cost_lingqi: typeof entry.cost_lingqi === 'number' ? entry.cost_lingqi : undefined,
-      cost_lingqi_rate: typeof entry.cost_lingqi_rate === 'number' ? entry.cost_lingqi_rate : undefined,
-      cost_qixue: typeof entry.cost_qixue === 'number' ? entry.cost_qixue : undefined,
-      cost_qixue_rate: typeof entry.cost_qixue_rate === 'number' ? entry.cost_qixue_rate : undefined,
-      cooldown: typeof entry.cooldown === 'number' ? entry.cooldown : undefined,
-      target_type: normalizeText(entry.target_type) || undefined,
-      target_count: typeof entry.target_count === 'number' ? entry.target_count : undefined,
-      damage_type: normalizeText(entry.damage_type) || null,
-      element: normalizeText(entry.element) || undefined,
-      effects: Array.isArray(entry.effects) ? entry.effects : undefined,
-    }));
-
-  return {
-    techniqueId: entry.techniqueId,
-    name: normalizeText(meta.definition.name) || meta.definition.id,
-    description: normalizeText(meta.definition.description) || null,
-    icon: normalizeText(meta.definition.icon) || null,
-    quality: normalizeText(meta.definition.quality) || '黄',
-    currentLayer: meta.currentLayer,
-    maxLayer: meta.maxLayer,
-    isInnate: entry.isInnate,
-    skillIds: meta.skillIds,
-    skills,
-    passiveAttrs: toPartnerPassiveAttrsDto(meta.passiveAttrs),
-  };
-};
-
-const getPartnerInnateTechniqueIds = (definition: PartnerDefConfig): string[] => {
-  const ids = Array.isArray(definition.innate_technique_ids)
-    ? definition.innate_technique_ids
-        .map((entry) => normalizeText(entry))
-        .filter((entry) => entry.length > 0)
-    : [];
-  return [...new Set(ids)];
-};
-
-const buildEffectivePartnerTechniqueEntries = (
-  definition: PartnerDefConfig,
-  techniqueRows: PartnerTechniqueRow[],
-): EffectivePartnerTechniqueEntry[] => {
-  const innateTechniqueIds = getPartnerInnateTechniqueIds(definition);
-  const innateTechniqueIdSet = new Set(innateTechniqueIds);
-  const rowMap = new Map(
-    techniqueRows.map((row) => [normalizeText(row.technique_id), row] as const),
-  );
-  const entries: EffectivePartnerTechniqueEntry[] = [];
-
-  for (const techniqueId of innateTechniqueIds) {
-    const row = rowMap.get(techniqueId) ?? null;
-    entries.push({
-      row,
-      techniqueId,
-      currentLayer: row ? normalizeInteger(row.current_layer, 1) : 1,
-      isInnate: true,
-      learnedFromItemDefId: row?.learned_from_item_def_id ?? null,
-    });
-  }
-
-  for (const row of techniqueRows) {
-    const techniqueId = normalizeText(row.technique_id);
-    if (!techniqueId || innateTechniqueIdSet.has(techniqueId)) continue;
-    if (row.is_innate) continue;
-    entries.push({
-      row,
-      techniqueId,
-      currentLayer: normalizeInteger(row.current_layer, 1),
-      isInnate: false,
-      learnedFromItemDefId: row.learned_from_item_def_id ?? null,
-    });
-  }
-
-  return entries;
-};
-
-const findEffectivePartnerTechniqueEntry = (
-  definition: PartnerDefConfig,
-  techniqueRows: PartnerTechniqueRow[],
-  techniqueIdRaw: string,
-): EffectivePartnerTechniqueEntry | null => {
-  const techniqueId = normalizeText(techniqueIdRaw);
-  if (!techniqueId) return null;
-  return buildEffectivePartnerTechniqueEntries(definition, techniqueRows)
-    .find((entry) => entry.techniqueId === techniqueId) ?? null;
-};
-
-const buildPartnerDetail = (params: {
-  row: PartnerRow;
-  definition: PartnerDefConfig;
-  techniqueRows: PartnerTechniqueRow[];
-}): PartnerDetailDto => {
-  const { row, definition, techniqueRows } = params;
-  const config = getPartnerGrowthConfig();
-  const growth = toPartnerGrowth(row);
-  const effectiveTechniqueEntries = buildEffectivePartnerTechniqueEntries(
-    definition,
-    techniqueRows,
-  );
-  const techniqueEntries = effectiveTechniqueEntries.map((entry) => {
-    const meta = getPartnerTechniqueStaticMeta(
-      entry.techniqueId,
-      entry.currentLayer,
-    );
-    if (!meta) {
-      throw new Error(`伙伴功法不存在: ${entry.techniqueId}`);
-    }
-    return {
-      entry,
-      meta,
-    };
-  });
-  const techniques = techniqueEntries.map((entry) =>
-    buildPartnerTechniqueDto(entry.entry, entry.meta),
-  );
-  const passiveAttrs = mergePartnerTechniquePassives(
-    techniqueEntries.map((entry) => entry.meta.passiveAttrs),
-  );
-  const element = normalizeText(definition.attribute_element) || 'none';
-  const finalAttrs = buildPartnerBattleAttrs({
-    baseAttrs: definition.base_attrs,
-    level: row.level,
-    levelAttrGains: definition.level_attr_gains,
-    passiveAttrs,
-    element,
-  });
-
-  return {
-    id: row.id,
-    partnerDefId: definition.id,
-    nickname: normalizeText(row.nickname) || normalizeText(definition.name),
-    name: normalizeText(definition.name) || definition.id,
-    description: normalizeText(definition.description),
-    avatar: normalizeText(definition.avatar) || null,
-    element,
-    role: normalizeText(definition.role) || '伙伴',
-    quality: normalizeText(definition.quality) || '黄',
-    level: normalizeInteger(row.level, 1),
-    progressExp: normalizeInteger(row.progress_exp),
-    nextLevelCostExp: calcPartnerUpgradeExpByTargetLevel(
-      normalizeInteger(row.level, 1) + 1,
-      config,
-    ),
-    slotCount: Math.max(0, normalizeInteger(definition.max_technique_slots)),
-    isActive: Boolean(row.is_active),
-    obtainedFrom: normalizeText(row.obtained_from) || null,
-    growth: toPartnerGrowthDto(growth),
-    computedAttrs: toPartnerComputedAttrsDto(finalAttrs),
-    techniques,
-  };
-};
-
-const buildPartnerDetailWithNextLevel = (params: {
-  row: PartnerRow;
-  definition: PartnerDefConfig;
-  techniqueRows: PartnerTechniqueRow[];
-}): PartnerDetailDto => {
-  return buildPartnerDetail(params);
-};
-
-const buildPartnerDetails = (params: {
-  rows: PartnerRow[];
-  techniqueMap: Map<number, PartnerTechniqueRow[]>;
-}): PartnerDetailDto[] => {
-  return params.rows.map((row) => {
-    const definition = getPartnerDefinitionById(row.partner_def_id);
-    if (!definition) {
-      throw new Error(`伙伴模板不存在: ${row.partner_def_id}`);
-    }
-    const techniqueRows = params.techniqueMap.get(row.id) ?? [];
-    return buildPartnerDetail({
-      row,
-      definition,
-      techniqueRows,
-    });
-  });
 };
 
 const buildTechniqueStateList = (
@@ -950,9 +464,13 @@ class PartnerService {
         rows.map((row) => row.id),
         false,
       );
+      const tradeStateMap = await loadPartnerMarketTradeStateMap(
+        rows.map((row) => row.id),
+      );
       const partners = buildPartnerDetails({
         rows,
         techniqueMap,
+        tradeStateMap,
       });
       const books = await loadPartnerBooks(characterId);
 
@@ -991,6 +509,9 @@ class PartnerService {
 
       const targetPartner = await loadSinglePartnerRow(characterId, partnerId, true);
       if (!targetPartner) return { success: false, message: '伙伴不存在' };
+      if (await loadActivePartnerMarketListing(partnerId, true)) {
+        return { success: false, message: '已在坊市挂单的伙伴不可出战' };
+      }
 
       if (!targetPartner.is_active) {
         await setCharacterPartnerActivation({
@@ -1010,7 +531,7 @@ class PartnerService {
       if (!partnerDef) {
         throw new Error(`伙伴模板不存在: ${refreshedPartner.partner_def_id}`);
       }
-      const partner = buildPartnerDetailWithNextLevel({
+      const partner = await buildPartnerDetailWithTradeState({
         row: refreshedPartner,
         definition: partnerDef,
         techniqueRows: techniqueMap.get(partnerId) ?? [],
@@ -1084,6 +605,9 @@ class PartnerService {
 
       const partnerRow = await loadSinglePartnerRow(characterId, partnerId, true);
       if (!partnerRow) return { success: false, message: '伙伴不存在' };
+      if (await loadActivePartnerMarketListing(partnerId, true)) {
+        return { success: false, message: '已在坊市挂单的伙伴不可灌注' };
+      }
 
       const injectPlan = resolvePartnerInjectPlan({
         beforeLevel: partnerRow.level,
@@ -1125,7 +649,7 @@ class PartnerService {
         throw new Error(`伙伴模板不存在: ${refreshedPartner.partner_def_id}`);
       }
       const techniqueMap = await loadPartnerTechniqueRows([partnerId], false);
-      const partner = buildPartnerDetailWithNextLevel({
+      const partner = await buildPartnerDetailWithTradeState({
         row: refreshedPartner,
         definition: partnerDef,
         techniqueRows: techniqueMap.get(partnerId) ?? [],
@@ -1223,6 +747,9 @@ class PartnerService {
 
       const partnerRow = await loadSinglePartnerRow(characterId, partnerId, true);
       if (!partnerRow) return { success: false, message: '伙伴不存在' };
+      if (await loadActivePartnerMarketListing(partnerId, true)) {
+        return { success: false, message: '已在坊市挂单的伙伴不可修炼功法' };
+      }
       const partnerDef = getPartnerDefinitionById(partnerRow.partner_def_id);
       if (!partnerDef) {
         throw new Error(`伙伴模板不存在: ${partnerRow.partner_def_id}`);
@@ -1356,7 +883,7 @@ class PartnerService {
       }
 
       const refreshedTechniqueMap = await loadPartnerTechniqueRows([partnerId], false);
-      const partner = buildPartnerDetailWithNextLevel({
+      const partner = await buildPartnerDetailWithTradeState({
         row: partnerRow,
         definition: partnerDef,
         techniqueRows: refreshedTechniqueMap.get(partnerId) ?? [],
@@ -1384,6 +911,7 @@ class PartnerService {
     }
   }
 
+  @Transactional
   async learnTechniqueByItem(params: {
     characterId: number;
     partnerId: number;
@@ -1401,6 +929,9 @@ class PartnerService {
 
       const partnerRow = await loadSinglePartnerRow(params.characterId, params.partnerId, true);
       if (!partnerRow) return { success: false, message: '伙伴不存在' };
+      if (await loadActivePartnerMarketListing(params.partnerId, true)) {
+        return { success: false, message: '已在坊市挂单的伙伴不可学习功法' };
+      }
 
       const partnerDef = getPartnerDefinitionById(partnerRow.partner_def_id);
       if (!partnerDef) {
@@ -1484,7 +1015,7 @@ class PartnerService {
             : null;
 
         const refreshedTechniqueMap = await loadPartnerTechniqueRows([params.partnerId], false);
-        const partner = buildPartnerDetailWithNextLevel({
+        const partner = await buildPartnerDetailWithTradeState({
           row: partnerRow,
           definition: partnerDef,
           techniqueRows: refreshedTechniqueMap.get(params.partnerId) ?? [],
@@ -1509,7 +1040,7 @@ class PartnerService {
       }
 
       const refreshedTechniqueMap = await loadPartnerTechniqueRows([params.partnerId], false);
-      const partner = buildPartnerDetailWithNextLevel({
+      const partner = await buildPartnerDetailWithTradeState({
         row: partnerRow,
         definition: partnerDef,
         techniqueRows: refreshedTechniqueMap.get(params.partnerId) ?? [],
@@ -1558,36 +1089,10 @@ class PartnerService {
     }
 
     const techniqueMap = await loadPartnerTechniqueRows([partnerRow.id], false);
-    const techniqueRows = techniqueMap.get(partnerRow.id) ?? [];
-    const effectiveTechniqueEntries = buildEffectivePartnerTechniqueEntries(
-      partnerDef,
-      techniqueRows,
-    );
-    const techniqueEntries = effectiveTechniqueEntries.map((entry) => {
-      const meta = getPartnerTechniqueStaticMeta(
-        entry.techniqueId,
-        entry.currentLayer,
-      );
-      if (!meta) {
-        throw new Error(`伙伴功法不存在: ${entry.techniqueId}`);
-      }
-      return {
-        entry,
-        meta,
-      };
-    });
-    const techniqueDtos = techniqueEntries.map((entry) =>
-      buildPartnerTechniqueDto(entry.entry, entry.meta),
-    );
-    const passiveAttrs = mergePartnerTechniquePassives(
-      techniqueEntries.map((entry) => entry.meta.passiveAttrs),
-    );
-      const finalAttrs = buildPartnerBattleAttrs({
-        baseAttrs: partnerDef.base_attrs,
-        level: partnerRow.level,
-        levelAttrGains: partnerDef.level_attr_gains,
-        passiveAttrs,
-        element: normalizeText(partnerDef.attribute_element) || 'none',
+    const partnerDisplay = buildPartnerDisplay({
+      row: partnerRow,
+      definition: partnerDef,
+      techniqueRows: techniqueMap.get(partnerRow.id) ?? [],
     });
 
     const skillDefinitionMap = new Map(
@@ -1597,7 +1102,7 @@ class PartnerService {
     );
     const skillIds = [
       ...new Set(
-        techniqueDtos.flatMap((entry) => entry.skillIds).filter((entry) => entry.length > 0),
+        partnerDisplay.techniques.flatMap((entry) => entry.skillIds).filter((entry) => entry.length > 0),
       ),
     ];
     const skills = skillIds
@@ -1609,39 +1114,39 @@ class PartnerService {
     const data: CharacterData = {
       user_id: params.userId,
       id: partnerRow.id,
-      nickname: normalizeText(partnerRow.nickname) || normalizeText(partnerDef.name),
+      nickname: partnerDisplay.nickname,
       realm: '',
       sub_realm: null,
       attribute_element: attributeElement,
-      qixue: normalizeInteger(finalAttrs.max_qixue, 1),
-      max_qixue: normalizeInteger(finalAttrs.max_qixue, 1),
-      lingqi: normalizeInteger(finalAttrs.max_lingqi),
-      max_lingqi: normalizeInteger(finalAttrs.max_lingqi),
-      wugong: Number(finalAttrs.wugong) || 0,
-      fagong: Number(finalAttrs.fagong) || 0,
-      wufang: Number(finalAttrs.wufang) || 0,
-      fafang: Number(finalAttrs.fafang) || 0,
-      sudu: Math.max(1, Number(finalAttrs.sudu) || 1),
-      mingzhong: Number(finalAttrs.mingzhong) || 0,
-      shanbi: Number(finalAttrs.shanbi) || 0,
-      zhaojia: Number(finalAttrs.zhaojia) || 0,
-      baoji: Number(finalAttrs.baoji) || 0,
-      baoshang: Number(finalAttrs.baoshang) || 0,
-      jianbaoshang: Number(finalAttrs.jianbaoshang) || 0,
-      kangbao: Number(finalAttrs.kangbao) || 0,
-      zengshang: Number(finalAttrs.zengshang) || 0,
-      zhiliao: Number(finalAttrs.zhiliao) || 0,
-      jianliao: Number(finalAttrs.jianliao) || 0,
-      xixue: Number(finalAttrs.xixue) || 0,
-      lengque: Number(finalAttrs.lengque) || 0,
-      kongzhi_kangxing: Number(finalAttrs.kongzhi_kangxing) || 0,
-      jin_kangxing: Number(finalAttrs.jin_kangxing) || 0,
-      mu_kangxing: Number(finalAttrs.mu_kangxing) || 0,
-      shui_kangxing: Number(finalAttrs.shui_kangxing) || 0,
-      huo_kangxing: Number(finalAttrs.huo_kangxing) || 0,
-      tu_kangxing: Number(finalAttrs.tu_kangxing) || 0,
-      qixue_huifu: Number(finalAttrs.qixue_huifu) || 0,
-      lingqi_huifu: Number(finalAttrs.lingqi_huifu) || 0,
+      qixue: partnerDisplay.computedAttrs.qixue,
+      max_qixue: partnerDisplay.computedAttrs.max_qixue,
+      lingqi: partnerDisplay.computedAttrs.lingqi,
+      max_lingqi: partnerDisplay.computedAttrs.max_lingqi,
+      wugong: partnerDisplay.computedAttrs.wugong,
+      fagong: partnerDisplay.computedAttrs.fagong,
+      wufang: partnerDisplay.computedAttrs.wufang,
+      fafang: partnerDisplay.computedAttrs.fafang,
+      sudu: partnerDisplay.computedAttrs.sudu,
+      mingzhong: partnerDisplay.computedAttrs.mingzhong,
+      shanbi: partnerDisplay.computedAttrs.shanbi,
+      zhaojia: partnerDisplay.computedAttrs.zhaojia,
+      baoji: partnerDisplay.computedAttrs.baoji,
+      baoshang: partnerDisplay.computedAttrs.baoshang,
+      jianbaoshang: partnerDisplay.computedAttrs.jianbaoshang,
+      kangbao: partnerDisplay.computedAttrs.kangbao,
+      zengshang: partnerDisplay.computedAttrs.zengshang,
+      zhiliao: partnerDisplay.computedAttrs.zhiliao,
+      jianliao: partnerDisplay.computedAttrs.jianliao,
+      xixue: partnerDisplay.computedAttrs.xixue,
+      lengque: partnerDisplay.computedAttrs.lengque,
+      kongzhi_kangxing: partnerDisplay.computedAttrs.kongzhi_kangxing,
+      jin_kangxing: partnerDisplay.computedAttrs.jin_kangxing,
+      mu_kangxing: partnerDisplay.computedAttrs.mu_kangxing,
+      shui_kangxing: partnerDisplay.computedAttrs.shui_kangxing,
+      huo_kangxing: partnerDisplay.computedAttrs.huo_kangxing,
+      tu_kangxing: partnerDisplay.computedAttrs.tu_kangxing,
+      qixue_huifu: partnerDisplay.computedAttrs.qixue_huifu,
+      lingqi_huifu: partnerDisplay.computedAttrs.lingqi_huifu,
       setBonusEffects: [],
     };
 

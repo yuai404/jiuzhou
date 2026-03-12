@@ -19,19 +19,24 @@
  */
 
 import type {
-  PartnerBaseAttrsDto,
   PartnerBookDto,
-  PartnerComputedAttrsDto,
   PartnerDetailDto,
   PartnerOverviewDto,
   PartnerPassiveAttrsDto,
   PartnerTechniqueDto,
   PartnerTechniqueUpgradeCostDto,
 } from '../../../../services/api';
-import { formatPercent, formatRecovery } from '../../shared/formatAttr';
-import { DEFAULT_ICON, resolveIconUrl } from '../../shared/resolveIcon';
-import { getAttrLabel, isPercentAttrKey } from '../../shared/attrDisplay';
 import { formatTechniquePassiveAmount } from '../../shared/techniquePassiveDisplay';
+import { getPartnerAttrLabel } from '../../shared/partnerDisplay';
+
+export {
+  formatPartnerAttrValue,
+  formatPartnerElementLabel,
+  getPartnerAttrLabel,
+  getPartnerVisibleBaseAttrs,
+  getPartnerVisibleCombatAttrs,
+  resolvePartnerAvatar,
+} from '../../shared/partnerDisplay';
 
 export type PartnerPanelKey = 'partners' | 'overview' | 'upgrade' | 'technique' | 'recruit';
 
@@ -52,46 +57,6 @@ export const PARTNER_GROWTH_ATTRS: Array<keyof PartnerDetailDto['growth']> = [
   'sudu',
 ];
 
-export const PARTNER_COMBAT_ATTR_ORDER: Array<keyof PartnerBaseAttrsDto> = [
-  'max_qixue',
-  'max_lingqi',
-  'wugong',
-  'fagong',
-  'wufang',
-  'fafang',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'sudu',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-  'qixue_huifu',
-  'lingqi_huifu',
-];
-
-const PARTNER_ELEMENT_LABELS: Record<string, string> = {
-  none: '无属性',
-  jin: '金',
-  mu: '木',
-  shui: '水',
-  huo: '火',
-  tu: '土',
-  an: '暗',
-};
-
 const PARTNER_OBTAINED_FROM_LABELS: Record<string, string> = {
   main_quest: '主线任务',
   main_quest_section: '主线章节',
@@ -99,33 +64,9 @@ const PARTNER_OBTAINED_FROM_LABELS: Record<string, string> = {
   partner_recruit: 'AI招募',
 };
 
-export const getPartnerAttrLabel = (
-  attrKey: keyof PartnerComputedAttrsDto | keyof PartnerDetailDto['growth'] | string,
-): string => {
-  return getAttrLabel(attrKey);
-};
-
-export const formatPartnerAttrValue = (
-  attrKey: keyof PartnerComputedAttrsDto | keyof PartnerDetailDto['growth'] | string,
-  value: number,
-): string => {
-  if (isPercentAttrKey(attrKey)) {
-    return formatPercent(value);
-  }
-  return formatRecovery(value);
-};
-
-export const formatPartnerElementLabel = (element: string): string => {
-  return PARTNER_ELEMENT_LABELS[element] ?? '无属性';
-};
-
 export const formatPartnerObtainedFromLabel = (obtainedFrom: string | null): string => {
   if (!obtainedFrom) return '主线获得';
   return PARTNER_OBTAINED_FROM_LABELS[obtainedFrom] ?? '其他来源';
-};
-
-export const resolvePartnerAvatar = (avatar: string | null): string => {
-  return resolveIconUrl(avatar, DEFAULT_ICON);
 };
 
 export const resolvePartnerActionLabel = (isActive: boolean): string => {
@@ -146,28 +87,6 @@ export const resolvePartnerNextSelectedId = (
 
 export const getPartnerEmptySlotCount = (partner: PartnerDetailDto): number => {
   return Math.max(0, partner.slotCount - partner.techniques.length);
-};
-
-export const getPartnerVisibleCombatAttrs = (
-  computedAttrs: PartnerComputedAttrsDto,
-): Array<{ key: keyof PartnerBaseAttrsDto; value: number }> => {
-  return PARTNER_COMBAT_ATTR_ORDER
-    .map((key) => ({ key, value: Number(computedAttrs[key]) || 0 }))
-    .filter((entry) => entry.value !== 0);
-};
-
-export const getPartnerVisibleBaseAttrs = (
-  baseAttrs: PartnerBaseAttrsDto,
-  compareAttrs?: PartnerBaseAttrsDto,
-): Array<{ key: keyof PartnerBaseAttrsDto; value: number }> => {
-  return PARTNER_COMBAT_ATTR_ORDER
-    .map((key) => ({
-      key,
-      value: Number(baseAttrs[key]) || 0,
-      compareValue: Number(compareAttrs?.[key]) || 0,
-    }))
-    .filter((entry) => entry.value !== 0 || entry.compareValue !== 0)
-    .map(({ key, value }) => ({ key, value }));
 };
 
 export const formatPartnerTechniquePassiveLines = (

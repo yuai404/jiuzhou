@@ -26,6 +26,7 @@ import {
   calculateMarketListingFeeSilver,
   calculateMarketListingRefundFee,
   calculateMarketTradeTotalPrice,
+  getTaxAmount,
   normalizeMarketBuyQuantity,
 } from "./shared/marketListingPurchaseShared.js";
 import { resolveGeneratedTechniqueBookDisplay } from "./shared/generatedTechniqueBookView.js";
@@ -92,12 +93,6 @@ const parseNonNegativeInt = (v: unknown): number | null => {
 
 const parseMaybeString = (v: unknown): string =>
   (typeof v === "string" ? v : "").trim();
-
-const getTaxAmount = (totalPrice: bigint, taxRate: number): bigint => {
-  if (!Number.isFinite(taxRate) || taxRate <= 0) return 0n;
-  const rate = Math.max(0, Math.min(100, taxRate));
-  return (totalPrice * BigInt(Math.floor(rate * 100))) / 10000n;
-};
 
 /**
  * 复用 item_instance 拆堆复制逻辑，避免“部分上架”和“部分购买”各写一份插入 SQL。

@@ -23,6 +23,7 @@ import assert from 'node:assert/strict';
 import {
   calculateMarketListingRefundFee,
   calculateMarketTradeTotalPrice,
+  getTaxAmount,
   normalizeMarketBuyQuantity,
 } from '../shared/marketListingPurchaseShared.js';
 
@@ -37,6 +38,12 @@ test('购买数量应限制为 1 到当前挂单数量之间的正整数', () =>
 test('成交总价应按本次购买数量与单价计算', () => {
   assert.equal(calculateMarketTradeTotalPrice(88n, 3), 264n);
   assert.equal(calculateMarketTradeTotalPrice(1n, 1), 1n);
+});
+
+test('税额应按总价与税率向下取整计算', () => {
+  assert.equal(getTaxAmount(999n, 0), 0n);
+  assert.equal(getTaxAmount(999n, 0.1), 99n);
+  assert.equal(getTaxAmount(15n, 0.2), 3n);
 });
 
 test('下架手续费应按剩余未成交比例向下取整退还', () => {
