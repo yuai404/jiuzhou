@@ -36,7 +36,6 @@ const EXPECTED_WEEKLY_SPIRIT_STONES = new Map<string, number>([
   ['task-lianji-weekly-001', 18000],
   ['task-lianji-weekly-002', 20000],
   ['task-lianji-weekly-004', 22000],
-  ['task-caiyao-weekly-001', 26000],
   ['task-caiyao-weekly-002', 28000],
   ['task-caiyao-weekly-003', 30000],
   ['task-caiyao-weekly-004', 32000],

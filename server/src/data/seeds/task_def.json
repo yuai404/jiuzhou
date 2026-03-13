@@ -1082,57 +1082,6 @@
       "sort_weight": 614
     },
     {
-      "id": "task-caiyao-weekly-001",
-      "category": "event",
-      "title": "周常：宫阙压测",
-      "realm": "炼炁化神·采药期",
-      "description": "本周累计完成九台宫阙高压试炼。",
-      "giver_npc_id": "npc-jiutai-hermit",
-      "map_id": "map-jiutai-sanctum",
-      "room_id": "room-jiutai-core-hall",
-      "objectives": [
-        {
-          "id": "obj-001",
-          "type": "dungeon_clear",
-          "text": "通关九台宫阙（普通）2 次",
-          "target": 2,
-          "params": {
-            "dungeon_id": "dungeon-lianqi-jiutai-gongque",
-            "difficulty_id": "dd-lianqi-jiutai-n"
-          }
-        },
-        {
-          "id": "obj-002",
-          "type": "dungeon_clear",
-          "text": "通关九台宫阙（困难）2 次",
-          "target": 2,
-          "params": {
-            "dungeon_id": "dungeon-lianqi-jiutai-gongque",
-            "difficulty_id": "dd-lianqi-jiutai-h"
-          }
-        }
-      ],
-      "rewards": [
-        {
-          "type": "spirit_stones",
-          "amount": 26000
-        },
-        {
-          "type": "item",
-          "item_def_id": "mat-taiyuan-jingpo",
-          "qty": 6
-        },
-        {
-          "type": "item",
-          "item_def_id": "box-009",
-          "qty": 1
-        }
-      ],
-      "prereq_task_ids": [],
-      "enabled": true,
-      "sort_weight": 660
-    },
-    {
       "id": "task-caiyao-weekly-002",
       "category": "event",
       "title": "周常：宫阙连战",
