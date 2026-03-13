@@ -389,7 +389,7 @@
         },
         {
           "type": "spirit_stones",
-          "amount": 30
+          "amount": 3000
         },
         {
           "type": "item",
@@ -444,7 +444,7 @@
         },
         {
           "type": "spirit_stones",
-          "amount": 35
+          "amount": 3500
         },
         {
           "type": "item",
@@ -492,7 +492,7 @@
         },
         {
           "type": "spirit_stones",
-          "amount": 60
+          "amount": 6000
         },
         {
           "type": "item",
@@ -726,7 +726,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 180
+          "amount": 18000
         },
         {
           "type": "item",
@@ -785,7 +785,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 200
+          "amount": 20000
         },
         {
           "type": "item",
@@ -874,7 +874,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 220
+          "amount": 22000
         },
         {
           "type": "item",
@@ -1115,7 +1115,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 260
+          "amount": 26000
         },
         {
           "type": "item",
@@ -1165,7 +1165,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 280
+          "amount": 28000
         },
         {
           "type": "item",
@@ -1214,7 +1214,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 300
+          "amount": 30000
         },
         {
           "type": "item",
@@ -1258,7 +1258,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 320
+          "amount": 32000
         },
         {
           "type": "item",
@@ -1424,7 +1424,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 380
+          "amount": 38000
         },
         {
           "type": "item",
@@ -1473,7 +1473,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 420
+          "amount": 42000
         },
         {
           "type": "item",
@@ -1719,7 +1719,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 460
+          "amount": 46000
         },
         {
           "type": "item",
@@ -1768,7 +1768,7 @@
       "rewards": [
         {
           "type": "spirit_stones",
-          "amount": 520
+          "amount": 52000
         },
         {
           "type": "item",
