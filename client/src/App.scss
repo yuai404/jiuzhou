@@ -9,10 +9,43 @@
  * 1. Ant Design 6 的 Tag 使用 `filled/outlined/solid` 变体类名，选择器必须覆盖这些类才能稳定压过组件默认样式。
  * 2. 语义色只做颜色映射，尺寸与宽度仍由各业务模块自己控制，避免全局皮肤误伤布局。
  */
+@font-face {
+  font-family: 'Source Code Pro';
+  src: url('https://cdn.faith.wang/fonts/SourceCodePro-Regular.otf.woff2') format('woff2');
+  font-display: swap;
+}
 
+@font-face {
+  font-family: 'Custom';
+  src: url('https://cdn.faith.wang/fonts/ChillRoundF.woff2') format('woff2');
+  font-display: swap;
+}
+
+/**
+ * 作用：集中声明项目全局字体链，避免在多个全局选择器和媒体查询里重复手写长字体列表。
+ * 不做什么：不区分业务模块或局部排版字体，局部特殊字体仍应在对应模块单独声明。
+ * 输入/输出：输入为远程字体资源与全局 CSS 变量；输出为 `body` 及其后代统一读取默认与高分辨率字体链。
+ * 数据流/状态流：`@font-face` 注册 Source Code Pro 与 ChillRoundF（别名 `Custom`），`body` 写入字体链变量，通用文本节点通过变量消费，媒体查询按分辨率切换到另一套字体链。
+ * 关键边界条件与坑点：
+ * 1. 全局已有 `body *` 的强制字体策略，字体入口必须集中成变量，否则常规态和高分辨率态容易改漏。
+ * 2. `Custom` 明确作为 ChillRoundF 的字体别名，只服务于你指定的字体链命名，不额外保留其他别名。
+ */
 body {
   --app-tag-base-bg: var(--panel-bg);
   --app-tag-radius: 4px;
+  --app-font-family: 'Source Code Pro', Roboto, Helvetica, Tahoma, Arial, yt, 'PingFang SC', 'Hiragino Sans GB', 'Heiti SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
+  --app-font-family-hidpi: 'Source Code Pro', Custom, 'PingFang SC', 'Hiragino Sans GB', 'Heiti SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', Arial, sans-serif;
+  font-family: var(--app-font-family);
+}
+
+body * {
+  font-family: var(--app-font-family);
+}
+
+@media screen and (min-resolution: 1.25x) {
+  body * {
+    font-family: var(--app-font-family-hidpi) !important;
+  }
 }
 
 body .ant-tag.ant-tag-filled,

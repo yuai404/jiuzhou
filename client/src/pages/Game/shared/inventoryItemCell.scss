@@ -1,4 +1,32 @@
+@use '../../../styles/tag' as appTag;
+
+/**
+ * 作用：统一物品格子左上数量与右上状态角标的 Tag 皮肤，直接复用全局 chip 体系。
+ * 不做什么：不改格子布局、品质边框和业务角标文案，只负责角标的视觉统一。
+ * 输入/输出：输入为 InventoryItemCell 产出的数量/状态角标 class；输出为浅色/深色主题一致的紧凑 Tag 样式。
+ * 数据流/状态流：Bag/Warehouse/Market 统一复用 InventoryItemCell -> 本样式为所有角标提供同一套底色、描边和强调色。
+ * 关键边界条件与坑点：
+ * 1) 角标覆盖在图标上方，底色需要带半透明面板感，既不能糊成一片，也不能丢失可读性。
+ * 2) “已穿戴 + 已锁”会双角标叠加，因此尺寸必须保持紧凑，避免挤压图标与名称。
+ */
+
+@mixin inventory-corner-tag() {
+  @include appTag.chip-base(var(--inventory-cell-tag-bg));
+  height: 16px;
+  padding: 0 5px;
+  border-radius: var(--app-tag-radius, 6px);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+}
+
 .inventory-item-cell {
+  --inventory-cell-tag-bg: color-mix(in srgb, var(--panel-bg) 88%, transparent);
   position: relative;
   aspect-ratio: 1 / 1;
   height: var(--inventory-cell-size, 56px);
@@ -71,44 +99,29 @@
 }
 
 .inventory-item-cell__qty {
+  @include inventory-corner-tag();
   position: absolute;
   top: var(--inventory-qty-top, 5px);
   left: var(--inventory-qty-left, 5px);
   z-index: 2;
-  height: 14px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.72);
-  color: var(--hero-overlay-text);
-  font-size: 9px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  color: color-mix(in srgb, var(--text-color) 94%, #fff 6%);
+  font-variant-numeric: tabular-nums;
 }
 
 .inventory-item-cell__badge {
+  @include inventory-corner-tag();
   position: absolute;
   top: 5px;
   right: 5px;
   z-index: 2;
-  height: 14px;
-  padding: 0 4px;
-  border-radius: 999px;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .inventory-item-cell__badge--equipped {
-  background: var(--primary-color);
+  @include appTag.chip-accent(var(--primary-color), var(--inventory-cell-tag-bg), 26%, 16%, 44%, 92%);
 }
 
 .inventory-item-cell__badge--locked {
-  background: rgba(255, 77, 79, 0.92);
+  @include appTag.chip-accent(var(--danger-color), var(--inventory-cell-tag-bg), 24%, 16%, 46%, 92%);
 }
 
 .inventory-item-cell__badge--locked.is-with-equipped {
