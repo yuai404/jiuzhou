@@ -28,10 +28,8 @@ import { useIsMobile } from '../../shared/responsive';
 import { getItemQualityLabel, getItemQualityTagClassName } from '../../shared/itemQuality';
 import ResearchPanel from './ResearchPanel';
 import {
-  TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS,
   resolveTechniqueResearchActionState,
   resolveTechniqueResearchIndicatorStatus,
-  shouldPollTechniqueResearchStatus,
   type TechniqueResearchStatusData,
 } from './researchShared';
 import {
@@ -434,6 +432,12 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
     setPublishNameError(null);
   }, []);
 
+  const applyResearchStatus = useCallback((status: TechniqueResearchStatusData | null) => {
+    researchStatusRef.current = status;
+    setResearchStatus(status);
+    onResearchIndicatorChange?.(resolveTechniqueResearchIndicatorStatus(status));
+  }, [onResearchIndicatorChange]);
+
   useEffect(() => {
     gameSocket.connect();
     const unsubscribe = gameSocket.onCharacterUpdate((c) => {
@@ -558,16 +562,14 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
       if (!statusRes?.success || !statusRes.data) {
         throw new Error(statusRes?.message || '获取研修状态失败');
       }
-      researchStatusRef.current = statusRes.data;
-      setResearchStatus(statusRes.data);
-      onResearchIndicatorChange?.(resolveTechniqueResearchIndicatorStatus(statusRes.data));
+      applyResearchStatus(statusRes.data);
     } catch {
       // 拉取失败时保留上一份状态，避免网络抖动误清结果提示。
     } finally {
       if (shouldShowBlockingLoading) setResearchLoading(false);
       if (shouldShowRefreshLoading) setResearchRefreshing(false);
     }
-  }, [characterId, onResearchIndicatorChange]);
+  }, [applyResearchStatus, characterId]);
 
   useEffect(() => {
     if (!open || panel !== 'research') return;
@@ -577,29 +579,16 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
 
   useEffect(() => {
     if (!open || panel !== 'research' || !characterId) return undefined;
-    return gameSocket.onTechniqueResearchResult((payload) => {
+    return gameSocket.onTechniqueResearchStatusUpdate((payload) => {
       if (payload.characterId !== characterId) return;
-      void refreshResearchStatus('background');
+      applyResearchStatus(payload.status);
     });
-  }, [characterId, open, panel, refreshResearchStatus]);
+  }, [applyResearchStatus, characterId, open, panel]);
 
   useEffect(() => {
     if (!open || panel !== 'research') return;
     setResearchVisitToken((value) => value + 1);
   }, [open, panel]);
-
-  useEffect(() => {
-    if (
-      !open ||
-      panel !== 'research' ||
-      !characterId ||
-      !shouldPollTechniqueResearchStatus(researchStatus)
-    ) return undefined;
-    const timer = window.setInterval(() => {
-      void refreshResearchStatus('background');
-    }, TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [characterId, open, panel, refreshResearchStatus, researchStatus]);
 
   useEffect(() => {
     if (

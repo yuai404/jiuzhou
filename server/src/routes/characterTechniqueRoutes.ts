@@ -21,6 +21,7 @@ import {
   abortTechniqueGenerationJob,
   enqueueTechniqueGenerationJob,
 } from '../services/techniqueGenerationJobRunner.js';
+import { notifyTechniqueResearchStatus } from '../services/techniqueResearchPush.js';
 
 const router = Router();
 
@@ -113,12 +114,14 @@ router.post('/:characterId/technique/research/generate', asyncHandler(async (req
           quality: result.data.quality,
           userId,
         });
+        await notifyTechniqueResearchStatus(characterId, userId);
       } catch (error) {
         await techniqueGenerationService.failPendingGenerationJob(
           characterId,
           result.data.generationId,
           `洞府推演任务投递失败：${error instanceof Error ? error.message : '未知异常'}`,
         );
+        await notifyTechniqueResearchStatus(characterId, userId);
         throw new BusinessError('洞府推演任务投递失败，请稍后重试');
       }
     }
@@ -137,6 +140,9 @@ router.post('/:characterId/technique/research/mark-result-viewed', asyncHandler(
   }
 
   const result = await techniqueGenerationService.markLatestResultViewed(characterId);
+  if (result.success) {
+    await notifyTechniqueResearchStatus(characterId, req.userId);
+  }
   sendResult(res, result);
 }));
 
@@ -163,6 +169,7 @@ router.post('/:characterId/technique/research/generate/:generationId/abandon', a
   if (result.success) {
     await abortTechniqueGenerationJob(generationId);
     await safePushCharacterUpdate(userId);
+    await notifyTechniqueResearchStatus(characterId, userId);
   }
   sendResult(res, result);
 }));
@@ -199,6 +206,7 @@ router.post('/:characterId/technique/research/generate/:generationId/publish', a
   });
   if (result.success) {
     await safePushCharacterUpdate(userId);
+    await notifyTechniqueResearchStatus(characterId, userId);
   }
   sendResult(res, result);
 }));

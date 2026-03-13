@@ -23,6 +23,7 @@ import { lockCharacterInventoryMutex } from './inventoryMutex.js';
 import { recordCollectItemEvent } from './taskService.js';
 import { getItemDefinitionsByIds } from './staticConfigLoader.js';
 import { createCacheLayer } from './shared/cacheLayer.js';
+import { getGameServer } from '../game/gameServer.js';
 
 // ============================================
 // 类型定义
@@ -333,6 +334,57 @@ class MailService {
         ),
       ),
     );
+  }
+
+  /**
+   * 推送当前在线角色可见的邮件红点状态。
+   *
+   * 作用：
+   * - 统一把首页邮件红点收敛为 socket 单一来源，避免前端靠轮询 `/mail/unread` 才能看到变化。
+   * - 只推当前在线角色视角的计数，保证角色级邮件不会错误污染同账号的其他角色视图。
+   *
+   * 输入/输出：
+   * - 输入：recipientUserId
+   * - 输出：无；副作用是向当前在线用户发送 `mail:update`
+   *
+   * 边界条件：
+   * 1) 账号离线或当前没有在线角色时直接跳过，邮件写操作本身不能依赖 socket 成功。
+   * 2) 邮件缓存必须先失效再读取最新计数，否则会把旧红点重新推回前端。
+   */
+  async pushUnreadCounterUpdateToUser(recipientUserId: number): Promise<void> {
+    try {
+      const gameServer = getGameServer();
+      const activeCharacterId = gameServer.getActiveCharacterIdByUserId(recipientUserId);
+      if (!activeCharacterId) return;
+
+      const counter = await this.getUnreadCount(recipientUserId, activeCharacterId);
+      gameServer.emitToUser(recipientUserId, 'mail:update', counter);
+    } catch (error) {
+      console.error(`[mail] 推送未读计数失败: userId=${recipientUserId}`, error);
+    }
+  }
+
+  /**
+   * 统一处理“邮件未读缓存失效 + 首页红点推送”。
+   *
+   * 作用：
+   * - 把所有会影响邮件红点的写路径收敛成单一入口，避免 send/read/claim/delete 各处重复写一套缓存失效与 socket 推送。
+   * - 保证首页看到的邮件红点和 `/mail/unread` 共用同一份缓存读模型。
+   *
+   * 输入/输出：
+   * - 输入：recipientUserId，以及可选的 recipientCharacterId
+   * - 输出：无；保证缓存已失效，并尝试向在线用户推送最新红点
+   *
+   * 边界条件：
+   * 1) 账号级邮件会影响该账号所有角色缓存，因此这里不能只清当前 characterId 的键。
+   * 2) 推送失败时不允许抛出到业务写路径，避免成功的邮件写入被 socket 提示反向打断。
+   */
+  private async invalidateUnreadCounterAndNotifyRecipient(
+    recipientUserId: number,
+    recipientCharacterId?: number,
+  ): Promise<void> {
+    await this.invalidateUnreadCounterCacheForRecipient(recipientUserId, recipientCharacterId);
+    await this.pushUnreadCounterUpdateToUser(recipientUserId);
   }
 
   /**
@@ -666,7 +718,7 @@ class MailService {
         options.metadata ? JSON.stringify(options.metadata) : null
       ]);
 
-      await this.invalidateUnreadCounterCacheForRecipient(
+      await this.invalidateUnreadCounterAndNotifyRecipient(
         options.recipientUserId,
         options.recipientCharacterId,
       );
@@ -862,7 +914,7 @@ class MailService {
       return { success: false, message: '邮件不存在' };
     }
 
-    await this.invalidateUnreadCounterCacheForRecipient(userId, characterId);
+    await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     return { success: true, message: '已读' };
   }
 
@@ -1079,7 +1131,7 @@ class MailService {
     }
 
     if (shouldInvalidateUnreadCounter) {
-      await this.invalidateUnreadCounterCacheForRecipient(userId, characterId);
+      await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     }
 
     return { success: true, message: '领取成功', rewards };
@@ -1174,7 +1226,7 @@ class MailService {
       return { success: true, message: '没有可领取的附件', claimedCount: 0, skippedCount: 0 };
     }
 
-    await this.invalidateUnreadCounterCacheForRecipient(userId, characterId);
+    await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
 
     if (skippedCount > 0) {
       return {
@@ -1216,7 +1268,7 @@ class MailService {
       return { success: false, message: '邮件不存在' };
     }
 
-    await this.invalidateUnreadCounterCacheForRecipient(userId, characterId);
+    await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
 
     const mail = result.rows[0];
     const hasAttachments = mail.attach_silver > 0 || mail.attach_spirit_stones > 0 ||
@@ -1254,7 +1306,7 @@ class MailService {
     const result = await query(sql + ' RETURNING id', [characterId, userId]);
 
     if (result.rows.length > 0) {
-      await this.invalidateUnreadCounterCacheForRecipient(userId, characterId);
+      await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     }
 
     return {
@@ -1282,7 +1334,7 @@ class MailService {
     `, [characterId, userId]);
 
     if (result.rows.length > 0) {
-      await this.invalidateUnreadCounterCacheForRecipient(userId, characterId);
+      await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     }
 
     return {

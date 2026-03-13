@@ -24,6 +24,7 @@ import { query } from '../config/database.js';
 import { getGameServer } from '../game/gameServer.js';
 import { getCharacterUserId } from './sect/db.js';
 import { isGeneratedTechniqueType } from './shared/techniqueGenerationConstraints.js';
+import { notifyTechniqueResearchStatus } from './techniqueResearchPush.js';
 import {
   techniqueGenerationService,
   type TechniqueQuality,
@@ -86,6 +87,7 @@ class TechniqueGenerationJobRunner {
         message: '洞府推演失败，请前往功法查看',
         errorMessage: reason,
       });
+      await notifyTechniqueResearchStatus(params.characterId, userId);
     };
 
     worker.once('error', (error) => {
@@ -147,6 +149,7 @@ class TechniqueGenerationJobRunner {
             : undefined,
           errorMessage: message.payload.errorMessage ?? undefined,
         });
+        await notifyTechniqueResearchStatus(message.payload.characterId, userId);
       })();
     });
   }

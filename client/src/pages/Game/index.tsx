@@ -17,10 +17,9 @@ import SkillFloatButton from './modules/SkillFloatButton';
 import TechniqueModal from './modules/TechniqueModal';
 import NpcTalkModal from './modules/NpcTalkModal';
 import {
-  TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS,
   getTechniqueResearchIndicatorTooltip,
   resolveTechniqueResearchIndicatorStatus,
-  shouldPollTechniqueResearchStatus,
+  type TechniqueResearchStatusData,
 } from './modules/TechniqueModal/researchShared';
 import TaskModal from './modules/TaskModal';
 import SectModal from './modules/SectModal';
@@ -37,7 +36,12 @@ import WarehouseModal from './modules/WarehouseModal';
 import SignInModal from './modules/SignInModal';
 import PartnerModal from './modules/PartnerModal';
 import { useIdleBattle, IdleBattlePanel, IdleBattleStatusBar } from './modules/IdleBattle';
-import { gameSocket, type CharacterData, type SectIndicatorPayload } from '../../services/gameSocket';
+import {
+  gameSocket,
+  type CharacterData,
+  type MailIndicatorPayload,
+  type SectIndicatorPayload,
+} from '../../services/gameSocket';
 import {
   acceptTaskFromNpc,
   claimTaskReward,
@@ -49,8 +53,6 @@ import {
   npcTalk,
   getSignInOverview,
   getAchievementList,
-  getMailUnread,
-  getTechniqueResearchStatus,
   nextDungeonInstance,
   startDungeonInstance,
   submitTaskToNpc,
@@ -665,7 +667,6 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const [showSignInDot, setShowSignInDot] = useState(false);
   const [showMailDot, setShowMailDot] = useState(false);
   const [techniqueIndicatorStatus, setTechniqueIndicatorStatus] = useState<TechniqueResearchResultStatusDto | null>(null);
-  const [techniqueResearchPending, setTechniqueResearchPending] = useState(false);
   const [mailModalOpen, setMailModalOpen] = useState(false);
   const [settingModalOpen, setSettingModalOpen] = useState(false);
   // 挂机面板 Modal 开关
@@ -1313,6 +1314,15 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     );
   }, []);
 
+  const applyMailIndicator = useCallback((payload: MailIndicatorPayload) => {
+    const unreadCount = Math.max(0, Math.floor(Number(payload.unreadCount) || 0));
+    setShowMailDot(unreadCount > 0);
+  }, []);
+
+  const applyTechniqueResearchStatus = useCallback((status: TechniqueResearchStatusData | null) => {
+    setTechniqueIndicatorStatus(resolveTechniqueResearchIndicatorStatus(status));
+  }, []);
+
   useEffect(() => {
     if (!characterId) return;
     const t = window.setTimeout(() => {
@@ -1382,14 +1392,6 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       unsub();
     };
   }, [clearBattleAutoCloseTimer, dungeonBattleId, syncRealtimeBattleView]);
-
-  useEffect(() => {
-    if (!characterId) return;
-    const timer = window.setInterval(() => {
-      void refreshTeamData();
-    }, 20000);
-    return () => window.clearInterval(timer);
-  }, [characterId, refreshTeamData]);
 
   const onLeaveTeam = useCallback(async () => {
     if (!characterId) return;
@@ -1511,98 +1513,32 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     return () => window.clearTimeout(t);
   }, [refreshSignInDot]);
 
-  /**
-   * 刷新邮箱未读红点。
-   *
-   * 设计说明：
-   * - 顶部入口只展示“未读邮件”状态，不复用附件未领计数，避免红点语义混淆。
-   * - 统一通过 `/mail/unread` 读取，避免在主界面重复拉取整页邮件列表。
-   */
-  const refreshMailDot = useCallback(async () => {
-    try {
-      const res = await getMailUnread();
-      if (!res.success || !res.data) {
-        setShowMailDot(false);
-        return;
-      }
-      const unreadCount = Math.max(0, Math.floor(Number(res.data.unreadCount) || 0));
-      setShowMailDot(unreadCount > 0);
-    } catch {
+  useEffect(() => {
+    if (!characterId) {
       setShowMailDot(false);
+      return;
     }
-  }, []);
 
-  // 进入游戏后立即拉取一次邮件红点状态。
+    return gameSocket.onMailUpdate((payload) => {
+      applyMailIndicator(payload);
+    });
+  }, [applyMailIndicator, characterId]);
+
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      void refreshMailDot();
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [refreshMailDot]);
-
-  // 轻量轮询，确保不打开邮箱时也能看到新邮件红点。
-  useEffect(() => {
-    if (!characterId) return;
-    const timer = window.setInterval(() => {
-      void refreshMailDot();
-    }, 20000);
-    return () => window.clearInterval(timer);
-  }, [characterId, refreshMailDot]);
-
-  const refreshTechniqueIndicator = useCallback(async () => {
     if (!TECHNIQUE_RESEARCH_ENABLED) {
       setTechniqueIndicatorStatus(null);
-      setTechniqueResearchPending(false);
-      return;
+      return undefined;
     }
     if (!characterId) {
       setTechniqueIndicatorStatus(null);
-      setTechniqueResearchPending(false);
-      return;
+      return undefined;
     }
-    try {
-      const res = await getTechniqueResearchStatus(characterId);
-      if (!res.success || !res.data) {
-        return;
-      }
-      setTechniqueResearchPending(shouldPollTechniqueResearchStatus(res.data));
-      const nextStatus = resolveTechniqueResearchIndicatorStatus(res.data);
-      if (!nextStatus) {
-        setTechniqueIndicatorStatus(null);
-        return;
-      }
-      setTechniqueIndicatorStatus(nextStatus);
-    } catch {
-      // 保留现有红点，等待下次成功同步，避免瞬时失败误清提醒。
-    }
-  }, [characterId]);
 
-  useEffect(() => {
-    if (!TECHNIQUE_RESEARCH_ENABLED) return undefined;
-    const t = window.setTimeout(() => {
-      void refreshTechniqueIndicator();
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [refreshTechniqueIndicator]);
-
-  useEffect(() => {
-    if (!TECHNIQUE_RESEARCH_ENABLED || !characterId || !techniqueResearchPending) return undefined;
-    const timer = window.setInterval(() => {
-      void refreshTechniqueIndicator();
-    }, TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [characterId, refreshTechniqueIndicator, techniqueResearchPending]);
-
-  useEffect(() => {
-    if (!TECHNIQUE_RESEARCH_ENABLED) return undefined;
-    if (!characterId) return undefined;
-    return gameSocket.onTechniqueResearchResult((payload) => {
+    return gameSocket.onTechniqueResearchStatusUpdate((payload) => {
       if (payload.characterId !== characterId) return;
-      setTechniqueResearchPending(false);
-      setTechniqueIndicatorStatus(payload.status);
-      void refreshTechniqueIndicator();
+      applyTechniqueResearchStatus(payload.status);
     });
-  }, [characterId, refreshTechniqueIndicator]);
+  }, [applyTechniqueResearchStatus, characterId]);
 
   const refreshAchievementIndicator = useCallback(async () => {
     try {
@@ -2494,7 +2430,6 @@ const Game: FC<GameProps> = ({ onLogout }) => {
           open={mailModalOpen}
           onClose={() => {
             setMailModalOpen(false);
-            void refreshMailDot();
           }}
         />
       )}

@@ -3,6 +3,11 @@
  */
 import { io, Socket } from "socket.io-client";
 import { SERVER_BASE } from "./api";
+import type {
+  MailUnreadResponse,
+  PartnerRecruitStatusResponse,
+  TechniqueResearchStatusResponse,
+} from "./api";
 import type { CharacterFeatureCode } from "./feature";
 
 const isLoopbackHostname = (hostname: string): boolean => {
@@ -173,6 +178,8 @@ export interface IdleFinishedPayload {
 
 type IdleUpdateListener = (data: IdleUpdatePayload) => void;
 type IdleFinishedListener = (data: IdleFinishedPayload) => void;
+export type MailIndicatorPayload = NonNullable<MailUnreadResponse["data"]>;
+type MailUpdateListener = (data: MailIndicatorPayload) => void;
 
 export interface TechniqueResearchResultPayload {
   characterId: number;
@@ -190,6 +197,13 @@ export interface TechniqueResearchResultPayload {
 }
 
 type TechniqueResearchResultListener = (data: TechniqueResearchResultPayload) => void;
+export type TechniqueResearchStatusPayload = {
+  characterId: number;
+  status: NonNullable<TechniqueResearchStatusResponse["data"]>;
+};
+type TechniqueResearchStatusListener = (
+  data: TechniqueResearchStatusPayload,
+) => void;
 
 export interface PartnerRecruitResultPayload {
   characterId: number;
@@ -207,6 +221,11 @@ export interface PartnerRecruitResultPayload {
 }
 
 type PartnerRecruitResultListener = (data: PartnerRecruitResultPayload) => void;
+export type PartnerRecruitStatusPayload = {
+  characterId: number;
+  status: NonNullable<PartnerRecruitStatusResponse["data"]>;
+};
+type PartnerRecruitStatusListener = (data: PartnerRecruitStatusPayload) => void;
 
 export interface OnlinePlayerDto {
   id: number;
@@ -236,11 +255,20 @@ class GameSocketService {
   private onlinePlayersListeners: Set<OnlinePlayersListener> = new Set();
   private idleUpdateListeners: Set<IdleUpdateListener> = new Set();
   private idleFinishedListeners: Set<IdleFinishedListener> = new Set();
+  private mailUpdateListeners: Set<MailUpdateListener> = new Set();
   private techniqueResearchResultListeners: Set<TechniqueResearchResultListener> = new Set();
+  private techniqueResearchStatusListeners: Set<TechniqueResearchStatusListener> =
+    new Set();
   private partnerRecruitResultListeners: Set<PartnerRecruitResultListener> = new Set();
+  private partnerRecruitStatusListeners: Set<PartnerRecruitStatusListener> =
+    new Set();
   private currentCharacter: CharacterData | null = null;
   private currentSectIndicator: SectIndicatorPayload | null = null;
   private currentOnlinePlayers: OnlinePlayersPayloadDto | null = null;
+  private currentMailIndicator: MailIndicatorPayload | null = null;
+  private currentTechniqueResearchStatus: TechniqueResearchStatusPayload | null =
+    null;
+  private currentPartnerRecruitStatus: PartnerRecruitStatusPayload | null = null;
   /** 本地在线玩家索引，用于增量合并 delta 消息 */
   private onlinePlayersMap: Map<number, OnlinePlayerDto> = new Map();
   private isConnected = false;
@@ -279,6 +307,9 @@ class GameSocketService {
       this.isConnected = false;
       this.currentSectIndicator = null;
       this.currentOnlinePlayers = null;
+      this.currentMailIndicator = null;
+      this.currentTechniqueResearchStatus = null;
+      this.currentPartnerRecruitStatus = null;
     });
 
     this.socket.on(
@@ -354,13 +385,34 @@ class GameSocketService {
       this.notifyIdleFinishedListeners(data);
     });
 
+    this.socket.on("mail:update", (data: MailIndicatorPayload) => {
+      this.currentMailIndicator = data;
+      this.notifyMailUpdateListeners(data);
+    });
+
     this.socket.on("techniqueResearchResult", (data: TechniqueResearchResultPayload) => {
       this.notifyTechniqueResearchResultListeners(data);
     });
 
+    this.socket.on(
+      "techniqueResearch:update",
+      (data: TechniqueResearchStatusPayload) => {
+        this.currentTechniqueResearchStatus = data;
+        this.notifyTechniqueResearchStatusListeners(data);
+      },
+    );
+
     this.socket.on("partnerRecruitResult", (data: PartnerRecruitResultPayload) => {
       this.notifyPartnerRecruitResultListeners(data);
     });
+
+    this.socket.on(
+      "partnerRecruit:update",
+      (data: PartnerRecruitStatusPayload) => {
+        this.currentPartnerRecruitStatus = data;
+        this.notifyPartnerRecruitStatusListeners(data);
+      },
+    );
 
     this.socket.on("chat:message", (data: ChatMessageDto) => {
       if (!data || typeof data !== "object") return;
@@ -479,6 +531,9 @@ class GameSocketService {
       this.currentCharacter = null;
       this.currentSectIndicator = null;
       this.currentOnlinePlayers = null;
+      this.currentMailIndicator = null;
+      this.currentTechniqueResearchStatus = null;
+      this.currentPartnerRecruitStatus = null;
       this.onlinePlayersMap.clear();
     }
   }
@@ -552,14 +607,42 @@ class GameSocketService {
     return () => this.idleFinishedListeners.delete(listener);
   }
 
+  onMailUpdate(listener: MailUpdateListener): () => void {
+    this.mailUpdateListeners.add(listener);
+    if (this.currentMailIndicator) {
+      listener(this.currentMailIndicator);
+    }
+    return () => this.mailUpdateListeners.delete(listener);
+  }
+
   onTechniqueResearchResult(listener: TechniqueResearchResultListener): () => void {
     this.techniqueResearchResultListeners.add(listener);
     return () => this.techniqueResearchResultListeners.delete(listener);
   }
 
+  onTechniqueResearchStatusUpdate(
+    listener: TechniqueResearchStatusListener,
+  ): () => void {
+    this.techniqueResearchStatusListeners.add(listener);
+    if (this.currentTechniqueResearchStatus) {
+      listener(this.currentTechniqueResearchStatus);
+    }
+    return () => this.techniqueResearchStatusListeners.delete(listener);
+  }
+
   onPartnerRecruitResult(listener: PartnerRecruitResultListener): () => void {
     this.partnerRecruitResultListeners.add(listener);
     return () => this.partnerRecruitResultListeners.delete(listener);
+  }
+
+  onPartnerRecruitStatusUpdate(
+    listener: PartnerRecruitStatusListener,
+  ): () => void {
+    this.partnerRecruitStatusListeners.add(listener);
+    if (this.currentPartnerRecruitStatus) {
+      listener(this.currentPartnerRecruitStatus);
+    }
+    return () => this.partnerRecruitStatusListeners.delete(listener);
   }
 
   onChatMessage(listener: ChatMessageListener): () => void {
@@ -677,12 +760,28 @@ class GameSocketService {
     this.idleFinishedListeners.forEach((listener) => listener(data));
   }
 
+  private notifyMailUpdateListeners(data: MailIndicatorPayload): void {
+    this.mailUpdateListeners.forEach((listener) => listener(data));
+  }
+
   private notifyTechniqueResearchResultListeners(data: TechniqueResearchResultPayload): void {
     this.techniqueResearchResultListeners.forEach((listener) => listener(data));
   }
 
+  private notifyTechniqueResearchStatusListeners(
+    data: TechniqueResearchStatusPayload,
+  ): void {
+    this.techniqueResearchStatusListeners.forEach((listener) => listener(data));
+  }
+
   private notifyPartnerRecruitResultListeners(data: PartnerRecruitResultPayload): void {
     this.partnerRecruitResultListeners.forEach((listener) => listener(data));
+  }
+
+  private notifyPartnerRecruitStatusListeners(
+    data: PartnerRecruitStatusPayload,
+  ): void {
+    this.partnerRecruitStatusListeners.forEach((listener) => listener(data));
   }
 
   private notifyChatMessageListeners(message: ChatMessageDto): void {

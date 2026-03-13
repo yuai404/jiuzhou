@@ -17,7 +17,10 @@ import { withUnlockedFeatures } from "../services/featureUnlockService.js";
 import { getRemainingCooldown } from "../services/battle/cooldownManager.js";
 import { syncBattleStateOnReconnect } from "../services/battle/index.js";
 import { detectSensitiveWords } from "../services/sensitiveWordService.js";
+import { mailService } from "../services/mailService.js";
+import { notifyPartnerRecruitStatus } from "../services/partnerRecruitPush.js";
 import { getSectIndicatorByCharacterId } from "../services/sect/indicator.js";
+import { notifyTechniqueResearchStatus } from "../services/techniqueResearchPush.js";
 import { AsyncShutdownGate } from "../utils/asyncShutdownGate.js";
 
 // 玩家会话
@@ -180,6 +183,12 @@ class GameServer {
             } catch (error) {
               console.error("宗门指示器同步失败:", error);
             }
+
+            await Promise.all([
+              mailService.pushUnreadCounterUpdateToUser(userId),
+              notifyTechniqueResearchStatus(character.id, userId),
+              notifyPartnerRecruitStatus(character.id, userId),
+            ]);
           }
 
           // 同步战斗冷却状态（重连时）
@@ -841,6 +850,14 @@ class GameServer {
     if (!socketId) return false;
     this.io.to(socketId).emit(event, data);
     return true;
+  }
+
+  public getActiveCharacterIdByUserId(userId: number): number | null {
+    if (this.shutdownGate.isShuttingDown()) return null;
+    if (!Number.isFinite(userId) || userId <= 0) return null;
+    const socketId = this.userSocketMap.get(userId);
+    if (!socketId) return null;
+    return this.sessions.get(socketId)?.character?.id ?? null;
   }
 
   public isUserOnline(userId: number): boolean {

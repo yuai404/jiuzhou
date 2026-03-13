@@ -52,10 +52,8 @@ import {
   buildPartnerRecruitIndicator,
   formatPartnerRecruitCooldownRemaining,
   isPartnerRecruitCoolingDown,
-  PARTNER_RECRUIT_STATUS_POLL_INTERVAL_MS,
   resolvePartnerRecruitActionState,
   resolvePartnerRecruitPanelView,
-  shouldPollPartnerRecruitStatus,
 } from './partnerRecruitShared';
 import './index.scss';
 
@@ -100,6 +98,10 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const [expandedTechniqueSkills, setExpandedTechniqueSkills] = useState<Record<string, boolean>>({});
   const markingRecruitViewedRef = useRef(false);
 
+  const applyRecruitStatus = useCallback((status: PartnerRecruitStatusDto | null) => {
+    setRecruitStatus(status);
+  }, []);
+
   const refreshOverview = useCallback(async () => {
     if (!open) return;
     setLoading(true);
@@ -124,14 +126,14 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       if (!res.success || !res.data) {
         throw new Error(getUnifiedApiErrorMessage(res, '获取招募状态失败'));
       }
-      setRecruitStatus(res.data);
+      applyRecruitStatus(res.data);
     } catch (error) {
       if (mode === 'initial') {
-        setRecruitStatus(null);
+        applyRecruitStatus(null);
         message.error(getUnifiedApiErrorMessage(error as { message?: string }, '获取招募状态失败'));
       }
     }
-  }, [message, open]);
+  }, [applyRecruitStatus, message, open]);
 
   useEffect(() => {
     if (!open) {
@@ -208,15 +210,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   }, [characterExp, expToNextLevel, selectedPartner]);
 
   useEffect(() => {
-    if (!open || !shouldPollPartnerRecruitStatus(recruitStatus)) return undefined;
-    const timer = window.setInterval(() => {
-      void refreshRecruitStatus();
-    }, PARTNER_RECRUIT_STATUS_POLL_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [open, recruitStatus, refreshRecruitStatus]);
-
-  useEffect(() => {
     if (!open) return undefined;
+    const unsubscribeStatus = gameSocket.onPartnerRecruitStatusUpdate((payload) => {
+      const currentCharacterId = gameSocket.getCharacter()?.id ?? null;
+      if (!currentCharacterId || payload.characterId !== currentCharacterId) return;
+      applyRecruitStatus(payload.status);
+    });
     const unsubscribe = gameSocket.onPartnerRecruitResult((payload) => {
       const currentCharacterId = gameSocket.getCharacter()?.id ?? null;
       if (!currentCharacterId || payload.characterId !== currentCharacterId) return;
@@ -225,10 +224,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       } else {
         message.warning(payload.errorMessage || payload.message);
       }
-      void refreshRecruitStatus();
     });
-    return unsubscribe;
-  }, [message, open, refreshRecruitStatus]);
+    return () => {
+      unsubscribeStatus();
+      unsubscribe();
+    };
+  }, [applyRecruitStatus, message, open]);
 
   useEffect(() => {
     if (!open || panel !== 'recruit' || !recruitStatus?.hasUnreadResult || markingRecruitViewedRef.current) {

@@ -27,6 +27,7 @@ import {
   refreshGeneratedTechniqueSnapshots,
 } from './staticConfigLoader.js';
 import { getCharacterUserId } from './sect/db.js';
+import { notifyPartnerRecruitStatus } from './partnerRecruitPush.js';
 import { partnerRecruitService } from './partnerRecruitService.js';
 import type { PartnerRecruitQuality } from './shared/partnerRecruitRules.js';
 import type {
@@ -108,6 +109,7 @@ class PartnerRecruitJobRunner {
         message: '伙伴招募失败，请前往伙伴界面查看',
         errorMessage: reason,
       });
+      await notifyPartnerRecruitStatus(params.characterId, userId);
     };
 
     worker.once('error', (error) => {
@@ -172,6 +174,7 @@ class PartnerRecruitJobRunner {
             : undefined,
           errorMessage: message.payload.errorMessage ?? undefined,
         });
+        await notifyPartnerRecruitStatus(message.payload.characterId, userId);
       })();
     });
   }

@@ -23,6 +23,7 @@ import { sendResult } from '../middleware/response.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import { itemService } from '../services/itemService.js';
 import { enqueuePartnerRecruitJob } from '../services/partnerRecruitJobRunner.js';
+import { notifyPartnerRecruitStatus } from '../services/partnerRecruitPush.js';
 import { partnerRecruitService } from '../services/partnerRecruitService.js';
 import { partnerService } from '../services/partnerService.js';
 import { getItemDefinitionById } from '../services/staticConfigLoader.js';
@@ -72,6 +73,7 @@ router.post('/recruit/generate', asyncHandler(async (req, res) => {
       quality,
       userId,
     });
+    await notifyPartnerRecruitStatus(characterId, userId);
   } catch (error) {
     const reason = error instanceof Error ? error.message : '未知异常';
     await partnerRecruitService.forceRefundPendingRecruitJob(
@@ -79,6 +81,7 @@ router.post('/recruit/generate', asyncHandler(async (req, res) => {
       result.data.generationId,
       `伙伴招募任务投递失败：${reason}`,
     );
+    await notifyPartnerRecruitStatus(characterId, userId);
     return sendResult(res, {
       success: false,
       message: '伙伴招募启动失败，已自动退还灵石',
@@ -100,6 +103,7 @@ router.post('/recruit/:generationId/confirm', asyncHandler(async (req, res) => {
   const result = await partnerRecruitService.confirmRecruitDraft(characterId, generationId);
   if (result.success) {
     await safePushCharacterUpdate(userId);
+    await notifyPartnerRecruitStatus(characterId, userId);
   }
   return sendResult(res, result);
 }));
@@ -113,12 +117,18 @@ router.post('/recruit/:generationId/discard', asyncHandler(async (req, res) => {
   }
 
   const result = await partnerRecruitService.discardRecruitDraft(characterId, generationId);
+  if (result.success) {
+    await notifyPartnerRecruitStatus(characterId, req.userId);
+  }
   return sendResult(res, result);
 }));
 
 router.post('/recruit/mark-result-viewed', asyncHandler(async (req, res) => {
   const characterId = req.characterId!;
   const result = await partnerRecruitService.markResultViewed(characterId);
+  if (result.success) {
+    await notifyPartnerRecruitStatus(characterId, req.userId);
+  }
   return sendResult(res, result);
 }));
 
