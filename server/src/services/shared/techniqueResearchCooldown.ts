@@ -19,6 +19,11 @@
  * 3. 剩余秒数必须向上取整，保证服务端拦截与前端倒计时在临界秒上口径一致。
  */
 
+import {
+  applyCooldownReductionSeconds,
+  convertCooldownSecondsToHours,
+} from './monthCardBenefits.js';
+
 export const TECHNIQUE_RESEARCH_COOLDOWN_HOURS = 72;
 
 const SECOND_MS = 1_000;
@@ -35,6 +40,7 @@ export type TechniqueResearchCooldownState = {
 
 type TechniqueResearchCooldownOptions = {
   bypassCooldown?: boolean;
+  cooldownReductionRate?: number;
 };
 
 /**
@@ -69,7 +75,11 @@ export const buildTechniqueResearchCooldownState = (
   options: TechniqueResearchCooldownOptions = {},
 ): TechniqueResearchCooldownState => {
   const bypassCooldown = options.bypassCooldown ?? shouldBypassTechniqueResearchCooldown();
-  const cooldownHours = bypassCooldown ? 0 : TECHNIQUE_RESEARCH_COOLDOWN_HOURS;
+  const baseCooldownSeconds = bypassCooldown ? 0 : TECHNIQUE_RESEARCH_COOLDOWN_HOURS * HOUR_SECONDS;
+  const actualCooldownSeconds = bypassCooldown
+    ? 0
+    : applyCooldownReductionSeconds(baseCooldownSeconds, options.cooldownReductionRate ?? 0);
+  const cooldownHours = convertCooldownSecondsToHours(actualCooldownSeconds);
   if (bypassCooldown) {
     return buildTechniqueResearchIdleCooldownState(cooldownHours);
   }
@@ -79,7 +89,7 @@ export const buildTechniqueResearchCooldownState = (
     return buildTechniqueResearchIdleCooldownState(cooldownHours);
   }
 
-  const cooldownUntilMs = startedAtMs + cooldownHours * HOUR_SECONDS * SECOND_MS;
+  const cooldownUntilMs = startedAtMs + actualCooldownSeconds * SECOND_MS;
   const remainingSeconds = Math.max(0, Math.ceil((cooldownUntilMs - now.getTime()) / SECOND_MS));
 
   return {

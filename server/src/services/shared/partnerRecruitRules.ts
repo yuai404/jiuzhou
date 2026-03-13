@@ -39,6 +39,10 @@ import {
 import {
   PARTNER_RECRUIT_FORM_RULES,
 } from './partnerRecruitCreativeDirection.js';
+import {
+  applyCooldownReductionSeconds,
+  convertCooldownSecondsToHours,
+} from './monthCardBenefits.js';
 
 export type PartnerRecruitQuality = '黄' | '玄' | '地' | '天';
 export type PartnerRecruitElement = 'jin' | 'mu' | 'shui' | 'huo' | 'tu' | 'none';
@@ -698,6 +702,7 @@ export type PartnerRecruitCooldownState = {
 
 type PartnerRecruitCooldownOptions = {
   bypassCooldown?: boolean;
+  cooldownReductionRate?: number;
 };
 
 /**
@@ -730,13 +735,17 @@ export const buildPartnerRecruitCooldownState = (
   options: PartnerRecruitCooldownOptions = {},
 ): PartnerRecruitCooldownState => {
   const bypassCooldown = options.bypassCooldown ?? shouldBypassPartnerRecruitCooldown();
-  const cooldownHours = bypassCooldown ? 0 : PARTNER_RECRUIT_COOLDOWN_HOURS;
+  const baseCooldownSeconds = bypassCooldown ? 0 : PARTNER_RECRUIT_COOLDOWN_HOURS * HOUR_SECONDS;
+  const actualCooldownSeconds = bypassCooldown
+    ? 0
+    : applyCooldownReductionSeconds(baseCooldownSeconds, options.cooldownReductionRate ?? 0);
+  const cooldownHours = convertCooldownSecondsToHours(actualCooldownSeconds);
   if (bypassCooldown) {
     return buildIdleCooldownState(cooldownHours);
   }
   const startedAtMs = latestStartedAt ? new Date(latestStartedAt).getTime() : Number.NaN;
   if (!Number.isFinite(startedAtMs)) return buildIdleCooldownState(cooldownHours);
-  const cooldownUntilMs = startedAtMs + cooldownHours * HOUR_SECONDS * SECOND_MS;
+  const cooldownUntilMs = startedAtMs + actualCooldownSeconds * SECOND_MS;
   const remainingSeconds = Math.max(0, Math.ceil((cooldownUntilMs - now.getTime()) / SECOND_MS));
   return {
     cooldownHours,

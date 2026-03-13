@@ -64,6 +64,7 @@ import {
   type PartnerRecruitQuality,
   validatePartnerRecruitDraft,
 } from './shared/partnerRecruitRules.js';
+import { getActiveMonthCardCooldownReductionRate } from './shared/monthCardBenefits.js';
 import {
   PARTNER_RECRUIT_FORM_RULES,
 } from './shared/partnerRecruitCreativeDirection.js';
@@ -672,7 +673,10 @@ class PartnerRecruitService {
 
     await this.discardExpiredDraftJobsTx(characterId);
     const latestJob = await this.loadLatestJobRow(characterId, false);
-    const cooldownState = buildPartnerRecruitCooldownState(latestJob?.cooldownStartedAt ?? null);
+    const cooldownReductionRate = await getActiveMonthCardCooldownReductionRate(characterId);
+    const cooldownState = buildPartnerRecruitCooldownState(latestJob?.cooldownStartedAt ?? null, new Date(), {
+      cooldownReductionRate,
+    });
     const preview = latestJob?.previewPartnerDefId
       ? buildRecruitPreviewByPartnerDefId(latestJob.previewPartnerDefId)
       : null;
@@ -724,7 +728,10 @@ class PartnerRecruitService {
       };
     }
 
-    const cooldownState = buildPartnerRecruitCooldownState(latestJob?.cooldownStartedAt ?? null);
+    const cooldownReductionRate = await getActiveMonthCardCooldownReductionRate(characterId);
+    const cooldownState = buildPartnerRecruitCooldownState(latestJob?.cooldownStartedAt ?? null, new Date(), {
+      cooldownReductionRate,
+    });
     if (cooldownState.isCoolingDown) {
       return {
         success: false,

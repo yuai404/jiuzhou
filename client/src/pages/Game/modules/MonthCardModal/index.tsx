@@ -1,23 +1,13 @@
-import { App, Button, Modal, Progress, Tag } from 'antd';
+import { App, Button, Modal, Tag } from 'antd';
 import { useCallback, useMemo, useState } from 'react';
-import { IMG_COIN as coin01 } from '../../shared/imageAssets';
 import { activateMonthCardItem, claimMonthCardReward, getInventoryItems, getMonthCardStatus } from '../../../../services/api';
+import { buildMonthCardDailyRewards, buildMonthCardPanelState, type MonthCardDailyReward } from './monthCardDisplay';
 import './index.scss';
 
 interface MonthCardModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-type DailyReward = {
-  id: string;
-  name: string;
-  icon: string;
-  amount: number;
-  type: 'spiritStone' | 'item';
-};
-
-const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
 const monthCardId = 'monthcard-001';
 const monthCardItemDefId = 'cons-monthcard-001';
@@ -72,9 +62,9 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     }
   }, []);
 
-  const dailyRewards = useMemo<DailyReward[]>(() => {
+  const dailyRewards = useMemo<MonthCardDailyReward[]>(() => {
     const amount = status?.dailySpiritStones ?? defaultDailySpiritStones;
-    return [{ id: 'sr', name: '灵石', icon: coin01, amount, type: 'spiritStone' }];
+    return buildMonthCardDailyRewards(amount);
   }, [status?.dailySpiritStones]);
 
   const active = Boolean(status?.active);
@@ -89,12 +79,16 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     return ts <= Date.now();
   }, [status?.expireAt]);
 
-  const progressPercent = useMemo(() => {
-    if (!active) return 0;
-    const total = Math.max(1, status?.durationDays ?? 30);
-    const used = clamp(total - daysLeft, 0, total);
-    return (used / total) * 100;
-  }, [active, daysLeft, status?.durationDays]);
+  const panelState = useMemo(
+    () =>
+      buildMonthCardPanelState({
+        active,
+        isExpired,
+        daysLeft,
+        expireAt: status?.expireAt ?? null,
+      }),
+    [active, daysLeft, isExpired, status?.expireAt],
+  );
 
   const doUseItem = useCallback(async () => {
     if (acting) return;
@@ -176,12 +170,12 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
               </div>
             </div>
             <div className="monthcard-hero-right">
-              <div className="monthcard-progress-title">进度</div>
-              <Progress percent={progressPercent} showInfo={false} strokeColor="var(--primary-color)" />
-              <div className="monthcard-progress-meta">{active ? `已使用 ${Math.round(progressPercent)}%` : '未激活'}</div>
+              <div className="monthcard-status-title">{panelState.title}</div>
+              <div className="monthcard-status-value">{panelState.statusValue}</div>
+              <div className="monthcard-status-hint">{panelState.statusHint}</div>
               {monthCardItem?.instanceId ? (
                 <Button type="primary" onClick={doUseItem} disabled={acting || loading}>
-                  {active ? '使用续期' : '使用'}
+                  {panelState.actionLabel}
                 </Button>
               ) : (
                 <Button type="primary" disabled>
@@ -217,16 +211,6 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
               </Button>
             </div>
           </div>
-
-          {!active ? (
-            <div className="monthcard-tip">
-              月卡未解锁：背包有月卡道具时可点击“使用”激活。
-            </div>
-          ) : isExpired ? (
-            <div className="monthcard-tip">
-              月卡已到期：背包有月卡道具时可点击“使用续期”叠加天数。
-            </div>
-          ) : null}
         </div>
       </div>
     </Modal>

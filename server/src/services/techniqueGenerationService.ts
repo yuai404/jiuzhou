@@ -46,6 +46,7 @@ import {
   buildTechniqueResearchCooldownState,
   formatTechniqueResearchCooldownRemaining,
 } from './shared/techniqueResearchCooldown.js';
+import { getActiveMonthCardCooldownReductionRate } from './shared/monthCardBenefits.js';
 import {
   buildTechniqueResearchUnlockState,
   type TechniqueResearchUnlockState,
@@ -660,7 +661,10 @@ class TechniqueGenerationService {
           }
         : null,
     );
-    const cooldownState = buildTechniqueResearchCooldownState(currentJobState.currentJob?.startedAt ?? null);
+    const cooldownReductionRate = await getActiveMonthCardCooldownReductionRate(characterId);
+    const cooldownState = buildTechniqueResearchCooldownState(currentJobState.currentJob?.startedAt ?? null, new Date(), {
+      cooldownReductionRate,
+    });
 
     return {
       success: true,
@@ -719,7 +723,10 @@ class TechniqueGenerationService {
       [characterId],
     );
     const latestStartedAt = toIsoString((latestJobRes.rows[0] as Record<string, unknown> | undefined)?.created_at);
-    const cooldownState = buildTechniqueResearchCooldownState(latestStartedAt);
+    const cooldownReductionRate = await getActiveMonthCardCooldownReductionRate(characterId);
+    const cooldownState = buildTechniqueResearchCooldownState(latestStartedAt, new Date(), {
+      cooldownReductionRate,
+    });
     if (cooldownState.isCoolingDown) {
       return {
         success: false,

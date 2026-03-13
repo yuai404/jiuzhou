@@ -915,7 +915,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         ? `需达到境界：${recruitStatus.unlockRealm}`
         : recruitStatus.cooldownHours === 0
           ? '当前环境已关闭伙伴招募冷却，可连续招募。'
-          : `每次开始招募后会进入冷却，当前默认冷却时长为 ${recruitStatus.cooldownHours} 小时。`;
+          : `每次开始招募后会进入冷却，当前冷却时长为 ${recruitStatus.cooldownHours} 小时。`;
 
     return (
       <div className="partner-pane-card">

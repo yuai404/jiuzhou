@@ -95,7 +95,7 @@ export type BattlePassStaticConfig = {
   tasks: BattlePassTaskConfig[];
 };
 
-type MonthCardDef = {
+export type MonthCardDef = {
   id: string;
   code?: string;
   name: string;
@@ -103,6 +103,7 @@ type MonthCardDef = {
   duration_days?: number;
   daily_spirit_stones?: number;
   price_spirit_stones?: number | string;
+  cooldown_reduction_rate?: number | string;
   enabled?: boolean;
   sort_weight?: number;
 };

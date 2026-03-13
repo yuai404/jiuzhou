@@ -7,7 +7,7 @@
 }
 
 .monthcard-shell {
-  height: 560px;
+  max-height: min(76vh, 720px);
   display: flex;
   flex-direction: column;
   background: var(--panel-bg);
@@ -86,9 +86,22 @@
   gap: 8px;
 }
 
-.monthcard-progress-title {
+.monthcard-status-title {
   font-size: 12px;
   font-weight: 900;
+  color: var(--text-tertiary);
+}
+
+.monthcard-status-value {
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 900;
+  color: var(--text-color);
+}
+
+.monthcard-status-hint {
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--text-tertiary);
 }
 
@@ -186,19 +199,9 @@
   color: var(--text-color);
 }
 
-.monthcard-tip {
-  border: 1px dashed var(--border-color);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  padding: 12px 12px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-tertiary);
-}
-
 @media screen and (max-width: 768px) {
   .monthcard-shell {
-    height: 76vh;
+    max-height: calc(100vh - 32px);
   }
 
   .monthcard-hero {

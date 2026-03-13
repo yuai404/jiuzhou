@@ -1,7 +1,10 @@
 import { query } from '../config/database.js';
 import { Transactional } from '../decorators/transactional.js';
 import { updateAchievementProgress } from './achievementService.js';
-import { getMonthCardDefinitions } from './staticConfigLoader.js';
+import {
+  DEFAULT_MONTH_CARD_ITEM_DEF_ID,
+  getMonthCardDefinitionById,
+} from './shared/monthCardBenefits.js';
 
 export type MonthCardStatusResult = {
   success: boolean;
@@ -70,13 +73,7 @@ const asNumber = (v: unknown, fallback: number) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-const defaultMonthCardItemDefId = 'cons-monthcard-001';
 const defaultDailySpiritStones = 10000;
-
-const getMonthCardDefinition = (monthCardId: string) => {
-  const defs = getMonthCardDefinitions();
-  return defs.find((item) => item.id === monthCardId && item.enabled !== false) ?? null;
-};
 
 class MonthCardService {
   async getMonthCardStatus(userId: number, monthCardId: string): Promise<MonthCardStatusResult> {
@@ -85,7 +82,7 @@ class MonthCardService {
     const characterId = Number(charRes.rows[0].id);
     const spiritStones = Number(charRes.rows[0].spirit_stones ?? 0);
 
-    const def = getMonthCardDefinition(monthCardId);
+    const def = getMonthCardDefinitionById(monthCardId);
     if (!def) return { success: false, message: '月卡不存在' };
 
     const ownRes = await query(
@@ -135,7 +132,7 @@ class MonthCardService {
     monthCardId: string,
     options?: { itemInstanceId?: number; itemDefId?: string },
   ): Promise<MonthCardUseItemResult> {
-    const monthCardDef = getMonthCardDefinition(monthCardId);
+    const monthCardDef = getMonthCardDefinitionById(monthCardId);
     if (!monthCardDef) {
       return { success: false, message: '月卡不存在或未启用' };
     }
@@ -148,7 +145,7 @@ class MonthCardService {
     }
     const characterId = Number(charRes.rows[0].id);
 
-    const itemDefId = options?.itemDefId || defaultMonthCardItemDefId;
+    const itemDefId = options?.itemDefId || DEFAULT_MONTH_CARD_ITEM_DEF_ID;
 
     let itemInstanceRow: { id: number; qty: number } | null = null;
     if (Number.isInteger(options?.itemInstanceId) && Number(options?.itemInstanceId) > 0) {
@@ -254,7 +251,7 @@ class MonthCardService {
 
   @Transactional
   async buyMonthCard(userId: number, monthCardId: string): Promise<MonthCardBuyResult> {
-    const monthCardDef = getMonthCardDefinition(monthCardId);
+    const monthCardDef = getMonthCardDefinitionById(monthCardId);
     if (!monthCardDef) {
       return { success: false, message: '月卡不存在或未启用' };
     }
@@ -327,7 +324,7 @@ class MonthCardService {
 
   @Transactional
   async claimMonthCardReward(userId: number, monthCardId: string): Promise<MonthCardClaimResult> {
-    const monthCardDef = getMonthCardDefinition(monthCardId);
+    const monthCardDef = getMonthCardDefinitionById(monthCardId);
     if (!monthCardDef) {
       return { success: false, message: '月卡不存在或未启用' };
     }

@@ -67,7 +67,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({
       : (coolingDown ? `剩余${formatTechniqueResearchCooldownRemaining(status.cooldownRemainingSeconds)}` : '可开始');
   const cooldownRuleText = status?.cooldownHours === 0
     ? '当前环境已关闭研修冷却，可连续开始领悟。'
-    : `每次开始领悟后会进入冷却，当前默认冷却时长为 ${status?.cooldownHours ?? '--'} 小时。`;
+    : `每次开始领悟后会进入冷却，当前冷却时长为 ${status?.cooldownHours ?? '--'} 小时。`;
 
   return (
     <div className="tech-pane">

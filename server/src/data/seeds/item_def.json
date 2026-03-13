@@ -349,8 +349,8 @@
       "tradeable": true,
       "disassemblable": false,
       "icon": "/assets/items/monthcard.webp",
-      "description": "使用后激活或续期修行月卡",
-      "long_desc": "使用后激活修行月卡30天；若已激活则在当前到期时间基础上叠加30天。",
+      "description": "使用后激活或续期修行月卡，并缩短部分玩法冷却",
+      "long_desc": "使用后激活修行月卡30天；若已激活则在当前到期时间基础上叠加30天。月卡生效期间，伙伴招募与洞府研修冷却缩短10%。",
       "tags": [
         "月卡",
         "续期",

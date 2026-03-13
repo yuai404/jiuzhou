@@ -2,17 +2,15 @@ import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { monthCardService } from '../services/monthCardService.js';
+import { DEFAULT_MONTH_CARD_ID } from '../services/shared/monthCardBenefits.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import { sendResult } from '../middleware/response.js';
 
 const router = Router();
 
-
-const defaultMonthCardId = 'monthcard-001';
-
 router.get('/status', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.userId!;
-  const monthCardId = typeof req.query.monthCardId === 'string' ? req.query.monthCardId : defaultMonthCardId;
+  const monthCardId = typeof req.query.monthCardId === 'string' ? req.query.monthCardId : DEFAULT_MONTH_CARD_ID;
   const result = await monthCardService.getMonthCardStatus(userId, monthCardId);
   sendResult(res, result);
 }));
@@ -20,7 +18,7 @@ router.get('/status', requireAuth, asyncHandler(async (req, res) => {
 router.post('/buy', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.userId!;
   const body = req.body as { monthCardId?: unknown };
-  const monthCardId = typeof body?.monthCardId === 'string' ? body.monthCardId : defaultMonthCardId;
+  const monthCardId = typeof body?.monthCardId === 'string' ? body.monthCardId : DEFAULT_MONTH_CARD_ID;
   const result = await monthCardService.buyMonthCard(userId, monthCardId);
   if (result.success) {
     await safePushCharacterUpdate(userId);
@@ -31,7 +29,7 @@ router.post('/buy', requireAuth, asyncHandler(async (req, res) => {
 router.post('/use-item', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.userId!;
   const body = req.body as { monthCardId?: unknown; itemInstanceId?: unknown };
-  const monthCardId = typeof body?.monthCardId === 'string' ? body.monthCardId : defaultMonthCardId;
+  const monthCardId = typeof body?.monthCardId === 'string' ? body.monthCardId : DEFAULT_MONTH_CARD_ID;
   const itemInstanceId =
     typeof body?.itemInstanceId === 'number'
       ? body.itemInstanceId
@@ -48,7 +46,7 @@ router.post('/use-item', requireAuth, asyncHandler(async (req, res) => {
 router.post('/claim', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.userId!;
   const body = req.body as { monthCardId?: unknown };
-  const monthCardId = typeof body?.monthCardId === 'string' ? body.monthCardId : defaultMonthCardId;
+  const monthCardId = typeof body?.monthCardId === 'string' ? body.monthCardId : DEFAULT_MONTH_CARD_ID;
   const result = await monthCardService.claimMonthCardReward(userId, monthCardId);
   if (result.success) {
     await safePushCharacterUpdate(userId);
