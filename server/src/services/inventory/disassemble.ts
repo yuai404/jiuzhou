@@ -30,6 +30,7 @@ import {
 } from "../disassembleRewardPlanner.js";
 import { lockCharacterInventoryMutex } from "../inventoryMutex.js";
 import { resolveQualityRankFromName } from "../shared/itemQuality.js";
+import { resolveItemCanDisassemble } from "../shared/itemDisassembleRule.js";
 import { consumeSpecificItemInstance, addCharacterCurrencies } from "./shared/consume.js";
 import { getStaticItemDef } from "./shared/helpers.js";
 import type {
@@ -110,6 +111,9 @@ const loadSingleDisassembleRewardPlan = async (
 
   if (item.location !== "bag" && item.location !== "warehouse") {
     return { success: false, message: "该物品当前位置不可分解" };
+  }
+  if (!resolveItemCanDisassemble(itemDef)) {
+    return { success: false, message: "该物品不可分解" };
   }
 
   const rowQty = Math.max(0, Number(item.qty) || 0);
@@ -425,6 +429,9 @@ export const disassembleEquipmentBatch = async (
     }
     if (row.location !== "bag" && row.location !== "warehouse") {
       return { success: false, message: "包含不可分解位置的物品" };
+    }
+    if (!resolveItemCanDisassemble(itemDef)) {
+      return { success: false, message: "包含不可分解的物品" };
     }
     if (row.locked) {
       skippedLockedCount += 1;

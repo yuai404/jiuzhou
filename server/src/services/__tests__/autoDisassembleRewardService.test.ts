@@ -192,6 +192,52 @@ test('任务奖励来源应跳过自动分解', async () => {
   assert.equal(calls[0]?.obtainedFrom, 'task_reward');
 });
 
+test('显式不可分解物品命中自动分解规则时应保留原物品', async () => {
+  const { calls, fn } = createCreateItemMock([
+    {
+      success: true,
+      message: 'ok',
+      itemIds: [602],
+    },
+  ]);
+
+  const result = await grantRewardItemWithAutoDisassemble({
+    characterId: 79,
+    itemDefId: 'quest-token-001',
+    qty: 1,
+    itemMeta: {
+      itemName: '宗门密令',
+      category: 'quest',
+      subCategory: 'token',
+      qualityRank: 1,
+      disassemblable: false,
+    },
+    autoDisassembleSetting: {
+      enabled: true,
+      rules: [
+        {
+          categories: ['quest'],
+          subCategories: [],
+          excludedSubCategories: [],
+          includeNameKeywords: [],
+          excludeNameKeywords: [],
+          maxQualityRank: 4,
+        },
+      ],
+    },
+    sourceObtainedFrom: 'dungeon_clear_reward',
+    createItem: fn,
+  });
+
+  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(result.pendingMailItems, []);
+  assert.deepEqual(result.grantedItems, [{ itemDefId: 'quest-token-001', qty: 1, itemIds: [602] }]);
+  assert.equal(result.gainedSilver, 0);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.itemDefId, 'quest-token-001');
+  assert.equal(calls[0]?.obtainedFrom, 'dungeon_clear_reward');
+});
+
 test('品质超过阈值时应保留原装备', async () => {
   const { calls, fn } = createCreateItemMock([
     {

@@ -341,12 +341,13 @@
     {
       "id": "cons-monthcard-001",
       "name": "修行月卡",
-      "category": "consumable",
-      "sub_category": "month_card",
+      "category": "other",
+      "sub_category": "object",
       "quality": "天",
       "stack_max": 9999,
       "bind_type": "none",
       "tradeable": true,
+      "disassemblable": false,
       "icon": "/assets/items/monthcard.webp",
       "description": "使用后激活或续期修行月卡",
       "long_desc": "使用后激活修行月卡30天；若已激活则在当前到期时间基础上叠加30天。",
@@ -354,18 +355,6 @@
         "月卡",
         "续期",
         "特权"
-      ],
-      "use_type": "instant",
-      "effect_defs": [
-        {
-          "trigger": "use",
-          "target": "self",
-          "effect_type": "activate_month_card",
-          "params": {
-            "month_card_id": "monthcard-001",
-            "duration_days": 30
-          }
-        }
       ]
     },
     {

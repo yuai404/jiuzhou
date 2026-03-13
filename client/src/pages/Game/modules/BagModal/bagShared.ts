@@ -108,6 +108,7 @@ export type BagItem = {
   name: string;
   category: Exclude<BagCategory, "all">;
   subCategory: string | null;
+  canDisassemble: boolean;
   quality: BagQuality;
   tags: string[];
   icon: string;
@@ -647,10 +648,12 @@ export const isTechniqueBookSubCategory = (
 export const isDisassemblableBagItem = (item: {
   category: Exclude<BagCategory, "all">;
   subCategory: string | null;
+  canDisassemble: boolean;
 }): boolean => {
-  // 当前版本规则：除锁定/位置限制外，所有类型物品均可分解。
-  void item;
-  return true;
+  // 分解可用性由后端统一下发规范化字段，前端只消费结果，不再重复解释默认值。
+  void item.category;
+  void item.subCategory;
+  return item.canDisassemble;
 };
 
 export const collectBatchDisassembleCandidates = (
@@ -775,18 +778,21 @@ const mapCategory = (value: unknown): Exclude<BagCategory, "all"> => {
 
 const mapActions = (
   category: Exclude<BagCategory, "all">,
+  canDisassemble: boolean,
   _subCategoryValue: unknown,
   _effectDefs: unknown,
 ): BagAction[] => {
   if (category === "consumable") {
-    return ["use", "disassemble", "show"];
+    return canDisassemble ? ["use", "disassemble", "show"] : ["use", "show"];
   }
   if (category === "equipment")
-    return ["equip", "enhance", "disassemble", "show"];
+    return canDisassemble
+      ? ["equip", "enhance", "disassemble", "show"]
+      : ["equip", "enhance", "show"];
   if (category === "material" || category === "gem")
-    return ["compose", "disassemble", "show"];
-  if (category === "quest") return ["disassemble", "show"];
-  return ["disassemble", "show"];
+    return canDisassemble ? ["compose", "disassemble", "show"] : ["compose", "show"];
+  if (category === "quest") return canDisassemble ? ["disassemble", "show"] : ["show"];
+  return canDisassemble ? ["disassemble", "show"] : ["show"];
 };
 
 const normalizeDisplayTags = (
@@ -1220,6 +1226,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
   const isEquip = category === "equipment";
   const hasSocketEffect = hasSocketBuffEffect(def.effect_defs);
   const bind = resolveItemBindMeta(it.bind_type);
+  const canDisassemble = def.can_disassemble;
 
   return {
     id: Number(it.id),
@@ -1228,6 +1235,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
     name: def.name,
     category,
     subCategory: def.sub_category ?? null,
+    canDisassemble,
     quality,
     tags,
     icon: resolveIcon(def),
@@ -1241,7 +1249,7 @@ export const buildBagItem = (it: InventoryItemDto): BagItem | null => {
     effects: buildEffects(def),
     useTargetType: resolveBagItemUseTargetType(def),
     hasSocketEffect,
-    actions: mapActions(category, def.sub_category, def.effect_defs),
+    actions: mapActions(category, canDisassemble, def.sub_category, def.effect_defs),
     setInfo: buildSetInfo(def),
     equip: isEquip
       ? {

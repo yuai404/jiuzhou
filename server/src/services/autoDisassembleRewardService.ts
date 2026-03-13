@@ -1,6 +1,7 @@
 import type { GenerateOptions } from './equipmentService.js';
 import { generateEquipment } from './equipmentService.js';
 import { buildDisassembleRewardPlan } from './disassembleRewardPlanner.js';
+import { resolveItemCanDisassemble } from './shared/itemDisassembleRule.js';
 import {
   shouldAutoDisassembleBySetting,
   type AutoDisassembleCandidateMeta,
@@ -51,6 +52,7 @@ export interface GrantRewardItemWithAutoDisassembleInput {
     subCategory?: string | null;
     effectDefs?: unknown;
     qualityRank?: number | null;
+    disassemblable?: boolean | null;
   };
   autoDisassembleSetting: AutoDisassembleSetting;
   sourceObtainedFrom: string;
@@ -235,8 +237,15 @@ export const grantRewardItemWithAutoDisassemble = async (
     if (Number.isInteger(n) && n > 0) return n;
     return 1;
   })();
+  const canDisassemble = resolveItemCanDisassemble({
+    disassemblable: input.itemMeta.disassemblable,
+  });
 
-  if (!input.autoDisassembleSetting.enabled || shouldSkipAutoDisassembleBySource(input.sourceObtainedFrom)) {
+  if (
+    !canDisassemble ||
+    !input.autoDisassembleSetting.enabled ||
+    shouldSkipAutoDisassembleBySource(input.sourceObtainedFrom)
+  ) {
     const createResult = await input.createItem({
       itemDefId: input.itemDefId,
       qty: normalizedQty,

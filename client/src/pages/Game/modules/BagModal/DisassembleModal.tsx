@@ -18,6 +18,7 @@ export type DisassembleTarget = {
   locked?: boolean;
   category: DisassembleCategory;
   subCategory: string | null;
+  canDisassemble: boolean;
 };
 
 interface DisassembleModalProps {

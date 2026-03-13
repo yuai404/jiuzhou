@@ -1308,6 +1308,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
               locked: activeItem.locked,
               category: activeItem.category,
               subCategory: activeItem.subCategory,
+              canDisassemble: activeItem.canDisassemble,
             }
             : null
         }

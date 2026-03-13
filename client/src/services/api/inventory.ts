@@ -28,6 +28,7 @@ export interface ItemDefLite {
   quality: string;
   category: string;
   sub_category: string | null;
+  can_disassemble: boolean;
   stack_max: number;
   description: string | null;
   long_desc: string | null;

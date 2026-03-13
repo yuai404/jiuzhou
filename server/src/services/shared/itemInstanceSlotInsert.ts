@@ -1,4 +1,5 @@
 import { query } from '../../config/database.js';
+import { ITEM_INSTANCE_SLOT_CONFLICT_CLAUSE } from './itemInstanceSlotUniqueIndex.js';
 
 /**
  * item_instance 槽位冲突安全插入工具
@@ -23,14 +24,6 @@ import { query } from '../../config/database.js';
  */
 
 type ItemInstanceInsertParam = string | number | boolean | null;
-
-const ITEM_INSTANCE_SLOT_CONFLICT_CLAUSE = `
-ON CONFLICT (owner_character_id, location, location_slot)
-  WHERE owner_character_id IS NOT NULL
-    AND location_slot IS NOT NULL
-    AND location IN ('bag', 'warehouse')
-DO NOTHING
-`;
 
 export const tryInsertItemInstanceWithSlot = async (
   insertSql: string,

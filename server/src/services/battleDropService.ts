@@ -608,6 +608,7 @@ class BattleDropService {
         subCategory: string | null;
         effectDefs: unknown;
         qualityRank: number;
+        disassemblable: boolean | null;
       }
     >();
     const autoDisassembleSettings = new Map<number, AutoDisassembleSetting>();
@@ -692,6 +693,7 @@ class BattleDropService {
       subCategory: string | null;
       effectDefs: unknown;
       qualityRank: number;
+      disassemblable: boolean | null;
     }> => {
       const cached = itemMetaCache.get(itemDefId);
       if (cached) return cached;
@@ -702,6 +704,8 @@ class BattleDropService {
         subCategory: def?.sub_category ?? null,
         effectDefs: def?.effect_defs ?? null,
         qualityRank: resolveQualityRankFromName(def?.quality, 1),
+        disassemblable:
+          typeof def?.disassemblable === 'boolean' ? def.disassemblable : null,
       };
       itemMetaCache.set(itemDefId, meta);
       return meta;
@@ -744,6 +748,7 @@ class BattleDropService {
           subCategory: sourceMeta.subCategory,
           effectDefs: sourceMeta.effectDefs,
           qualityRank: sourceMeta.qualityRank,
+          disassemblable: sourceMeta.disassemblable,
         },
         autoDisassembleSetting: receiverAutoDisassemble,
         sourceObtainedFrom: 'battle_drop',

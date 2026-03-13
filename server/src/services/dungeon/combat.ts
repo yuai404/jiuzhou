@@ -332,6 +332,7 @@ export const nextDungeonInstance = async (
             subCategory: string | null;
             effectDefs: unknown;
             qualityRank: number;
+            disassemblable: boolean | null;
           }
         >();
 
@@ -391,6 +392,7 @@ export const nextDungeonInstance = async (
           subCategory: string | null;
           effectDefs: unknown;
           qualityRank: number;
+          disassemblable: boolean | null;
         }> => {
           const cached = itemMetaCache.get(itemDefId);
           if (cached) return cached;
@@ -401,6 +403,8 @@ export const nextDungeonInstance = async (
             subCategory: typeof row?.sub_category === 'string' && row.sub_category.length > 0 ? row.sub_category : null,
             effectDefs: row?.effect_defs ?? null,
             qualityRank: resolveQualityRankFromName(row?.quality, 1),
+            disassemblable:
+              typeof row?.disassemblable === 'boolean' ? row.disassemblable : null,
           };
           itemMetaCache.set(itemDefId, meta);
           return meta;
@@ -484,6 +488,10 @@ export const nextDungeonInstance = async (
                 subCategory: itemMeta.subCategory,
                 effectDefs: itemMeta.effectDefs,
                 qualityRank: itemMeta.qualityRank,
+                disassemblable:
+                  typeof itemMeta.disassemblable === 'boolean'
+                    ? itemMeta.disassemblable
+                    : null,
               },
               autoDisassembleSetting,
               sourceObtainedFrom: 'dungeon_clear_reward',

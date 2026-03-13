@@ -21,6 +21,8 @@ const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(ma
 
 const monthCardId = 'monthcard-001';
 const monthCardItemDefId = 'cons-monthcard-001';
+const defaultDailySpiritStones = 10000;
+const defaultMonthCardDescription = `有效期30天，每日可领取${defaultDailySpiritStones}灵石。`;
 
 const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
   const { message } = App.useApp();
@@ -71,7 +73,7 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
   }, []);
 
   const dailyRewards = useMemo<DailyReward[]>(() => {
-    const amount = status?.dailySpiritStones ?? 100;
+    const amount = status?.dailySpiritStones ?? defaultDailySpiritStones;
     return [{ id: 'sr', name: '灵石', icon: coin01, amount, type: 'spiritStone' }];
   }, [status?.dailySpiritStones]);
 
@@ -166,7 +168,7 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
           <div className="monthcard-hero">
             <div className="monthcard-hero-left">
               <div className="monthcard-hero-name">{status?.name || '修行月卡'}</div>
-              <div className="monthcard-hero-desc">{status?.description || '有效期30天，每日可领取100灵石。'}</div>
+              <div className="monthcard-hero-desc">{status?.description || defaultMonthCardDescription}</div>
               <div className="monthcard-hero-tags">
                 {active ? <Tag color="green">已解锁</Tag> : <Tag color="default">未解锁</Tag>}
                 {active ? <Tag color="blue">剩余 {daysLeft} 天</Tag> : null}

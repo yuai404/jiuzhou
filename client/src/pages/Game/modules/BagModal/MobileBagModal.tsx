@@ -1802,6 +1802,7 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
           locked: activeItem.locked,
           category: activeItem.category,
           subCategory: activeItem.subCategory,
+          canDisassemble: activeItem.canDisassemble,
         } : null}
         onClose={() => setDisassembleOpen(false)}
         onSuccess={refresh}

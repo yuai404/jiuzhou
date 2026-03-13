@@ -71,6 +71,7 @@ const asNumber = (v: unknown, fallback: number) => {
 };
 
 const defaultMonthCardItemDefId = 'cons-monthcard-001';
+const defaultDailySpiritStones = 10000;
 
 const getMonthCardDefinition = (monthCardId: string) => {
   const defs = getMonthCardDefinitions();
@@ -115,7 +116,7 @@ class MonthCardService {
         name: String(def.name || ''),
         description: typeof def.description === 'string' ? def.description : null,
         durationDays: asNumber(def.duration_days, 30),
-        dailySpiritStones: asNumber(def.daily_spirit_stones, 100),
+        dailySpiritStones: asNumber(def.daily_spirit_stones, defaultDailySpiritStones),
         priceSpiritStones: asNumber(def.price_spirit_stones, 0),
         active,
         expireAt: expireAt ? expireAt.toISOString() : null,
@@ -337,7 +338,7 @@ class MonthCardService {
     }
     const characterId = Number(charRes.rows[0].id);
 
-    const reward = asNumber(monthCardDef.daily_spirit_stones, 100);
+    const reward = asNumber(monthCardDef.daily_spirit_stones, defaultDailySpiritStones);
 
     const ownRes = await query(
       `

@@ -4,9 +4,9 @@
       "id": "monthcard-001",
       "code": "xiuxing_month_card",
       "name": "修行月卡",
-      "description": "有效期30天，每日可领取100灵石。",
+      "description": "有效期30天，每日可领取10000灵石。",
       "duration_days": 30,
-      "daily_spirit_stones": 100,
+      "daily_spirit_stones": 10000,
       "price_spirit_stones": 0,
       "enabled": true,
       "sort_weight": 0

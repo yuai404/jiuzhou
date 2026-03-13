@@ -477,6 +477,7 @@ export type ItemDefConfig = {
   unique_type?: string;
   unique_limit?: number;
   quest_only?: boolean;
+  disassemblable?: boolean;
   droppable?: boolean;
   destroyable?: boolean;
   mailable?: boolean;

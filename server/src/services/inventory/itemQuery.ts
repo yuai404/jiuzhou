@@ -39,6 +39,7 @@ import {
   parseGeneratedAffixesForReroll,
 } from "../equipmentAffixRerollService.js";
 import { resolveQualityRankFromName } from "../shared/itemQuality.js";
+import { resolveItemCanDisassemble } from "../shared/itemDisassembleRule.js";
 import { resolveGeneratedTechniqueBookDisplay } from "../shared/generatedTechniqueBookView.js";
 import type {
   InventoryItemWithDef,
@@ -215,6 +216,7 @@ export const getInventoryItemsWithDefs = async (
       : 0;
     const baseDef = {
       ...normalizedDef,
+      can_disassemble: resolveItemCanDisassemble(normalizedDef),
       set_id: setId || null,
       set_name: setId ? (setNameMap.get(setId) ?? null) : null,
       set_bonuses: setBonuses,

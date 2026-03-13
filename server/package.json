@@ -15,7 +15,7 @@
     "db:generate": "node scripts/prismaCli.mjs generate",
     "db:pull": "node scripts/prismaCli.mjs db pull --schema prisma/schema.prisma",
     "db:push": "node scripts/prismaCli.mjs db push --schema prisma/schema.prisma",
-    "db:sync": "pnpm run db:push",
+    "db:sync": "pnpm run db:push && tsx scripts/syncCustomIndexes.ts",
     "db:seed": "tsx src/services/seedService.ts"
   },
   "keywords": [
