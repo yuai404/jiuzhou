@@ -33,19 +33,6 @@
 body {
   --app-tag-base-bg: var(--panel-bg);
   --app-tag-radius: 4px;
-  --app-font-family: 'Source Code Pro', Roboto, Helvetica, Tahoma, Arial, yt, 'PingFang SC', 'Hiragino Sans GB', 'Heiti SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
-  --app-font-family-hidpi: 'Source Code Pro', Custom, 'PingFang SC', 'Hiragino Sans GB', 'Heiti SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', Arial, sans-serif;
-  font-family: var(--app-font-family);
-}
-
-body * {
-  font-family: var(--app-font-family);
-}
-
-@media screen and (min-resolution: 1.25x) {
-  body * {
-    font-family: var(--app-font-family-hidpi) !important;
-  }
 }
 
 body .ant-tag.ant-tag-filled,
