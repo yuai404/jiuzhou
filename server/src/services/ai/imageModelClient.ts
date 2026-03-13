@@ -40,6 +40,9 @@ export type ImageGenerationResult = {
   modelName: string;
 };
 
+// 显式保留 OpenAI SDK 的默认瞬时错误重试次数，避免排查图片链路时把“SDK 默认行为”误当成“完全无重试”。
+export const OPENAI_IMAGE_GENERATION_MAX_RETRIES = 3;
+
 type OpenAIImageSize =
   | 'auto'
   | '256x256'
@@ -180,6 +183,7 @@ export const generateConfiguredImageAsset = async (
   const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
+    maxRetries: OPENAI_IMAGE_GENERATION_MAX_RETRIES,
     timeout: config.timeoutMs,
   });
   const response = await client.images.generate({

@@ -24,12 +24,18 @@ import sharp from 'sharp';
 import {
   downloadImageBuffer,
   generateConfiguredImageAsset,
+  OPENAI_IMAGE_GENERATION_MAX_RETRIES,
 } from '../ai/imageModelClient.js';
+import { readImageModelConfig } from '../ai/modelConfig.js';
 import {
   PARTNER_RECRUIT_AVATAR_COMPOSITION_RULES,
   PARTNER_RECRUIT_AVATAR_STYLE_RULES,
   PARTNER_RECRUIT_FORM_RULES,
 } from './partnerRecruitCreativeDirection.js';
+import {
+  debugImageGenerationLog,
+  summarizeImageGenerationError,
+} from './imageGenerationDebugShared.js';
 
 export type PartnerRecruitAvatarInput = {
   partnerId: string;
@@ -102,19 +108,48 @@ const saveImageBufferToLocal = async (buffer: Buffer, partnerId: string): Promis
 export const generatePartnerRecruitAvatar = async (
   input: PartnerRecruitAvatarInput,
 ): Promise<string> => {
-  const prompt = buildPartnerRecruitAvatarPrompt(input);
-  const generated = await generateConfiguredImageAsset(prompt);
-  if (!generated) {
+  const config = readImageModelConfig();
+  if (!config) {
     throw new Error('缺少 AI_TECHNIQUE_IMAGE_MODEL_URL 或 AI_TECHNIQUE_IMAGE_MODEL_KEY 配置');
   }
 
-  if (generated.asset.b64) {
-    return saveImageBufferToLocal(Buffer.from(generated.asset.b64, 'base64'), input.partnerId);
-  }
-  if (generated.asset.url) {
-    const buffer = await downloadImageBuffer(generated.asset.url, generated.timeoutMs);
-    return saveImageBufferToLocal(buffer, input.partnerId);
-  }
+  const prompt = buildPartnerRecruitAvatarPrompt(input);
+  debugImageGenerationLog(
+    'partner-avatar-image',
+    'provider=',
+    config.provider,
+    'endpoint=',
+    config.endpoint,
+    'model=',
+    config.modelName,
+    'retry=',
+    config.provider === 'openai' ? OPENAI_IMAGE_GENERATION_MAX_RETRIES : 'none',
+    'partnerId=',
+    input.partnerId,
+  );
 
-  throw new Error('图像模型未返回可用图片数据');
+  try {
+    const generated = await generateConfiguredImageAsset(prompt);
+    if (!generated) {
+      throw new Error('缺少 AI_TECHNIQUE_IMAGE_MODEL_URL 或 AI_TECHNIQUE_IMAGE_MODEL_KEY 配置');
+    }
+
+    if (generated.asset.b64) {
+      const localPath = await saveImageBufferToLocal(Buffer.from(generated.asset.b64, 'base64'), input.partnerId);
+      debugImageGenerationLog('partner-avatar-image', 'saved from b64:', localPath);
+      return localPath;
+    }
+    if (generated.asset.url) {
+      const buffer = await downloadImageBuffer(generated.asset.url, generated.timeoutMs);
+      const localPath = await saveImageBufferToLocal(buffer, input.partnerId);
+      debugImageGenerationLog('partner-avatar-image', 'saved from url:', localPath);
+      return localPath;
+    }
+
+    throw new Error('图像模型未返回可用图片数据');
+  } catch (error) {
+    const summary = summarizeImageGenerationError(error instanceof Error ? error : String(error));
+    debugImageGenerationLog('partner-avatar-image', 'generate failed:', summary);
+    throw new Error(`伙伴头像生成失败：${summary}`);
+  }
 };

@@ -24,8 +24,13 @@ import sharp from 'sharp';
 import {
   downloadImageBuffer,
   generateConfiguredImageAsset,
+  OPENAI_IMAGE_GENERATION_MAX_RETRIES,
 } from '../ai/imageModelClient.js';
 import { readImageModelConfig } from '../ai/modelConfig.js';
+import {
+  debugImageGenerationLog,
+  summarizeImageGenerationError,
+} from './imageGenerationDebugShared.js';
 
 export type TechniqueSkillImageInput = {
   skillId: string;
@@ -45,27 +50,10 @@ const LOCAL_IMAGE_PREFIX = '/uploads/techniques';
 export const TECHNIQUE_SKILL_IMAGE_OUTPUT_MAX_EDGE = 256;
 export const TECHNIQUE_SKILL_IMAGE_OUTPUT_WEBP_QUALITY = 82;
 
-const asString = (raw: unknown): string => (typeof raw === 'string' ? raw.trim() : '');
-
-const asBool = (raw: unknown, fallback: boolean): boolean => {
-  const text = asString(raw).toLowerCase();
-  if (!text) return fallback;
-  if (text === '1' || text === 'true' || text === 'yes' || text === 'on') return true;
-  if (text === '0' || text === 'false' || text === 'no' || text === 'off') return false;
-  return fallback;
-};
-
 const ensureImageDir = async (): Promise<string> => {
   const dir = path.join(__dirname, '../../../uploads/techniques');
   await fs.mkdir(dir, { recursive: true });
   return dir;
-};
-
-const getDebugEnabled = (): boolean => asBool(process.env.AI_TECHNIQUE_IMAGE_DEBUG, false);
-
-const debugLog = (...args: unknown[]): void => {
-  if (!getDebugEnabled()) return;
-  console.log('[technique-image]', ...args);
 };
 
 export const buildTechniqueSkillImagePrompt = (input: TechniqueSkillImageInput): string => {
@@ -152,13 +140,16 @@ export const generateTechniqueSkillIcon = async (input: TechniqueSkillImageInput
   if (!cfg) return null;
 
   const prompt = buildTechniqueSkillImagePrompt(input);
-  debugLog(
+  debugImageGenerationLog(
+    'technique-image',
     'provider=',
     cfg.provider,
     'endpoint=',
     cfg.endpoint,
     'model=',
     cfg.modelName,
+    'retry=',
+    cfg.provider === 'openai' ? OPENAI_IMAGE_GENERATION_MAX_RETRIES : 'none',
     'skillId=',
     input.skillId,
   );
@@ -166,17 +157,17 @@ export const generateTechniqueSkillIcon = async (input: TechniqueSkillImageInput
   try {
     const generated = await generateConfiguredImageAsset(prompt);
     if (!generated) {
-      debugLog('skip: image config missing');
+      debugImageGenerationLog('technique-image', 'skip: image config missing');
       return null;
     }
 
     if (generated.asset.b64) {
       const localPath = await saveB64ImageToLocal(generated.asset.b64, input.skillId);
       if (localPath) {
-        debugLog('saved from b64:', localPath);
+        debugImageGenerationLog('technique-image', 'saved from b64:', localPath);
         return localPath;
       }
-      debugLog('b64 returned but local save failed');
+      debugImageGenerationLog('technique-image', 'b64 returned but local save failed');
     }
 
     if (generated.asset.url) {
@@ -184,21 +175,29 @@ export const generateTechniqueSkillIcon = async (input: TechniqueSkillImageInput
         const buffer = await downloadImageBuffer(generated.asset.url, generated.timeoutMs);
         const localPath = await saveImageBufferToLocal(buffer, input.skillId);
         if (localPath) {
-          debugLog('saved from url:', localPath);
+          debugImageGenerationLog('technique-image', 'saved from url:', localPath);
           return localPath;
         }
-        debugLog('url returned but local save failed, fallback remote url');
+        debugImageGenerationLog('technique-image', 'url returned but local save failed, fallback remote url');
       } catch (error) {
-        debugLog('download url failed, fallback remote url:', error instanceof Error ? error.message : String(error));
+        debugImageGenerationLog(
+          'technique-image',
+          'download url failed, fallback remote url:',
+          summarizeImageGenerationError(error instanceof Error ? error : String(error)),
+        );
         return generated.asset.url;
       }
       return generated.asset.url;
     }
 
-    debugLog('empty image asset returned');
+    debugImageGenerationLog('technique-image', 'empty image asset returned');
     return null;
   } catch (error) {
-    debugLog('generate failed:', error instanceof Error ? error.message : String(error));
+    debugImageGenerationLog(
+      'technique-image',
+      'generate failed:',
+      summarizeImageGenerationError(error instanceof Error ? error : String(error)),
+    );
     return null;
   }
 };
