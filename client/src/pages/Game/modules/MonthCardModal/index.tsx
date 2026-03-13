@@ -1,7 +1,8 @@
-import { App, Button, Modal, Tag } from 'antd';
+import { ClockCircleOutlined, GiftOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import { App, Button, Modal } from 'antd';
 import { useCallback, useMemo, useState } from 'react';
 import { activateMonthCardItem, claimMonthCardReward, getInventoryItems, getMonthCardStatus } from '../../../../services/api';
-import { buildMonthCardDailyRewards, buildMonthCardPanelState, type MonthCardDailyReward } from './monthCardDisplay';
+import { buildMonthCardDailyRewards, buildMonthCardPanelState, getMonthCardPrivileges, type MonthCardDailyReward } from './monthCardDisplay';
 import './index.scss';
 
 interface MonthCardModalProps {
@@ -12,7 +13,6 @@ interface MonthCardModalProps {
 const monthCardId = 'monthcard-001';
 const monthCardItemDefId = 'cons-monthcard-001';
 const defaultDailySpiritStones = 10000;
-const defaultMonthCardDescription = `有效期30天，每日可领取${defaultDailySpiritStones}灵石。`;
 
 const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
   const { message } = App.useApp();
@@ -27,13 +27,11 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
       const res = await getMonthCardStatus(monthCardId);
       if (!res.success || !res.data) {
         setStatus(null);
-        void 0;
         return;
       }
       setStatus(res.data);
     } catch {
       setStatus(null);
-      void 0;
     } finally {
       setLoading(false);
     }
@@ -100,14 +98,13 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     try {
       const res = await activateMonthCardItem({ monthCardId, itemInstanceId: monthCardItem.instanceId });
       if (!res.success) {
-        void 0;
         return;
       }
       message.success('使用成功');
       await refreshStatus();
       await refreshMonthCardItem();
     } catch {
-      void 0;
+      // ignore
     } finally {
       setActing(false);
     }
@@ -120,13 +117,12 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     try {
       const res = await claimMonthCardReward(monthCardId);
       if (!res.success) {
-        void 0;
         return;
       }
       message.success(`领取成功 +${res.data?.rewardSpiritStones ?? 0} 灵石`);
       await refreshStatus();
     } catch {
-      void 0;
+      // ignore
     } finally {
       setActing(false);
     }
@@ -139,7 +135,7 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
       footer={null}
       title={null}
       centered
-      width={760}
+      width={720}
       className="monthcard-modal"
       destroyOnHidden
       maskClosable
@@ -155,60 +151,79 @@ const MonthCardModal: React.FC<MonthCardModalProps> = ({ open, onClose }) => {
     >
       <div className="monthcard-shell">
         <div className="monthcard-header">
-          <div className="monthcard-title">月卡</div>
+          <div className="monthcard-title">修仙月卡</div>
         </div>
 
         <div className="monthcard-body">
-          <div className="monthcard-hero">
-            <div className="monthcard-hero-left">
-              <div className="monthcard-hero-name">{status?.name || '修行月卡'}</div>
-              <div className="monthcard-hero-desc">{status?.description || defaultMonthCardDescription}</div>
-              <div className="monthcard-hero-tags">
-                {active ? <Tag color="green">已解锁</Tag> : <Tag color="default">未解锁</Tag>}
-                {active ? <Tag color="blue">剩余 {daysLeft} 天</Tag> : null}
-                {!active && isExpired ? <Tag color="red">已到期</Tag> : null}
+          <div className="monthcard-vip-card">
+            <div className="monthcard-vip-bg-fx"></div>
+            <div className="monthcard-vip-content-wrapper">
+              <div className="monthcard-vip-header">
+                <div className="monthcard-vip-name">{status?.name || '修行月卡'}</div>
               </div>
-            </div>
-            <div className="monthcard-hero-right">
-              <div className="monthcard-status-title">{panelState.title}</div>
-              <div className="monthcard-status-value">{panelState.statusValue}</div>
-              <div className="monthcard-status-hint">{panelState.statusHint}</div>
-              {monthCardItem?.instanceId ? (
-                <Button type="primary" onClick={doUseItem} disabled={acting || loading}>
-                  {panelState.actionLabel}
-                </Button>
-              ) : (
-                <Button type="primary" disabled>
-                  无月卡道具
-                </Button>
-              )}
-              <div className="monthcard-progress-meta">
-                背包月卡道具：{monthCardItem?.qty ? `${monthCardItem.qty} 个` : '0 个'}
+              
+              <div className="monthcard-vip-main">
+                <div className="monthcard-vip-status">
+                  <div className="monthcard-vip-status-value">{panelState.statusValue}</div>
+                  <div className="monthcard-vip-status-hint">{panelState.statusHint}</div>
+                </div>
+                
+                <div className="monthcard-vip-action">
+                  <Button 
+                    type="primary" 
+                    onClick={doUseItem} 
+                    disabled={acting || loading || !monthCardItem?.instanceId}
+                    className="monthcard-vip-btn"
+                  >
+                    {monthCardItem?.instanceId ? panelState.actionLabel : '无月卡道具'}
+                  </Button>
+                  <div className="monthcard-vip-action-meta">背包已存：{monthCardItem?.qty ? `${monthCardItem.qty} 个` : '0 个'}</div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="monthcard-section">
-            <div className="monthcard-section-title">每日奖励</div>
-            <div className="monthcard-reward-grid">
-              {dailyRewards.map((r) => (
-                <div key={r.id} className="monthcard-reward">
-                  <img className="monthcard-reward-icon" src={r.icon} alt={r.name} />
-                  <div className="monthcard-reward-name">{r.name}</div>
-                  <div className="monthcard-reward-amount">x{r.amount}</div>
-                </div>
-              ))}
+          <div className="monthcard-privileges">
+            <div className="monthcard-section-title">月卡专属特权</div>
+            <div className="monthcard-privilege-list">
+              {getMonthCardPrivileges().map(privilege => {
+                let IconComp: React.FC<any> | null = null;
+                if (privilege.iconName === 'GiftOutlined') IconComp = GiftOutlined;
+                if (privilege.iconName === 'UsergroupAddOutlined') IconComp = UsergroupAddOutlined;
+                if (privilege.iconName === 'ClockCircleOutlined') IconComp = ClockCircleOutlined;
+                
+                return (
+                  <div key={privilege.id} className="monthcard-privilege-item">
+                    <div className="monthcard-privilege-icon">
+                      {IconComp && <IconComp />}
+                    </div>
+                    <div className="monthcard-privilege-info">
+                      <div className="monthcard-privilege-name">{privilege.name}</div>
+                      <div className="monthcard-privilege-desc">{privilege.description}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="monthcard-claim-row">
-              <div className="monthcard-claim-meta">
-                <div className="monthcard-claim-k">今日领取</div>
-                <div className="monthcard-claim-v">
-                  {active ? (today === lastClaimDate ? '已领取' : '未领取') : '未解锁'}
-                </div>
+          </div>
+
+          <div className="monthcard-claim-panel">
+            <div className="monthcard-section-title">每日领礼</div>
+            <div className="monthcard-claim-content">
+              <div className="monthcard-reward-grid">
+                {dailyRewards.map((r) => (
+                  <div key={r.id} className="monthcard-reward">
+                    <img className="monthcard-reward-icon" src={r.icon} alt={r.name} />
+                    <div className="monthcard-reward-name">{r.name}</div>
+                    <div className="monthcard-reward-amount">x{r.amount}</div>
+                  </div>
+                ))}
               </div>
-              <Button type="primary" disabled={!canClaim || acting || loading} loading={acting && canClaim} onClick={claim}>
-                {today === lastClaimDate ? '已领取' : '领取奖励'}
-              </Button>
+              <div className="monthcard-claim-action">
+                <Button type="primary" disabled={!canClaim || acting || loading} loading={acting && canClaim} onClick={claim}>
+                  {today === lastClaimDate ? '今日已领取' : '领取奖励'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

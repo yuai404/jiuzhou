@@ -42,6 +42,13 @@ export type MonthCardDailyReward = {
   type: 'spiritStone';
 };
 
+export type MonthCardPrivilege = {
+  id: string;
+  name: string;
+  description: string;
+  iconName: string;
+};
+
 export type MonthCardPanelStateInput = {
   active: boolean;
   isExpired: boolean;
@@ -55,6 +62,27 @@ export type MonthCardPanelState = {
   statusHint: string;
   actionLabel: '使用' | '使用续期';
 };
+
+export const getMonthCardPrivileges = (): MonthCardPrivilege[] => [
+  {
+    id: 'daily-reward',
+    name: '每日灵石',
+    description: '激活期间每日可领取灵石奖励',
+    iconName: 'GiftOutlined',
+  },
+  {
+    id: 'partner-cooldown',
+    name: '招募加速',
+    description: '伙伴招募冷却时间缩短 10%',
+    iconName: 'UsergroupAddOutlined',
+  },
+  {
+    id: 'practice-cooldown',
+    name: '研修加速',
+    description: '洞府研修冷却时间缩短 10%',
+    iconName: 'ClockCircleOutlined',
+  },
+];
 
 export const buildMonthCardDailyRewards = (dailySpiritStones: number): MonthCardDailyReward[] => [
   {
