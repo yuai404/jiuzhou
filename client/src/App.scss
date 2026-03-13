@@ -103,3 +103,11 @@ body .game-element-tone {
 body .game-element-text {
   @include appTag.element-text();
 }
+
+body .ant-tag.game-quality-tone {
+  @include appTag.quality-chip(var(--quality-tag-base-bg, var(--app-tag-base-bg)));
+}
+
+body .game-quality-tone {
+  @include appTag.quality-chip(var(--quality-tag-base-bg, var(--app-tag-base-bg)));
+}

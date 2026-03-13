@@ -55,6 +55,7 @@ import CraftModal from './CraftModal';
 import GemSynthesisModal from './GemSynthesisModal';
 import { formatPercent, formatSignedNumber, formatSignedPercent } from '../../shared/formatAttr';
 import { buildAutoDisassembleSubCategoryOptionsByCategory } from '../../shared/autoDisassembleFilters';
+import { getItemQualityTagClassName } from '../../shared/itemQuality';
 import { ITEM_CATEGORY_ALL_OPTION, ITEM_CATEGORY_OPTIONS } from '../../shared/itemTaxonomy';
 import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
 import { useIsMobile } from '../../shared/responsive';
@@ -1035,7 +1036,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                     <div className="bag-detail-name">{activeItem.name}</div>
                     <div className="bag-detail-tags">
                       <Tag color="blue">{categoryLabels[activeItem.category]}</Tag>
-                      <Tag className={`bag-detail-quality-tag ${qualityClass[activeItem.quality]}`}>
+                      <Tag className={`bag-detail-quality-tag ${getItemQualityTagClassName(activeItem.quality)}`}>
                         {qualityLabelText[activeItem.quality]}
                       </Tag>
                       <Tag>{activeItem.bind.detailLabel}</Tag>

@@ -25,6 +25,7 @@ import {
   upgradeCharacterTechnique,
 } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
+import { getItemQualityLabel, getItemQualityTagClassName } from '../../shared/itemQuality';
 import ResearchPanel from './ResearchPanel';
 import {
   TECHNIQUE_RESEARCH_STATUS_POLL_INTERVAL_MS,
@@ -909,7 +910,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
               {t ? `${t.name}（${layerText(t.layer)}/${layerText(t.layers.length)}）` : '未装备'}
             </div>
             <div className="tech-slot-tags">
-              {t ? <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag> : <Tag>未装配</Tag>}
+              {t ? <Tag className={getItemQualityTagClassName(t.quality)}>{getItemQualityLabel(t.quality)}</Tag> : <Tag>未装配</Tag>}
               {(t?.tags ?? []).slice(0, 2).map((x) => (
                 <Tag key={x} color="default">
                   {x}
@@ -950,7 +951,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
             <div className="tech-row-main">
               <div className="tech-row-name">{t.name}</div>
               <div className="tech-row-tags">
-                <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag>
+                <Tag className={getItemQualityTagClassName(t.quality)}>{getItemQualityLabel(t.quality)}</Tag>
                 <Tag color="default">
                   {layerText(t.layer)}/{layerText(t.layers.length)}
                 </Tag>
@@ -1044,7 +1045,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                 <div className="tech-row-main">
                   <div className="tech-row-name">{t.name}</div>
                   <div className="tech-row-tags">
-                    <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag>
+                    <Tag className={getItemQualityTagClassName(t.quality)}>{getItemQualityLabel(t.quality)}</Tag>
                     <Tag color="default">
                       {layerText(t.layer)}/{layerText(t.layers.length)}
                     </Tag>
@@ -1116,7 +1117,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                 render: (_: string, row: (typeof rows)[number]) => (
                   <div className="tech-table-name">
                     <span className="tech-table-name-text">{row.name}</span>
-                    <Tag color={qualityColor[row.quality]}>{qualityText[row.quality]}</Tag>
+                    <Tag className={getItemQualityTagClassName(row.quality)}>{getItemQualityLabel(row.quality)}</Tag>
                   </div>
                 ),
               },
@@ -1442,7 +1443,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                 <div className="tech-detail-meta">
                   <div className="tech-detail-name">
                     <span>{t.name}</span>
-                    <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag>
+                    <Tag className={getItemQualityTagClassName(t.quality)}>{getItemQualityLabel(t.quality)}</Tag>
                     <Tag color="default">
                       {layerText(t.layer)}/{layerText(t.layers.length)}
                     </Tag>
@@ -1638,7 +1639,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                 <div className="tech-cultivate-meta">
                   <div className="tech-cultivate-name">
                     <span>{t.name}</span>
-                    <Tag color={qualityColor[t.quality]}>{qualityText[t.quality]}</Tag>
+                    <Tag className={getItemQualityTagClassName(t.quality)}>{getItemQualityLabel(t.quality)}</Tag>
                   </div>
                   <div className="tech-cultivate-layer">
                     当前：{layerText(t.layer)}/{layerText(t.layers.length)} {maxed ? '（已满）' : ''}

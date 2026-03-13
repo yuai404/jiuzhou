@@ -6,7 +6,7 @@ import {
   resolvePartnerAvatar,
 } from '../../shared/partnerDisplay';
 import { getElementToneClassName } from '../../shared/elementTheme';
-import { getItemQualityMeta } from '../../shared/itemQuality';
+import { getItemQualityTagClassName } from '../../shared/itemQuality';
 
 interface MarketPartnerPreviewSheetProps {
   partner: PartnerDisplayDto | null;
@@ -16,10 +16,6 @@ interface MarketPartnerPreviewSheetProps {
   onClose: () => void;
   onBuy?: () => void;
 }
-
-const getQualityClassName = (value: unknown): string => {
-  return getItemQualityMeta(value)?.className ?? '';
-};
 
 const MarketPartnerPreviewSheet: React.FC<MarketPartnerPreviewSheetProps> = ({
   partner,
@@ -53,7 +49,7 @@ const MarketPartnerPreviewSheet: React.FC<MarketPartnerPreviewSheetProps> = ({
                 {partner.nickname || partner.name}
               </div>
               <div className="market-list-sheet-tags">
-                <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${getQualityClassName(partner.quality)}`}>
+                <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${getItemQualityTagClassName(partner.quality)}`}>
                   {partner.quality}
                 </span>
                 <span className={`market-list-sheet-tag ${getElementToneClassName(partner.element)}`}>{formatPartnerElementLabel(partner.element)}</span>

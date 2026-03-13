@@ -1,5 +1,4 @@
 @use './tooltipSurfaceShared';
-@use './itemQualityTag' as qualityTag;
 @use './techniqueSkillSection' as techniqueSkill;
 @use '../../../styles/tag' as appTag;
 
@@ -99,10 +98,6 @@
   font-size: 12px;
   display: inline-flex;
   align-items: center;
-}
-
-.item-tooltip-tag--quality {
-  @include qualityTag.quality-tag-chip(var(--item-tooltip-chip-bg));
 }
 
 .item-tooltip-desc {

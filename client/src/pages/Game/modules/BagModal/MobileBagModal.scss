@@ -1,5 +1,4 @@
 @use './rerollRollShared' as rerollRoll;
-@use './qualityTagShared' as qualityTag;
 @use '../../shared/techniqueSkillSection' as techniqueSkill;
 
 /* ═══════════════════════════════════════════════════
@@ -11,6 +10,7 @@
 .mbag-overlay {
   @include rerollRoll.roll-theme-vars();
   @include techniqueSkill.technique-skill-section();
+  --quality-tag-base-bg: var(--panel-bg-soft);
 
   position: fixed;
   inset: 0;
@@ -324,6 +324,7 @@
 }
 
 .mbag-sheet {
+  --quality-tag-base-bg: var(--panel-bg-soft);
   position: fixed;
   left: 0;
   right: 0;
@@ -428,10 +429,6 @@
 .mbag-sheet-tag--cat {
   background: var(--primary-bg-soft);
   color: var(--primary-color);
-}
-
-.mbag-sheet-tag--quality {
-  @include qualityTag.quality-chip-solid();
 }
 
 .mbag-sheet-tag--tag {

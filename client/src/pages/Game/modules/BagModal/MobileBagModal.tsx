@@ -61,7 +61,7 @@ import {
 import type { BagAction, BagCategory, BagItem, BagQuality, BagSort, BatchMode } from './bagShared';
 import { buildAutoDisassembleSubCategoryOptionsByCategory } from '../../shared/autoDisassembleFilters';
 import { formatPercent, formatSignedNumber, formatSignedPercent } from '../../shared/formatAttr';
-import { getItemQualityMeta } from '../../shared/itemQuality';
+import { getItemQualityMeta, getItemQualityTagClassName } from '../../shared/itemQuality';
 import { ITEM_CATEGORY_ALL_OPTION, ITEM_CATEGORY_OPTIONS } from '../../shared/itemTaxonomy';
 import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
 import InventoryItemCell from '../../shared/InventoryItemCell';
@@ -450,7 +450,7 @@ const ItemSheet: React.FC<SheetProps> = ({
               <span className="mbag-sheet-tag mbag-sheet-tag--cat">
                 {categoryLabels[item.category]}
               </span>
-              <span className={`mbag-sheet-tag mbag-sheet-tag--quality ${qualityClass[item.quality]}`}>
+              <span className={`mbag-sheet-tag mbag-sheet-tag--quality ${getItemQualityTagClassName(item.quality)}`}>
                 {qualityLabelText[item.quality]}
               </span>
               <span className="mbag-sheet-tag mbag-sheet-tag--bind">{item.bind.detailLabel}</span>

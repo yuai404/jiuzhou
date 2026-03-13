@@ -7,7 +7,7 @@ import {
   resolvePartnerAvatar,
 } from '../../shared/partnerDisplay';
 import { getElementToneClassName } from '../../shared/elementTheme';
-import { getItemQualityMeta } from '../../shared/itemQuality';
+import { getItemQualityTagClassName } from '../../shared/itemQuality';
 
 interface MarketPartnerBuyModalProps {
   partner: PartnerDisplayDto | null;
@@ -17,10 +17,6 @@ interface MarketPartnerBuyModalProps {
   onClose: () => void;
   onBuy?: () => void;
 }
-
-const getQualityClassName = (value: unknown): string => {
-  return getItemQualityMeta(value)?.className ?? '';
-};
 
 const MarketPartnerBuyModal: React.FC<MarketPartnerBuyModalProps> = ({
   partner,
@@ -56,7 +52,7 @@ const MarketPartnerBuyModal: React.FC<MarketPartnerBuyModalProps> = ({
             <div className="market-list-detail-meta">
               <div className="market-list-detail-name">{partner.nickname || partner.name}</div>
               <div className="market-list-detail-tags">
-                <Tag className={`market-tag market-tag-quality ${getQualityClassName(partner.quality)}`}>{partner.quality}</Tag>
+                <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(partner.quality)}`}>{partner.quality}</Tag>
                 <Tag className={`market-tag ${getElementToneClassName(partner.element)}`}>{formatPartnerElementLabel(partner.element)}</Tag>
                 <Tag className="market-tag">{partner.role}</Tag>
                 <Tag className="market-tag">等级 {partner.level}</Tag>

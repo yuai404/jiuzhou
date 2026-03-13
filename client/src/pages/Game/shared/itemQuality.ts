@@ -75,6 +75,22 @@ export const getItemQualityMeta = (value: unknown): ItemQualityMeta | null => {
   };
 };
 
+export const getItemQualityClassName = (value: unknown): string => {
+  return getItemQualityMeta(value)?.className ?? '';
+};
+
+export const getItemQualityTagClassName = (value: unknown): string => {
+  const qualityClassName = getItemQualityClassName(value);
+  return qualityClassName ? `game-quality-tone ${qualityClassName}` : 'game-quality-tone';
+};
+
+export const getItemQualityLabel = (
+  value: unknown,
+  fallback: ItemQualityName = '黄',
+): string => {
+  return getItemQualityMeta(value)?.label ?? QUALITY_KEY_TO_LABEL[parseQualityKey(fallback) ?? 'huang'];
+};
+
 export const normalizeItemQualityName = (
   value: unknown,
   fallback: ItemQualityName = '黄',

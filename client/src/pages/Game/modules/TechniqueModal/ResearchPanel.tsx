@@ -18,6 +18,7 @@
  * 2. 冷却展示必须仅消费共享纯函数，避免这里和按钮禁用条件各算一套剩余时间。
  */
 import { Button, Tag, Tooltip } from 'antd';
+import { getItemQualityLabel, getItemQualityTagClassName } from '../../shared/itemQuality';
 import type { TechniqueResearchStatusData } from './researchShared';
 import {
   formatTechniqueResearchCooldownRemaining,
@@ -42,20 +43,6 @@ type ResearchPanelProps = {
   onAbandonPendingJob: (generationId: string) => void;
   onRefresh: () => void;
   onCopyResearchBook: (generationId: string, suggestedName: string) => void;
-};
-
-const QUALITY_TAG_CLASS: Record<'黄' | '玄' | '地' | '天', string> = {
-  天: 'q-tian',
-  地: 'q-di',
-  玄: 'q-xuan',
-  黄: 'q-huang',
-};
-
-const QUALITY_TEXT: Record<'黄' | '玄' | '地' | '天', string> = {
-  天: '天品',
-  地: '地品',
-  玄: '玄品',
-  黄: '黄品',
 };
 
 const ResearchPanel: React.FC<ResearchPanelProps> = ({
@@ -157,8 +144,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({
               <div className="tech-research-draft-head-main">
                 <div className="tech-research-draft-name">{panelView.preview.aiSuggestedName}</div>
                 <div className="tech-research-draft-meta">
-                  <Tag className={`tech-research-quality-tag ${QUALITY_TAG_CLASS[panelView.preview.quality]}`}>
-                    {QUALITY_TEXT[panelView.preview.quality]}
+                  <Tag className={`tech-research-quality-tag ${getItemQualityTagClassName(panelView.preview.quality)}`}>
+                    {getItemQualityLabel(panelView.preview.quality)}
                   </Tag>
                   <Tag color="default">{panelView.preview.type}</Tag>
                   <Tag color="default">最高{panelView.preview.maxLayer}层</Tag>

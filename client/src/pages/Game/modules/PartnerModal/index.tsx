@@ -47,6 +47,7 @@ import {
   type PartnerPanelKey,
 } from './partnerShared';
 import { getElementTextClassName, getElementToneClassName } from '../../shared/elementTheme';
+import { getItemQualityTagClassName } from '../../shared/itemQuality';
 import {
   buildPartnerRecruitIndicator,
   formatPartnerRecruitCooldownRemaining,
@@ -489,7 +490,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   </div>
                   <div className="partner-tag-row">
                     <Tag color={partner.isActive ? 'green' : 'default'}>{partner.isActive ? '已出战' : '待命中'}</Tag>
-                    <Tag color="gold">{partner.quality}</Tag>
+                    <Tag className={getItemQualityTagClassName(partner.quality)}>{partner.quality}</Tag>
                     {partner.tradeStatus === 'market_listed' ? <Tag color="orange">坊市中</Tag> : null}
                   </div>
                 </div>
@@ -536,7 +537,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
             <div className="partner-tag-row">
               <Tag color={selectedPartner.isActive ? 'green' : 'default'}>{selectedPartner.isActive ? '当前出战' : '未出战'}</Tag>
               <Tag color="blue">等级 {selectedPartner.level}</Tag>
-              <Tag color="gold">{selectedPartner.quality}</Tag>
+              <Tag className={getItemQualityTagClassName(selectedPartner.quality)}>{selectedPartner.quality}</Tag>
               {selectedPartner.tradeStatus === 'market_listed' ? <Tag color="orange">坊市中</Tag> : null}
             </div>
             <div className="partner-tag-row">
@@ -668,7 +669,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   <div className="partner-tag-row">
                     <Tag color={technique.isInnate ? 'purple' : 'blue'}>{technique.isInnate ? '天生功法' : '后天功法'}</Tag>
                     <Tag color="cyan">{formatPartnerTechniqueLayerLabel(technique)}</Tag>
-                    <Tag color="gold">{technique.quality}</Tag>
+                    <Tag className={getItemQualityTagClassName(technique.quality)}>{technique.quality}</Tag>
                   </div>
                   <div className="partner-technique-lines">
                     {passiveLines.length > 0 ? (
@@ -803,7 +804,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                     </div>
                   </div>
                   <div className="partner-tag-row">
-                    <Tag color="gold">{book.quality}</Tag>
+                    <Tag className={getItemQualityTagClassName(book.quality)}>{book.quality}</Tag>
                     <Tag color="blue">功法书</Tag>
                   </div>
                 </div>
@@ -838,7 +839,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
           <div className="partner-current-main">
             <div className="partner-name">{preview.name}</div>
             <div className="partner-tag-row">
-              <Tag color="gold">{preview.quality}</Tag>
+              <Tag className={getItemQualityTagClassName(preview.quality)}>{preview.quality}</Tag>
               <Tag className={getElementToneClassName(preview.element)}>{formatPartnerElementLabel(preview.element)}</Tag>
               <Tag color="cyan">{preview.role}</Tag>
               <Tag color="purple">功法槽 {preview.slotCount}</Tag>
@@ -874,7 +875,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                   </div>
                 </div>
                 <div className="partner-tag-row">
-                  <Tag color="gold">{technique.quality}</Tag>
+                  <Tag className={getItemQualityTagClassName(technique.quality)}>{technique.quality}</Tag>
                   <Tag color="purple">天生功法</Tag>
                 </div>
                 <div className="partner-technique-lines">

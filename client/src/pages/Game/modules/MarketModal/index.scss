@@ -325,10 +325,6 @@
   font-weight: 900;
 }
 
-.market-tag-quality.ant-tag {
-  @include appTag.quality-chip(var(--app-tag-base-bg, var(--panel-bg)));
-}
-
 .market-tag-mine.ant-tag {
   border-style: dashed;
   @include appTag.chip-accent(var(--primary-color), var(--app-tag-base-bg, var(--panel-bg)), 16%, 8%, 30%, 80%);
@@ -1634,6 +1630,7 @@
 .market-list-sheet {
   --market-sheet-tag-base-bg: var(--panel-bg-soft);
   --element-tag-base-bg: var(--market-sheet-tag-base-bg);
+  --quality-tag-base-bg: var(--market-sheet-tag-base-bg);
   position: fixed;
   left: 0;
   right: 0;
@@ -1762,10 +1759,6 @@
 
   &.market-list-sheet-tag--cat {
     @include appTag.chip-accent(var(--primary-color), var(--market-sheet-tag-base-bg), 18%, 10%, 32%, 78%);
-  }
-
-  &.market-list-sheet-tag--quality {
-    @include appTag.quality-chip(var(--market-sheet-tag-base-bg));
   }
 
   &.market-list-sheet-tag--locked {

@@ -4,10 +4,6 @@
  * 作用：统一品质标签（黄/玄/地/天）的视觉规则，供多个 tooltip/面板复用。
  */
 
-@mixin quality-tag-chip($base-bg: var(--panel-bg-soft)) {
-  @include appTag.quality-chip($base-bg);
-}
-
 @mixin quality-surface-state($base-bg: var(--panel-bg-soft), $alpha: 10%) {
   &.item-quality--huang {
     border-color: var(--rarity-huang-border-soft);

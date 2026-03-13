@@ -1,6 +1,7 @@
 import { App, Button, InputNumber, Modal, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { disassembleInventoryEquipment } from '../../../../services/api';
+import { getItemQualityTagClassName } from '../../shared/itemQuality';
 import { isDisassemblableBagItem, qualityLabelText } from './bagShared';
 import type { BagCategory, BagQuality } from './bagShared';
 import { formatDisassembleRewardsText, formatDisassembleSuccessMessage } from './disassembleRewardText';
@@ -89,7 +90,7 @@ const DisassembleModal: React.FC<DisassembleModalProps> = ({ open, item, onClose
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.name ?? '未选择'}</div>
-          {item?.quality ? <Tag>{qualityLabelText[item.quality]}</Tag> : null}
+          {item?.quality ? <Tag className={getItemQualityTagClassName(item.quality)}>{qualityLabelText[item.quality]}</Tag> : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>分解数量</div>

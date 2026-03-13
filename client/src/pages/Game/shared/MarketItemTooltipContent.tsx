@@ -333,7 +333,7 @@ const MarketItemTooltipContent: React.FC<{ item: MarketTooltipItemData }> = ({ i
           {infoTags.map((tag, idx) => (
             <span
               key={`${idx}-${tag.text}`}
-              className={`item-tooltip-tag${tag.qualityClassName ? ` item-tooltip-tag--quality ${tag.qualityClassName}` : ''}`}
+              className={`item-tooltip-tag${tag.qualityClassName ? ` item-tooltip-tag--quality game-quality-tone ${tag.qualityClassName}` : ''}`}
             >
               {tag.text}
             </span>

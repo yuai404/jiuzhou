@@ -30,7 +30,7 @@ import type {
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
 import { useIsMobile } from '../../shared/responsive';
 import { getElementToneClassName } from '../../shared/elementTheme';
-import { getItemQualityMeta, normalizeItemQualityName } from '../../shared/itemQuality';
+import { getItemQualityClassName, getItemQualityTagClassName, normalizeItemQualityName } from '../../shared/itemQuality';
 import InventoryItemCell from '../../shared/InventoryItemCell';
 import { ITEM_CATEGORY_ALL_OPTION, ITEM_CATEGORY_LABELS, ITEM_CATEGORY_OPTIONS } from '../../shared/itemTaxonomy';
 import { useGameItemTaxonomy } from '../../shared/useGameItemTaxonomy';
@@ -165,9 +165,9 @@ const ListSheet: React.FC<ListSheetProps> = ({
               <span className="market-list-sheet-tag market-list-sheet-tag--cat">
                 {bagCategoryLabels[item.category]}
               </span>
-              <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${qualityClass[item.quality]}`}>
-                {qualityLabelText[item.quality]}
-              </span>
+                <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${getItemQualityTagClassName(item.quality)}`}>
+                  {qualityLabelText[item.quality]}
+                </span>
               <span className="market-list-sheet-tag market-list-sheet-tag--bind">{item.bind.detailLabel}</span>
               {item.locked ? <span className="market-list-sheet-tag market-list-sheet-tag--locked">已锁定</span> : null}
             </div>
@@ -298,7 +298,7 @@ const PartnerListSheet: React.FC<PartnerListSheetProps> = ({
                 {partner.nickname || partner.name}
               </div>
               <div className="market-list-sheet-tags">
-                <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${getQualityClassName(partner.quality)}`}>
+                <span className={`market-list-sheet-tag market-list-sheet-tag--quality ${getItemQualityTagClassName(partner.quality)}`}>
                   {partner.quality}
                 </span>
                 <span className={`market-list-sheet-tag ${getElementToneClassName(partner.element)}`}>{formatPartnerElementLabel(partner.element)}</span>
@@ -444,10 +444,6 @@ const resolveIcon = resolveIconUrl;
 
 const normalizeQuality = (value: unknown): ItemQuality => {
   return normalizeItemQualityName(value, '黄');
-};
-
-const getQualityClassName = (value: unknown): string => {
-  return getItemQualityMeta(value)?.className ?? '';
 };
 
 const normalizeMarketCategory = (value: string | null | undefined): string => {
@@ -1498,7 +1494,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
               {marketListings.map((row) => (
                 <div
                   key={row.id}
-                  className={`market-mobile-card ${getQualityClassName(row.quality)}`}
+                  className={`market-mobile-card ${getItemQualityClassName(row.quality)}`}
                   role="button"
                   tabIndex={0}
                   onClick={() => setMobileListingPreview({ source: 'market', listingId: row.id })}
@@ -1509,12 +1505,12 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                   }}
                 >
                   <div className="market-mobile-card-head">
-                    <img className={`market-item-icon ${getQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
+                    <img className={`market-item-icon ${getItemQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
                       <div className="market-mobile-head-main">
                         <div className="market-item-name">{row.name}</div>
                         <MarketEquipmentSummary items={row.equipmentSummary} />
                         <div className="market-item-tags">
-                          <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.quality)}`}>{row.quality}</Tag>
+                          <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.quality)}`}>{row.quality}</Tag>
                           <Tag className="market-tag">{ITEM_CATEGORY_LABELS[row.category] ?? row.category}</Tag>
                         {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
                       </div>
@@ -1580,13 +1576,13 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                       title={<MarketItemTooltipContent item={row} />}
                       getPopupContainer={getMarketTooltipPopupContainer}
                     >
-                      <div className={`market-item ${getQualityClassName(row.quality)}`} onMouseEnter={resolveMarketTooltipPlacement}>
-                        <img className={`market-item-icon ${getQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
+                      <div className={`market-item ${getItemQualityClassName(row.quality)}`} onMouseEnter={resolveMarketTooltipPlacement}>
+                        <img className={`market-item-icon ${getItemQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
                         <div className="market-item-meta">
                           <div className="market-item-name">{row.name}</div>
                           <MarketEquipmentSummary items={row.equipmentSummary} />
                           <div className="market-item-tags">
-                            <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.quality)}`}>{row.quality}</Tag>
+                            <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.quality)}`}>{row.quality}</Tag>
                             <Tag className="market-tag">{ITEM_CATEGORY_LABELS[row.category] ?? row.category}</Tag>
                             {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
                           </div>
@@ -1667,7 +1663,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                     <div className="market-mobile-head-main">
                       <div className="market-item-name">{row.partner.nickname || row.partner.name} <span className="market-partner-level">Lv.{row.partner.level}</span></div>
                       <div className="market-item-tags">
-                        <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.partner.quality)}`}>{row.partner.quality}</Tag>
+                        <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.partner.quality)}`}>{row.partner.quality}</Tag>
                         <Tag className={`market-tag ${getElementToneClassName(row.partner.element)}`}>{formatPartnerElementLabel(row.partner.element)}</Tag>
                         <Tag className="market-tag">{row.partner.role}</Tag>
                         {row.seller === playerName ? <Tag className="market-tag market-tag-mine">我的上架</Tag> : null}
@@ -1737,7 +1733,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
               {myListings.map((row) => (
                 <div
                   key={row.id}
-                  className={`market-mobile-card ${getQualityClassName(row.quality)}`}
+                  className={`market-mobile-card ${getItemQualityClassName(row.quality)}`}
                   role="button"
                   tabIndex={0}
                   onClick={() => setMobileListingPreview({ source: 'my', listingId: row.id })}
@@ -1748,12 +1744,12 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                   }}
                 >
                   <div className="market-mobile-card-head">
-                    <img className={`market-item-icon ${getQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
+                    <img className={`market-item-icon ${getItemQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
                     <div className="market-mobile-head-main">
                       <div className="market-item-name">{row.name}</div>
                       <MarketEquipmentSummary items={row.equipmentSummary} />
                       <div className="market-item-tags">
-                        <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.quality)}`}>{row.quality}</Tag>
+                        <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.quality)}`}>{row.quality}</Tag>
                         <Tag className="market-tag">{ITEM_CATEGORY_LABELS[row.category] ?? row.category}</Tag>
                       </div>
                     </div>
@@ -1817,13 +1813,13 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                       title={<MarketItemTooltipContent item={row} />}
                       getPopupContainer={getMarketTooltipPopupContainer}
                     >
-                      <div className={`market-item ${getQualityClassName(row.quality)}`} onMouseEnter={resolveMarketTooltipPlacement}>
-                        <img className={`market-item-icon ${getQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
+                      <div className={`market-item ${getItemQualityClassName(row.quality)}`} onMouseEnter={resolveMarketTooltipPlacement}>
+                        <img className={`market-item-icon ${getItemQualityClassName(row.quality)}`} src={row.icon} alt={row.name} />
                         <div className="market-item-meta">
                           <div className="market-item-name">{row.name}</div>
                           <MarketEquipmentSummary items={row.equipmentSummary} />
                           <div className="market-item-tags">
-                            <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.quality)}`}>{row.quality}</Tag>
+                            <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.quality)}`}>{row.quality}</Tag>
                             <Tag className="market-tag">{ITEM_CATEGORY_LABELS[row.category] ?? row.category}</Tag>
                           </div>
                         </div>
@@ -1891,7 +1887,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                   <div className="market-mobile-head-main">
                     <div className="market-item-name">{row.partner.nickname || row.partner.name} <span className="market-partner-level">Lv.{row.partner.level}</span></div>
                     <div className="market-item-tags">
-                      <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.partner.quality)}`}>{row.partner.quality}</Tag>
+                      <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.partner.quality)}`}>{row.partner.quality}</Tag>
                       <Tag className={`market-tag ${getElementToneClassName(row.partner.element)}`}>{formatPartnerElementLabel(row.partner.element)}</Tag>
                       <Tag className="market-tag">{row.partner.role}</Tag>
                     </div>
@@ -1984,7 +1980,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                   <InventoryItemCell
                     key={b.id}
                     className="market-bag-cell"
-                    qualityClassName={getQualityClassName(b.quality)}
+                    qualityClassName={getItemQualityClassName(b.quality)}
                     active={selectedBagId === b.id}
                     icon={b.icon}
                     name={b.name}
@@ -2035,7 +2031,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                   <InventoryItemCell
                     key={b.id}
                     className="market-bag-cell"
-                    qualityClassName={getQualityClassName(b.quality)}
+                    qualityClassName={getItemQualityClassName(b.quality)}
                     active={selectedBagId === b.id}
                     icon={b.icon}
                     name={b.name}
@@ -2054,11 +2050,11 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                   <>
                     <div className="market-list-detail-head">
                       <div className="market-list-detail-head-main">
-                        <img className={`market-list-detail-icon ${getQualityClassName(selectedBagItem.quality)}`} src={selectedBagItem.icon} alt={selectedBagItem.name} />
+                        <img className={`market-list-detail-icon ${getItemQualityClassName(selectedBagItem.quality)}`} src={selectedBagItem.icon} alt={selectedBagItem.name} />
                         <div className="market-list-detail-meta">
                           <div className="market-list-detail-name">{selectedBagItem.name}</div>
                           <div className="market-list-detail-tags">
-                            <Tag className={`market-tag market-tag-quality ${getQualityClassName(selectedBagItem.quality)}`}>{selectedBagItem.quality}</Tag>
+                            <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(selectedBagItem.quality)}`}>{selectedBagItem.quality}</Tag>
                             <Tag className="market-tag">{bagCategoryLabels[selectedBagItem.category]}</Tag>
                             <Tag className="market-tag">{selectedBagItem.bind.detailLabel}</Tag>
                             <Tag className="market-tag">数量 {selectedBagItem.qty}</Tag>
@@ -2175,7 +2171,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
               <div className="market-mobile-head-main">
                 <div className="market-item-name">{partner.nickname || partner.name} <span className="market-partner-level">Lv.{partner.level}</span></div>
                 <div className="market-item-tags">
-                  <Tag className={`market-tag market-tag-quality ${getQualityClassName(partner.quality)}`}>{partner.quality}</Tag>
+                  <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(partner.quality)}`}>{partner.quality}</Tag>
                   <Tag className={`market-tag ${getElementToneClassName(partner.element)}`}>{formatPartnerElementLabel(partner.element)}</Tag>
                   <Tag className="market-tag">{partner.role}</Tag>
                   {renderMarketPartnerStatusTags(partner)}
@@ -2229,7 +2225,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                         <div className="market-list-detail-meta">
                           <div className="market-list-detail-name">{selectedPartner.nickname || selectedPartner.name}</div>
                           <div className="market-list-detail-tags">
-                            <Tag className={`market-tag market-tag-quality ${getQualityClassName(selectedPartner.quality)}`}>{selectedPartner.quality}</Tag>
+                            <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(selectedPartner.quality)}`}>{selectedPartner.quality}</Tag>
                             <Tag className={`market-tag ${getElementToneClassName(selectedPartner.element)}`}>{formatPartnerElementLabel(selectedPartner.element)}</Tag>
                             <Tag className="market-tag">{selectedPartner.role}</Tag>
                             <Tag className="market-tag">等级 {selectedPartner.level}</Tag>
@@ -2417,7 +2413,7 @@ const MarketModal: React.FC<MarketModalProps> = ({ open, onClose, playerName = '
                     <div className="market-item-name">{row.partner.nickname || row.partner.name} <span className="market-partner-level">Lv.{row.partner.level}</span></div>
                     <div className="market-item-tags">
                       <Tag className={`market-tag market-tag-record ${row.type === '买入' ? 'buy' : 'sell'}`}>{row.type}</Tag>
-                      <Tag className={`market-tag market-tag-quality ${getQualityClassName(row.partner.quality)}`}>{row.partner.quality}</Tag>
+                      <Tag className={`market-tag market-tag-quality ${getItemQualityTagClassName(row.partner.quality)}`}>{row.partner.quality}</Tag>
                       <Tag className={`market-tag ${getElementToneClassName(row.partner.element)}`}>{formatPartnerElementLabel(row.partner.element)}</Tag>
                     </div>
                   </div>

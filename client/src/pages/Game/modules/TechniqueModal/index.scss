@@ -1,7 +1,8 @@
 @use '../../shared/tooltipSurfaceShared';
-@use '../BagModal/qualityTagShared' as bagQualityTag;
 
 .tech-modal {
+  --quality-tag-base-bg: var(--panel-bg-soft);
+
   .ant-modal-content {
     padding: 0;
     border-radius: 14px;
@@ -497,7 +498,6 @@
 
 .tech-research-draft-meta .ant-tag.tech-research-quality-tag {
   font-weight: 700;
-  @include bagQualityTag.quality-chip-solid();
 }
 
 .tech-research-draft-desc {
