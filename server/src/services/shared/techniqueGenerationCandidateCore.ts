@@ -197,6 +197,9 @@ const sanitizeCandidateFromModel = (
     }];
   });
 
+  // 清洗后实际保留的技能ID集合，用于过滤 layer 中引用的不存在技能ID
+  const sanitizedSkillIdSet = new Set(skills.map((s) => s.id));
+
   const rawLayers = Array.isArray(source.layers) ? source.layers : [];
   const orderedLayers = rawLayers
     .map((rawLayer): TechniqueGenerationCandidate['layers'][number] | null => {
@@ -221,10 +224,10 @@ const sanitizeCandidateFromModel = (
               .filter((entry): entry is { key: string; value: number } => entry !== null)
           : [],
         unlockSkillIds: Array.isArray(row.unlockSkillIds)
-          ? row.unlockSkillIds.map((entry) => asString(entry)).filter(Boolean)
+          ? row.unlockSkillIds.map((entry) => asString(entry)).filter((id) => sanitizedSkillIdSet.has(id))
           : [],
         upgradeSkillIds: Array.isArray(row.upgradeSkillIds)
-          ? row.upgradeSkillIds.map((entry) => asString(entry)).filter(Boolean)
+          ? row.upgradeSkillIds.map((entry) => asString(entry)).filter((id) => sanitizedSkillIdSet.has(id))
           : [],
         layerDesc: asString(row.layerDesc) || `第${layerNo}层`,
       };
