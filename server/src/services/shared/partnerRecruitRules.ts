@@ -210,10 +210,10 @@ const getPartnerRecruitPassiveValueMaxTotalUpperBound = (
 };
 
 const QUALITY_ROLL_TABLE: ReadonlyArray<{ quality: PartnerRecruitQuality; weight: number }> = [
-  { quality: '黄', weight: 55 },
-  { quality: '玄', weight: 28 },
-  { quality: '地', weight: 12 },
-  { quality: '天', weight: 5 },
+  { quality: '黄', weight: 4 },
+  { quality: '玄', weight: 3 },
+  { quality: '地', weight: 2 },
+  { quality: '天', weight: 1 },
 ];
 
 const asString = (raw: unknown): string => (typeof raw === 'string' ? raw.trim() : '');
