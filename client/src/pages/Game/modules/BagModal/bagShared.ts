@@ -10,6 +10,8 @@ import {
 import type {
   InventoryItemDto,
   InventoryLocation,
+  InventoryUseCharacterSnapshot,
+  InventoryUseEffect,
   InventoryUseLootResult,
   ItemDefLite,
 } from "../../../../services/api";
@@ -340,6 +342,21 @@ const toFiniteNumber = (value: unknown): number | null => {
     if (Number.isFinite(parsed)) return parsed;
   }
   return null;
+};
+
+const formatIntegerOrRange = (
+  minRaw: unknown,
+  maxRaw: unknown,
+  fallbackRaw: unknown,
+): string => {
+  const min = toFiniteNumber(minRaw);
+  const max = toFiniteNumber(maxRaw);
+  if (min !== null && max !== null) {
+    const lower = Math.floor(Math.min(min, max));
+    const upper = Math.floor(Math.max(min, max));
+    return lower === upper ? `${lower}` : `${lower}~${upper}`;
+  }
+  return `${Math.floor(toFiniteNumber(fallbackRaw) ?? 0)}`;
 };
 
 const toRecord = (value: unknown): Record<string, unknown> => {
@@ -897,7 +914,6 @@ export const formatSetEffectLine = (raw: unknown): string | null => {
       : "";
     main = `${formatValueWithScale(value, "护盾")}${absorbText}`;
   } else if (effectType === "resource") {
-    const value = toFiniteNumber(params.value) ?? 0;
     const resource =
       typeof params.resource_type === "string"
         ? params.resource_type
@@ -909,11 +925,18 @@ export const formatSetEffectLine = (raw: unknown): string | null => {
         ? "灵气"
         : resource === "qixue"
           ? "气血"
+          : resource === "stamina"
+            ? "体力"
           : resource === "exp"
             ? "经验"
             : "资源";
     const action = resource === "exp" ? "获得" : "恢复";
-    main = `${action}${resourceName} ${Math.floor(value)}`;
+    const amountText = formatIntegerOrRange(
+      params.min,
+      params.max,
+      params.value,
+    );
+    main = `${action}${resourceName} ${amountText}`;
   } else if (effectType === "mark") {
     main =
       formatMarkEffectText({
@@ -1321,44 +1344,128 @@ export const pickNumber = (obj: unknown, keys: string[]): number | null => {
 };
 
 export const calcUseEffectDelta = (
-  effects: unknown,
+  effects: InventoryUseEffect[] | null | undefined,
   qty: number,
-): { qixue: number; lingqi: number; exp: number } => {
-  if (!Array.isArray(effects)) return { qixue: 0, lingqi: 0, exp: 0 };
+): { qixue: number; lingqi: number; stamina: number; exp: number } => {
+  if (!Array.isArray(effects)) return { qixue: 0, lingqi: 0, stamina: 0, exp: 0 };
   let deltaQixue = 0;
   let deltaLingqi = 0;
+  let deltaStamina = 0;
   let deltaExp = 0;
   const safeQty = Math.max(1, Math.floor(Number(qty) || 1));
 
   for (const rawEffect of effects) {
-    if (!rawEffect || typeof rawEffect !== "object") continue;
-    const e = rawEffect as Record<string, unknown>;
-    if (String(e.trigger || "") !== "use") continue;
-    if (String(e.target || "self") !== "self") continue;
+    if (String(rawEffect.trigger || "") !== "use") continue;
+    if (String(rawEffect.target || "self") !== "self") continue;
 
     const effectType =
-      typeof e.effect_type === "string" ? e.effect_type : undefined;
-    const value = typeof e.value === "number" ? e.value : Number(e.value);
-    if (!Number.isFinite(value)) continue;
+      typeof rawEffect.effect_type === "string" ? rawEffect.effect_type : undefined;
+    const params = rawEffect.params ?? null;
+    const hasRange = params !== null && (params.min !== undefined || params.max !== undefined);
+    const value =
+      typeof rawEffect.value === "number" ? rawEffect.value : Number(rawEffect.value);
+    if (!hasRange && !Number.isFinite(value)) continue;
 
     if (!effectType || effectType === "heal") {
-      deltaQixue += value * safeQty;
+      if (Number.isFinite(value)) {
+        deltaQixue += value * safeQty;
+      }
       continue;
     }
     if (effectType === "resource") {
-      const params =
-        e.params && typeof e.params === "object"
-          ? (e.params as Record<string, unknown>)
-          : null;
       const resource = params ? String(params.resource || "") : "";
+      if (!Number.isFinite(value)) continue;
       if (resource === "qixue") deltaQixue += value * safeQty;
       if (resource === "lingqi") deltaLingqi += value * safeQty;
+      if (resource === "stamina") deltaStamina += value * safeQty;
       if (resource === "exp") deltaExp += value * safeQty;
     }
   }
   return {
     qixue: Math.floor(deltaQixue),
     lingqi: Math.floor(deltaLingqi),
+    stamina: Math.floor(deltaStamina),
     exp: Math.floor(deltaExp),
   };
+};
+
+type UseItemChatContentArgs = {
+  itemName: string;
+  itemCategory: string;
+  useCount: number;
+  remaining: number;
+  lootResults?: readonly InventoryUseLootResult[];
+  beforeCharacter?: InventoryUseCharacterSnapshot | null;
+  afterCharacter?: InventoryUseCharacterSnapshot | null;
+  effects?: InventoryUseEffect[] | null;
+};
+
+/**
+ * 作用：
+ * - 做什么：统一生成背包使用物品后的系统聊天文案，供桌面端和移动端共享。
+ * - 不做什么：不触发请求、不修改角色状态，只根据入参拼装展示文本。
+ *
+ * 输入/输出：
+ * - 输入：物品名称、分类、使用数量、剩余数量，以及使用前后角色快照 / effect / 掉落结果。
+ * - 输出：可直接写入系统频道的中文文案。
+ *
+ * 数据流/状态流：
+ * - inventory/use 响应 + gameSocket 当前角色快照 -> formatUseItemChatContent -> BagModal / MobileBagModal -> chat:append。
+ *
+ * 关键边界条件与坑点：
+ * 1. 随机体力恢复要优先读前后角色差值，不能直接读 effect_defs 配置，否则会把 10~20 的区间误当成固定值。
+ * 2. 桌面端和移动端都依赖这段文案，必须把“掉落型文案”和“资源恢复型文案”放在同一入口，避免两边继续分叉。
+ */
+export const formatUseItemChatContent = ({
+  itemName,
+  itemCategory,
+  useCount,
+  remaining,
+  lootResults,
+  beforeCharacter,
+  afterCharacter,
+  effects,
+}: UseItemChatContentArgs): string => {
+  const qtyPart = useCount > 1 ? `×${useCount}` : "";
+  if (lootResults && lootResults.length > 0) {
+    const rewardParts = formatMergedLootResultParts(lootResults);
+    return `打开【${itemName}】${qtyPart}，获得${rewardParts.join("、")}。`;
+  }
+
+  const beforeQixue = pickNumber(beforeCharacter, ["qixue"]);
+  const beforeLingqi = pickNumber(beforeCharacter, ["lingqi"]);
+  const beforeExp = pickNumber(beforeCharacter, ["exp"]);
+  const beforeStamina = pickNumber(beforeCharacter, ["stamina"]);
+  const afterQixue = pickNumber(afterCharacter, ["qixue"]);
+  const afterLingqi = pickNumber(afterCharacter, ["lingqi"]);
+  const afterExp = pickNumber(afterCharacter, ["exp"]);
+  const afterStamina = pickNumber(afterCharacter, ["stamina", "stamina_max"]);
+  const effectDelta = calcUseEffectDelta(effects, useCount);
+
+  const qixueByStat =
+    beforeQixue !== null && afterQixue !== null ? Math.max(0, Math.floor(afterQixue - beforeQixue)) : null;
+  const lingqiByStat =
+    beforeLingqi !== null && afterLingqi !== null ? Math.max(0, Math.floor(afterLingqi - beforeLingqi)) : null;
+  const expByStat =
+    beforeExp !== null && afterExp !== null ? Math.max(0, Math.floor(afterExp - beforeExp)) : null;
+  const staminaByStat =
+    beforeStamina !== null && afterStamina !== null ? Math.max(0, Math.floor(afterStamina - beforeStamina)) : null;
+
+  const restoredQixue = qixueByStat !== null ? qixueByStat : Math.max(0, Math.floor(effectDelta.qixue));
+  const restoredLingqi = lingqiByStat !== null ? lingqiByStat : Math.max(0, Math.floor(effectDelta.lingqi));
+  const restoredStamina = staminaByStat !== null ? staminaByStat : Math.max(0, Math.floor(effectDelta.stamina));
+  const gainedExp = expByStat !== null ? expByStat : Math.max(0, Math.floor(effectDelta.exp));
+
+  const effectParts: string[] = [];
+  if (restoredQixue > 0) effectParts.push(`恢复了${restoredQixue}点气血`);
+  if (restoredLingqi > 0) effectParts.push(`恢复了${restoredLingqi}点灵气`);
+  if (restoredStamina > 0) effectParts.push(`恢复了${restoredStamina}点体力`);
+  if (gainedExp > 0) effectParts.push(`获得了${gainedExp}点经验`);
+
+  if (itemCategory === "consumable") {
+    return effectParts.length > 0
+      ? `使用【${itemName}】${qtyPart}成功，${effectParts.join("，")}，背包剩余${remaining}。`
+      : `使用【${itemName}】${qtyPart}成功，背包剩余${remaining}。`;
+  }
+  return `使用【${itemName}】成功，背包剩余${remaining}。`;
 };

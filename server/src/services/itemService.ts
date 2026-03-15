@@ -27,6 +27,7 @@ import { resolveQualityRankFromName } from './shared/itemQuality.js';
 import { shouldValidateTechniqueLearnRealm } from './shared/techniqueLearnRule.js';
 import { isCharacterVisibleTechniqueDefinition } from './shared/techniqueUsageScope.js';
 import { resolveTechniqueBookLearning } from './shared/techniqueBookRules.js';
+import { resolveItemUseResourceDelta, rollItemUseAmount } from './shared/itemUseValueRules.js';
 import {
   applyCharacterResourceDeltaByCharacterId,
   getCharacterComputedByCharacterId,
@@ -36,6 +37,7 @@ import { getGemLevel, isGemItemDefinition } from './shared/gemItemSemantics.js';
 import { unbindEquipmentBindingByInstanceId } from './inventory/equipmentUnbind.js';
 import type { PartnerLearnTechniqueResultDto } from './partnerService.js';
 import { partnerService } from './partnerService.js';
+import { recoverStaminaByCharacterId } from './staminaService.js';
 
 // 物品定义接口
 export interface ItemDef {
@@ -413,6 +415,7 @@ class ItemService {
   
     let deltaQixue = 0;
     let deltaLingqi = 0;
+    let deltaStamina = 0;
     let deltaExp = 0;
     let hasLoot = false;
     let hasLearnTechnique = false;
@@ -432,12 +435,12 @@ class ItemService {
       if (String(effect.trigger || '') !== 'use') continue;
   
       const effectType = typeof effect.effect_type === 'string' ? effect.effect_type : undefined;
+      const params =
+        effect.params && typeof effect.params === 'object' && !Array.isArray(effect.params)
+          ? (effect.params as Record<string, unknown>)
+          : null;
 
       if (effectType === 'unbind') {
-        const params =
-          effect.params && typeof effect.params === 'object' && !Array.isArray(effect.params)
-            ? (effect.params as Record<string, unknown>)
-            : null;
         const targetType = String(params?.target_type || '').trim();
         const bindState = String(params?.bind_state || '').trim();
         if (targetType !== 'equipment' || bindState !== 'bound') {
@@ -464,24 +467,15 @@ class ItemService {
   
       if (effectType === 'loot') {
         hasLoot = true;
-        const params =
-          effect.params && typeof effect.params === 'object'
-            ? (effect.params as Record<string, unknown>)
-            : null;
         const lootType = params ? String(params.loot_type || '') : '';
   
         if (lootType === 'currency') {
           const currency = params ? String(params.currency || '') : '';
-          const min = Math.max(0, Math.floor(params ? Number(params.min) || 0 : 0));
-          const max = Math.max(min, Math.floor(params ? Number(params.max) || 0 : 0));
-          let amount = 0;
-          if (min === max) {
-            amount = min * qty;
-          } else {
-            for (let i = 0; i < qty; i += 1) {
-              amount += Math.floor(Math.random() * (max - min + 1)) + min;
-            }
-          }
+          const amount = rollItemUseAmount({
+            qty,
+            min: typeof params?.min === 'number' || typeof params?.min === 'string' ? params.min : undefined,
+            max: typeof params?.max === 'number' || typeof params?.max === 'string' ? params.max : undefined,
+          });
           if (amount > 0) {
             if (currency === 'spirit_stones') {
               deltaSpiritStones += amount;
@@ -716,36 +710,32 @@ class ItemService {
         });
         continue;
       }
-  
-      const value = Number(effect.value);
-      if (!Number.isFinite(value)) continue;
-  
-      if (!effectType || effectType === 'heal') {
-        deltaQixue += value * qty;
-        continue;
-      }
-  
-      if (effectType === 'resource') {
-        const params =
-          effect.params && typeof effect.params === 'object'
-            ? (effect.params as Record<string, unknown>)
-            : null;
-        const resource = params ? String(params.resource || '') : '';
-        if (resource === 'qixue') {
-          deltaQixue += value * qty;
-        }
-        if (resource === 'lingqi') {
-          deltaLingqi += value * qty;
-        }
-        if (resource === 'exp') {
-          deltaExp += Math.floor(value * qty);
-        }
-      }
+
+      const resourceDelta = resolveItemUseResourceDelta(
+        {
+          trigger: typeof effect.trigger === 'string' ? effect.trigger : undefined,
+          target: typeof effect.target === 'string' ? effect.target : undefined,
+          effect_type: effectType,
+          value: typeof effect.value === 'number' || typeof effect.value === 'string' ? effect.value : undefined,
+          params: {
+            resource: typeof params?.resource === 'string' ? params.resource : undefined,
+            resource_type: typeof params?.resource_type === 'string' ? params.resource_type : undefined,
+            min: typeof params?.min === 'number' || typeof params?.min === 'string' ? params.min : undefined,
+            max: typeof params?.max === 'number' || typeof params?.max === 'string' ? params.max : undefined,
+          },
+        },
+        qty,
+      );
+      deltaQixue += resourceDelta.qixue;
+      deltaLingqi += resourceDelta.lingqi;
+      deltaStamina += resourceDelta.stamina;
+      deltaExp += resourceDelta.exp;
     }
   
     if (
       deltaQixue === 0 &&
       deltaLingqi === 0 &&
+      deltaStamina === 0 &&
       deltaExp === 0 &&
       !hasLoot &&
       !hasLearnTechnique &&
@@ -851,6 +841,12 @@ class ItemService {
         qixue: deltaQixue,
         lingqi: deltaLingqi,
       });
+    }
+    if (deltaStamina !== 0) {
+      const staminaResult = await recoverStaminaByCharacterId(characterId, deltaStamina);
+      if (!staminaResult) {
+        throw new Error('角色体力数据异常');
+      }
     }
 
     const updatedChar = updatedCharResult.rows.length > 0

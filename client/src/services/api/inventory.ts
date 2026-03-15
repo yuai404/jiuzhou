@@ -110,12 +110,29 @@ export const moveInventoryItem = (body: {
   return api.post('/inventory/move', body);
 };
 
+export interface InventoryUseEffect {
+  trigger?: string;
+  target?: string;
+  effect_type?: string;
+  value?: number | string;
+  params?: Record<string, string | number | boolean> | null;
+}
+
+export interface InventoryUseCharacterSnapshot {
+  qixue?: number | string;
+  lingqi?: number | string;
+  exp?: number | string;
+  stamina?: number | string;
+  staminaMax?: number | string;
+  stamina_max?: number | string;
+}
+
 export interface InventoryUseResponse {
   success: boolean;
   message: string;
-  effects?: unknown[];
+  effects?: InventoryUseEffect[];
   data?: {
-    character: unknown;
+    character: InventoryUseCharacterSnapshot | null;
     lootResults?: InventoryUseLootResult[];
   };
 }

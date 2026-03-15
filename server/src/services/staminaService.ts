@@ -210,3 +210,45 @@ export const applyStaminaRecoveryByUserId = async (userId: number): Promise<Stam
 export const applyStaminaRecoveryTx = async (characterId: number): Promise<StaminaRecoveryState | null> => {
   return applyRecoveryByCharacterIdFromDB((text, params) => query(text, params), characterId, true);
 };
+
+/**
+ * 按角色 ID 恢复体力（事务内）
+ *
+ * 设计说明：
+ * 1. 先复用 `applyStaminaRecoveryTx` 拿到带行锁的当前体力，避免直接对过期值做加法。
+ * 2. 体力恢复道具与自然恢复共用同一份 `stamina_recover_at` 状态：未回满时保留原计时，回满时写入当前时间并同步缓存。
+ */
+export const recoverStaminaByCharacterId = async (
+  characterId: number,
+  amount: number,
+): Promise<StaminaRecoveryState | null> => {
+  if (!Number.isFinite(characterId) || characterId <= 0) return null;
+
+  const delta = toNonNegativeInt(amount, 0);
+  const current = await applyStaminaRecoveryTx(characterId);
+  if (!current) return null;
+  if (delta <= 0) return current;
+
+  const nextStamina = Math.min(current.maxStamina, current.stamina + delta);
+  const nextRecoverAt =
+    nextStamina >= current.maxStamina ? new Date() : current.staminaRecoverAt;
+  const changed =
+    nextStamina !== current.stamina ||
+    nextRecoverAt.getTime() !== current.staminaRecoverAt.getTime();
+
+  if (!changed) return current;
+
+  await query(
+    'UPDATE characters SET stamina = $2, stamina_recover_at = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+    [characterId, nextStamina, nextRecoverAt],
+  );
+  await setCachedStamina(characterId, nextStamina, nextRecoverAt, current.maxStamina);
+
+  return {
+    ...current,
+    stamina: nextStamina,
+    recovered: current.recovered + Math.max(0, nextStamina - current.stamina),
+    changed: true,
+    staminaRecoverAt: nextRecoverAt,
+  };
+};

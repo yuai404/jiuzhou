@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBagItem,
   formatBagItemEffectLine,
+  formatUseItemChatContent,
   isDisassemblableBagItem,
 } from '../bagShared';
 
@@ -46,6 +47,50 @@ describe('bagEffects', () => {
         },
       }),
     ).toBe('随机获得1~4级宝石');
+  });
+
+  it('formatBagItemEffectLine: 体力恢复区间应输出中文范围描述', () => {
+    expect(
+      formatBagItemEffectLine({
+        trigger: 'use',
+        target: 'self',
+        effect_type: 'resource',
+        params: {
+          resource: 'stamina',
+          min: 10,
+          max: 20,
+        },
+      }),
+    ).toBe('恢复体力 10~20');
+  });
+
+  it('formatUseItemChatContent: 应优先按前后体力差值输出实际恢复量', () => {
+    expect(
+      formatUseItemChatContent({
+        itemName: '回元散',
+        itemCategory: 'consumable',
+        useCount: 1,
+        remaining: 4,
+        beforeCharacter: {
+          stamina: 35,
+        },
+        afterCharacter: {
+          stamina: 53,
+        },
+        effects: [
+          {
+            trigger: 'use',
+            target: 'self',
+            effect_type: 'resource',
+            params: {
+              resource: 'stamina',
+              min: 10,
+              max: 20,
+            },
+          },
+        ],
+      }),
+    ).toBe('使用【回元散】成功，恢复了18点体力，背包剩余4。');
   });
 
   it('buildBagItem: 效果列表应走共享中文映射', () => {

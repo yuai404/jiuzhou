@@ -36,13 +36,12 @@ import {
   buildBagItem,
   buildBatchDisassemblePayloadItems,
   buildEquipmentDetailLines,
-  calcUseEffectDelta,
   categoryLabels,
   collectBatchDisassembleCandidates,
   collectGemCandidates,
   formatAffixRollPercent,
   formatEquipmentAffixLine,
-  formatMergedLootResultParts,
+  formatUseItemChatContent,
   getAffixRollColorVars,
   getAffixRollPercent,
   getEquipSlotLabel,
@@ -51,7 +50,6 @@ import {
   normalizeAffixLockIndexes,
   normalizeGemType,
   percentAttrKeys,
-  pickNumber,
   qualityClass,
   qualityColor,
   qualityLabelText,
@@ -1510,40 +1508,16 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
 
       const lootResults = res.data?.lootResults;
       const remaining = Math.max(0, Math.floor(activeItem.qty) - useCount);
-
-      let content: string;
-      if (lootResults && lootResults.length > 0) {
-        const parts = formatMergedLootResultParts(lootResults);
-        const qtyPart = useCount > 1 ? `×${useCount}` : '';
-        content = `打开【${activeItem.name}】${qtyPart}，获得${parts.join('、')}。`;
-      } else {
-        const afterChar = res.data?.character;
-        const beforeQixue = beforeChar?.qixue ?? null;
-        const beforeLingqi = beforeChar?.lingqi ?? null;
-        const beforeExp = beforeChar?.exp ?? null;
-        const afterQixue = pickNumber(afterChar, ['qixue']);
-        const afterLingqi = pickNumber(afterChar, ['lingqi']);
-        const afterExp = pickNumber(afterChar, ['exp']);
-        const effectDelta = calcUseEffectDelta(res.effects, useCount);
-        const qixueByStat =
-          beforeQixue !== null && afterQixue !== null ? Math.max(0, Math.floor(afterQixue - beforeQixue)) : null;
-        const lingqiByStat =
-          beforeLingqi !== null && afterLingqi !== null ? Math.max(0, Math.floor(afterLingqi - beforeLingqi)) : null;
-        const expByStat = beforeExp !== null && afterExp !== null ? Math.max(0, Math.floor(afterExp - beforeExp)) : null;
-        const restoredQixue = qixueByStat !== null ? qixueByStat : Math.max(0, effectDelta.qixue);
-        const restoredLingqi = lingqiByStat !== null ? lingqiByStat : Math.max(0, effectDelta.lingqi);
-        const gainedExp = expByStat !== null ? expByStat : Math.max(0, effectDelta.exp);
-        const effectParts: string[] = [];
-        if (restoredQixue > 0) effectParts.push(`恢复了${restoredQixue}点气血`);
-        if (restoredLingqi > 0) effectParts.push(`恢复了${restoredLingqi}点灵气`);
-        if (gainedExp > 0) effectParts.push(`获得了${gainedExp}点经验`);
-        const qtyPart = useCount > 1 ? `×${useCount}` : '';
-        content = activeItem.category === 'consumable'
-          ? effectParts.length > 0
-            ? `使用【${activeItem.name}】${qtyPart}成功，${effectParts.join('，')}，背包剩余${remaining}。`
-            : `使用【${activeItem.name}】${qtyPart}成功，背包剩余${remaining}。`
-          : `使用【${activeItem.name}】成功，背包剩余${remaining}。`;
-      }
+      const content = formatUseItemChatContent({
+        itemName: activeItem.name,
+        itemCategory: activeItem.category,
+        useCount,
+        remaining,
+        lootResults,
+        beforeCharacter: beforeChar,
+        afterCharacter: res.data?.character,
+        effects: res.effects,
+      });
       window.dispatchEvent(new CustomEvent('chat:append', { detail: { channel: 'system', content } }));
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));

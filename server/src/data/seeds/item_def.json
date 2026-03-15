@@ -339,6 +339,42 @@
       ]
     },
     {
+      "id": "cons-011",
+      "name": "回元散",
+      "category": "consumable",
+      "sub_category": "pill",
+      "quality": "黄",
+      "stack_max": 9999,
+      "bind_type": "none",
+      "tradeable": true,
+      "icon": "/assets/danyao/bing_yuan_dan.png",
+      "description": "温养气海，随机恢复体力",
+      "long_desc": "回元散以温补药材调和而成，服用后可恢复10~20点体力，适合秘境历练前随身备上一些。",
+      "tags": [
+        "丹药",
+        "回复",
+        "体力"
+      ],
+      "use_type": "instant",
+      "use_cd_round": 0,
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "resource",
+          "params": {
+            "resource": "stamina",
+            "min": 10,
+            "max": 20
+          }
+        }
+      ],
+      "source_hint": [
+        "商店",
+        "炼丹"
+      ]
+    },
+    {
       "id": "cons-monthcard-001",
       "name": "修行月卡",
       "category": "other",
