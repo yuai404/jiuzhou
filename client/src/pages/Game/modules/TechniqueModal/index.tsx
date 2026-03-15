@@ -630,8 +630,8 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
 
       message.success(generateRes.message || '已加入洞府推演队列');
       await refreshResearchStatus('background');
-    } catch (error: unknown) {
-      message.error(error instanceof Error ? error.message : '生成失败');
+    } catch {
+      void 0;
     } finally {
       setGenerateSubmitting(false);
     }
@@ -683,8 +683,8 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
       closeResearchPublishDialog();
       message.success(`抄写成功，已发放《${publishRes.data.finalName}》功法书`);
       await Promise.all([refreshResearchStatus('background'), refreshStatus()]);
-    } catch (error: unknown) {
-      message.error(error instanceof Error ? error.message : '抄写失败');
+    } catch {
+      void 0;
     } finally {
       setPublishSubmitting(false);
     }

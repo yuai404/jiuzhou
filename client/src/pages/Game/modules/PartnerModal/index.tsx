@@ -111,13 +111,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         throw new Error(getUnifiedApiErrorMessage(res, '获取伙伴信息失败'));
       }
       setOverview(res.data);
-    } catch (error) {
+    } catch {
       setOverview(null);
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '获取伙伴信息失败'));
     } finally {
       setLoading(false);
     }
-  }, [message, open]);
+  }, [open]);
 
   const refreshRecruitStatus = useCallback(async (mode: RecruitStatusRefreshMode = 'background') => {
     if (!open) return;
@@ -127,13 +126,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         throw new Error(getUnifiedApiErrorMessage(res, '获取招募状态失败'));
       }
       applyRecruitStatus(res.data);
-    } catch (error) {
+    } catch {
       if (mode === 'initial') {
         applyRecruitStatus(null);
-        message.error(getUnifiedApiErrorMessage(error as { message?: string }, '获取招募状态失败'));
       }
     }
-  }, [applyRecruitStatus, message, open]);
+  }, [applyRecruitStatus, open]);
 
   useEffect(() => {
     if (!open) {
@@ -240,13 +238,13 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       try {
         await markPartnerRecruitResultViewed();
         await refreshRecruitStatus();
-      } catch (error) {
-        message.warning(getUnifiedApiErrorMessage(error as { message?: string }, '同步招募已读状态失败'));
+      } catch {
+        void 0;
       } finally {
         markingRecruitViewedRef.current = false;
       }
     })();
-  }, [message, open, panel, recruitStatus?.hasUnreadResult, refreshRecruitStatus]);
+  }, [open, panel, recruitStatus?.hasUnreadResult, refreshRecruitStatus]);
 
   useEffect(() => {
     if (!open || panel !== 'technique' || !selectedPartner) {
@@ -276,10 +274,9 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         );
         if (cancelled) return;
         setTechniqueUpgradeCosts(Object.fromEntries(costEntries));
-      } catch (error) {
+      } catch {
         if (cancelled) return;
         setTechniqueUpgradeCosts({});
-        message.error(getUnifiedApiErrorMessage(error as { message?: string }, '读取功法升层消耗失败'));
       }
     };
 
@@ -287,7 +284,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     return () => {
       cancelled = true;
     };
-  }, [message, open, panel, selectedPartner]);
+  }, [open, panel, selectedPartner]);
 
   const handleActivate = useCallback(async (partnerId: number) => {
     setActionKey(`activate-${partnerId}`);
@@ -298,8 +295,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       await refreshOverview();
       dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '切换出战失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -314,8 +311,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       await refreshOverview();
       dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '伙伴下阵失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -336,8 +333,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       await refreshOverview();
       dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '灌注失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -354,8 +351,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       await refreshOverview();
       dispatchPartnerChangedEvent();
       window.dispatchEvent(new Event('inventory:changed'));
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '学习失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -373,8 +370,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
       window.dispatchEvent(new Event('inventory:changed'));
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '升层失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -389,8 +386,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       message.success(res.message || '伙伴招募已开始');
       await refreshRecruitStatus();
       gameSocket.refreshCharacter();
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '开始招募失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -405,8 +402,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       await Promise.all([refreshRecruitStatus(), refreshOverview()]);
       dispatchPartnerChangedEvent();
       gameSocket.refreshCharacter();
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error as { message?: string }, '确认招募失败'));
+    } catch {
+      void 0;
     } finally {
       setActionKey('');
     }
@@ -426,8 +423,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
           if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '放弃失败'));
           message.success(res.message || '已放弃本次招募');
           await refreshRecruitStatus();
-        } catch (error) {
-          message.error(getUnifiedApiErrorMessage(error as { message?: string }, '放弃失败'));
+        } catch {
+          void 0;
         } finally {
           setActionKey('');
         }

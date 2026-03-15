@@ -532,8 +532,8 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
       setEquipmentUnbindOpen(false);
-    } catch (error: unknown) {
-      message.error(getUnifiedApiErrorMessage(error, '使用失败'));
+    } catch {
+      void 0;
     } finally {
       setEquipmentUnbindSubmitting(false);
     }

@@ -245,9 +245,8 @@ const SettingModal: React.FC<SettingModalProps> = ({ open, onClose }) => {
       const res = await updateCharacterDungeonNoStaminaCost(nextEnabled);
       if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '设置保存失败'));
       message.success('秘境免体力设置已保存');
-    } catch (error) {
+    } catch {
       rollback();
-      message.error(getUnifiedApiErrorMessage(error, '秘境免体力设置保存失败'));
     } finally {
       setDungeonNoStaminaCostSaving(false);
     }

@@ -18,15 +18,11 @@ const CreateCharacter: React.FC<CreateCharacterProps> = ({ open, onSuccess }) =>
     setLoading(true);
     try {
       const result = await apiCreateCharacter(values.name, values.gender);
-      if (result.success) {
-        message.success('角色创建成功');
-        onSuccess(values);
-      } else {
-        message.error(result.message || '创建失败');
-      }
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      message.error(err.message || '创建失败');
+      if (!result.success) return;
+      message.success('角色创建成功');
+      onSuccess(values);
+    } catch {
+      void 0;
     } finally {
       setLoading(false);
     }

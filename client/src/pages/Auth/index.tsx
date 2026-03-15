@@ -3,7 +3,6 @@ import { App, Button, Form, Input } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 
 import CreateCharacter from '../../components/CreateCharacter';
-import { getUnifiedApiErrorMessage } from '../../services/api/error';
 import {
   checkCharacter,
   login as apiLogin,
@@ -115,11 +114,10 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
         } else {
           setShowCreateCharacter(true);
         }
-      } catch (error) {
-        message.error(getUnifiedApiErrorMessage(error, '角色状态检查失败'));
+      } catch {
+        void 0;
       }
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error, '登录失败'));
+    } catch {
       refreshLoginCaptcha();
     } finally {
       setLoading(false);
@@ -139,8 +137,7 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
       message.success('注册成功，请登录');
       refreshRegisterCaptcha();
       flipToLogin();
-    } catch (error) {
-      message.error(getUnifiedApiErrorMessage(error, '注册失败'));
+    } catch {
       refreshRegisterCaptcha();
     } finally {
       setLoading(false);
