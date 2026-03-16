@@ -3,7 +3,7 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：锁定 webhook 签名串、OpenAPI 签名和私信失败重试时间表的纯函数规则，避免接入细节散落后悄悄漂移。
- * 2. 做什么：验证目标方案判断与月卡奖励载荷只有一个单一来源，后续改需求时能明确看到断言变化。
+ * 2. 做什么：验证方案配置查询与月卡奖励载荷只有一个单一来源，后续改需求时能明确看到断言变化。
  * 3. 不做什么：不请求真实爱发电接口、不校验数据库写入，也不覆盖路由响应格式。
  *
  * 输入/输出：
@@ -21,19 +21,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  AFDIAN_TARGET_PLAN_ID,
-  buildAfdianMonthCardRewardPayload,
+  AFDIAN_MONTH_CARD_PLAN_ID,
+  AFDIAN_PLAN_CONFIGS,
   buildAfdianOpenApiSign,
   buildAfdianWebhookSignText,
   computeAfdianMessageRetryAt,
-  isTargetAfdianPlan,
+  getAfdianPlanConfig,
   type AfdianWebhookOrder,
 } from '../afdian/shared.js';
 
 const SAMPLE_ORDER: AfdianWebhookOrder = {
   out_trade_no: '202603160001',
   user_id: 'afdian-user-001',
-  plan_id: AFDIAN_TARGET_PLAN_ID,
+  plan_id: AFDIAN_MONTH_CARD_PLAN_ID,
   month: 1,
   total_amount: '18.00',
   status: 2,
@@ -68,10 +68,12 @@ test('computeAfdianMessageRetryAt: 应按预设退避节奏给出下次重试时
   assert.equal(computeAfdianMessageRetryAt(6, base), null);
 });
 
-test('爱发电目标方案与月卡奖励载荷应固定命中月卡道具', () => {
-  assert.equal(isTargetAfdianPlan(AFDIAN_TARGET_PLAN_ID), true);
-  assert.equal(isTargetAfdianPlan('other-plan'), false);
-  assert.deepEqual(buildAfdianMonthCardRewardPayload(), {
-    items: [{ itemDefId: 'cons-monthcard-001', quantity: 1 }],
+test('爱发电方案配置应按 plan_id 返回对应奖励载荷', () => {
+  assert.deepEqual(Object.keys(AFDIAN_PLAN_CONFIGS), [AFDIAN_MONTH_CARD_PLAN_ID]);
+  assert.deepEqual(getAfdianPlanConfig(AFDIAN_MONTH_CARD_PLAN_ID), {
+    rewardPayload: {
+      items: [{ itemDefId: 'cons-monthcard-001', quantity: 1 }],
+    },
   });
+  assert.equal(getAfdianPlanConfig('other-plan'), null);
 });

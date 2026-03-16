@@ -2,7 +2,7 @@
  * 爱发电 webhook 服务
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：校验爱发电 webhook 签名，按订单幂等落库，并在目标方案命中时生成兑换码与私信任务。
+ * 1. 做什么：校验爱发电 webhook 签名，按订单幂等落库，并在受支持方案命中时生成兑换码与私信任务。
  * 2. 做什么：把“订单入库、兑换码生成、私信任务创建”收敛到单一服务入口，避免路由层散落 SQL。
  * 3. 不做什么：不直接返回 HTTP 响应，也不管理后台定时器生命周期。
  *
@@ -12,7 +12,7 @@
  *
  * 数据流/状态流：
  * webhook 路由 -> verifyWebhookSignature -> afdian_order；
- * 命中目标方案 -> redeemCodeService.getOrCreateCodeBySource -> afdian_message_delivery -> 即时尝试发送。
+ * 命中受支持方案 -> redeemCodeService.getOrCreateCodeBySource -> afdian_message_delivery -> 即时尝试发送。
  *
  * 关键边界条件与坑点：
  * 1. webhook 可能重复推送，因此订单幂等必须基于 `out_trade_no`，不能靠内存态判断。
@@ -27,10 +27,9 @@ import { redeemCodeService } from './redeemCodeService.js';
 import {
   AFDIAN_REDEEM_SOURCE_TYPE,
   AFDIAN_WEBHOOK_PUBLIC_KEY,
-  buildAfdianMonthCardRewardPayload,
   buildAfdianRedeemCodeMessage,
   buildAfdianWebhookSignText,
-  isTargetAfdianPlan,
+  getAfdianPlanConfig,
   type AfdianWebhookOrder,
   type AfdianWebhookPayload,
 } from './afdian/shared.js';
@@ -182,14 +181,15 @@ class AfdianWebhookService {
       orderRedeemCodeId = insertedRow.redeem_code_id ? Number(insertedRow.redeem_code_id) : 0;
     }
 
-    if (!isTargetAfdianPlan(order.plan_id)) {
+    const planConfig = getAfdianPlanConfig(order.plan_id);
+    if (!planConfig) {
       return { deliveryId: null };
     }
 
     const redeemCode = await redeemCodeService.getOrCreateCodeBySource({
       sourceType: AFDIAN_REDEEM_SOURCE_TYPE,
       sourceRefId: order.out_trade_no,
-      rewardPayload: buildAfdianMonthCardRewardPayload(),
+      rewardPayload: planConfig.rewardPayload,
     });
 
     if (orderRedeemCodeId !== redeemCode.id) {

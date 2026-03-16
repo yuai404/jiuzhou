@@ -2,8 +2,8 @@
  * 爱发电接入共享模块
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：集中维护爱发电 webhook / OpenAPI 的常量、签名拼装、目标方案判断和私信重试节奏，避免路由、服务、定时器各写一套。
- * 2. 做什么：集中定义“爱发电订单 -> 本服兑换码消息”的固定文案与月卡奖励配置，保证单一入口。
+ * 1. 做什么：集中维护爱发电 webhook / OpenAPI 的常量、签名拼装、方案配置查询和私信重试节奏，避免路由、服务、定时器各写一套。
+ * 2. 做什么：集中定义“爱发电订单 -> 本服兑换码消息”的固定文案与方案奖励配置，保证单一入口。
  * 3. 不做什么：不直接发 HTTP 请求、不写数据库，也不负责实际物品发放。
  *
  * 输入/输出：
@@ -23,7 +23,7 @@ import type {
   GrantedRewardPayload as RedeemCodeRewardPayload,
 } from '../shared/rewardPayload.js';
 
-export const AFDIAN_TARGET_PLAN_ID = '04f7a35e210c11f182a752540025c377';
+export const AFDIAN_MONTH_CARD_PLAN_ID = '04f7a35e210c11f182a752540025c377';
 export const AFDIAN_REDEEM_SOURCE_TYPE = 'afdian_order';
 export const AFDIAN_MONTH_CARD_ITEM_DEF_ID = 'cons-monthcard-001';
 export const AFDIAN_OPEN_API_DEFAULT_BASE_URL = 'https://ifdian.net';
@@ -86,13 +86,34 @@ export type AfdianOpenApiEnvelope<TData extends object> = {
   data: TData;
 };
 
+export type AfdianPlanConfig = {
+  rewardPayload: RedeemCodeRewardPayload;
+};
+
+export const AFDIAN_PLAN_CONFIGS: Readonly<Record<string, AfdianPlanConfig>> = {
+  [AFDIAN_MONTH_CARD_PLAN_ID]: {
+    rewardPayload: {
+      items: [
+        {
+          itemDefId: AFDIAN_MONTH_CARD_ITEM_DEF_ID,
+          quantity: 1,
+        },
+      ],
+    },
+  },
+};
+
 export const getAfdianOpenApiBaseUrl = (): string => {
   const raw = String(process.env.AFDIAN_OPEN_API_BASE_URL ?? AFDIAN_OPEN_API_DEFAULT_BASE_URL).trim();
   return raw.replace(/\/+$/u, '') || AFDIAN_OPEN_API_DEFAULT_BASE_URL;
 };
 
-export const isTargetAfdianPlan = (planId: string): boolean => {
-  return planId.trim() === AFDIAN_TARGET_PLAN_ID;
+export const getAfdianPlanConfig = (planId: string): AfdianPlanConfig | null => {
+  const normalizedPlanId = planId.trim();
+  if (!normalizedPlanId) {
+    return null;
+  }
+  return AFDIAN_PLAN_CONFIGS[normalizedPlanId] ?? null;
 };
 
 export const buildAfdianWebhookSignText = (order: AfdianWebhookOrder): string => {
@@ -109,23 +130,12 @@ export const buildAfdianOpenApiSign = (input: {
   return createHash('md5').update(signText).digest('hex');
 };
 
-export const buildAfdianMonthCardRewardPayload = (): RedeemCodeRewardPayload => {
-  return {
-    items: [
-      {
-        itemDefId: AFDIAN_MONTH_CARD_ITEM_DEF_ID,
-        quantity: 1,
-      },
-    ],
-  };
-};
-
 export const buildAfdianRedeemCodeMessage = (code: string): string => {
   return [
     '感谢你支持《九州修仙录》！',
-    '这是为你生成的月卡兑换码：',
+    '这是为你生成的赞助兑换码：',
     code,
-    '进入游戏后，在“设置 - 兑换码”中输入即可领取 1 个修行月卡道具。',
+    '进入游戏后，在“设置 - 兑换码”中输入即可领取对应赞助奖励。',
   ].join('\n');
 };
 
