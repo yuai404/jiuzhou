@@ -18,7 +18,7 @@
         "unlock_condition": {},
         "daily_limit": 0,
         "weekly_limit": 0,
-        "stamina_cost": 8,
+        "stamina_cost": 15,
         "time_limit_sec": 900,
         "revive_limit": 3,
         "tags": [
