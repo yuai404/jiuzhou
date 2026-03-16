@@ -24,7 +24,7 @@ type TaskStatus = 'ongoing' | 'turnin' | 'claimable' | 'completed';
 
 type TaskReward = { id: string; name: string; icon: string; amount: number; amountMax?: number };
 
-type TaskObjective = { text: string; done: number; total: number };
+type TaskObjective = { text: string; done: number; total: number; mapName?: string | null; mapNameType?: 'map' | 'dungeon' | null };
 
 type TaskItem = {
   id: string;
@@ -177,6 +177,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
               text: String(o.text || ''),
               done: Number.isFinite(Number(o.done)) ? Number(o.done) : 0,
               total: Number.isFinite(Number(o.target)) ? Number(o.target) : 1,
+              mapName: typeof o.mapName === 'string' && o.mapName.trim() ? o.mapName.trim() : null,
+              mapNameType: o.mapNameType === 'map' || o.mapNameType === 'dungeon' ? o.mapNameType : null,
             }))
             .filter((o) => o.text);
 
@@ -230,6 +232,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
               text: String(o.text || ''),
               done: Number.isFinite(Number(o.done)) ? Number(o.done) : 0,
               total: Number.isFinite(Number(o.target)) ? Number(o.target) : 1,
+              mapName: typeof o.mapName === 'string' && o.mapName.trim() ? o.mapName.trim() : null,
+              mapNameType: o.mapNameType === 'map' || o.mapNameType === 'dungeon' ? o.mapNameType : null,
             }))
             .filter((o) => o.text);
 
@@ -545,7 +549,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onTrackedChange })
                     <div className="task-objectives">
                       {activeTask.objectives.map((o) => (
                         <div key={o.text} className="task-objective">
-                          <div className="task-objective-text">{o.text}</div>
+                          <div className="task-objective-body">
+                            <div className="task-objective-text">{o.text}</div>
+                            {o.mapName ? (
+                              <Tag className="task-objective-map-tag" color={o.mapNameType === 'dungeon' ? 'purple' : 'cyan'}>{o.mapName}</Tag>
+                            ) : null}
+                          </div>
                           <div className="task-objective-progress">
                             {o.done}/{o.total}
                           </div>

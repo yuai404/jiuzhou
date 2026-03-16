@@ -252,6 +252,14 @@
   gap: 12px;
 }
 
+.task-objective-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
 .task-objective-text {
   font-weight: 900;
   color: var(--text-tertiary);
@@ -259,6 +267,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.task-objective-map-tag {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
 }
 
 .task-objective-progress {

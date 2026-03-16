@@ -11,6 +11,8 @@ export type TaskObjectiveDto = {
   done: number;
   target: number;
   params?: Record<string, unknown>;
+  mapName: string | null;
+  mapNameType: 'map' | 'dungeon' | null;
 };
 
 export type TaskRewardDto =
@@ -25,6 +27,7 @@ export type TaskOverviewRowDto = {
   realm: string;
   giverNpcId: string | null;
   mapId: string | null;
+  mapName: string | null;
   roomId: string | null;
   status: TaskStatus;
   tracked: boolean;

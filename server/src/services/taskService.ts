@@ -5,8 +5,13 @@ import { ensureMainQuestProgressForNewChapters, updateSectionProgress, updateSec
 import { updateAchievementProgress } from './achievementService.js';
 import { Transactional } from '../decorators/transactional.js';
 import {
+  getDungeonDefinitions,
+  getDungeonDifficultiesByDungeonId,
+  getDungeonStagesByDifficultyId,
+  getDungeonWavesByStageId,
   getMainQuestChapterById,
   getMainQuestSectionById,
+  getMapDefinitions,
   getNpcDefinitions,
   getTalkTreeDefinitions,
 } from './staticConfigLoader.js';
@@ -41,6 +46,8 @@ type TaskObjectiveDto = {
   done: number;
   target: number;
   params?: Record<string, unknown>;
+  mapName: string | null;
+  mapNameType: 'map' | 'dungeon' | null;
 };
 
 type TaskRewardDto =
@@ -55,6 +62,7 @@ type TaskOverviewDto = {
   realm: string;
   giverNpcId: string | null;
   mapId: string | null;
+  mapName: string | null;
   roomId: string | null;
   status: TaskStatus;
   tracked: boolean;
@@ -138,6 +146,110 @@ const mapProgressStatusToUiStatus = (v: unknown): TaskStatus => {
 const parseObjectives = (objectives: unknown): RawObjective[] => (Array.isArray(objectives) ? (objectives as RawObjective[]) : []);
 
 const parseRewards = (rewards: unknown): RawReward[] => (Array.isArray(rewards) ? (rewards as RawReward[]) : []);
+
+/** 根据 mapId 从地图定义中查找地图名称 */
+const resolveMapName = (mapId: string | null): string | null => {
+  if (!mapId) return null;
+  const map = getMapDefinitions().find((m) => m.id === mapId);
+  return map?.name ?? null;
+};
+
+/**
+ * 从 map_def.json 的房间数据中构建 entity_id → 地图名称 的缓存
+ * 用于将怪物/资源 ID 解析到其所在的地图
+ */
+let entityMapNameCache: Map<string, string> | null = null;
+
+const buildEntityMapNameCache = (): Map<string, string> => {
+  if (entityMapNameCache) return entityMapNameCache;
+  const cache = new Map<string, string>();
+  const maps = getMapDefinitions();
+  for (const map of maps) {
+    const rooms = map.rooms as Array<{
+      monsters?: Array<{ monster_def_id: string }>;
+      resources?: Array<{ resource_id: string }>;
+    }> | undefined;
+    if (!Array.isArray(rooms)) continue;
+    for (const room of rooms) {
+      if (Array.isArray(room.monsters)) {
+        for (const m of room.monsters) {
+          if (m.monster_def_id && !cache.has(m.monster_def_id)) {
+            cache.set(m.monster_def_id, map.name);
+          }
+        }
+      }
+      if (Array.isArray(room.resources)) {
+        for (const r of room.resources) {
+          if (r.resource_id && !cache.has(r.resource_id)) {
+            cache.set(r.resource_id, map.name);
+          }
+        }
+      }
+    }
+  }
+  entityMapNameCache = cache;
+  return cache;
+};
+
+/**
+ * 从所有副本的波次数据中构建 monster_id → 副本名称 的缓存
+ * 用于将秘境内 boss/怪物解析到其所属副本
+ */
+let monsterDungeonNameCache: Map<string, string> | null = null;
+
+const buildMonsterDungeonNameCache = (): Map<string, string> => {
+  if (monsterDungeonNameCache) return monsterDungeonNameCache;
+  const cache = new Map<string, string>();
+  for (const dungeon of getDungeonDefinitions()) {
+    const diffs = getDungeonDifficultiesByDungeonId(dungeon.id);
+    for (const diff of diffs) {
+      for (const stage of getDungeonStagesByDifficultyId(diff.id)) {
+        for (const wave of getDungeonWavesByStageId(stage.id)) {
+          for (const m of wave.monsters ?? []) {
+            const mid = typeof m === 'object' && m !== null && typeof (m as Record<string, unknown>).monster_def_id === 'string'
+              ? String((m as Record<string, unknown>).monster_def_id)
+              : '';
+            if (mid && !cache.has(mid)) {
+              cache.set(mid, dungeon.name);
+            }
+          }
+        }
+      }
+    }
+  }
+  monsterDungeonNameCache = cache;
+  return cache;
+};
+
+/**
+ * 根据目标参数解析该目标实际执行的地点标签及类型
+ * - dungeon_clear：有具体 dungeon_id 时返回 "秘境"；无则返回 null
+ * - kill_monster：优先从副本波次查找所属副本名，其次从地图房间查找地图名
+ * - gather_resource：从地图房间查找地图名
+ * - 无具体目标：返回 null
+ */
+const resolveObjectiveMapName = (
+  params: Record<string, unknown> | undefined,
+): { name: string; type: 'map' | 'dungeon' } | null => {
+  if (!params) return null;
+  const dungeonId = asNonEmptyString(params.dungeon_id);
+  if (dungeonId) return { name: '秘境', type: 'dungeon' };
+  const monsterId = asNonEmptyString(params.monster_id);
+  if (monsterId) {
+    const dungeonName = buildMonsterDungeonNameCache().get(monsterId);
+    if (dungeonName) return { name: dungeonName, type: 'dungeon' };
+    const mapName = buildEntityMapNameCache().get(monsterId);
+    if (mapName) return { name: mapName, type: 'map' };
+    return null;
+  }
+  const resourceId = asNonEmptyString(params.resource_id);
+  if (resourceId) {
+    const mapName = buildEntityMapNameCache().get(resourceId);
+    if (mapName) return { name: mapName, type: 'map' };
+    return null;
+  }
+  return null;
+};
 
 const collectRewardItemDefIds = (rewardGroups: Iterable<RawReward[]>): string[] => {
   const itemRewardIds = new Set<string>();
@@ -367,6 +479,7 @@ export const getTaskOverview = async (
       const realm = asNonEmptyString(r.realm) ?? '凡人';
       const giverNpcId = asNonEmptyString(r.giver_npc_id);
       const mapId = asNonEmptyString(r.map_id);
+      const mapName = resolveMapName(mapId);
       const roomId = asNonEmptyString(r.room_id);
       const description = String(r.description ?? '');
       const tracked = r.tracked === true;
@@ -381,7 +494,8 @@ export const getTaskOverview = async (
           const type = String(o?.type ?? 'unknown');
           const paramsValue = o?.params;
           const params = paramsValue && typeof paramsValue === 'object' ? (paramsValue as Record<string, unknown>) : undefined;
-          return { id: oid, type, text, done, target, ...(params ? { params } : {}) };
+          const objMapName = resolveObjectiveMapName(params);
+          return { id: oid, type, text, done, target, mapName: objMapName?.name ?? null, mapNameType: objMapName?.type ?? null, ...(params ? { params } : {}) };
         })
         .filter((x) => x.text);
 
@@ -389,7 +503,7 @@ export const getTaskOverview = async (
         .map((rw) => toTaskRewardDto(rw, itemMeta))
         .filter((x): x is TaskRewardDto => x !== null && x.amount > 0);
 
-      return { id, category, title, realm, giverNpcId, mapId, roomId, status, tracked, description, objectives, rewards };
+      return { id, category, title, realm, giverNpcId, mapId, mapName, roomId, status, tracked, description, objectives, rewards };
     })
     .filter((t) => t.id);
 
@@ -499,6 +613,7 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
       const realm = taskDef.realm ?? '凡人';
       const giverNpcId = asNonEmptyString(taskDef.giver_npc_id);
       const mapId = taskDef.map_id;
+      const mapName = resolveMapName(mapId);
       const roomId = taskDef.room_id;
       const description = String(r.bounty_description ?? '');
       const tracked = r.tracked === true;
@@ -513,7 +628,8 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
           const type = String(o?.type ?? 'unknown');
           const paramsValue = o?.params;
           const params = paramsValue && typeof paramsValue === 'object' ? (paramsValue as Record<string, unknown>) : undefined;
-          return { id: oid, type, text, done, target, ...(params ? { params } : {}) };
+          const objMapName = resolveObjectiveMapName(params);
+          return { id: oid, type, text, done, target, mapName: objMapName?.name ?? null, mapNameType: objMapName?.type ?? null, ...(params ? { params } : {}) };
         })
         .filter((x) => x.text);
 
@@ -544,6 +660,7 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
         realm,
         giverNpcId,
         mapId,
+        mapName,
         roomId,
         status,
         tracked,
