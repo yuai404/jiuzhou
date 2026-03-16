@@ -65,6 +65,7 @@ export {
   refineEquipment,
   rerollEquipmentAffixes,
   getRerollCostPreview,
+  getAffixPoolPreview,
 } from "./equipment.js";
 
 // ============================================

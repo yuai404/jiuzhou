@@ -1,0 +1,240 @@
+/* 词条池预览弹窗样式 — 适配项目全局亮/暗色变量的清爽布局 */
+
+.affix-pool-preview {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 16px;
+}
+
+/* 状态展示 */
+.affix-pool-preview-loading,
+.affix-pool-preview-empty {
+  text-align: center;
+  color: var(--text-secondary, #999);
+  padding: 40px 0;
+  font-size: 13px;
+}
+
+/* ---- 顶部：搜索栏与统计 ---- */
+.affix-pool-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.search-input {
+  max-width: 240px;
+  border-radius: 6px;
+}
+
+.stats {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  flex-shrink: 0;
+
+  .stats-num {
+    font-weight: 600;
+    color: var(--text-color, #333);
+
+    &.highlight {
+      color: var(--primary-color, #1677ff);
+    }
+  }
+
+  .stats-divider {
+    margin: 0 8px;
+    color: var(--border-color-split, #e8e8e8);
+  }
+}
+
+/* ---- 滚动列表区块 ---- */
+.affix-pool-preview-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px; /* 留出滚动条空间 */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  /* 自定义一点滚动条，使之更柔和 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-color-soft, rgba(128,128,128,0.2));
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--border-color, rgba(128,128,128,0.4));
+  }
+}
+
+/* ---- 分组标题 ---- */
+.affix-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color-split, rgba(128,128,128,0.15));
+
+    .label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .count {
+      font-size: 11px;
+      color: var(--text-tertiary, #bbb);
+      background: var(--panel-bg-soft, rgba(128,128,128,0.1));
+      padding: 1px 6px;
+      border-radius: 10px;
+      line-height: normal;
+    }
+  }
+}
+
+/* ---- 词条卡片网格 ---- */
+.affix-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.affix-card {
+  background: var(--panel-bg-soft, rgba(128,128,128,0.05));
+  border: 1px solid var(--border-color-soft, rgba(128,128,128,0.15));
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &:hover {
+    border-color: var(--border-color, rgba(128,128,128,0.3));
+    background: var(--panel-bg, transparent);
+    box-shadow: 0 2px 6px var(--shadow-color, rgba(0,0,0,0.1));
+  }
+
+  &.is-owned {
+    background: color-mix(in srgb, var(--primary-color, #1677ff) 5%, transparent);
+    border-color: color-mix(in srgb, var(--primary-color, #1677ff) 30%, transparent);
+  }
+
+  &.is-legendary {
+    border-left: 3px solid var(--gold-color, #faad14);
+  }
+}
+
+/* 卡片头部：名称与标签 */
+.affix-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+
+  .name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+
+    .legendary-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold-color, #faad14);
+      flex-shrink: 0;
+    }
+
+    .name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .owned-tag {
+    font-size: 10px;
+    color: var(--primary-color, #1677ff);
+    background: color-mix(in srgb, var(--primary-color, #1677ff) 10%, transparent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+}
+
+/* 卡片身体：数值行 */
+.affix-card-body {
+  .tier-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tier-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel-bg-soft, rgba(128,128,128,0.06));
+    border: 1px solid var(--border-color-split, rgba(128,128,128,0.1));
+    border-radius: 4px;
+    padding: 3px 8px;
+
+    .tier-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary, #888);
+      font-family: Consolas, monospace;
+    }
+
+    .tier-value {
+      font-size: 12px;
+      color: var(--text-color);
+      font-family: Consolas, monospace;
+    }
+  }
+
+  .tier-empty {
+    font-size: 11px;
+    color: var(--text-tertiary, #bbb);
+    text-align: center;
+    padding: 4px 0;
+  }
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 576px) {
+  .affix-pool-preview-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+
+    .search-input {
+      max-width: none;
+    }
+  }
+
+  .affix-list {
+    grid-template-columns: 1fr;
+  }
+
+  .affix-pool-preview-body {
+    max-height: 50vh;
+  }
+}

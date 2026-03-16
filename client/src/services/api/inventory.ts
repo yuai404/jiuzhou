@@ -342,6 +342,37 @@ export const getRerollCostPreview = (
   return api.post('/inventory/reroll-affixes/cost-preview', { itemId });
 };
 
+export interface AffixPoolPreviewTierEntry {
+  tier: number;
+  min: number;
+  max: number;
+}
+
+export interface AffixPoolPreviewAffixEntry {
+  key: string;
+  name: string;
+  group: string;
+  is_legendary: boolean;
+  apply_type: string;
+  tiers: AffixPoolPreviewTierEntry[];
+  owned: boolean;
+}
+
+export interface AffixPoolPreviewResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    poolName: string;
+    affixes: AffixPoolPreviewAffixEntry[];
+  };
+}
+
+export const getAffixPoolPreview = (
+  itemId: number,
+): Promise<AffixPoolPreviewResponse> => {
+  return api.post('/inventory/reroll-affixes/pool-preview', { itemId });
+};
+
 export interface SocketedGemEffectDto {
   attr: string;
   value: number;

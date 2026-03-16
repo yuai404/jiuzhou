@@ -545,6 +545,25 @@ router.post('/reroll-affixes/cost-preview', asyncHandler(async (req, res) => {
 }));
 
 // ============================================
+// 洗炼词条池预览
+// POST /api/inventory/reroll-affixes/pool-preview
+// Body: { itemId: number }
+// ============================================
+router.post('/reroll-affixes/pool-preview', asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const { itemId } = req.body as { itemId?: unknown };
+    if (itemId === undefined || itemId === null) {
+      throw new BusinessError('参数不完整');
+    }
+    const parsedItemId = Number(itemId);
+    if (!Number.isInteger(parsedItemId) || parsedItemId <= 0) {
+      throw new BusinessError('itemId参数错误');
+    }
+    const result = await inventoryService.getAffixPoolPreview(characterId, parsedItemId);
+    return sendResult(res, result);
+}));
+
+// ============================================
 // 装备词条洗炼
 // POST /api/inventory/reroll-affixes
 // Body: { itemId: number, lockIndexes?: number[] }

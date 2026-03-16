@@ -22,6 +22,7 @@ import {
   refineInventoryItem,
   rerollInventoryAffixes,
   getRerollCostPreview,
+  getAffixPoolPreview,
   removeInventoryItemsBatch,
   setInventoryItemLock,
   socketInventoryGem,
@@ -29,7 +30,7 @@ import {
   unequipInventoryItem,
 } from '../../../../services/api';
 import { getUnifiedApiErrorMessage } from '../../../../services/api';
-import type { InventoryInfoData } from '../../../../services/api';
+import type { InventoryInfoData, AffixPoolPreviewResponse } from '../../../../services/api';
 import {
   attrLabel,
   attrOrder,
@@ -57,6 +58,7 @@ import {
   qualityRank,
 } from './bagShared';
 import type { BagAction, BagCategory, BagItem, BagQuality, BagSort, BatchMode } from './bagShared';
+import { AffixPoolPreviewModal } from './AffixPoolPreviewModal';
 import { buildAutoDisassembleSubCategoryOptionsByCategory } from '../../shared/autoDisassembleFilters';
 import { formatPercent, formatSignedNumber, formatSignedPercent } from '../../shared/formatAttr';
 import { getItemQualityMeta, getItemQualityTagClassName } from '../../shared/itemQuality';
@@ -643,6 +645,9 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
     rerollScrollItemDefId: string;
     entries: Array<{ lockCount: number; rerollScrollQty: number; silverCost: number; spiritStoneCost: number }>;
   } | null>(null);
+  const [poolPreviewOpen, setPoolPreviewOpen] = useState(false);
+  const [poolPreviewLoading, setPoolPreviewLoading] = useState(false);
+  const [poolPreviewData, setPoolPreviewData] = useState<AffixPoolPreviewResponse['data'] | null>(null);
   const [socketSlot, setSocketSlot] = useState<number | undefined>(undefined);
   const [selectedGemItemId, setSelectedGemItemId] = useState<number | undefined>(undefined);
 
@@ -861,6 +866,27 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
       setSubmitting(false);
     }
   }, [item.id, message, onDone, rerollState]);
+
+  const handleOpenPoolPreview = useCallback(async () => {
+    if (!item?.id || poolPreviewLoading) return;
+    setPoolPreviewOpen(true);
+    setPoolPreviewLoading(true);
+    setPoolPreviewData(null);
+    try {
+      const res = await getAffixPoolPreview(item.id);
+      if (res.success) {
+        setPoolPreviewData(res.data ?? null);
+      } else {
+        message.warning(res.message || '获取词条池失败');
+        setPoolPreviewOpen(false);
+      }
+    } catch {
+      message.error('获取词条池失败');
+      setPoolPreviewOpen(false);
+    } finally {
+      setPoolPreviewLoading(false);
+    }
+  }, [item, message, poolPreviewLoading]);
 
   const handleSocket = useCallback(async () => {
     if (!socketState) return;
@@ -1119,6 +1145,17 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
                   })}
                 </div>
               </div>
+
+              <div style={{ padding: '0 4px' }}>
+                <button
+                  type="button"
+                  className="mbag-reroll-pool-preview-btn"
+                  onClick={() => void handleOpenPoolPreview()}
+                  disabled={item.locked}
+                >
+                  查看词条池
+                </button>
+              </div>
             </>
           ) : null}
 
@@ -1186,6 +1223,14 @@ const GrowthSheet: React.FC<GrowthSheetProps> = ({
           </button>
         </div>
       </div>
+
+      <AffixPoolPreviewModal
+        open={poolPreviewOpen}
+        onClose={() => setPoolPreviewOpen(false)}
+        loading={poolPreviewLoading}
+        poolName={poolPreviewData?.poolName ?? ''}
+        affixes={poolPreviewData?.affixes ?? []}
+      />
     </>
   );
 };

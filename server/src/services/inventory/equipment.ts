@@ -11,6 +11,7 @@
  * - refineEquipment(characterId, userId, itemInstanceId) — 精炼装备
  * - rerollEquipmentAffixes(characterId, userId, itemInstanceId, lockIndexes) — 词条洗炼
  * - getRerollCostPreview(characterId, itemInstanceId) — 洗炼消耗预览（纯查询）
+ * - getAffixPoolPreview(characterId, itemInstanceId) — 洗炼词条池预览（纯查询）
  *
  * 数据流：
  * - 穿戴/卸下：校验 → 属性差分 → 更新位置 → 应用差分 → 套装加成
@@ -51,6 +52,7 @@ import {
   rerollEquipmentAffixesWithLocks,
   resolveQualityForReroll,
 } from "../equipmentAffixRerollService.js";
+import { getAffixPoolDefinitions } from "../staticConfigLoader.js";
 import type { GeneratedAffix } from "../equipmentService.js";
 import {
   getCharacterComputedByCharacterId,
@@ -917,6 +919,100 @@ export const getRerollCostPreview = async (
       rerollScrollItemDefId: REROLL_SCROLL_ITEM_DEF_ID,
       maxLockCount,
       costTable,
+    },
+  };
+};
+
+// ============================================
+// 洗炼词条池预览
+// ============================================
+
+export const getAffixPoolPreview = async (
+  characterId: number,
+  itemInstanceId: number,
+): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    poolName: string;
+    affixes: Array<{
+      key: string;
+      name: string;
+      group: string;
+      is_legendary: boolean;
+      apply_type: string;
+      tiers: Array<{
+        tier: number;
+        min: number;
+        max: number;
+      }>;
+      owned: boolean;
+    }>;
+  };
+}> => {
+  const row = await query(
+    `SELECT ii.item_def_id, ii.affixes, ii.locked, ii.location, ii.qty
+     FROM item_instance ii
+     WHERE ii.id = $1 AND ii.owner_character_id = $2
+     LIMIT 1`,
+    [itemInstanceId, characterId],
+  );
+  if (row.rows.length === 0) return { success: false, message: '物品不存在' };
+
+  const r = row.rows[0] as {
+    item_def_id: string;
+    affixes: unknown;
+    locked: boolean;
+    location: string;
+    qty: number;
+  };
+
+  const itemDef = getStaticItemDef(r.item_def_id);
+  if (!itemDef || itemDef.category !== 'equipment')
+    return { success: false, message: '该物品不可洗炼' };
+  if (r.locked) return { success: false, message: '物品已锁定' };
+  if (String(r.location) === 'auction')
+    return { success: false, message: '交易中的装备不可洗炼' };
+  if (!['bag', 'warehouse', 'equipped'].includes(String(r.location)))
+    return { success: false, message: '该物品当前位置不可洗炼' };
+
+  const affixes = parseGeneratedAffixesForReroll(r.affixes);
+  if (affixes.length <= 0)
+    return { success: false, message: '该装备没有可洗炼词条' };
+
+  const affixPoolId = String(itemDef.affix_pool_id || '').trim();
+  if (!affixPoolId) return { success: false, message: '该装备没有可用词条池' };
+
+  const poolDef = getAffixPoolDefinitions().find(
+    (entry) => entry.enabled !== false && entry.id === affixPoolId,
+  );
+  if (!poolDef) return { success: false, message: '词条池不存在' };
+
+  const realmRank = getEquipRealmRankForReroll(itemDef.equip_req_realm);
+  const ownedKeys = new Set(affixes.map((a) => a.key));
+
+  const previewAffixes = poolDef.affixes.map((affix) => ({
+    key: affix.key,
+    name: affix.name,
+    group: affix.group,
+    is_legendary: Boolean(affix.is_legendary),
+    apply_type: affix.apply_type,
+    tiers: affix.tiers
+      .filter((tier) => Number(tier.realm_rank_min ?? 0) <= realmRank)
+      .map((tier) => ({
+        tier: Number(tier.tier ?? 1),
+        min: Number(tier.min ?? 0),
+        max: Number(tier.max ?? 0),
+      })),
+    owned: ownedKeys.has(affix.key),
+  }));
+
+  return {
+    success: true,
+    message: 'ok',
+    data: {
+      poolName: poolDef.name,
+      affixes: previewAffixes,
     },
   };
 };

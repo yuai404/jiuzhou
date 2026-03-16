@@ -2,6 +2,8 @@ import { App, Button, Input, InputNumber, Modal, Select, Tabs, Tag } from 'antd'
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MobileBagModal from './MobileBagModal';
+import { AffixPoolPreviewModal } from './AffixPoolPreviewModal';
+
 import { gameSocket } from '../../../../services/gameSocket';
 import {
   disassembleInventoryEquipmentBatch,
@@ -12,6 +14,7 @@ import {
   refineInventoryItem,
   rerollInventoryAffixes,
   getRerollCostPreview,
+  getAffixPoolPreview,
   removeInventoryItemsBatch,
   setInventoryItemLock,
   socketInventoryGem,
@@ -20,7 +23,7 @@ import {
   inventoryUseItem,
 } from '../../../../services/api';
 import { getUnifiedApiErrorMessage } from '../../../../services/api';
-import type { InventoryInfoData } from '../../../../services/api';
+import type { InventoryInfoData, AffixPoolPreviewResponse } from '../../../../services/api';
 import {
   attrLabel,
   attrOrder,
@@ -100,6 +103,9 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
     rerollScrollItemDefId: string;
     entries: Array<{ lockCount: number; rerollScrollQty: number; silverCost: number; spiritStoneCost: number }>;
   } | null>(null);
+  const [poolPreviewOpen, setPoolPreviewOpen] = useState(false);
+  const [poolPreviewLoading, setPoolPreviewLoading] = useState(false);
+  const [poolPreviewData, setPoolPreviewData] = useState<AffixPoolPreviewResponse['data'] | null>(null);
   const [socketSlot, setSocketSlot] = useState<number | undefined>(undefined);
   const [selectedGemItemId, setSelectedGemItemId] = useState<number | undefined>(undefined);
   const [batchOpen, setBatchOpen] = useState(false);
@@ -741,6 +747,27 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       setRerollSubmitting(false);
     }
   }, [activeItem, message, refresh, rerollState]);
+
+  const handleOpenPoolPreview = useCallback(async () => {
+    if (!activeItem?.id || poolPreviewLoading) return;
+    setPoolPreviewOpen(true);
+    setPoolPreviewLoading(true);
+    setPoolPreviewData(null);
+    try {
+      const res = await getAffixPoolPreview(activeItem.id);
+      if (res.success) {
+        setPoolPreviewData(res.data ?? null);
+      } else {
+        message.warning(res.message || '获取词条池失败');
+        setPoolPreviewOpen(false);
+      }
+    } catch {
+      message.error('获取词条池失败');
+      setPoolPreviewOpen(false);
+    } finally {
+      setPoolPreviewLoading(false);
+    }
+  }, [activeItem, message, poolPreviewLoading]);
 
   const bagOnlyItems = useMemo(() => items.filter((i) => i.location === 'bag'), [items]);
 
@@ -1701,6 +1728,15 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
                   })}
                 </div>
 
+                <button
+                  type="button"
+                  className="bag-reroll-pool-preview-btn"
+                  onClick={() => void handleOpenPoolPreview()}
+                  disabled={!!activeItem?.locked}
+                >
+                  查看词条池
+                </button>
+
                 <Button
                   block
                   type="primary"
@@ -1725,6 +1761,14 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
           ))}
         </div>
       </Modal>
+
+      <AffixPoolPreviewModal
+        open={poolPreviewOpen}
+        onClose={() => setPoolPreviewOpen(false)}
+        loading={poolPreviewLoading}
+        poolName={poolPreviewData?.poolName ?? ''}
+        affixes={poolPreviewData?.affixes ?? []}
+      />
 
       <Modal
         open={batchOpen}

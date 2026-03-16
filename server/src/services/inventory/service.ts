@@ -46,6 +46,7 @@ import {
   refineEquipment,
   rerollEquipmentAffixes,
   getRerollCostPreview,
+  getAffixPoolPreview,
 } from "./equipment.js";
 import { socketEquipment } from "./socket.js";
 import {
@@ -107,6 +108,28 @@ class InventoryService {
     };
   }> {
     return getRerollCostPreview(characterId, itemInstanceId);
+  }
+
+  async getAffixPoolPreview(
+    characterId: number,
+    itemInstanceId: number,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      poolName: string;
+      affixes: Array<{
+        key: string;
+        name: string;
+        group: string;
+        is_legendary: boolean;
+        apply_type: string;
+        tiers: Array<{ tier: number; min: number; max: number }>;
+        owned: boolean;
+      }>;
+    };
+  }> {
+    return getAffixPoolPreview(characterId, itemInstanceId);
   }
 
   async getEquipmentGrowthCostPreview(
