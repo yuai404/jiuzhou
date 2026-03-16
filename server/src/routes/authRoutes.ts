@@ -1,13 +1,43 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { register, login, verifyTokenAndSession } from '../services/authService.js';
+import { createQpsLimitMiddleware } from '../middleware/qpsLimit.js';
+import {
+  getPasswordPolicyError,
+  login,
+  register,
+  verifyTokenAndSession,
+} from '../services/authService.js';
+import {
+  assertCredentialAttemptAllowed,
+  clearCredentialAttemptFailures,
+  recordCredentialAttemptFailure,
+} from '../services/authAttemptGuardService.js';
 import { createCaptcha } from '../services/captchaService.js';
 import { isTencentCaptchaProvider } from '../config/captchaConfig.js';
 import { sendSuccess, sendResult } from '../middleware/response.js';
 import { BusinessError } from '../middleware/BusinessError.js';
+import { resolveRequestIp } from '../shared/requestIp.js';
 import { verifyCaptchaByProvider } from '../shared/verifyCaptchaByProvider.js';
 
 const router = Router();
+
+const AUTH_QPS_LIMIT_MESSAGE = '认证请求过于频繁，请稍后再试';
+
+const registerQpsLimit = createQpsLimitMiddleware({
+  keyPrefix: 'qps:auth:register',
+  limit: 6,
+  windowMs: 10 * 60 * 1000,
+  message: AUTH_QPS_LIMIT_MESSAGE,
+  resolveScope: (req) => resolveRequestIp(req),
+});
+
+const loginQpsLimit = createQpsLimitMiddleware({
+  keyPrefix: 'qps:auth:login',
+  limit: 12,
+  windowMs: 60 * 1000,
+  message: AUTH_QPS_LIMIT_MESSAGE,
+  resolveScope: (req) => resolveRequestIp(req),
+});
 
 type AuthPayload = {
   username?: string;
@@ -28,10 +58,11 @@ router.get('/captcha', asyncHandler(async (_req, res) => {
 }));
 
 // 注册接口
-router.post('/register', asyncHandler(async (req, res) => {
+router.post('/register', registerQpsLimit, asyncHandler(async (req, res) => {
   const payload = (req.body ?? {}) as AuthPayload;
   const username = payload.username?.trim() ?? '';
   const password = payload.password ?? '';
+  const requestIp = resolveRequestIp(req);
 
   if (!username || !password) {
     throw new BusinessError('用户名和密码不能为空');
@@ -41,27 +72,41 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw new BusinessError('用户名长度需在2-20个字符之间');
   }
 
-  if (password.length < 6) {
-    throw new BusinessError('密码长度至少6位');
+  const passwordPolicyError = getPasswordPolicyError(password);
+  if (passwordPolicyError) {
+    throw new BusinessError(passwordPolicyError);
   }
 
-  await verifyCaptchaByProvider({ body: payload, userIp: req.ip ?? '' });
+  await verifyCaptchaByProvider({ body: payload, userIp: requestIp });
   const result = await register(username, password);
   sendResult(res, result);
 }));
 
 // 登录接口
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', loginQpsLimit, asyncHandler(async (req, res) => {
   const payload = (req.body ?? {}) as AuthPayload;
   const username = payload.username?.trim() ?? '';
   const password = payload.password ?? '';
+  const requestIp = resolveRequestIp(req);
 
   if (!username || !password) {
     throw new BusinessError('用户名和密码不能为空');
   }
 
-  await verifyCaptchaByProvider({ body: payload, userIp: req.ip ?? '' });
+  const attemptScope = {
+    action: 'login' as const,
+    subject: username,
+    ip: requestIp,
+  };
+  await assertCredentialAttemptAllowed(attemptScope);
+
+  await verifyCaptchaByProvider({ body: payload, userIp: requestIp });
   const result = await login(username, password);
+  if (result.success) {
+    await clearCredentialAttemptFailures(attemptScope);
+  } else {
+    await recordCredentialAttemptFailure(attemptScope);
+  }
   sendResult(res, result);
 }));
 

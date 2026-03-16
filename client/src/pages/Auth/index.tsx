@@ -9,6 +9,11 @@ import {
   register as apiRegister,
   type UnifiedCaptchaPayload,
 } from '../../services/api';
+import {
+  ACCOUNT_PASSWORD_MIN_LENGTH,
+  ACCOUNT_PASSWORD_MIN_LENGTH_MESSAGE,
+  createConfirmPasswordValidator,
+} from '../shared/accountPasswordFormRules';
 import { IMG_LOGO as logo } from '../Game/shared/imageAssets';
 import AuthCaptchaField, { type AuthCaptchaFieldHandle } from './components/AuthCaptchaField';
 import './index.scss';
@@ -227,7 +232,13 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
               <Input prefix={<UserOutlined />} placeholder="道号" />
             </Form.Item>
 
-            <Form.Item name="password" rules={[{ required: true, min: 6, message: '口令至少6位' }]}>
+            <Form.Item
+              name="password"
+              rules={[
+                { required: true, message: '请输入口令' },
+                { min: ACCOUNT_PASSWORD_MIN_LENGTH, message: ACCOUNT_PASSWORD_MIN_LENGTH_MESSAGE },
+              ]}
+            >
               <Input.Password prefix={<LockOutlined />} placeholder="口令" />
             </Form.Item>
 
@@ -237,10 +248,7 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
               rules={[
                 { required: true, message: '请确认口令' },
                 ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (!value || getFieldValue('password') === value) return Promise.resolve();
-                    return Promise.reject(new Error('两次口令不一致'));
-                  },
+                  validator: createConfirmPasswordValidator(getFieldValue, 'password', '两次口令不一致'),
                 }),
               ]}
             >

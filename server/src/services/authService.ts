@@ -30,9 +30,27 @@ export interface AuthResult {
   };
 }
 
+export const PASSWORD_MIN_LENGTH = 6;
+
+export const getPasswordPolicyError = (password: string): string | null => {
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return `密码长度至少${PASSWORD_MIN_LENGTH}位`;
+  }
+  return null;
+};
+
 // 生成会话token
 const generateSessionToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
+};
+
+export const hashPassword = async (password: string): Promise<string> => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+};
+
+export const verifyPasswordHash = (password: string, passwordHash: string): Promise<boolean> => {
+  return bcrypt.compare(password, passwordHash);
 };
 
 // 注册
@@ -44,8 +62,7 @@ export const register = async (username: string, password: string): Promise<Auth
   }
 
   // 加密密码
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+  const hashedPassword = await hashPassword(password);
 
   // 插入用户
   const insertSQL = `
@@ -84,7 +101,7 @@ export const login = async (username: string, password: string): Promise<AuthRes
   }
 
   // 验证密码
-  const isMatch = await bcrypt.compare(password, user.password!);
+  const isMatch = await verifyPasswordHash(password, user.password!);
   if (!isMatch) {
     return { success: false, message: '用户名或密码错误' };
   }
@@ -167,3 +184,40 @@ export const verifyTokenAndSession = async (
   return { valid: true, decoded };
 };
 
+export const changePassword = async (
+  userId: number,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; message: string }> => {
+  const result = await query('SELECT password, status FROM users WHERE id = $1', [userId]);
+  if (result.rows.length === 0) {
+    return { success: false, message: '账号不存在' };
+  }
+
+  const user = result.rows[0] as Pick<User, 'password' | 'status'>;
+  if (user.status === 0) {
+    return { success: false, message: '账号已被禁用' };
+  }
+
+  const passwordHash = user.password;
+  if (!passwordHash) {
+    return { success: false, message: '账号密码状态异常' };
+  }
+
+  const isCurrentPasswordValid = await verifyPasswordHash(currentPassword, passwordHash);
+  if (!isCurrentPasswordValid) {
+    return { success: false, message: '当前密码错误' };
+  }
+
+  if (currentPassword === newPassword) {
+    return { success: false, message: '新密码不能与当前密码相同' };
+  }
+
+  const nextPasswordHash = await hashPassword(newPassword);
+  await query(
+    'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+    [nextPasswordHash, userId]
+  );
+
+  return { success: true, message: '密码修改成功' };
+};

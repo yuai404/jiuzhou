@@ -51,7 +51,22 @@
     border-color: var(--border-color);
   }
 
+  .ant-input-affix-wrapper {
+    color: var(--text-color);
+    background: var(--panel-bg-soft);
+    border-color: var(--border-color);
+  }
+
+  .ant-input-affix-wrapper .ant-input {
+    background: transparent;
+    box-shadow: none;
+  }
+
   .ant-input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .ant-input-affix-wrapper input::placeholder {
     color: var(--text-secondary);
   }
 
@@ -60,6 +75,17 @@
   .ant-input-focused {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px var(--primary-bg-soft);
+  }
+
+  .ant-input-affix-wrapper:hover,
+  .ant-input-affix-wrapper:focus,
+  .ant-input-affix-wrapper-focused {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-bg-soft);
+  }
+
+  .ant-form-item-label > label {
+    color: var(--text-color);
   }
 }
 
@@ -132,10 +158,29 @@
   background: var(--panel-bg-soft);
 }
 
+.setting-password-form {
+  width: 100%;
+}
+
+.setting-password-form .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.setting-password-form .ant-form-item:last-of-type {
+  margin-bottom: 0;
+}
+
 .setting-rule-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.setting-password-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
 }
 
 .setting-cdk-mobile {
@@ -205,5 +250,13 @@
 
   .setting-rule-card {
     padding: 10px;
+  }
+
+  .setting-password-actions {
+    flex-direction: column-reverse;
+  }
+
+  .setting-password-actions .ant-btn {
+    width: 100%;
   }
 }
