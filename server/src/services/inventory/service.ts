@@ -124,6 +124,7 @@ class InventoryService {
         failMode: "none" | "downgrade" | "destroy";
         costs: {
           materialItemDefId: string;
+          materialName: string;
           materialQty: number;
           silverCost: number;
           spiritStoneCost: number;
@@ -138,6 +139,7 @@ class InventoryService {
         failMode: "none" | "downgrade" | "destroy";
         costs: {
           materialItemDefId: string;
+          materialName: string;
           materialQty: number;
           silverCost: number;
           spiritStoneCost: number;

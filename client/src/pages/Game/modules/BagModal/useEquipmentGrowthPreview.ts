@@ -91,7 +91,7 @@ const buildStageState = (
   const materialName =
     materialItemDefId === null
       ? ''
-      : materialNameByDefId[materialItemDefId] ?? materialItemDefId;
+      : source.costs.materialName ?? materialNameByDefId[materialItemDefId] ?? materialItemDefId;
   const owned = materialItemDefId === null ? 0 : (materialCountByDefId[materialItemDefId] ?? 0);
   return {
     curLv: source.currentLevel,

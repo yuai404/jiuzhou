@@ -687,6 +687,7 @@ export const getEquipmentGrowthCostPreview = async (
       failMode: EquipmentGrowthFailMode;
       costs: {
         materialItemDefId: string;
+        materialName: string;
         materialQty: number;
         silverCost: number;
         spiritStoneCost: number;
@@ -701,6 +702,7 @@ export const getEquipmentGrowthCostPreview = async (
       failMode: EquipmentGrowthFailMode;
       costs: {
         materialItemDefId: string;
+        materialName: string;
         materialQty: number;
         silverCost: number;
         spiritStoneCost: number;
@@ -792,6 +794,18 @@ export const getEquipmentGrowthCostPreview = async (
     socketedGemsRaw: itemRow.socketed_gems,
   });
 
+  const enhanceMaterialDef = getStaticItemDef(enhanceCostPlan.materialItemDefId);
+  const enhanceCostsWithName = {
+    ...enhanceCostPlan,
+    materialName: enhanceMaterialDef?.name ?? enhanceCostPlan.materialItemDefId,
+  };
+  const refineCostsWithName = refineCostPlan
+    ? {
+        ...refineCostPlan,
+        materialName: getStaticItemDef(refineCostPlan.materialItemDefId)?.name ?? refineCostPlan.materialItemDefId,
+      }
+    : null;
+
   return {
     success: true,
     message: "ok",
@@ -802,7 +816,7 @@ export const getEquipmentGrowthCostPreview = async (
         maxLevel: null,
         successRate: getEnhanceSuccessRatePercent(enhanceTargetLevel),
         failMode: getEnhanceFailMode(enhanceTargetLevel),
-        costs: enhanceCostPlan,
+        costs: enhanceCostsWithName,
         previewBaseAttrs: enhancePreviewBaseAttrs,
       },
       refine: {
@@ -813,7 +827,7 @@ export const getEquipmentGrowthCostPreview = async (
           ? 0
           : getRefineSuccessRatePercent(refineTargetLevel),
         failMode: refineTargetLevel >= 6 ? "downgrade" : "none",
-        costs: refineCostPlan,
+        costs: refineCostsWithName,
         previewBaseAttrs: refinePreviewBaseAttrs,
       },
     },
