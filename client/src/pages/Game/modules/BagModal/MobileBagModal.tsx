@@ -75,6 +75,7 @@ import { getEquipmentGrowthFailModeText, useEquipmentGrowthPreview } from './use
 import { useTechniqueBookSkills } from './useTechniqueBookSkills';
 import { collectEquipmentUnbindCandidates } from './equipmentUnbind';
 import { TechniqueSkillSection } from '../../shared/TechniqueSkillSection';
+import { useCharacterRenameCardFlow } from '../../shared/useCharacterRenameCardFlow';
 import './MobileBagModal.scss';
 
 /* ─── 排序面板 ─── */
@@ -1348,6 +1349,13 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
     }
   }, [message]);
 
+  const { openCharacterRename, renameModalNode } = useCharacterRenameCardFlow({
+    refresh,
+    onAfterSuccess: () => {
+      setSheetOpen(false);
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     refresh();
@@ -1545,6 +1553,13 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
 
   const handleUseItem = useCallback(async () => {
     if (!activeItem) return;
+    if (activeItem.useTargetType === 'characterRename') {
+      openCharacterRename({
+        itemInstanceId: activeItem.id,
+        itemName: activeItem.name,
+      });
+      return;
+    }
     if (activeItem.useTargetType === 'boundEquipment') {
       if (equipmentUnbindCandidates.length <= 0) {
         message.warning('当前没有可解绑的已绑定装备');
@@ -1582,7 +1597,7 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
       }));
       setLoading(false);
     }
-  }, [activeItem, clampUseQty, equipmentUnbindCandidates.length, message, refresh, useQty]);
+  }, [activeItem, clampUseQty, equipmentUnbindCandidates.length, message, openCharacterRename, refresh, useQty]);
 
   const handleSubmitEquipmentUnbind = useCallback(async () => {
     if (!activeItem || activeItem.useTargetType !== 'boundEquipment') return;
@@ -1909,6 +1924,7 @@ const MobileBagModal: React.FC<MobileBagModalProps> = ({ open, onClose }) => {
           onSubmit={() => void handleSubmitEquipmentUnbind()}
         />
       )}
+      {renameModalNode}
     </div>
   );
 };

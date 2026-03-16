@@ -1120,6 +1120,7 @@ export const formatBagItemEffectLine = (
   if (effectType === "learn_technique") return "学习功法";
   if (effectType === "learn_generated_technique") return "学习功法";
   if (effectType === "unbind") return "解除一件已绑定装备的绑定状态";
+  if (effectType === "rename_character") return "修改角色道号";
   if (effectType === "activate_month_card") return "激活月卡";
   if (effectType === "activate_battle_pass") return "激活战令";
 

@@ -174,3 +174,11 @@ export const updateCharacterDungeonNoStaminaCost = (
 ): Promise<{ success: boolean; message: string }> => {
   return api.post('/character/updateDungeonNoStaminaCost', { enabled });
 };
+
+export const renameCharacterWithCard = (
+  itemInstanceId: number,
+  nickname: string,
+  requestConfig?: AxiosRequestConfig,
+): Promise<{ success: boolean; message: string }> => {
+  return api.post('/character/renameWithCard', { itemInstanceId, nickname }, requestConfig);
+};

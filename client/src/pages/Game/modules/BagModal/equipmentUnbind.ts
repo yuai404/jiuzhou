@@ -1,8 +1,9 @@
 /**
- * 装备解绑前端共享规则
+ * 交互型道具使用目标前端共享规则
  *
  * 作用（做什么 / 不做什么）：
- * - 做什么：集中解析“哪些道具需要选择已绑定装备目标”，并提供候选装备筛选函数。
+ * - 做什么：集中解析“哪些道具在使用前还需要额外交互”，目前覆盖装备解绑与易名符改名。
+ * - 做什么：提供可解绑装备候选列表筛选函数，避免桌面端和移动端背包各写一套判断。
  * - 不做什么：不发请求、不管理弹窗状态、不渲染具体桌面/移动端 UI。
  *
  * 输入/输出：
@@ -11,15 +12,15 @@
  *
  * 数据流/状态流：
  * - `buildBagItem` 调用 `resolveBagItemUseTargetType` 生成 ViewModel；
- * - BagModal / MobileBagModal 调用 `collectEquipmentUnbindCandidates` 生成可选目标。
+ * - BagModal / MobileBagModal 根据类型决定是开改名弹窗，还是开解绑目标选择。
  *
  * 关键边界条件与坑点：
- * 1) 仅当 effect 明确声明“解绑已绑定装备”时才要求选择目标，避免把普通 target 道具误判成解绑道具。
- * 2) 候选列表只保留“已绑定装备且未锁定”的实例，避免 UI 与后端校验口径不一致。
+ * 1) 易名符没有走通用 `/inventory/use`，因此必须在这里先识别出来，避免 UI 误发普通使用请求。
+ * 2) 装备解绑候选列表只保留“已绑定装备且未锁定”的实例，避免 UI 与后端校验口径不一致。
  */
 import type { ItemDefLite, InventoryLocation } from '../../../../services/api';
 
-export type BagItemUseTargetType = 'none' | 'boundEquipment';
+export type BagItemUseTargetType = 'none' | 'boundEquipment' | 'characterRename';
 
 type EffectDef = Record<string, unknown>;
 
@@ -49,8 +50,17 @@ const coerceEffectDefs = (value: unknown): EffectDef[] => {
 export const resolveBagItemUseTargetType = (
   def: Pick<ItemDefLite, 'use_type' | 'effect_defs'> | null | undefined,
 ): BagItemUseTargetType => {
-  if (!def || String(def.use_type || '').trim() !== 'target') return 'none';
-  for (const effect of coerceEffectDefs(def.effect_defs)) {
+  if (!def) return 'none';
+  const effectDefs = coerceEffectDefs(def.effect_defs);
+
+  for (const effect of effectDefs) {
+    if (String(effect.trigger || '').trim() !== 'use') continue;
+    if (String(effect.effect_type || '').trim() !== 'rename_character') continue;
+    return 'characterRename';
+  }
+
+  if (String(def.use_type || '').trim() !== 'target') return 'none';
+  for (const effect of effectDefs) {
     if (String(effect.trigger || '').trim() !== 'use') continue;
     if (String(effect.effect_type || '').trim() !== 'unbind') continue;
     const params =

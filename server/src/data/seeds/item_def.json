@@ -375,6 +375,32 @@
       ]
     },
     {
+      "id": "cons-rename-001",
+      "name": "易名符",
+      "category": "consumable",
+      "sub_category": "function",
+      "quality": "玄",
+      "stack_max": 9999,
+      "bind_type": "pickup",
+      "tradeable": false,
+      "disassemblable": false,
+      "icon": "/assets/items/icon_bygj.png",
+      "description": "使用后可立即修改一次角色道号",
+      "long_desc": "背包中使用后可直接输入新的角色道号。改名成功时消耗 1 张，若新道号不合法则不会消耗。",
+      "tags": [
+        "改名",
+        "功能道具",
+        "道号"
+      ],
+      "effect_defs": [
+        {
+          "trigger": "use",
+          "target": "self",
+          "effect_type": "rename_character"
+        }
+      ]
+    },
+    {
       "id": "cons-monthcard-001",
       "name": "修行月卡",
       "category": "other",

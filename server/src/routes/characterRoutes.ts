@@ -5,6 +5,7 @@ import {
   checkCharacter,
   createCharacter,
   getCharacter,
+  renameCharacterWithCard,
   updateCharacterAutoCastSkills,
   updateCharacterAutoDisassembleSettings,
   updateCharacterDungeonNoStaminaCostSetting,
@@ -13,6 +14,7 @@ import {
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import { sendResult } from '../middleware/response.js';
 import { BusinessError } from '../middleware/BusinessError.js';
+import { normalizeCharacterNicknameInput } from '../services/shared/characterNameRules.js';
 
 const router = Router();
 
@@ -26,22 +28,19 @@ router.get('/check', requireAuth, asyncHandler(async (req, res) => {
 // 创建角色
 router.post('/create', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.userId!;
-  const { nickname, gender } = req.body;
+  const { nickname, gender } = req.body as { nickname?: string; gender?: 'male' | 'female' | string };
+  const normalizedNickname = normalizeCharacterNicknameInput(String(nickname || ''));
 
   // 参数验证
-  if (!nickname || !gender) {
+  if (!normalizedNickname || !gender) {
     throw new BusinessError('道号和性别不能为空');
-  }
-
-  if (nickname.length < 2 || nickname.length > 12) {
-    throw new BusinessError('道号长度需在2-12个字符之间');
   }
 
   if (!['male', 'female'].includes(gender)) {
     throw new BusinessError('性别参数错误');
   }
 
-  const result = await createCharacter(userId, nickname, gender);
+  const result = await createCharacter(userId, normalizedNickname, gender as 'male' | 'female');
   sendResult(res, result);
 }));
 
@@ -110,6 +109,29 @@ router.post('/updateDungeonNoStaminaCost', requireAuth, asyncHandler(async (req,
   const enabled = Boolean((req.body as { enabled?: unknown })?.enabled);
 
   const result = await updateCharacterDungeonNoStaminaCostSetting(userId, enabled);
+
+  if (result.success) {
+    await safePushCharacterUpdate(userId);
+  }
+
+  return sendResult(res, result);
+}));
+
+router.post('/renameWithCard', requireAuth, asyncHandler(async (req, res) => {
+  const userId = req.userId!;
+  const body = req.body as { itemInstanceId?: number | string; nickname?: string };
+  const itemInstanceId = Number(body.itemInstanceId);
+  const nickname = normalizeCharacterNicknameInput(String(body.nickname || ''));
+
+  if (!Number.isInteger(itemInstanceId) || itemInstanceId <= 0) {
+    throw new BusinessError('itemInstanceId参数错误');
+  }
+
+  if (!nickname) {
+    throw new BusinessError('道号不能为空');
+  }
+
+  const result = await renameCharacterWithCard(userId, itemInstanceId, nickname);
 
   if (result.success) {
     await safePushCharacterUpdate(userId);

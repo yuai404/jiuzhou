@@ -69,6 +69,7 @@ import { getEquipmentGrowthFailModeText, useEquipmentGrowthPreview } from './use
 import { useTechniqueBookSkills } from './useTechniqueBookSkills';
 import { collectEquipmentUnbindCandidates } from './equipmentUnbind';
 import { TechniqueSkillSection } from '../../shared/TechniqueSkillSection';
+import { useCharacterRenameCardFlow } from '../../shared/useCharacterRenameCardFlow';
 import './index.scss';
 
 interface BagModalProps {
@@ -159,6 +160,10 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       setLoading(false);
     }
   }, [message]);
+
+  const { openCharacterRename, renameModalNode } = useCharacterRenameCardFlow({
+    refresh,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -449,6 +454,13 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
 
   const handleUseItem = useCallback(async () => {
     if (!activeItem) return;
+    if (activeItem.useTargetType === 'characterRename') {
+      openCharacterRename({
+        itemInstanceId: activeItem.id,
+        itemName: activeItem.name,
+      });
+      return;
+    }
     if (activeItem.useTargetType === 'boundEquipment') {
       if (equipmentUnbindCandidates.length <= 0) {
         message.warning('当前没有可解绑的已绑定装备');
@@ -489,7 +501,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
       );
       setLoading(false);
     }
-  }, [activeItem, clampUseQty, refresh, useQty]);
+  }, [activeItem, clampUseQty, equipmentUnbindCandidates.length, message, openCharacterRename, refresh, useQty]);
 
   const handleToggleItemLock = useCallback(async () => {
     if (!activeItem) return;
@@ -1895,6 +1907,7 @@ const BagModal: React.FC<BagModalProps> = ({ open, onClose }) => {
           </div>
         </div>
       </Modal>
+      {renameModalNode}
     </Modal>
   );
 };

@@ -53,6 +53,21 @@ test('解绑道具应识别为需要选择已绑定装备目标', () => {
   assert.equal(useTargetType, 'boundEquipment');
 });
 
+test('易名符应识别为角色改名交互道具', () => {
+  const useTargetType = resolveBagItemUseTargetType({
+    use_type: null,
+    effect_defs: [
+      {
+        trigger: 'use',
+        target: 'self',
+        effect_type: 'rename_character',
+      },
+    ],
+  });
+
+  assert.equal(useTargetType, 'characterRename');
+});
+
 test('解绑候选列表只应包含已绑定装备', () => {
   const candidates = collectEquipmentUnbindCandidates([
     {

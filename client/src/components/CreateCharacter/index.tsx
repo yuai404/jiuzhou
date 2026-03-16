@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Form, Input, Radio, Button, App } from 'antd';
 import { UserOutlined, ManOutlined, WomanOutlined } from '@ant-design/icons';
 import { createCharacter as apiCreateCharacter } from '../../services/api';
+import { buildCharacterNameFormRules } from '../../pages/Game/shared/characterNameShared';
 import './index.scss';
 
 interface CreateCharacterProps {
@@ -53,10 +54,7 @@ const CreateCharacter: React.FC<CreateCharacterProps> = ({ open, onSuccess }) =>
         <Form.Item
           name="name"
           label="道号"
-          rules={[
-            { required: true, message: '请输入道号' },
-            { min: 2, max: 12, message: '道号需2-12个字符' }
-          ]}
+          rules={buildCharacterNameFormRules()}
         >
           <Input
             prefix={<UserOutlined />}
