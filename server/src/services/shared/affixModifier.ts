@@ -6,6 +6,7 @@
  * 2. 统一词条数值精度规则，避免不同服务各自实现导致行为漂移；
  * 3. 提供从“旧结构（attr_key + value）”到“新结构（modifiers）”的安全转换能力。
  */
+import { CHARACTER_RATIO_ATTR_KEY_SET } from './characterAttrRegistry.js';
 
 export type AffixApplyType = 'flat' | 'percent' | 'special';
 export type AffixEffectType = 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark';
@@ -29,27 +30,6 @@ export interface AffixValueNormalizeContext {
   params?: AffixParams;
 }
 
-const RATIO_ATTR_KEYS = new Set([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
-
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
@@ -60,7 +40,7 @@ const toFiniteNumber = (value: unknown, fallback = 0): number => {
 };
 
 export const isRatioAttrKey = (attrKeyRaw: unknown): boolean => {
-  return typeof attrKeyRaw === 'string' && RATIO_ATTR_KEYS.has(attrKeyRaw);
+  return typeof attrKeyRaw === 'string' && CHARACTER_RATIO_ATTR_KEY_SET.has(attrKeyRaw);
 };
 
 const isRatioSpecialAffixValue = (

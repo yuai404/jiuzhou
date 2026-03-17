@@ -31,6 +31,10 @@ import {
 import { getAdjustedDropQuantityRange } from './shared/dropQuantityMultiplier.js';
 import { getGemLevel, isGemItemDefinition } from './shared/gemItemSemantics.js';
 import { getMonthCardActiveMapByCharacterIds } from './shared/monthCardBenefits.js';
+import {
+  CHARACTER_ATTR_LABEL_MAP,
+  CHARACTER_RATIO_ATTR_KEY_SET,
+} from './shared/characterAttrRegistry.js';
 
 type InfoTargetType = 'npc' | 'monster' | 'item' | 'player';
 
@@ -116,58 +120,8 @@ const attrLabelMap: Record<string, string> = {
   jing: '精',
   qi: '气',
   shen: '神',
-  qixue: '气血',
-  max_qixue: '最大气血',
-  lingqi: '灵气',
-  max_lingqi: '最大灵气',
-  wugong: '物攻',
-  fagong: '法攻',
-  wufang: '物防',
-  fafang: '法防',
-  mingzhong: '命中',
-  shanbi: '闪避',
-  zhaojia: '招架',
-  baoji: '暴击',
-  baoshang: '爆伤',
-  jianbaoshang: '暴伤减免',
-  kangbao: '抗暴',
-  zengshang: '增伤',
-  zhiliao: '治疗',
-  jianliao: '减疗',
-  xixue: '吸血',
-  lengque: '冷却',
-  kongzhi_kangxing: '控制抗性',
-  jin_kangxing: '金抗性',
-  mu_kangxing: '木抗性',
-  shui_kangxing: '水抗性',
-  huo_kangxing: '火抗性',
-  tu_kangxing: '土抗性',
-  qixue_huifu: '气血恢复',
-  lingqi_huifu: '灵气恢复',
-  sudu: '速度',
-  fuyuan: '福源',
+  ...CHARACTER_ATTR_LABEL_MAP,
 };
-
-const PERCENT_ATTR_KEYS = new Set<string>([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
 
 const formatPercent = (value: number): string => {
   const percent = value * 100;
@@ -193,7 +147,7 @@ const toStatsFromAttrs = (attrs: unknown, prefix: string): Array<{ label: string
     if (value === null || value === undefined) continue;
     if (typeof value !== 'number' && typeof value !== 'string') continue;
     const label = attrLabelMap[key] ?? key;
-    if (PERCENT_ATTR_KEYS.has(key)) {
+    if (CHARACTER_RATIO_ATTR_KEY_SET.has(key)) {
       const n = typeof value === 'number' ? value : Number(value);
       if (Number.isFinite(n)) {
         rows.push({ label: `${prefix}${label}`, value: formatPercent(n) });

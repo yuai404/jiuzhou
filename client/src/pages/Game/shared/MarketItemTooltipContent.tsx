@@ -72,6 +72,8 @@ const translateKey = (key: string): string | null => {
     zhaojia: '招架',
     baoji: '暴击',
     baoshang: '暴伤',
+    jianbaoshang: '暴伤减免',
+    jianfantan: '反伤减免',
     kangbao: '抗暴',
     zengshang: '增伤',
     zhiliao: '治疗',

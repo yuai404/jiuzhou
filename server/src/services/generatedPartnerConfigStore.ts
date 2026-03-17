@@ -76,6 +76,7 @@ const asPartnerBaseAttrs = (raw: unknown): PartnerBaseAttrConfig | null => {
     baoji: asNonNegativeNumber(row.baoji, 0),
     baoshang: asNonNegativeNumber(row.baoshang, 0),
     jianbaoshang: asNonNegativeNumber(row.jianbaoshang, 0),
+    jianfantan: asNonNegativeNumber(row.jianfantan, 0),
     kangbao: asNonNegativeNumber(row.kangbao, 0),
     zengshang: asNonNegativeNumber(row.zengshang, 0),
     zhiliao: asNonNegativeNumber(row.zhiliao, 0),

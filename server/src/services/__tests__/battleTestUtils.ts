@@ -40,6 +40,7 @@ const BASE_ATTRS: BattleAttrs = {
   baoji: 0,
   baoshang: 1.5,
   jianbaoshang: 0,
+  jianfantan: 0,
   kangbao: 0,
   zengshang: 0,
   zhiliao: 0,

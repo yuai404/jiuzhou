@@ -91,6 +91,7 @@ export interface PartnerComputedAttrsDto {
   baoji: number;
   baoshang: number;
   jianbaoshang: number;
+  jianfantan: number;
   kangbao: number;
   zengshang: number;
   zhiliao: number;
@@ -450,6 +451,7 @@ export const toPartnerComputedAttrsDto = (
     baoji: Number(finalAttrs.baoji) || 0,
     baoshang: Number(finalAttrs.baoshang) || 0,
     jianbaoshang: Number(finalAttrs.jianbaoshang) || 0,
+    jianfantan: Number(finalAttrs.jianfantan) || 0,
     kangbao: Number(finalAttrs.kangbao) || 0,
     zengshang: Number(finalAttrs.zengshang) || 0,
     zhiliao: Number(finalAttrs.zhiliao) || 0,
@@ -484,6 +486,7 @@ export const toPartnerBaseAttrsDto = (
     baoji: Number(rawAttrs?.baoji) || 0,
     baoshang: Number(rawAttrs?.baoshang) || 0,
     jianbaoshang: Number(rawAttrs?.jianbaoshang) || 0,
+    jianfantan: Number(rawAttrs?.jianfantan) || 0,
     kangbao: Number(rawAttrs?.kangbao) || 0,
     zengshang: Number(rawAttrs?.zengshang) || 0,
     zhiliao: Number(rawAttrs?.zhiliao) || 0,

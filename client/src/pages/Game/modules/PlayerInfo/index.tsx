@@ -234,6 +234,8 @@ const PlayerInfo: React.FC = () => {
     { label: '招架', value: formatPercent(character.zhaojia) },
     { label: '暴击', value: formatPercent(derivedStats?.baoji || 0) },
     { label: '爆伤', value: formatPercent(character.baoshang) },
+    { label: '暴伤减免', value: formatPercent(character.jianbaoshang) },
+    { label: '反伤减免', value: formatPercent(character.jianfantan) },
     { label: '抗暴', value: formatPercent(character.kangbao) },
     { label: '增伤', value: formatPercent(character.zengshang) },
     { label: '治疗', value: formatPercent(character.zhiliao) },

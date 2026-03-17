@@ -48,6 +48,10 @@ import {
   splitTechniquePassiveAttrs,
 } from './shared/techniquePassiveAttrs.js';
 import { CHARACTER_BASE_COLUMNS_SQL } from './shared/sqlFragments.js';
+import {
+  CHARACTER_RATIO_ATTR_KEY_SET,
+  TITLE_EFFECT_KEY_SET,
+} from './shared/characterAttrRegistry.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -92,6 +96,7 @@ interface CharacterComputedStats {
   baoji: number;
   baoshang: number;
   jianbaoshang: number;
+  jianfantan: number;
   kangbao: number;
   zengshang: number;
   zhiliao: number;
@@ -174,6 +179,7 @@ type CharacterAttrKey =
   | 'baoji'
   | 'baoshang'
   | 'jianbaoshang'
+  | 'jianfantan'
   | 'kangbao'
   | 'zengshang'
   | 'zhiliao'
@@ -198,60 +204,6 @@ const RESOURCE_MEMORY_TTL_MS = 5 * 60_000;
 const staticAttrsMemoryCache = new Map<number, { payload: StaticAttrsCachePayload; expiresAt: number }>();
 const resourceMemoryCache = new Map<number, { payload: CharacterResourceState; expiresAt: number }>();
 
-const RATIO_ATTR_KEYS = new Set<CharacterAttrKey>([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
-
-const VALID_TITLE_EFFECT_KEYS = new Set<CharacterAttrKey>([
-  'qixue',
-  'max_qixue',
-  'lingqi',
-  'max_lingqi',
-  'wugong',
-  'fagong',
-  'wufang',
-  'fafang',
-  'sudu',
-  'fuyuan',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-  'qixue_huifu',
-  'lingqi_huifu',
-]);
-
 const DEFAULT_ATTRS: CharacterComputedStats = Object.freeze({
   max_qixue: 100,
   max_lingqi: 0,
@@ -265,6 +217,7 @@ const DEFAULT_ATTRS: CharacterComputedStats = Object.freeze({
   baoji: 0.1,
   baoshang: 1.5,
   jianbaoshang: 0,
+  jianfantan: 0,
   kangbao: 0,
   zengshang: 0,
   zhiliao: 0,
@@ -399,7 +352,7 @@ const applyAttrDelta = (stats: CharacterComputedStats, keyRaw: string, valueRaw:
     key === 'qixue' ? 'max_qixue' : key === 'lingqi' ? 'max_lingqi' : key;
   if (!(mappedKey in stats)) return;
 
-  if (RATIO_ATTR_KEYS.has(mappedKey)) {
+  if (CHARACTER_RATIO_ATTR_KEY_SET.has(mappedKey)) {
     stats[mappedKey] = Math.max(0, roundRatio(stats[mappedKey] + value));
     return;
   }
@@ -427,6 +380,7 @@ const normalizeStats = (stats: CharacterComputedStats): CharacterComputedStats =
     'baoji',
     'baoshang',
     'jianbaoshang',
+    'jianfantan',
     'kangbao',
     'zengshang',
     'zhiliao',
@@ -452,7 +406,7 @@ const parseTitleEffects = (effectsRaw: unknown): Record<string, number> => {
   const candidate = Object.keys(flat).length > 0 ? flat : source;
   const out: Record<string, number> = {};
   for (const [key, raw] of Object.entries(candidate)) {
-    if (!VALID_TITLE_EFFECT_KEYS.has(key as CharacterAttrKey)) continue;
+    if (!TITLE_EFFECT_KEY_SET.has(key)) continue;
     const value = safeNumber(raw);
     if (!Number.isFinite(value) || value === 0) continue;
     out[key] = value;

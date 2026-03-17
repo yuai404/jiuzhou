@@ -25,7 +25,7 @@ import { executeSkill } from '../../battle/modules/skill.js';
 import type { BattleSkill } from '../../battle/types.js';
 import { asActionLog, createState, createUnit } from './battleTestUtils.js';
 
-function createReflectBuffSkill(): BattleSkill {
+function createReflectBuffSkill(reflectRate = 0.5): BattleSkill {
   return {
     id: 'skill-reflect-buff',
     name: '玄甲守势',
@@ -40,7 +40,7 @@ function createReflectBuffSkill(): BattleSkill {
       {
         type: 'buff',
         duration: 2,
-        value: 0.5,
+        value: reflectRate,
         buffKey: 'buff-reflect-damage',
         buffKind: 'reflect_damage',
       },
@@ -50,7 +50,7 @@ function createReflectBuffSkill(): BattleSkill {
   };
 }
 
-function createStrikeSkill(): BattleSkill {
+function createStrikeSkill(damage = 200): BattleSkill {
   return {
     id: 'skill-flat-true-damage',
     name: '碎岳击',
@@ -65,7 +65,7 @@ function createStrikeSkill(): BattleSkill {
       {
         type: 'damage',
         valueType: 'flat',
-        value: 200,
+        value: damage,
         damageType: 'true',
         element: 'none',
       },
@@ -96,4 +96,48 @@ test('reflect_damage Buff 应按本次实际受击伤害比例反弹真伤', () 
   assert.equal(reflectLog.actorId, defender.id);
   assert.equal(reflectLog.targets[0]?.targetId, attacker.id);
   assert.equal(reflectLog.targets[0]?.hits[0]?.damage, 100);
+});
+
+test('reflect_damage Buff 应被反弹伤害减免降低', () => {
+  const defender = createUnit({ id: 'player-1', name: '守御者' });
+  const attacker = createUnit({
+    id: 'monster-1',
+    name: '进攻者',
+    type: 'monster',
+    attrs: { jianfantan: 0.4 },
+  });
+  const state = createState({ attacker: [defender], defender: [attacker] });
+
+  const applyBuffResult = executeSkill(state, defender, createReflectBuffSkill());
+  assert.equal(applyBuffResult.success, true);
+
+  const attackResult = executeSkill(state, attacker, createStrikeSkill(), [defender.id]);
+  assert.equal(attackResult.success, true);
+  assert.equal(attacker.qixue, attacker.currentAttrs.max_qixue - 60);
+
+  const actionLogs = state.logs.filter((log) => log.type === 'action');
+  const reflectLog = asActionLog(actionLogs[2]);
+  assert.equal(reflectLog.targets[0]?.hits[0]?.damage, 60);
+});
+
+test('reflect_damage Buff 在低伤害场景下不应因二次取整被额外抹掉', () => {
+  const defender = createUnit({ id: 'player-1', name: '守御者' });
+  const attacker = createUnit({
+    id: 'monster-1',
+    name: '进攻者',
+    type: 'monster',
+    attrs: { jianfantan: 0.1 },
+  });
+  const state = createState({ attacker: [defender], defender: [attacker] });
+
+  const applyBuffResult = executeSkill(state, defender, createReflectBuffSkill(0.1));
+  assert.equal(applyBuffResult.success, true);
+
+  const attackResult = executeSkill(state, attacker, createStrikeSkill(19), [defender.id]);
+  assert.equal(attackResult.success, true);
+  assert.equal(attacker.qixue, attacker.currentAttrs.max_qixue - 1);
+
+  const actionLogs = state.logs.filter((log) => log.type === 'action');
+  const reflectLog = asActionLog(actionLogs[2]);
+  assert.equal(reflectLog.targets[0]?.hits[0]?.damage, 1);
 });

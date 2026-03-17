@@ -17,35 +17,14 @@
  * 1) `wugong / fagong / wufang / fafang / max_qixue` 在当前规则里是乘区百分比，不能被当成固定值直接加，否则升层后面板几乎不变化。
  * 2) 本模块只做分类，不做数值归一化；调用方若需要整数化或保留小数，必须在自己的结算阶段处理，避免共享层偷改显示精度。
  */
+import {
+  TECHNIQUE_PASSIVE_PERCENT_ADDITIVE_KEY_SET,
+  TECHNIQUE_PASSIVE_PERCENT_MULTIPLY_KEY_SET,
+} from './characterAttrRegistry.js';
 
-export const TECHNIQUE_PASSIVE_PERCENT_ADDITIVE_KEYS = new Set<string>([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
+export const TECHNIQUE_PASSIVE_PERCENT_ADDITIVE_KEYS = TECHNIQUE_PASSIVE_PERCENT_ADDITIVE_KEY_SET;
 
-export const TECHNIQUE_PASSIVE_PERCENT_MULTIPLY_KEYS = new Set<string>([
-  'wugong',
-  'fagong',
-  'wufang',
-  'fafang',
-  'max_qixue',
-]);
+export const TECHNIQUE_PASSIVE_PERCENT_MULTIPLY_KEYS = TECHNIQUE_PASSIVE_PERCENT_MULTIPLY_KEY_SET;
 
 export interface SplitTechniquePassiveAttrsResult {
   flatAdditive: Record<string, number>;

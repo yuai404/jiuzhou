@@ -17,6 +17,7 @@
  * 1. 功法被动的 `fagong/wugong/wufang/fafang/max_qixue` 等键虽然最终会影响面板数值，但在功法展示里是“百分比增益”口径，不能复用通用属性面板格式化。
  * 2. `lingqi_huifu`、`qixue_huifu` 这类恢复值在功法配置里仍按固定值展示，不能误乘 100。
  */
+import { percentAttrKeys } from './attrDisplay';
 
 const TECHNIQUE_PASSIVE_PERCENT_KEYS = new Set<string>([
   'max_qixue',
@@ -24,23 +25,7 @@ const TECHNIQUE_PASSIVE_PERCENT_KEYS = new Set<string>([
   'fagong',
   'wufang',
   'fafang',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
+  ...percentAttrKeys,
 ]);
 
 export const isTechniquePassivePercentKey = (key: string): boolean => {

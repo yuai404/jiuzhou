@@ -600,7 +600,11 @@ function buildReflectDamageLogs(
   if (actualDamage <= 0 || !attacker.isAlive) return [];
 
   const reflectRate = getUnitReflectDamageRate(defender);
-  const reflectDamage = calculateReactiveDamageByRate(actualDamage, reflectRate);
+  const reflectDamage = calculateReactiveDamageByRate(
+    actualDamage,
+    reflectRate,
+    Math.max(0, 1 - attacker.currentAttrs.jianfantan),
+  );
   if (reflectDamage <= 0) return [];
 
   const applied = applyReactiveTrueDamage(state, defender, attacker, reflectDamage);

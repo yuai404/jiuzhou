@@ -86,6 +86,7 @@ import './index.scss';
 import { useIsMobile } from './shared/responsive';
 import { coerceAffixes } from './shared/itemMetaFormat';
 import EquipmentAffixTooltipList from './shared/EquipmentAffixTooltipList';
+import { attrLabel, attrOrder, percentAttrKeys } from './shared/attrDisplay';
 import {
   NPC_TALK_TASK_STATUS_META,
   createNpcDialogueEntriesFromDialogueNode,
@@ -150,131 +151,6 @@ const EQUIPMENT_TOOLTIP_CLASS_NAMES = {
   root: 'equipment-tooltip-overlay game-tooltip-surface-root',
   container: 'equipment-tooltip-overlay-container game-tooltip-surface-container',
 } as const;
-
-const RATING_SUFFIX = '_rating';
-
-const RATING_BASE_ATTR_KEYS = [
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-] as const;
-
-const RATING_BASE_ATTR_KEY_SET = new Set<string>(RATING_BASE_ATTR_KEYS);
-
-const attrLabelBase: Record<string, string> = {
-  jing: '精',
-  qi: '气',
-  shen: '神',
-  max_qixue: '气血上限',
-  max_lingqi: '灵气上限',
-  wugong: '物攻',
-  fagong: '法攻',
-  wufang: '物防',
-  fafang: '法防',
-  mingzhong: '命中',
-  shanbi: '闪避',
-  zhaojia: '招架',
-  baoji: '暴击',
-  baoshang: '暴伤',
-  kangbao: '抗暴',
-  zengshang: '增伤',
-  zhiliao: '治疗',
-  jianliao: '减疗',
-  xixue: '吸血',
-  lengque: '冷却',
-  sudu: '速度',
-  qixue_huifu: '气血恢复',
-  lingqi_huifu: '灵气恢复',
-  kongzhi_kangxing: '控制抗性',
-  jin_kangxing: '金抗性',
-  mu_kangxing: '木抗性',
-  shui_kangxing: '水抗性',
-  huo_kangxing: '火抗性',
-  tu_kangxing: '土抗性',
-  fuyuan: '福源',
-};
-
-const ratingAttrLabelEntries = RATING_BASE_ATTR_KEYS.map((key) => {
-  const baseLabel = attrLabelBase[key] ?? key;
-  return [`${key}${RATING_SUFFIX}`, `${baseLabel}等级`] as const;
-});
-
-const attrLabel: Record<string, string> = {
-  ...attrLabelBase,
-  ...Object.fromEntries(ratingAttrLabelEntries),
-};
-
-const attrOrderBase = [
-  'max_qixue',
-  'max_lingqi',
-  'wugong',
-  'fagong',
-  'wufang',
-  'fafang',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'sudu',
-  'qixue_huifu',
-  'lingqi_huifu',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-  'fuyuan',
-] as const;
-
-const attrOrderKeys = attrOrderBase.flatMap((key) =>
-  RATING_BASE_ATTR_KEY_SET.has(key) ? [key, `${key}${RATING_SUFFIX}`] : [key],
-);
-
-const attrOrder: Record<string, number> = Object.fromEntries(
-  attrOrderKeys.map((k, idx) => [k, idx]),
-);
-
-const percentAttrKeys = new Set<string>([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
 
 const coerceAttrRecord = (value: unknown): Record<string, number> => {
   if (!value) return {};

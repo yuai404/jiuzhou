@@ -26,6 +26,8 @@ export const RATING_BASE_ATTR_KEYS = [
   'zhaojia',
   'baoji',
   'baoshang',
+  'jianbaoshang',
+  'jianfantan',
   'kangbao',
   'zengshang',
   'zhiliao',
@@ -41,6 +43,9 @@ export const RATING_BASE_ATTR_KEYS = [
 ] as const;
 
 const ATTR_LABEL_BASE: Record<string, string> = {
+  jing: '精',
+  qi: '气',
+  shen: '神',
   qixue: '当前气血',
   max_qixue: '气血上限',
   lingqi: '当前灵气',
@@ -55,6 +60,7 @@ const ATTR_LABEL_BASE: Record<string, string> = {
   baoji: '暴击',
   baoshang: '暴伤',
   jianbaoshang: '暴伤减免',
+  jianfantan: '反伤减免',
   kangbao: '抗暴',
   zengshang: '增伤',
   zhiliao: '治疗',
@@ -90,6 +96,7 @@ export const percentAttrKeys = new Set<string>([
   'baoji',
   'baoshang',
   'jianbaoshang',
+  'jianfantan',
   'kangbao',
   'zengshang',
   'zhiliao',
@@ -103,6 +110,47 @@ export const percentAttrKeys = new Set<string>([
   'huo_kangxing',
   'tu_kangxing',
 ]);
+
+export const ATTR_ORDER_BASE = [
+  'max_qixue',
+  'max_lingqi',
+  'wugong',
+  'fagong',
+  'wufang',
+  'fafang',
+  'mingzhong',
+  'shanbi',
+  'zhaojia',
+  'baoji',
+  'baoshang',
+  'jianbaoshang',
+  'jianfantan',
+  'kangbao',
+  'zengshang',
+  'zhiliao',
+  'jianliao',
+  'xixue',
+  'lengque',
+  'sudu',
+  'qixue_huifu',
+  'lingqi_huifu',
+  'kongzhi_kangxing',
+  'jin_kangxing',
+  'mu_kangxing',
+  'shui_kangxing',
+  'huo_kangxing',
+  'tu_kangxing',
+  'fuyuan',
+] as const;
+
+const ratingBaseAttrKeySet = new Set<string>(RATING_BASE_ATTR_KEYS);
+const attrOrderKeys = ATTR_ORDER_BASE.flatMap((key) =>
+  ratingBaseAttrKeySet.has(key) ? [key, `${key}${RATING_SUFFIX}`] : [key],
+);
+
+export const attrOrder: Record<string, number> = Object.fromEntries(
+  attrOrderKeys.map((key, index) => [key, index]),
+);
 
 export const getAttrLabel = (attrKey: string): string => {
   return attrLabel[attrKey] ?? '未知属性';

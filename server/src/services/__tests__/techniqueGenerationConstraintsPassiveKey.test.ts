@@ -29,6 +29,10 @@ test('暴伤减免应被识别为受支持的功法被动属性', () => {
   assert.equal(isSupportedTechniquePassiveKey('jianbaoshang'), true);
 });
 
+test('反弹伤害减免应被识别为受支持的功法被动属性', () => {
+  assert.equal(isSupportedTechniquePassiveKey('jianfantan'), true);
+});
+
 test('所有功法类型共享完整被动池，允许 AI 自由搭配', () => {
   const expectedKeys = [...SUPPORTED_TECHNIQUE_PASSIVE_KEYS];
   const techniqueTypes = Object.keys(TECHNIQUE_PASSIVE_KEY_POOL_BY_TYPE) as Array<keyof typeof TECHNIQUE_PASSIVE_KEY_POOL_BY_TYPE>;

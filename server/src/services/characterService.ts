@@ -57,6 +57,7 @@ export interface Character {
   baoji: number;
   baoshang: number;
   jianbaoshang: number;
+  jianfantan: number;
   kangbao: number;
   zengshang: number;
   zhiliao: number;

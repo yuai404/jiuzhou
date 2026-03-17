@@ -1,4 +1,5 @@
 import type { EquipmentAffixTextInput } from './equipmentAffixText';
+import { percentAttrKeys } from './attrDisplay';
 
 /**
  * 物品元信息格式化工具。
@@ -46,25 +47,7 @@ export const formatScalar = (value: unknown): string => {
  * 百分比属性键集合。
  * 说明：这些键在展示时应走 `formatSignedPercent` 而不是 `formatSignedNumber`。
  */
-export const PERCENT_ATTR_KEYS: ReadonlySet<string> = new Set<string>([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
+export const PERCENT_ATTR_KEYS: ReadonlySet<string> = percentAttrKeys;
 
 /**
  * 截断文本行数，超出上限时追加省略号。

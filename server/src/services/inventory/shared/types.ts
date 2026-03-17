@@ -67,6 +67,7 @@ export type CharacterAttrKey =
   | "baoji"
   | "baoshang"
   | "jianbaoshang"
+  | "jianfantan"
   | "kangbao"
   | "zengshang"
   | "zhiliao"
@@ -99,6 +100,7 @@ export const allowedCharacterAttrKeys = new Set<CharacterAttrKey>([
   "baoji",
   "baoshang",
   "jianbaoshang",
+  "jianfantan",
   "kangbao",
   "zengshang",
   "zhiliao",

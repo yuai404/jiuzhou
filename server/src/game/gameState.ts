@@ -41,6 +41,7 @@ export interface CharacterAttributes {
   baoji: number;
   baoshang: number;
   jianbaoshang: number;
+  jianfantan: number;
   kangbao: number;
   zengshang: number;
   zhiliao: number;
@@ -101,6 +102,7 @@ export const dbToCharacterAttributes = (dbRow: Record<string, unknown>): Charact
   baoji: dbRow.baoji as number,
   baoshang: dbRow.baoshang as number,
   jianbaoshang: dbRow.jianbaoshang as number,
+  jianfantan: dbRow.jianfantan as number,
   kangbao: dbRow.kangbao as number,
   zengshang: dbRow.zengshang as number,
   zhiliao: dbRow.zhiliao as number,

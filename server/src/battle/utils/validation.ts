@@ -116,6 +116,10 @@ function validateBattleAttrs(attrs: BattleAttrs): ValidationResult {
   if (attrs.jianbaoshang < 0) {
     return { valid: false, error: `暴伤减免不能为负数: ${attrs.jianbaoshang}` };
   }
+
+  if (attrs.jianfantan < 0) {
+    return { valid: false, error: `反弹伤害减免不能为负数: ${attrs.jianfantan}` };
+  }
   
   return { valid: true };
 }

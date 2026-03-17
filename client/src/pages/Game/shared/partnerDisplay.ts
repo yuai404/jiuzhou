@@ -40,6 +40,7 @@ export const PARTNER_COMBAT_ATTR_ORDER: Array<keyof PartnerBaseAttrsDto> = [
   'baoji',
   'baoshang',
   'jianbaoshang',
+  'jianfantan',
   'kangbao',
   'zengshang',
   'zhiliao',

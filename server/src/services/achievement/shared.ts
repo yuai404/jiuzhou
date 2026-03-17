@@ -8,6 +8,7 @@ import type {
   AchievementTrackType,
   CharacterAchievementRow,
 } from './types.js';
+import { TITLE_EFFECT_KEYS } from '../shared/characterAttrRegistry.js';
 
 const CATEGORY_TO_POINTS_COLUMN: Record<string, 'combat' | 'cultivation' | 'exploration' | 'social' | 'collection' | null> = {
   combat: 'combat',
@@ -21,38 +22,6 @@ const CATEGORY_TO_POINTS_COLUMN: Record<string, 'combat' | 'cultivation' | 'expl
   equipment: 'collection',
   life: 'collection',
 };
-
-export const TITLE_EFFECT_KEYS = [
-  'qixue',
-  'max_qixue',
-  'lingqi',
-  'max_lingqi',
-  'wugong',
-  'fagong',
-  'wufang',
-  'fafang',
-  'sudu',
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-  'qixue_huifu',
-  'lingqi_huifu',
-] as const;
 
 const titleEffectKeySet = new Set<string>(TITLE_EFFECT_KEYS);
 

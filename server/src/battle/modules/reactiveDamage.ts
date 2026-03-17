@@ -27,17 +27,22 @@ export interface ReactiveDamageApplyResult {
   extraLogs: BattleLogEntry[];
 }
 
-export function calculateReactiveDamageByRate(sourceDamage: number, rate: number): number {
+export function calculateReactiveDamageByRate(
+  sourceDamage: number,
+  rate: number,
+  damageMultiplier = 1,
+): number {
   if (!Number.isFinite(sourceDamage) || sourceDamage <= 0) return 0;
   if (!Number.isFinite(rate) || rate <= 0) return 0;
-  return Math.floor(sourceDamage * rate);
+  if (!Number.isFinite(damageMultiplier) || damageMultiplier <= 0) return 0;
+  return Math.floor(sourceDamage * rate * damageMultiplier);
 }
 
 export function applyReactiveTrueDamage(
   state: BattleState,
   source: BattleUnit,
   target: BattleUnit,
-  damage: number
+  damage: number,
 ): ReactiveDamageApplyResult | null {
   const normalizedDamage = Math.floor(damage);
   if (!Number.isFinite(normalizedDamage) || normalizedDamage <= 0) return null;

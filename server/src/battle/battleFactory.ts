@@ -17,6 +17,7 @@ import { generateBattleSeed, getNextRandom } from './utils/random.js';
 import { getNormalAttack } from './modules/skill.js';
 import { normalizeRealmKeepingUnknown } from '../services/shared/realmRules.js';
 import type { PartnerSkillPolicySlotDto } from '../services/shared/partnerSkillPolicy.js';
+import { CHARACTER_RATIO_ATTR_KEY_SET } from '../services/shared/characterAttrRegistry.js';
 
 // 角色数据接口（来自数据库）
 export interface CharacterData {
@@ -41,6 +42,7 @@ export interface CharacterData {
   baoji: number;
   baoshang: number;
   jianbaoshang: number;
+  jianfantan: number;
   kangbao: number;
   zengshang: number;
   zhiliao: number;
@@ -84,6 +86,7 @@ export interface MonsterData {
     baoji?: number;
     baoshang?: number;
     jianbaoshang?: number;
+    jianfantan?: number;
     kangbao?: number;
     zengshang?: number;
     zhiliao?: number;
@@ -123,26 +126,9 @@ function clampNumber(value: number, min: number, max: number): number {
   return value;
 }
 
-const MONSTER_RATIO_ATTR_KEYS: ReadonlySet<keyof BattleAttrs> = new Set([
-  'mingzhong',
-  'shanbi',
-  'zhaojia',
-  'baoji',
-  'baoshang',
-  'jianbaoshang',
-  'kangbao',
-  'zengshang',
-  'zhiliao',
-  'jianliao',
-  'xixue',
-  'lengque',
-  'kongzhi_kangxing',
-  'jin_kangxing',
-  'mu_kangxing',
-  'shui_kangxing',
-  'huo_kangxing',
-  'tu_kangxing',
-]);
+const MONSTER_RATIO_ATTR_KEYS: ReadonlySet<keyof BattleAttrs> = new Set(
+  Array.from(CHARACTER_RATIO_ATTR_KEY_SET) as Array<keyof BattleAttrs>,
+);
 
 function applyMonsterEncounterScaling(state: BattleState, base: BattleAttrs, monster: MonsterData): BattleAttrs {
   const variance = clampNumber(toNumber(monster.attr_variance, 0.05), 0, 1);
@@ -166,6 +152,7 @@ function applyMonsterEncounterScaling(state: BattleState, base: BattleAttrs, mon
     'baoji',
     'baoshang',
     'jianbaoshang',
+    'jianfantan',
     'kangbao',
     'zengshang',
     'zhiliao',
@@ -470,6 +457,7 @@ function extractAttrs(data: CharacterData): BattleAttrs {
     baoji: data.baoji,
     baoshang: data.baoshang,
     jianbaoshang: data.jianbaoshang,
+    jianfantan: data.jianfantan,
     kangbao: data.kangbao,
     zengshang: data.zengshang,
     zhiliao: data.zhiliao,
@@ -509,6 +497,7 @@ function extractMonsterAttrs(data: MonsterData): BattleAttrs {
     baoji: toNumber(attrs.baoji, 0),
     baoshang: toNumber(attrs.baoshang, 0),
     jianbaoshang: toNumber(attrs.jianbaoshang, 0),
+    jianfantan: toNumber(attrs.jianfantan, 0),
     kangbao: toNumber(attrs.kangbao, 0),
     zengshang: toNumber(attrs.zengshang, 0),
     zhiliao: toNumber(attrs.zhiliao, 0),

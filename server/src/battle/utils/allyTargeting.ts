@@ -35,6 +35,8 @@ const DEFENSIVE_BUFF_ATTRS = new Set([
   'max_qixue',
   'wufang',
   'fafang',
+  'jianbaoshang',
+  'jianfantan',
   'jianliao',
   'kangbao',
   'shanbi',

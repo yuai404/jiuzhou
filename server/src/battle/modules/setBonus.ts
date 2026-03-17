@@ -232,7 +232,11 @@ function applySetDamage(
    * - echo 设计为纯比例机制，不叠加 scale，避免与“固定值+比例”混合。
    */
   if (damageTypeRaw === 'reflect' || damageTypeRaw === 'echo') {
-    damage += calculateReactiveDamageByRate(sourceDamage ?? 0, normalizeRate(rawValue));
+    damage += calculateReactiveDamageByRate(
+      sourceDamage ?? 0,
+      normalizeRate(rawValue),
+      damageTypeRaw === 'reflect' ? Math.max(0, 1 - target.currentAttrs.jianfantan) : 1,
+    );
   } else {
     damage += Math.floor(rawValue);
   }

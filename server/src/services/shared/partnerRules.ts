@@ -92,6 +92,7 @@ const cloneBaseAttrs = (
     baoji: normalizeFiniteNumber(baseAttrs.baoji),
     baoshang: normalizeFiniteNumber(baseAttrs.baoshang),
     jianbaoshang: normalizeFiniteNumber(baseAttrs.jianbaoshang),
+    jianfantan: normalizeFiniteNumber(baseAttrs.jianfantan),
     kangbao: normalizeFiniteNumber(baseAttrs.kangbao),
     zengshang: normalizeFiniteNumber(baseAttrs.zengshang),
     zhiliao: normalizeFiniteNumber(baseAttrs.zhiliao),

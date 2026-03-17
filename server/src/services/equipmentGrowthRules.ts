@@ -1,5 +1,11 @@
 import { QUALITY_MULTIPLIER_BY_RANK } from "./shared/itemQuality.js";
 import { getItemDefinitionById } from "./staticConfigLoader.js";
+import {
+  ATTACK_ATTR_KEY_SET,
+  CHARACTER_RATIO_ATTR_KEY_SET,
+  DEFENSE_ATTR_KEY_SET,
+  SURVIVAL_ATTR_KEY_SET,
+} from "./shared/characterAttrRegistry.js";
 
 export type CharacterAttrRecord = Record<string, number>;
 
@@ -96,63 +102,6 @@ const GEM_SUB_CATEGORY_TO_TYPE: Record<string, string> = {
   gem_survival: "survival",
   gem_all: "all",
 };
-
-const ATTACK_ATTR_KEYS = new Set([
-  "wugong",
-  "fagong",
-  "mingzhong",
-  "baoji",
-  "baoshang",
-  "zengshang",
-]);
-
-const DEFENSE_ATTR_KEYS = new Set([
-  "wufang",
-  "fafang",
-  "shanbi",
-  "zhaojia",
-  "jianbaoshang",
-  "kangbao",
-  "jianliao",
-  "kongzhi_kangxing",
-  "jin_kangxing",
-  "mu_kangxing",
-  "shui_kangxing",
-  "huo_kangxing",
-  "tu_kangxing",
-]);
-
-const SURVIVAL_ATTR_KEYS = new Set([
-  "qixue",
-  "max_qixue",
-  "lingqi",
-  "max_lingqi",
-  "zhiliao",
-  "xixue",
-  "qixue_huifu",
-  "lingqi_huifu",
-]);
-
-const RATIO_ATTR_KEYS = new Set([
-  "mingzhong",
-  "shanbi",
-  "zhaojia",
-  "baoji",
-  "baoshang",
-  "jianbaoshang",
-  "kangbao",
-  "zengshang",
-  "zhiliao",
-  "jianliao",
-  "xixue",
-  "lengque",
-  "kongzhi_kangxing",
-  "jin_kangxing",
-  "mu_kangxing",
-  "shui_kangxing",
-  "huo_kangxing",
-  "tu_kangxing",
-]);
 
 export const clampInt = (value: number, min: number, max: number): number => {
   const n = Number(value);
@@ -311,7 +260,7 @@ export const scaleNumberRecord = (
     const n = toNumber(v);
     if (!Number.isFinite(n)) continue;
     const scaled = mul !== 1 ? n * mul : n;
-    out[k] = RATIO_ATTR_KEYS.has(k)
+    out[k] = CHARACTER_RATIO_ATTR_KEY_SET.has(k)
       ? Number(scaled.toFixed(6))
       : Math.round(scaled);
   }
@@ -366,9 +315,9 @@ export const inferGemTypeFromEffects = (effects: SocketEffect[]): string => {
   for (const effect of effects) {
     const key = String(effect.attrKey || "").trim();
     if (!key) continue;
-    if (ATTACK_ATTR_KEYS.has(key)) hasAttack = true;
-    else if (DEFENSE_ATTR_KEYS.has(key)) hasDefense = true;
-    else if (SURVIVAL_ATTR_KEYS.has(key)) hasSurvival = true;
+    if (ATTACK_ATTR_KEY_SET.has(key)) hasAttack = true;
+    else if (DEFENSE_ATTR_KEY_SET.has(key)) hasDefense = true;
+    else if (SURVIVAL_ATTR_KEY_SET.has(key)) hasSurvival = true;
   }
 
   const count = Number(hasAttack) + Number(hasDefense) + Number(hasSurvival);

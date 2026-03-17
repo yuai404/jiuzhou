@@ -72,6 +72,7 @@ function snapshotToCharacterData(
     baoji: a.baoji ?? 0,
     baoshang: a.baoshang ?? 0,
     jianbaoshang: a.jianbaoshang ?? 0,
+    jianfantan: a.jianfantan ?? 0,
     kangbao: a.kangbao ?? 0,
     zengshang: a.zengshang ?? 0,
     zhiliao: a.zhiliao ?? 0,

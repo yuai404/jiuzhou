@@ -1299,6 +1299,7 @@ class PartnerService {
       baoji: partnerDisplay.computedAttrs.baoji,
       baoshang: partnerDisplay.computedAttrs.baoshang,
       jianbaoshang: partnerDisplay.computedAttrs.jianbaoshang,
+      jianfantan: partnerDisplay.computedAttrs.jianfantan,
       kangbao: partnerDisplay.computedAttrs.kangbao,
       zengshang: partnerDisplay.computedAttrs.zengshang,
       zhiliao: partnerDisplay.computedAttrs.zhiliao,

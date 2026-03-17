@@ -91,6 +91,8 @@ export const TECHNIQUE_SKILL_SCALE_ATTR_LIST = [
   'zhaojia',
   'baoji',
   'baoshang',
+  'jianbaoshang',
+  'jianfantan',
   'kangbao',
   'zengshang',
   'zhiliao',
