@@ -23,9 +23,11 @@ import test from 'node:test';
 import {
   AFDIAN_MONTH_CARD_PLAN_ID,
   AFDIAN_PLAN_CONFIGS,
+  AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID,
   assertAfdianOrderMatchesWebhook,
   buildAfdianLogContext,
-  buildAfdianPlanRewardPayload,
+  buildAfdianOrderRewardPayload,
+  buildAfdianRedeemCodeMessage,
   buildAfdianOpenApiSign,
   computeAfdianMessageRetryAt,
   findAfdianOrderByOutTradeNo,
@@ -64,21 +66,59 @@ test('computeAfdianMessageRetryAt: 应按预设退避节奏给出下次重试时
   assert.equal(computeAfdianMessageRetryAt(6, base), null);
 });
 
-test('爱发电方案配置应按 plan_id 返回对应单月奖励规则，并按 month 计算最终奖励', () => {
-  assert.deepEqual(Object.keys(AFDIAN_PLAN_CONFIGS), [AFDIAN_MONTH_CARD_PLAN_ID]);
-  assert.deepEqual(getAfdianPlanConfig(AFDIAN_MONTH_CARD_PLAN_ID), {
-    rewardItemDefId: 'cons-monthcard-001',
-    rewardQuantityPerMonth: 1,
-  });
-  const planConfig = getAfdianPlanConfig(AFDIAN_MONTH_CARD_PLAN_ID);
-  assert.ok(planConfig);
-  assert.deepEqual(buildAfdianPlanRewardPayload(planConfig, 1), {
+test('爱发电方案配置应按 plan_id 返回对应奖励规则，并由统一纯函数生成最终奖励', () => {
+  assert.deepEqual(Object.keys(AFDIAN_PLAN_CONFIGS), [
+    AFDIAN_MONTH_CARD_PLAN_ID,
+    AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID,
+  ]);
+
+  const monthCardPlan = getAfdianPlanConfig(AFDIAN_MONTH_CARD_PLAN_ID);
+  assert.ok(monthCardPlan);
+  assert.deepEqual(buildAfdianOrderRewardPayload(monthCardPlan, SAMPLE_ORDER), {
     items: [{ itemDefId: 'cons-monthcard-001', quantity: 1 }],
   });
-  assert.deepEqual(buildAfdianPlanRewardPayload(planConfig, 3), {
+
+  assert.deepEqual(buildAfdianOrderRewardPayload(monthCardPlan, {
+    ...SAMPLE_ORDER,
+    month: 3,
+  }), {
     items: [{ itemDefId: 'cons-monthcard-001', quantity: 3 }],
   });
+
+  const productPlan = getAfdianPlanConfig(AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID);
+  assert.ok(productPlan);
+  assert.deepEqual(buildAfdianOrderRewardPayload(productPlan, {
+    out_trade_no: '202603171821374999575330508',
+    user_id: 'afdian-user-002',
+    plan_id: AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID,
+    month: 1,
+    total_amount: '3.00',
+    status: 2,
+    product_type: 1,
+    sku_detail: [{ sku_id: 'sku-001', count: 3, name: 'AA', album_id: '', pic: '' }],
+  }), {
+    spiritStones: 90000,
+  });
+
   assert.equal(getAfdianPlanConfig('other-plan'), null);
+});
+
+test('爱发电商品方案缺少有效 sku_detail 时应抛出明确错误', () => {
+  const productPlan = getAfdianPlanConfig(AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID);
+  assert.ok(productPlan);
+
+  assert.throws(() => {
+    buildAfdianOrderRewardPayload(productPlan, {
+      out_trade_no: '202603171821374999575330509',
+      user_id: 'afdian-user-003',
+      plan_id: AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID,
+      month: 1,
+      total_amount: '1.00',
+      status: 2,
+      product_type: 1,
+      sku_detail: [],
+    });
+  }, /sku_detail/);
 });
 
 test('buildAfdianLogContext: 应输出稳定日志上下文并忽略空值', () => {
@@ -112,4 +152,11 @@ test('爱发电订单回查工具应能按 out_trade_no 命中并校验关键字
       month: 3,
     });
   }, /month/);
+});
+
+test('爱发电兑换码私信文案应适用于赞助与商品订单', () => {
+  const message = buildAfdianRedeemCodeMessage('JZABC');
+  assert.ok(message.includes('这是为你生成的兑换码：'));
+  assert.ok(message.includes('对应奖励'));
+  assert.ok(!message.includes('赞助奖励'));
 });

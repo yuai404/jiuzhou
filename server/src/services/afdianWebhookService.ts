@@ -27,7 +27,7 @@ import {
   AFDIAN_REDEEM_SOURCE_TYPE,
   assertAfdianOrderMatchesWebhook,
   buildAfdianLogContext,
-  buildAfdianPlanRewardPayload,
+  buildAfdianOrderRewardPayload,
   buildAfdianRedeemCodeMessage,
   findAfdianOrderByOutTradeNo,
   getAfdianPlanConfig,
@@ -219,7 +219,7 @@ class AfdianWebhookService {
     const redeemCode = await redeemCodeService.getOrCreateCodeBySource({
       sourceType: AFDIAN_REDEEM_SOURCE_TYPE,
       sourceRefId: order.out_trade_no,
-      rewardPayload: buildAfdianPlanRewardPayload(planConfig, order.month),
+      rewardPayload: buildAfdianOrderRewardPayload(planConfig, order),
     });
     console.log(
       `[AfdianWebhook] 兑换码已${redeemCode.created ? '创建' : '复用'} ${buildAfdianLogContext({

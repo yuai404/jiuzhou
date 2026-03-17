@@ -24,6 +24,7 @@ import type {
 } from '../shared/rewardPayload.js';
 
 export const AFDIAN_MONTH_CARD_PLAN_ID = '04f7a35e210c11f182a752540025c377';
+export const AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID = 'ac7064ea21ca11f1a2b15254001e7c00';
 export const AFDIAN_REDEEM_SOURCE_TYPE = 'afdian_order';
 export const AFDIAN_MONTH_CARD_ITEM_DEF_ID = 'cons-monthcard-001';
 export const AFDIAN_OPEN_API_DEFAULT_BASE_URL = 'https://ifdian.net';
@@ -86,17 +87,40 @@ export type AfdianOpenApiEnvelope<TData extends object> = {
   data: TData;
 };
 
+export type AfdianPlanRewardConfig =
+  | {
+      kind: 'item';
+      unit: 'month';
+      itemDefId: string;
+      quantityPerUnit: number;
+    }
+  | {
+      kind: 'spirit_stones';
+      unit: 'sku_count';
+      amountPerUnit: number;
+    };
+
 export type AfdianPlanConfig = {
-  rewardItemDefId: string;
-  rewardQuantityPerMonth: number;
+  reward: AfdianPlanRewardConfig;
 };
 
 export type AfdianLogFieldValue = string | number | boolean | null | undefined;
 
 export const AFDIAN_PLAN_CONFIGS: Readonly<Record<string, AfdianPlanConfig>> = {
   [AFDIAN_MONTH_CARD_PLAN_ID]: {
-    rewardItemDefId: AFDIAN_MONTH_CARD_ITEM_DEF_ID,
-    rewardQuantityPerMonth: 1,
+    reward: {
+      kind: 'item',
+      unit: 'month',
+      itemDefId: AFDIAN_MONTH_CARD_ITEM_DEF_ID,
+      quantityPerUnit: 1,
+    },
+  },
+  [AFDIAN_SPIRIT_STONE_PRODUCT_PLAN_ID]: {
+    reward: {
+      kind: 'spirit_stones',
+      unit: 'sku_count',
+      amountPerUnit: 30000,
+    },
   },
 };
 
@@ -113,17 +137,54 @@ export const getAfdianPlanConfig = (planId: string): AfdianPlanConfig | null => 
   return AFDIAN_PLAN_CONFIGS[normalizedPlanId] ?? null;
 };
 
-export const buildAfdianPlanRewardPayload = (
+const computeAfdianSkuPurchaseCount = (order: AfdianWebhookOrder): number => {
+  if (!Array.isArray(order.sku_detail) || order.sku_detail.length <= 0) {
+    throw new Error('爱发电商品订单缺少有效 sku_detail');
+  }
+
+  let totalCount = 0;
+  for (const sku of order.sku_detail) {
+    if (!Number.isInteger(sku.count) || sku.count <= 0) {
+      throw new Error('爱发电商品订单 sku_detail.count 必须为正整数');
+    }
+    totalCount += sku.count;
+  }
+
+  if (totalCount <= 0) {
+    throw new Error('爱发电商品订单 sku_detail.count 汇总后必须大于 0');
+  }
+
+  return totalCount;
+};
+
+const computeAfdianRewardUnits = (
+  rewardConfig: AfdianPlanRewardConfig,
+  order: AfdianWebhookOrder,
+): number => {
+  if (rewardConfig.unit === 'month') {
+    return order.month;
+  }
+  return computeAfdianSkuPurchaseCount(order);
+};
+
+export const buildAfdianOrderRewardPayload = (
   planConfig: AfdianPlanConfig,
-  monthCount: number,
+  order: AfdianWebhookOrder,
 ): RedeemCodeRewardPayload => {
+  const rewardUnits = computeAfdianRewardUnits(planConfig.reward, order);
+  if (planConfig.reward.kind === 'item') {
+    return {
+      items: [
+        {
+          itemDefId: planConfig.reward.itemDefId,
+          quantity: planConfig.reward.quantityPerUnit * rewardUnits,
+        },
+      ],
+    };
+  }
+
   return {
-    items: [
-      {
-        itemDefId: planConfig.rewardItemDefId,
-        quantity: planConfig.rewardQuantityPerMonth * monthCount,
-      },
-    ],
+    spiritStones: planConfig.reward.amountPerUnit * rewardUnits,
   };
 };
 
