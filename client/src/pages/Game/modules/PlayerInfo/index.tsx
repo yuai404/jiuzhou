@@ -225,7 +225,6 @@ const PlayerInfo: React.FC = () => {
 
   const combatAttributes = [
     { label: '属性', value: `${attackTypeText}（${elementText}）` },
-    { label: '属性数值', value: formatPercent(character.shuxingShuzhi) },
     { label: '物攻', value: character.wugong },
     { label: '法攻', value: character.fagong },
     { label: '物防', value: derivedStats?.wufang || 0 },

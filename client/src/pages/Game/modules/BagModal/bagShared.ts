@@ -219,7 +219,6 @@ const attrOrderBase = [
   "huo_kangxing",
   "tu_kangxing",
   "fuyuan",
-  "shuxing_shuzhi",
 ] as const;
 const ratingBaseAttrKeySet = new Set<string>(RATING_BASE_ATTR_KEYS);
 

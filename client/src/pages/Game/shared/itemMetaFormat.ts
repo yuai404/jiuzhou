@@ -47,7 +47,6 @@ export const formatScalar = (value: unknown): string => {
  * 说明：这些键在展示时应走 `formatSignedPercent` 而不是 `formatSignedNumber`。
  */
 export const PERCENT_ATTR_KEYS: ReadonlySet<string> = new Set<string>([
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

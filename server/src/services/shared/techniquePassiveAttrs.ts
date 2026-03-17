@@ -31,7 +31,6 @@ export const TECHNIQUE_PASSIVE_PERCENT_ADDITIVE_KEYS = new Set<string>([
   'jianliao',
   'xixue',
   'lengque',
-  'shuxing_shuzhi',
   'kongzhi_kangxing',
   'jin_kangxing',
   'mu_kangxing',

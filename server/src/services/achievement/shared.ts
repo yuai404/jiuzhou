@@ -44,7 +44,6 @@ export const TITLE_EFFECT_KEYS = [
   'jianliao',
   'xixue',
   'lengque',
-  'shuxing_shuzhi',
   'kongzhi_kangxing',
   'jin_kangxing',
   'mu_kangxing',

@@ -30,7 +30,6 @@ export interface AffixValueNormalizeContext {
 }
 
 const RATIO_ATTR_KEYS = new Set([
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

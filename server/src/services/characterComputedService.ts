@@ -98,7 +98,6 @@ interface CharacterComputedStats {
   jianliao: number;
   xixue: number;
   lengque: number;
-  shuxing_shuzhi: number;
   kongzhi_kangxing: number;
   jin_kangxing: number;
   mu_kangxing: number;
@@ -181,7 +180,6 @@ type CharacterAttrKey =
   | 'jianliao'
   | 'xixue'
   | 'lengque'
-  | 'shuxing_shuzhi'
   | 'kongzhi_kangxing'
   | 'jin_kangxing'
   | 'mu_kangxing'
@@ -213,7 +211,6 @@ const RATIO_ATTR_KEYS = new Set<CharacterAttrKey>([
   'jianliao',
   'xixue',
   'lengque',
-  'shuxing_shuzhi',
   'kongzhi_kangxing',
   'jin_kangxing',
   'mu_kangxing',
@@ -245,7 +242,6 @@ const VALID_TITLE_EFFECT_KEYS = new Set<CharacterAttrKey>([
   'jianliao',
   'xixue',
   'lengque',
-  'shuxing_shuzhi',
   'kongzhi_kangxing',
   'jin_kangxing',
   'mu_kangxing',
@@ -275,7 +271,6 @@ const DEFAULT_ATTRS: CharacterComputedStats = Object.freeze({
   jianliao: 0,
   xixue: 0,
   lengque: 0,
-  shuxing_shuzhi: 0,
   kongzhi_kangxing: 0,
   jin_kangxing: 0,
   mu_kangxing: 0,
@@ -438,7 +433,6 @@ const normalizeStats = (stats: CharacterComputedStats): CharacterComputedStats =
     'jianliao',
     'xixue',
     'lengque',
-    'shuxing_shuzhi',
     'kongzhi_kangxing',
     'jin_kangxing',
     'mu_kangxing',

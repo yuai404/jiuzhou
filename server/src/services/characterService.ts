@@ -63,7 +63,6 @@ export interface Character {
   jianliao: number;
   xixue: number;
   lengque: number;
-  shuxing_shuzhi: number;
   kongzhi_kangxing: number;
   jin_kangxing: number;
   mu_kangxing: number;

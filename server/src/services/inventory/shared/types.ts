@@ -73,7 +73,6 @@ export type CharacterAttrKey =
   | "jianliao"
   | "xixue"
   | "lengque"
-  | "shuxing_shuzhi"
   | "kongzhi_kangxing"
   | "jin_kangxing"
   | "mu_kangxing"
@@ -106,7 +105,6 @@ export const allowedCharacterAttrKeys = new Set<CharacterAttrKey>([
   "jianliao",
   "xixue",
   "lengque",
-  "shuxing_shuzhi",
   "kongzhi_kangxing",
   "jin_kangxing",
   "mu_kangxing",

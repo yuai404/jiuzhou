@@ -46,8 +46,7 @@ const calcPower = (c: CharacterData | null): number => {
   const hp = Number(c.maxQixue) || 0;
   const mp = Number(c.maxLingqi) || 0;
   const spd = Number(c.sudu) || 0;
-  const extra = Number(c.shuxingShuzhi) || 0;
-  const base = atk * 2 + def * 1.4 + (hp + mp) / 16 + spd * 8 + extra * 5;
+  const base = atk * 2 + def * 1.4 + (hp + mp) / 16 + spd * 8;
   return Math.max(1, Math.round(base));
 };
 

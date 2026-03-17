@@ -88,7 +88,6 @@ const translateKey = (key: string): string | null => {
     huo_kangxing: '火抗性',
     tu_kangxing: '土抗性',
     fuyuan: '福源',
-    shuxing_shuzhi: '属性数值',
 
     attack: '攻击',
     defense: '防御',

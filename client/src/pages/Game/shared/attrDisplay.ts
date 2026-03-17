@@ -21,7 +21,6 @@
 export const RATING_SUFFIX = '_rating';
 
 export const RATING_BASE_ATTR_KEYS = [
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',
@@ -72,7 +71,6 @@ const ATTR_LABEL_BASE: Record<string, string> = {
   huo_kangxing: '火抗性',
   tu_kangxing: '土抗性',
   fuyuan: '福源',
-  shuxing_shuzhi: '属性数值',
 };
 
 const ratingAttrLabelEntries = RATING_BASE_ATTR_KEYS.map((key) => {
@@ -86,7 +84,6 @@ export const attrLabel: Record<string, string> = {
 };
 
 export const percentAttrKeys = new Set<string>([
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

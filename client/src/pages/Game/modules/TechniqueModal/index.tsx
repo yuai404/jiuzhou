@@ -152,7 +152,6 @@ const passiveLabel: Record<string, string> = {
   huo_kangxing: '火抗性',
   tu_kangxing: '土抗性',
   fuyuan: '福缘',
-  shuxing_shuzhi: '属性数值',
 };
 
 const normalizePassiveKey = (raw: string): string =>

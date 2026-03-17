@@ -154,7 +154,6 @@ const EQUIPMENT_TOOLTIP_CLASS_NAMES = {
 const RATING_SUFFIX = '_rating';
 
 const RATING_BASE_ATTR_KEYS = [
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',
@@ -207,7 +206,6 @@ const attrLabelBase: Record<string, string> = {
   huo_kangxing: '火抗性',
   tu_kangxing: '土抗性',
   fuyuan: '福源',
-  shuxing_shuzhi: '属性数值',
 };
 
 const ratingAttrLabelEntries = RATING_BASE_ATTR_KEYS.map((key) => {
@@ -248,7 +246,6 @@ const attrOrderBase = [
   'huo_kangxing',
   'tu_kangxing',
   'fuyuan',
-  'shuxing_shuzhi',
 ] as const;
 
 const attrOrderKeys = attrOrderBase.flatMap((key) =>
@@ -260,7 +257,6 @@ const attrOrder: Record<string, number> = Object.fromEntries(
 );
 
 const percentAttrKeys = new Set<string>([
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

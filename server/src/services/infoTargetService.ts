@@ -136,7 +136,6 @@ const attrLabelMap: Record<string, string> = {
   jianliao: '减疗',
   xixue: '吸血',
   lengque: '冷却',
-  shuxing_shuzhi: '属性数值',
   kongzhi_kangxing: '控制抗性',
   jin_kangxing: '金抗性',
   mu_kangxing: '木抗性',
@@ -150,7 +149,6 @@ const attrLabelMap: Record<string, string> = {
 };
 
 const PERCENT_ATTR_KEYS = new Set<string>([
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

@@ -24,7 +24,6 @@ const TECHNIQUE_PASSIVE_PERCENT_KEYS = new Set<string>([
   'fagong',
   'wufang',
   'fafang',
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

@@ -100,7 +100,6 @@ const titleEffectLabel: Record<string, string> = {
   shui_kangxing: '水抗性',
   huo_kangxing: '火抗性',
   tu_kangxing: '土抗性',
-  shuxing_shuzhi: '属性数值',
 };
 
 const titleEffectOrder: Record<string, number> = Object.fromEntries(
@@ -133,12 +132,10 @@ const titleEffectOrder: Record<string, number> = Object.fromEntries(
     'shui_kangxing',
     'huo_kangxing',
     'tu_kangxing',
-    'shuxing_shuzhi',
   ].map((key, idx) => [key, idx]),
 );
 
 const titlePercentEffectKeys = new Set<string>([
-  'shuxing_shuzhi',
   'mingzhong',
   'shanbi',
   'zhaojia',

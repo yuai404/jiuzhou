@@ -105,7 +105,6 @@ export interface CharacterData {
   jianliao: number;
   xixue: number;
   lengque: number;
-  shuxingShuzhi: number;
   kongzhiKangxing: number;
   jinKangxing: number;
   muKangxing: number;
