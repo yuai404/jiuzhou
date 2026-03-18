@@ -132,6 +132,7 @@ type CharacterListener = (character: CharacterData | null) => void;
 type ErrorListener = (error: { message: string }) => void;
 type KickedListener = (data: { message: string }) => void;
 type TeamUpdateListener = (data: unknown) => void;
+type AuthReadyListener = () => void;
 export interface SectIndicatorPayload {
   joined: boolean;
   myPendingApplicationCount: number;
@@ -287,6 +288,7 @@ class GameSocketService {
   private errorListeners: Set<ErrorListener> = new Set();
   private kickedListeners: Set<KickedListener> = new Set();
   private teamUpdateListeners: Set<TeamUpdateListener> = new Set();
+  private authReadyListeners: Set<AuthReadyListener> = new Set();
   private sectUpdateListeners: Set<SectUpdateListener> = new Set();
   private battleUpdateListeners: Set<BattleUpdateListener> = new Set();
   private battleCooldownListeners: Set<BattleCooldownListener> = new Set();
@@ -360,6 +362,7 @@ class GameSocketService {
       this.currentGameTimeSync = null;
       this.currentTechniqueResearchStatus = null;
       this.currentPartnerRecruitStatus = null;
+      this.currentBattleUpdate = null;
       this.currentBattleCooldownState = null;
     });
 
@@ -394,6 +397,10 @@ class GameSocketService {
 
     this.socket.on("team:update", (data: unknown) => {
       this.notifyTeamUpdateListeners(data);
+    });
+
+    this.socket.on("game:auth-ready", () => {
+      this.notifyAuthReadyListeners();
     });
 
     this.socket.on(
@@ -675,6 +682,11 @@ class GameSocketService {
     return () => this.teamUpdateListeners.delete(listener);
   }
 
+  onAuthReady(listener: AuthReadyListener): () => void {
+    this.authReadyListeners.add(listener);
+    return () => this.authReadyListeners.delete(listener);
+  }
+
   onSectUpdate(listener: SectUpdateListener): () => void {
     this.sectUpdateListeners.add(listener);
     if (this.currentSectIndicator) {
@@ -884,6 +896,10 @@ class GameSocketService {
 
   private notifyTeamUpdateListeners(data: unknown): void {
     this.teamUpdateListeners.forEach((listener) => listener(data));
+  }
+
+  private notifyAuthReadyListeners(): void {
+    this.authReadyListeners.forEach((listener) => listener());
   }
 
   private notifySectUpdateListeners(data: SectIndicatorPayload): void {

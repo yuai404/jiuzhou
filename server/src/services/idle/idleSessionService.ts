@@ -42,10 +42,11 @@ import type {
   RewardItemEntry,
 } from './types.js';
 import {
-  rowToIdleBattleDetailRow,
+  rowToIdleBattleStoredDetailRow,
   rowToIdleBattleSummaryRow,
   rowToIdleSessionRow,
 } from './rowMappers.js';
+import { replayIdleBattleLogs } from './idleBattleSimulationCore.js';
 import { hasRegisteredIdleExecutionLoop } from './idleExecutionRegistry.js';
 import {
   resolveOrphanStoppingSessionIds,
@@ -582,7 +583,13 @@ class IdleSessionService {
     );
 
     if (res.rows.length === 0) return null;
-    return rowToIdleBattleDetailRow(res.rows[0] as Record<string, unknown>);
+    const storedRow = rowToIdleBattleStoredDetailRow(
+      res.rows[0] as Record<string, unknown>,
+    );
+    return {
+      ...storedRow,
+      battleLog: replayIdleBattleLogs(storedRow.battleReplaySnapshot),
+    };
   }
 
   /**

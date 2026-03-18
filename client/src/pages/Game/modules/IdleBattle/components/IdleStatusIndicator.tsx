@@ -4,7 +4,7 @@
  * 作用：
  *   在游戏主界面状态栏展示当前挂机会话的实时摘要信息。
  *   仅在 activeSession 非 null 时渲染，否则返回 null。
- *   不包含任何数据请求逻辑，所有数据通过 props 传入。
+ *   通过共享地图详情缓存解析地图/房间中文名，避免 tooltip 先露出英文 ID。
  *
  * 输入/输出：
  *   - activeSession: 当前活跃会话（null 时组件不渲染）
@@ -19,11 +19,11 @@
  *   2. status === 'stopping' 时显示"停止中"标签，不再更新计时
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Tag, Tooltip } from 'antd';
 import { LoadingOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import { getEnabledMaps, getMapDetail } from '../../../../../services/api/world';
 import type { IdleSessionDto } from '../types';
+import { useMapDetailSnapshot } from '../../../shared/useMapDetailSnapshot';
 import './IdleStatusIndicator.scss';
 
 // ============================================
@@ -67,25 +67,13 @@ const IdleStatusIndicator: React.FC<IdleStatusIndicatorProps> = ({
   );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isStopping = activeSession.status === 'stopping';
-
-  // 根据 mapId/roomId 解析地图名和房间名（仅挂载时请求一次）
-  const [mapName, setMapName] = useState(activeSession.mapId);
-  const [roomName, setRoomName] = useState(activeSession.roomId);
-
-  useEffect(() => {
-    let cancelled = false;
-    void getEnabledMaps().then((res) => {
-      if (cancelled || !res.success || !res.data?.maps) return;
-      const map = res.data.maps.find((m) => m.id === activeSession.mapId);
-      if (map) setMapName(map.name);
-    });
-    void getMapDetail(activeSession.mapId).then((res) => {
-      if (cancelled || !res.success || !res.data?.rooms) return;
-      const room = res.data.rooms.find((r) => r.id === activeSession.roomId);
-      if (room) setRoomName(room.name);
-    });
-    return () => { cancelled = true; };
-  }, [activeSession.mapId, activeSession.roomId]);
+  const { snapshot, loading } = useMapDetailSnapshot(activeSession.mapId);
+  const roomName = useMemo(() => {
+    const matchedRoom = snapshot?.rooms.find((room) => room.id === activeSession.roomId);
+    if (matchedRoom?.name) return matchedRoom.name;
+    return loading ? '同步中...' : '未知房间';
+  }, [activeSession.roomId, loading, snapshot]);
+  const mapName = snapshot?.mapName || (loading ? '同步中...' : '未知地图');
 
   useEffect(() => {
     // stopping 状态不再更新计时

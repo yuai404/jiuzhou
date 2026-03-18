@@ -37,11 +37,14 @@ import { BATTLE_TICK_MS, BATTLE_START_COOLDOWN_MS } from '../battle/index.js';
 import { getGameServer } from '../../game/gameServer.js';
 import { getRoomInMap } from '../mapService.js';
 import { getCharacterUserId } from '../sect/db.js';
-import type { IdleSessionRow, RewardItemEntry } from './types.js';
+import type {
+  IdleBattleReplaySnapshot,
+  IdleSessionRow,
+  RewardItemEntry,
+} from './types.js';
 import { toPgTextArrayLiteral } from './pgTextArrayLiteral.js';
 import { resolveIdleBattleRewards } from './idleBattleRewardResolver.js';
 import { simulateIdleBattle } from './idleBattleSimulationCore.js';
-import type { BattleLogEntry } from '../../battle/types.js';
 import { rowToIdleSessionRow } from './rowMappers.js';
 import { idleSessionService } from './idleSessionService.js';
 import {
@@ -106,7 +109,7 @@ export interface SingleBatchResult {
   itemsGained: RewardItemEntry[];
   randomSeed: number;
   roundCount: number;
-  battleLog: BattleLogEntry[];
+  replaySnapshot: IdleBattleReplaySnapshot | null;
   monsterIds: string[];
   bagFullFlag: boolean;
 }
@@ -130,7 +133,7 @@ interface BatchBuffer {
     expGained: number;
     silverGained: number;
     itemsGained: RewardItemEntry[];
-    battleLog: BattleLogEntry[];
+    replaySnapshot: IdleBattleReplaySnapshot | null;
     monsterIds: string[];
   }>;
   summaryState: IdleSessionSummaryState;
@@ -190,7 +193,7 @@ export async function executeSingleBatch(
     itemsGained: rewardSnapshot.itemsGained,
     randomSeed: simulationResult.randomSeed,
     roundCount: simulationResult.roundCount,
-    battleLog: simulationResult.battleLog,
+    replaySnapshot: simulationResult.replaySnapshot,
     monsterIds: simulationResult.monsterIds,
     bagFullFlag: rewardSnapshot.bagFullFlag,
   };
@@ -239,7 +242,7 @@ async function flushBuffer(
           b.expGained,
           b.silverGained,
           JSON.stringify(b.itemsGained),
-          JSON.stringify(b.battleLog),
+          JSON.stringify(b.replaySnapshot),
           toPgTextArrayLiteral(b.monsterIds),
         );
         return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},$${base + 9},$${base + 10},$${base + 11},NOW())`;
@@ -289,7 +292,7 @@ async function appendToBuffer(
     expGained: batchResult.expGained,
     silverGained: batchResult.silverGained,
     itemsGained: batchResult.itemsGained,
-    battleLog: batchResult.battleLog,
+    replaySnapshot: batchResult.replaySnapshot,
     monsterIds: batchResult.monsterIds,
   });
 

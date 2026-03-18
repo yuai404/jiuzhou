@@ -29,7 +29,11 @@ import { BATTLE_TICK_MS, BATTLE_START_COOLDOWN_MS } from '../battle/index.js';
 import { getGameServer } from '../../game/gameServer.js';
 import { getRoomInMap } from '../mapService.js';
 import { getCharacterUserId } from '../sect/db.js';
-import type { IdleSessionRow, RewardItemEntry } from './types.js';
+import type {
+  IdleBattleReplaySnapshot,
+  IdleSessionRow,
+  RewardItemEntry,
+} from './types.js';
 import { resolveIdleBattleRewards } from './idleBattleRewardResolver.js';
 import { toPgTextArrayLiteral } from './pgTextArrayLiteral.js';
 import { rowToIdleSessionRow } from './rowMappers.js';
@@ -57,7 +61,7 @@ type WorkerBatchResult = {
   result: 'attacker_win' | 'defender_win' | 'draw';
   randomSeed: number;
   roundCount: number;
-  battleLog: unknown[];
+  replaySnapshot: IdleBattleReplaySnapshot | null;
   monsterIds: string[];
 };
 
@@ -80,7 +84,7 @@ type BatchBuffer = {
     silverGained: number;
     itemsGained: RewardItemEntry[];
     bagFullFlag: boolean;
-    battleLog: unknown[];
+    replaySnapshot: IdleBattleReplaySnapshot | null;
     monsterIds: string[];
   }>;
   summaryState: IdleSessionSummaryState;
@@ -174,7 +178,7 @@ async function flushBuffer(
         b.randomSeed,
         b.expGained,
         b.silverGained,
-        JSON.stringify(b.battleLog),
+        JSON.stringify(b.replaySnapshot),
         JSON.stringify(b.itemsGained),
         toPgTextArrayLiteral(b.monsterIds),
       ]);
@@ -369,7 +373,7 @@ export function startExecutionLoop(session: IdleSessionRow, userId: number): voi
         silverGained: batchResult.silverGained,
         itemsGained: batchResult.itemsGained,
         bagFullFlag: batchResult.bagFullFlag,
-        battleLog: batchResult.battleLog,
+        replaySnapshot: batchResult.replaySnapshot,
         monsterIds: batchResult.monsterIds,
       });
       appendBattleResultToIdleSessionSummary(buffer.summaryState, batchResult);

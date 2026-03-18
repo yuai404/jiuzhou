@@ -995,6 +995,16 @@ const BattleArea: React.FC<BattleAreaProps> = ({
   ]);
 
   useEffect(() => {
+    return gameSocket.onAuthReady(() => {
+      const currentBattleId = battleIdRef.current ?? resolvedExternalBattleId;
+      if (!currentBattleId) return;
+      if (!adoptCachedBattleSnapshot(currentBattleId)) {
+        gameSocket.requestBattleSync(currentBattleId);
+      }
+    });
+  }, [adoptCachedBattleSnapshot, resolvedExternalBattleId]);
+
+  useEffect(() => {
     if (!battleState) return;
     setStartupStatus('none');
     const nextResult: BattleResult =
@@ -1105,7 +1115,8 @@ const BattleArea: React.FC<BattleAreaProps> = ({
           const current = battleStateRef.current;
           const currentLogCount = battleLogsRef.current.length;
           if (
-            incomingBattleId === currentId
+            !data.authoritative
+            && incomingBattleId === currentId
             && current
             && !isNewerBattleState(data.state, current, data.logs.length, currentLogCount)
           ) {
@@ -1124,7 +1135,14 @@ const BattleArea: React.FC<BattleAreaProps> = ({
         if (!next) return;
         const current = battleStateRef.current;
         const currentLogCount = battleLogsRef.current.length;
-        if (!isNewerBattleState(next, current, data.logs.length, currentLogCount)) return;
+        if (
+          !data.authoritative
+          && incomingBattleId === currentId
+          && current
+          && !isNewerBattleState(next, current, data.logs.length, currentLogCount)
+        ) {
+          return;
+        }
         applyBattleStateSnapshot(next, data.logs);
         return;
       }

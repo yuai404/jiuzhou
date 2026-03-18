@@ -32,6 +32,7 @@ import {
 } from "./runtime/state.js";
 import { stopBattleTicker, emitBattleUpdate } from "./runtime/ticker.js";
 import { removeBattleFromRedis } from "./runtime/persistence.js";
+import { buildBattleAbandonedRealtimePayload } from "./runtime/realtime.js";
 import { finishBattle, getBattleMonsters } from "./settlement.js";
 import { settleArenaBattleIfNeeded } from "./pvp.js";
 import { markBattleSessionAbandoned } from "../battleSession/index.js";
@@ -162,15 +163,18 @@ export async function abandonBattle(
     const sessionSnapshot = markBattleSessionAbandoned(battleId);
     for (const participantUserId of participants) {
       if (!Number.isFinite(participantUserId)) continue;
-      gameServer.emitToUser(participantUserId, "battle:update", {
-        kind: "battle_abandoned",
-        battleId,
-        success: true,
-        message: "已放弃战斗",
-        battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
-        nextBattleAvailableAt: cooldownUntilMs,
-        ...(sessionSnapshot ? { session: sessionSnapshot } : {}),
-      });
+      gameServer.emitToUser(
+        participantUserId,
+        "battle:update",
+        buildBattleAbandonedRealtimePayload({
+          battleId,
+          success: true,
+          message: "已放弃战斗",
+          battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
+          nextBattleAvailableAt: cooldownUntilMs,
+          session: sessionSnapshot,
+        }),
+      );
       void gameServer.pushCharacterUpdate(participantUserId);
       if (state.battleType === "pvp") {
         const computed = await getCharacterComputedByUserId(participantUserId);

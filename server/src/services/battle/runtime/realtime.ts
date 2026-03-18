@@ -30,6 +30,7 @@ type BattleRealtimeExtras = {
   result?: string;
   success?: boolean;
   message?: string;
+  authoritative?: boolean;
   battleStartCooldownMs?: number;
   retryAfterMs?: number;
   nextBattleAvailableAt?: number;
@@ -76,6 +77,37 @@ export const buildBattleRealtimePayload = (params: {
     state: params.state,
     logs: params.logs,
     ...(params.extras ?? {}),
+  };
+};
+
+export const buildBattleAbandonedRealtimePayload = (params: {
+  battleId: string;
+  session?: object | null;
+  success?: boolean;
+  message?: string;
+  authoritative?: boolean;
+  battleStartCooldownMs?: number;
+  retryAfterMs?: number;
+  nextBattleAvailableAt?: number;
+}): Record<string, unknown> => {
+  return {
+    kind: "battle_abandoned",
+    battleId: params.battleId,
+    ...(params.session ? { session: params.session } : {}),
+    ...(typeof params.success === "boolean" ? { success: params.success } : {}),
+    ...(typeof params.message === "string" ? { message: params.message } : {}),
+    ...(typeof params.authoritative === "boolean"
+      ? { authoritative: params.authoritative }
+      : {}),
+    ...(typeof params.battleStartCooldownMs === "number"
+      ? { battleStartCooldownMs: params.battleStartCooldownMs }
+      : {}),
+    ...(typeof params.retryAfterMs === "number"
+      ? { retryAfterMs: params.retryAfterMs }
+      : {}),
+    ...(typeof params.nextBattleAvailableAt === "number"
+      ? { nextBattleAvailableAt: params.nextBattleAvailableAt }
+      : {}),
   };
 };
 

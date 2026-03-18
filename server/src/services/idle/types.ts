@@ -35,6 +35,16 @@ export type {
   BattleSetBonusEffect,
 } from '../../battle/types.js';
 
+/**
+ * 挂机战斗重放快照。
+ * - initialState：开战前的初始 BattleState 快照，用于按随机种子重放整场战斗
+ * - playerAutoSkillPolicy：挂机玩家的自动放技能策略；若为空则重放时走默认自动战斗逻辑
+ */
+export interface IdleBattleReplaySnapshot {
+  initialState: import('../../battle/types.js').BattleState;
+  playerAutoSkillPolicy: AutoSkillPolicy | null;
+}
+
 // ============================================
 // 挂机配置
 // ============================================
@@ -153,14 +163,26 @@ export interface IdleBattleSummaryRow {
 }
 
 /**
- * 单场战斗详情行（idle_battle_batches 表的完整回放映射）
- * - 仅在玩家点击单个批次后读取，避免列表接口一次返回整场 battle_log
+ * 单场战斗详情行（对前端输出的完整回放详情）
+ * - 服务端读取批次快照后现场重放生成 battleLog，再返回给前端
  * - 复用摘要字段，确保列表和详情的业务规则只有一份来源
  */
 export interface IdleBattleDetailRow extends IdleBattleSummaryRow {
   randomSeed: number;
   itemsGained: RewardItemEntry[];
   battleLog: import('../../battle/types.js').BattleLogEntry[];
+  monsterIds: string[];
+}
+
+/**
+ * 单场战斗详情存储行（idle_battle_batches 表的内部映射）
+ * - `battle_log` 列现在存的是 `IdleBattleReplaySnapshot`，不是 battleLog 正文
+ * - 仅供服务端详情查询和重放使用，不直接返回给前端
+ */
+export interface IdleBattleStoredDetailRow extends IdleBattleSummaryRow {
+  randomSeed: number;
+  itemsGained: RewardItemEntry[];
+  battleReplaySnapshot: IdleBattleReplaySnapshot | null;
   monsterIds: string[];
 }
 

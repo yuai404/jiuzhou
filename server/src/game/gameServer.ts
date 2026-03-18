@@ -20,7 +20,10 @@ import {
   syncBattleSnapshotToUser,
   syncBattleStateOnReconnect,
 } from "../services/battle/index.js";
-import { buildBattleFinishedRealtimePayload } from "../services/battle/runtime/realtime.js";
+import {
+  buildBattleAbandonedRealtimePayload,
+  buildBattleFinishedRealtimePayload,
+} from "../services/battle/runtime/realtime.js";
 import type { BattleSessionSnapshot } from "../services/battleSession/index.js";
 import { getCurrentBattleSessionDetail } from "../services/battleSession/index.js";
 import { detectSensitiveWords } from "../services/sensitiveWordService.js";
@@ -240,6 +243,7 @@ class GameServer {
           // 同步战斗状态（重连时）
           await syncBattleStateOnReconnect(userId);
           await this.syncFinishedBattleOnReconnect(userId);
+          socket.emit("game:auth-ready");
 
           this.scheduleEmitOnlinePlayers(true);
         } catch (error) {
@@ -268,7 +272,19 @@ class GameServer {
             socket.emit("game:error", { message: "缺少战斗ID" });
             return;
           }
-          await syncBattleSnapshotToUser(session.userId, battleId);
+          const synced = await syncBattleSnapshotToUser(session.userId, battleId);
+          if (synced) {
+            return;
+          }
+          socket.emit(
+            "battle:update",
+            buildBattleAbandonedRealtimePayload({
+              battleId,
+              success: false,
+              message: "战斗不存在或已结束",
+              authoritative: true,
+            }),
+          );
         }),
       );
 

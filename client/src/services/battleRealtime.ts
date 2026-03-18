@@ -40,6 +40,7 @@ type BattleRealtimeDataEnvelope = {
   rewards?: BattleRewardsDto | null;
   result?: BattleResultDto;
   session?: BattleSessionSnapshotDto | null;
+  authoritative?: boolean;
 } & BattleCooldownMetaDto;
 
 export type BattleRealtimeWirePayload = {
@@ -52,6 +53,7 @@ export type BattleRealtimeWirePayload = {
   session?: BattleSessionSnapshotDto | null;
   rewards?: BattleRewardsDto | null;
   result?: BattleResultDto;
+  authoritative?: boolean;
   success?: boolean;
   message?: string;
   unitsDelta?: boolean;
@@ -68,6 +70,7 @@ export type BattleRealtimeStatePayload = {
   session?: BattleSessionSnapshotDto | null;
   rewards?: BattleRewardsDto | null;
   result?: BattleResultDto;
+  authoritative?: boolean;
   success?: boolean;
   message?: string;
   unitsDelta?: boolean;
@@ -77,6 +80,7 @@ export type BattleRealtimeAbandonedPayload = {
   kind: 'battle_abandoned';
   battleId: string;
   session?: BattleSessionSnapshotDto | null;
+  authoritative?: boolean;
   success?: boolean;
   message?: string;
 } & BattleCooldownMetaDto;
@@ -114,6 +118,8 @@ export const normalizeBattleRealtimePayload = (
 
   const envelope = raw.data ?? null;
   const session = raw.session ?? envelope?.session ?? undefined;
+  const authoritative =
+    raw.authoritative === true || envelope?.authoritative === true;
   const success = typeof raw.success === 'boolean' ? raw.success : undefined;
   const message = typeof raw.message === 'string' ? raw.message : undefined;
   const battleStartCooldownMs = raw.battleStartCooldownMs ?? envelope?.battleStartCooldownMs;
@@ -126,6 +132,7 @@ export const normalizeBattleRealtimePayload = (
       kind,
       battleId,
       session,
+      authoritative,
       success,
       message,
       battleStartCooldownMs,
@@ -157,6 +164,7 @@ export const normalizeBattleRealtimePayload = (
     session,
     rewards,
     result,
+    authoritative,
     success,
     message,
     unitsDelta: Boolean(raw.unitsDelta),

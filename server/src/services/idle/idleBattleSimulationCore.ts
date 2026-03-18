@@ -9,13 +9,16 @@
  * 输入/输出：
  *   - simulateIdleBattle(session, userId, roomMonsters)
  *     输入会话快照、用户 ID、房间怪物配置；
- *     输出单场战斗核心结果（胜负、随机种子、回合数、日志、怪物 ID 列表）。
+ *     输出单场战斗核心结果（胜负、随机种子、回合数、重放快照、怪物 ID 列表）。
+ *   - replayIdleBattleLogs(snapshot)
+ *     输入单场战斗重放快照；
+ *     输出按原随机种子重建的整场日志。
  *
  * 数据流：
  *   roomMonsters + sessionSnapshot → 目标怪物列表
  *   → resolveMonsterDataForBattle（普通战斗同入口）
  *   → createPVEBattle + BattleEngine.autoExecute
- *   → battle result / logs
+ *   → battle result / replaySnapshot
  *
  * 关键边界条件与坑点：
  *   1. targetMonsterDefId 存在时只打该种怪，数量取房间配置 count（默认 1）。
@@ -25,12 +28,15 @@
 import { randomUUID } from 'crypto';
 import { createPVEBattle, type CharacterData, type SkillData } from '../../battle/battleFactory.js';
 import { BattleEngine, type PlayerSkillSelector } from '../../battle/battleEngine.js';
-import { consumeBattleLogDelta } from '../../battle/logStream.js';
-import type { BattleLogEntry } from '../../battle/types.js';
+import { clearBattleLogStream, consumeBattleLogDelta } from '../../battle/logStream.js';
+import type { BattleLogEntry, BattleState } from '../../battle/types.js';
 import { resolveMonsterDataForBattle } from '../battle/index.js';
 import { hasConfiguredAutoSkillPolicy } from './autoSkillPolicyGuard.js';
 import { selectSkillByPolicy } from './selectSkillByPolicy.js';
-import type { IdleSessionRow } from './types.js';
+import type {
+  IdleBattleReplaySnapshot,
+  IdleSessionRow,
+} from './types.js';
 
 export type IdleRoomMonsterSlot = {
   monster_def_id: string;
@@ -41,7 +47,7 @@ export interface IdleBattleSimulationResult {
   result: 'attacker_win' | 'defender_win' | 'draw';
   randomSeed: number;
   roundCount: number;
-  battleLog: BattleLogEntry[];
+  replaySnapshot: IdleBattleReplaySnapshot | null;
   monsterIds: string[];
 }
 
@@ -125,21 +131,35 @@ function buildMonsterIds(
   return roomMonsters.map((m) => m.monster_def_id);
 }
 
-/**
- * 执行单场挂机战斗模拟（不含奖励）。
- */
-export function simulateIdleBattle(
+const resolveIdleBattlePlayerSelector = (
+  snapshot: Pick<IdleBattleReplaySnapshot, 'playerAutoSkillPolicy'>,
+): PlayerSkillSelector | undefined => {
+  const policy = snapshot.playerAutoSkillPolicy;
+  if (!policy || !hasConfiguredAutoSkillPolicy(policy)) {
+    return undefined;
+  }
+  return (unit) => selectSkillByPolicy(unit, policy);
+};
+
+const createIdleBattleReplaySnapshot = (
+  initialState: BattleState,
+  session: IdleSessionRow,
+): IdleBattleReplaySnapshot => {
+  return {
+    initialState: structuredClone(initialState),
+    playerAutoSkillPolicy: session.sessionSnapshot.autoSkillPolicy ?? null,
+  };
+};
+
+const buildIdleBattleState = (
   session: IdleSessionRow,
   userId: number,
   roomMonsters: IdleRoomMonsterSlot[],
-): IdleBattleSimulationResult {
+): { initialState: BattleState | null; monsterIds: string[] } => {
   const monsterIds = buildMonsterIds(session.sessionSnapshot.targetMonsterDefId, roomMonsters);
   if (monsterIds.length === 0) {
     return {
-      result: 'draw',
-      randomSeed: 0,
-      roundCount: 0,
-      battleLog: [],
+      initialState: null,
       monsterIds: [],
     };
   }
@@ -147,17 +167,14 @@ export function simulateIdleBattle(
   const monsterResult = resolveMonsterDataForBattle(monsterIds);
   if (!monsterResult.success) {
     return {
-      result: 'draw',
-      randomSeed: 0,
-      roundCount: 0,
-      battleLog: [],
+      initialState: null,
       monsterIds,
     };
   }
 
   const characterData = snapshotToCharacterData(session.sessionSnapshot, userId);
   const skillData = battleSkillsToSkillData(session.sessionSnapshot.skills);
-  const state = createPVEBattle(
+  const initialState = createPVEBattle(
     randomUUID(),
     characterData,
     skillData,
@@ -168,21 +185,60 @@ export function simulateIdleBattle(
       : undefined,
   );
 
-  const engine = new BattleEngine(state);
-  const policy = session.sessionSnapshot.autoSkillPolicy;
-  const playerSelector: PlayerSkillSelector | undefined =
-    hasConfiguredAutoSkillPolicy(policy)
-      ? (unit) => selectSkillByPolicy(unit, policy)
-      : undefined;
+  return {
+    initialState,
+    monsterIds,
+  };
+};
+
+export function replayIdleBattleLogs(
+  replaySnapshot: IdleBattleReplaySnapshot | null,
+): BattleLogEntry[] {
+  if (!replaySnapshot) return [];
+  const replayState = structuredClone(replaySnapshot.initialState);
+  replayState.battleId = randomUUID();
+  const engine = new BattleEngine(replayState);
+  const playerSelector = resolveIdleBattlePlayerSelector(replaySnapshot);
+  engine.autoExecute(playerSelector);
+  const battleLog = consumeBattleLogDelta(replayState.battleId).logs;
+  clearBattleLogStream(replayState.battleId);
+  return battleLog;
+}
+
+/**
+ * 执行单场挂机战斗模拟（不含奖励）。
+ */
+export function simulateIdleBattle(
+  session: IdleSessionRow,
+  userId: number,
+  roomMonsters: IdleRoomMonsterSlot[],
+): IdleBattleSimulationResult {
+  const { initialState, monsterIds } = buildIdleBattleState(
+    session,
+    userId,
+    roomMonsters,
+  );
+  if (!initialState) {
+    return {
+      result: 'draw',
+      randomSeed: 0,
+      roundCount: 0,
+      replaySnapshot: null,
+      monsterIds,
+    };
+  }
+  const replaySnapshot = createIdleBattleReplaySnapshot(initialState, session);
+  const engine = new BattleEngine(initialState);
+  const playerSelector = resolveIdleBattlePlayerSelector(replaySnapshot);
   engine.autoExecute(playerSelector);
 
   const finalState = engine.getState();
-  const battleLog = consumeBattleLogDelta(finalState.battleId).logs;
+  clearBattleLogStream(finalState.battleId);
   return {
     result: finalState.result ?? 'draw',
     randomSeed: finalState.randomSeed,
     roundCount: finalState.roundCount,
-    battleLog,
+    replaySnapshot,
     monsterIds,
   };
 }

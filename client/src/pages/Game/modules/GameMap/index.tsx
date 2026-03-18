@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { getMapDetail, SILENT_API_REQUEST_CONFIG, type MapRoom } from '../../../../services/api';
+import type { MapRoom } from '../../../../services/api';
+import { useMapDetailSnapshot } from '../../shared/useMapDetailSnapshot';
 import './index.scss';
 
 interface GameMapProps {
@@ -49,45 +50,13 @@ const GameMap: React.FC<GameMapProps> = ({ currentMapId, currentRoomId, trackedR
   const [scale, setScale] = useState(1);
   const [lines, setLines] = useState<Array<{ key: string; x1: number; y1: number; x2: number; y2: number }>>([]);
   const [moving, setMoving] = useState(false);
-
-  const [mapName, setMapName] = useState<string>('');
-  const [rooms, setRooms] = useState<RoomNode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { snapshot, loading } = useMapDetailSnapshot(currentMapId);
+  const mapName = snapshot?.mapName ?? '';
+  const rooms = useMemo(() => normalizeRooms(snapshot?.rooms ?? []), [snapshot]);
 
   const setNodeRef = (id: string) => (el: HTMLDivElement | null) => {
     nodeRefs.current[id] = el;
   };
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    getMapDetail(currentMapId, SILENT_API_REQUEST_CONFIG)
-      .then((res) => {
-        if (cancelled) return;
-        if (!res?.success || !res.data) {
-          setRooms([]);
-          setMapName('');
-          return;
-        }
-
-        const mapObj = res.data.map as Record<string, unknown> | undefined;
-        const name = typeof mapObj?.name === 'string' ? mapObj.name : '';
-        setMapName(name);
-        setRooms(normalizeRooms(res.data.rooms ?? []));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setRooms([]);
-        setMapName('');
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentMapId]);
 
   const roomById = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
 
@@ -223,7 +192,7 @@ const GameMap: React.FC<GameMapProps> = ({ currentMapId, currentRoomId, trackedR
     }, 180);
   };
 
-  const shownMapName = mapName || currentMapId;
+  const shownMapName = mapName || (loading ? '同步中...' : '未知地图');
 
   return (
     <div className="game-map">

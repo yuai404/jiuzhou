@@ -130,6 +130,7 @@ export async function syncBattleStateOnReconnect(
       state: buildBattleSnapshotState(state),
       logs: logSnapshot.logs,
       extras: {
+        authoritative: true,
         logStart: logSnapshot.logStart,
         logDelta: logSnapshot.logDelta,
       },
@@ -191,6 +192,7 @@ export async function syncBattleSnapshotToUser(
       state: buildBattleSnapshotState(state),
       logs: logSnapshot.logs,
       extras: {
+        authoritative: true,
         ...(getAttachedBattleSessionSnapshot(normalizedBattleId)
           ? { session: getAttachedBattleSessionSnapshot(normalizedBattleId) }
           : {}),

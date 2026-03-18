@@ -120,6 +120,7 @@ export interface IdleBatchSummaryDto {
  * 单场战斗批次详情 DTO（GET /api/idle/history/:id/batches/:batchId 响应体）
  * - 仅在玩家选中某个批次后加载，右侧日志面板使用
  * - battleLog 复用 BattleLogEntryDto，与在线战斗日志格式一致
+ * - 日志由服务端根据重放快照现场生成，不是数据库里直接存的整场正文
  */
 export interface IdleBatchDetailDto extends IdleBatchSummaryDto {
   randomSeed: number;

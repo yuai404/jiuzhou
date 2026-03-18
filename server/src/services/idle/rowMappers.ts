@@ -9,7 +9,7 @@
  * 输入/输出：
  *   - rowToIdleSessionRow(row) => IdleSessionRow
  *   - rowToIdleBattleSummaryRow(row) => IdleBattleSummaryRow
- *   - rowToIdleBattleDetailRow(row) => IdleBattleDetailRow
+ *   - rowToIdleBattleStoredDetailRow(row) => IdleBattleStoredDetailRow
  *
  * 数据流：
  *   DB query rows（snake_case）→ rowMappers 统一转换 → 业务模块（Service/Executor）消费
@@ -20,11 +20,11 @@
  *      本模块不做兼容解析，调用方需保证查询驱动配置一致。
  */
 
-import type { BattleLogEntry } from '../../battle/types.js';
 import type {
-  IdleBattleDetailRow,
+  IdleBattleStoredDetailRow,
   IdleBattleSummaryRow,
   IdleSessionRow,
+  IdleBattleReplaySnapshot,
   RewardItemEntry,
   SessionSnapshot,
 } from './types.js';
@@ -67,13 +67,13 @@ export function rowToIdleBattleSummaryRow(row: Record<string, unknown>): IdleBat
   };
 }
 
-/** 将 idle_battle_batches 详情查询行映射为 IdleBattleDetailRow。 */
-export function rowToIdleBattleDetailRow(row: Record<string, unknown>): IdleBattleDetailRow {
+/** 将 idle_battle_batches 详情查询行映射为内部存储行。 */
+export function rowToIdleBattleStoredDetailRow(row: Record<string, unknown>): IdleBattleStoredDetailRow {
   return {
     ...rowToIdleBattleSummaryRow(row),
     randomSeed: Number(row.random_seed),
     itemsGained: (row.items_gained as RewardItemEntry[]) ?? [],
-    battleLog: (row.battle_log as BattleLogEntry[]) ?? [],
+    battleReplaySnapshot: (row.battle_log as IdleBattleReplaySnapshot | null) ?? null,
     monsterIds: (row.monster_ids as string[]) ?? [],
   };
 }
