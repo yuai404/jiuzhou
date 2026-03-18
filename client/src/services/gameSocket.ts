@@ -211,6 +211,9 @@ export interface AchievementUpdatePayload {
   characterId: number;
   claimableCount: number;
 }
+type LatestEventReplayOptions = {
+  emitCurrent?: boolean;
+};
 type AchievementUpdateListener = (data: AchievementUpdatePayload) => void;
 export type TaskOverviewScope = "task" | "bounty";
 export interface TaskOverviewUpdatePayload {
@@ -752,9 +755,12 @@ class GameSocketService {
     return () => this.mailUpdateListeners.delete(listener);
   }
 
-  onAchievementUpdate(listener: AchievementUpdateListener): () => void {
+  onAchievementUpdate(
+    listener: AchievementUpdateListener,
+    options?: LatestEventReplayOptions,
+  ): () => void {
     this.achievementUpdateListeners.add(listener);
-    if (this.currentAchievementUpdate) {
+    if (options?.emitCurrent !== false && this.currentAchievementUpdate) {
       listener(this.currentAchievementUpdate);
     }
     return () => this.achievementUpdateListeners.delete(listener);

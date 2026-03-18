@@ -296,10 +296,11 @@ const AchievementModal: React.FC<AchievementModalProps> = ({ open, onClose, onCh
 
   useEffect(() => {
     if (!open || !characterId) return;
+    // 弹窗打开时已经主动拉取过完整数据，这里只接收后续增量推送，避免订阅瞬间回放当前缓存导致重复请求。
     return gameSocket.onAchievementUpdate((payload) => {
       if (payload.characterId !== characterId) return;
       void refreshData('silent');
-    });
+    }, { emitCurrent: false });
   }, [characterId, open, refreshData]);
 
   /**
