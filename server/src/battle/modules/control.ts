@@ -188,6 +188,30 @@ export function getTauntSource(unit: BattleUnit): string | null {
 }
 
 /**
+ * 解析嘲讽强制目标
+ *
+ * 作用：
+ * - 统一“被嘲讽时必须攻击嘲讽者”的目标锁定规则，避免 AI 与手动选敌各写一份判断。
+ * - 只负责从候选敌人中找出可用的嘲讽目标，不负责兜底默认选敌。
+ *
+ * 输入/输出：
+ * - 输入：当前行动单位、敌方候选列表。
+ * - 输出：若存在存活的嘲讽来源则返回该目标，否则返回 null。
+ *
+ * 关键边界条件与坑点：
+ * 1) 嘲讽来源死亡后必须立刻失效，不能继续锁定到已死亡单位。
+ * 2) 这里依赖 getTauntSource 的单一状态来源，后续若扩展多来源优先级，也只需要改这一条链路。
+ */
+export function resolveTauntLockedTarget(
+  unit: BattleUnit,
+  enemies: BattleUnit[],
+): BattleUnit | null {
+  const tauntSourceId = getTauntSource(unit);
+  if (!tauntSourceId) return null;
+  return enemies.find((enemy) => enemy.id === tauntSourceId && enemy.isAlive) ?? null;
+}
+
+/**
  * 检查单位是否处于恐惧状态
  */
 export function isFeared(unit: BattleUnit): boolean {

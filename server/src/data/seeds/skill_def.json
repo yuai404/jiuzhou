@@ -2814,6 +2814,61 @@
       "enabled": true
     },
     {
+      "id": "skill-taixi-zhenyue-he",
+      "code": "zhenyue_heling",
+      "name": "镇岳喝令",
+      "description": "以厚土真气震慑强敌，造成伤害并强制其朝自身出手。",
+      "icon": "/assets/skills/icon_skill_23.png",
+      "source_type": "technique",
+      "source_id": "tech-taixi-ningtai-jue",
+      "cost_lingqi": 24,
+      "cooldown": 4,
+      "target_type": "single_enemy",
+      "damage_type": "physical",
+      "element": "tu",
+      "effects": [
+        {
+          "type": "damage",
+          "valueType": "scale",
+          "scaleAttr": "wufang",
+          "scaleRate": 1.25
+        },
+        {
+          "type": "control",
+          "controlType": "taunt",
+          "duration": 2,
+          "chance": 0.75
+        }
+      ],
+      "trigger_type": "active",
+      "ai_priority": 72,
+      "upgrades": [
+        {
+          "layer": 8,
+          "upgradeType": "value",
+          "changes": {
+            "effects": [
+              {
+                "type": "damage",
+                "valueType": "scale",
+                "scaleAttr": "wufang",
+                "scaleRate": 1.65,
+                "value": 160
+              },
+              {
+                "type": "control",
+                "controlType": "taunt",
+                "duration": 2,
+                "chance": 0.9
+              }
+            ]
+          }
+        }
+      ],
+      "sort_weight": 335,
+      "enabled": true
+    },
+    {
       "id": "skill-taixi-ningtai-yin",
       "code": "fanzhen_bengyue",
       "name": "返震崩岳",

@@ -5,7 +5,7 @@
 import type { BattleState, BattleUnit, BattleSkill } from '../types.js';
 import { shuffle } from '../utils/random.js';
 import { resolveSingleAllyTargetId } from '../utils/allyTargeting.js';
-import { getTauntSource } from './control.js';
+import { resolveTauntLockedTarget } from './control.js';
 
 /**
  * 解析技能目标
@@ -28,19 +28,19 @@ export function resolveTargets(
       return [caster];
       
     case 'single_enemy':
-      return resolveSingleEnemy(caster, aliveEnemies, selectedTargetIds);
+      return resolveEnemyTargets(state, caster, skill, aliveEnemies, selectedTargetIds);
       
     case 'single_ally':
       return resolveSingleAlly(caster, skill, aliveAllies, selectedTargetIds);
       
     case 'all_enemy':
-      return aliveEnemies;
+      return resolveEnemyTargets(state, caster, skill, aliveEnemies);
       
     case 'all_ally':
       return aliveAllies;
       
     case 'random_enemy':
-      return resolveRandomTargets(state, aliveEnemies, skill.targetCount);
+      return resolveEnemyTargets(state, caster, skill, aliveEnemies);
       
     case 'random_ally':
       return resolveRandomTargets(state, aliveAllies, skill.targetCount);
@@ -51,22 +51,51 @@ export function resolveTargets(
 }
 
 /**
- * 解析单体敌方目标（考虑嘲讽）
+ * 解析敌方目标（统一处理嘲讽锁定）
+ *
+ * 作用：
+ * - 集中处理所有敌方指向技能的目标解析，避免 single/all/random enemy 各自维护一套嘲讽判断。
+ * - 在嘲讽生效时统一收敛为嘲讽者单目标，保证控制语义与技能描述一致。
+ *
+ * 输入/输出：
+ * - 输入：战斗状态、施法者、技能定义、存活敌人列表，以及可选显式目标。
+ * - 输出：最终命中的敌方目标列表；若没有可用敌人则返回空数组。
+ *
+ * 关键边界条件与坑点：
+ * 1) 嘲讽优先级必须高于显式选敌、群攻和随机选敌，否则新控制会被 AoE/随机技能绕过。
+ * 2) random_enemy 在嘲讽下也只能命中嘲讽者一次，不能继续按 targetCount 扩散到其他敌人。
  */
-function resolveSingleEnemy(
+function resolveEnemyTargets(
+  state: BattleState,
   caster: BattleUnit,
+  skill: BattleSkill,
   enemies: BattleUnit[],
   selectedTargetIds?: string[]
 ): BattleUnit[] {
-  // 检查嘲讽
-  const tauntSourceId = getTauntSource(caster);
-  if (tauntSourceId) {
-    const tauntTarget = enemies.find(e => e.id === tauntSourceId && e.isAlive);
-    if (tauntTarget) {
-      return [tauntTarget];
-    }
+  const tauntTarget = resolveTauntLockedTarget(caster, enemies);
+  if (tauntTarget) {
+    return [tauntTarget];
   }
-  
+
+  switch (skill.targetType) {
+    case 'single_enemy':
+      return resolveSingleEnemy(enemies, selectedTargetIds);
+    case 'all_enemy':
+      return enemies;
+    case 'random_enemy':
+      return resolveRandomTargets(state, enemies, skill.targetCount);
+    default:
+      return [];
+  }
+}
+
+/**
+ * 解析单体敌方目标（不处理嘲讽）
+ */
+function resolveSingleEnemy(
+  enemies: BattleUnit[],
+  selectedTargetIds?: string[]
+): BattleUnit[] {
   // 使用玩家选择的目标
   if (selectedTargetIds && selectedTargetIds.length > 0) {
     const target = enemies.find(e => e.id === selectedTargetIds[0]);
@@ -74,7 +103,7 @@ function resolveSingleEnemy(
       return [target];
     }
   }
-  
+
   // 默认选择第一个存活敌人
   return enemies.length > 0 ? [enemies[0]] : [];
 }

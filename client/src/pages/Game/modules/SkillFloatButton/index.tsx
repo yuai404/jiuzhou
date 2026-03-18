@@ -40,6 +40,8 @@ type SkillCooldownMapDto = Record<string, unknown>;
 
 type BattleUnitWithCooldownDto = {
   id?: unknown;
+  name?: string;
+  isAlive?: unknown;
   lingqi?: unknown;
   qixue?: unknown;
   currentAttrs?: {
@@ -56,6 +58,9 @@ type BattleStateWithUnitsDto = {
     attacker?: {
       units?: unknown;
     };
+    defender?: {
+      units?: unknown;
+    };
   };
 };
 
@@ -70,11 +75,14 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 
 type BattleBuffDto = {
   control?: unknown;
+  sourceUnitId?: string;
 };
 
 type SkillControlState = {
   silenced: boolean;
   disarmed: boolean;
+  taunted: boolean;
+  tauntSourceName: string | null;
 };
 
 type SkillResourceState = {
@@ -101,21 +109,42 @@ type SkillAvailabilityResult = {
 const EMPTY_SKILL_CONTROL_STATE: SkillControlState = {
   silenced: false,
   disarmed: false,
+  taunted: false,
+  tauntSourceName: null,
 };
 
 const SKILL_CAST_BLOCKED_MESSAGE_KEY = 'skill-fab-cast-blocked';
 
-const readSkillControlState = (buffs: unknown): SkillControlState => {
+const readSkillControlState = (
+  buffs: unknown,
+  aliveEnemyNameById: ReadonlyMap<string, string>,
+): SkillControlState => {
   const list: BattleBuffDto[] = Array.isArray(buffs) ? (buffs as BattleBuffDto[]) : [];
   let silenced = false;
   let disarmed = false;
+  let taunted = false;
+  let tauntSourceName: string | null = null;
   for (const buff of list) {
     const control = String(isRecord(buff) ? buff.control ?? '' : '').trim();
     if (control === 'silence') silenced = true;
     if (control === 'disarm') disarmed = true;
-    if (silenced && disarmed) break;
+    if (control === 'taunt') {
+      const sourceUnitId = String(isRecord(buff) ? buff.sourceUnitId ?? '' : '').trim();
+      // 仅在嘲讽来源仍是存活敌人时保留锁定提示，和服务端目标解析规则保持一致。
+      const aliveSourceName = aliveEnemyNameById.get(sourceUnitId) ?? null;
+      if (!aliveSourceName) continue;
+      taunted = true;
+      if (!tauntSourceName) {
+        tauntSourceName = aliveSourceName;
+      }
+    }
   }
-  return { silenced, disarmed };
+  return {
+    silenced,
+    disarmed,
+    taunted,
+    tauntSourceName,
+  };
 };
 
 const resolveSkillAvailability = (
@@ -569,17 +598,34 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
       const attackerUnits: BattleUnitWithCooldownDto[] = Array.isArray(attackerUnitsRaw)
         ? (attackerUnitsRaw as BattleUnitWithCooldownDto[])
         : [];
+      const defenderUnitsRaw = stateLike.teams?.defender?.units;
+      const defenderUnits: BattleUnitWithCooldownDto[] = Array.isArray(defenderUnitsRaw)
+        ? (defenderUnitsRaw as BattleUnitWithCooldownDto[])
+        : [];
+      const aliveEnemyNameById = new Map(
+        defenderUnits
+          .filter((unit) => Boolean(unit?.isAlive))
+          .map((unit) => {
+            const unitId = String(unit?.id ?? '').trim();
+            const unitName = String(unit?.name ?? '').trim();
+            return unitId && unitName ? [unitId, unitName] as const : null;
+          })
+          .filter((entry): entry is readonly [string, string] => entry !== null),
+      );
       const myUnit = attackerUnits.find((u) => String(u?.id ?? '') === myUnitId);
       if (!myUnit) {
         controlStateRef.current = EMPTY_SKILL_CONTROL_STATE;
-        setControlState((prev) => (prev.silenced || prev.disarmed ? EMPTY_SKILL_CONTROL_STATE : prev));
+        setControlState((prev) => (prev.silenced || prev.disarmed || prev.taunted ? EMPTY_SKILL_CONTROL_STATE : prev));
         return;
       }
 
-      const nextControlState = readSkillControlState(myUnit?.buffs);
+      const nextControlState = readSkillControlState(myUnit?.buffs, aliveEnemyNameById);
       controlStateRef.current = nextControlState;
       setControlState((prev) =>
-        prev.silenced === nextControlState.silenced && prev.disarmed === nextControlState.disarmed
+        prev.silenced === nextControlState.silenced
+        && prev.disarmed === nextControlState.disarmed
+        && prev.taunted === nextControlState.taunted
+        && prev.tauntSourceName === nextControlState.tauntSourceName
           ? prev
           : nextControlState,
       );
@@ -641,7 +687,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
     if (!isBattleRunning) {
       lastBattleIdRef.current = null;
       controlStateRef.current = EMPTY_SKILL_CONTROL_STATE;
-      setControlState((prev) => (prev.silenced || prev.disarmed ? EMPTY_SKILL_CONTROL_STATE : prev));
+      setControlState((prev) => (prev.silenced || prev.disarmed || prev.taunted ? EMPTY_SKILL_CONTROL_STATE : prev));
       return;
     }
     const rawKey = String(actionKey ?? '').trim();
@@ -702,6 +748,9 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
         }
         return false;
       }
+      const tauntLockedTargetName = controlStateRef.current.taunted && target.targetType === 'single_enemy'
+        ? (controlStateRef.current.tauntSourceName || '嘲讽者')
+        : null;
 
       if (turn != null && onCastSkill) {
         setIsCasting(true);
@@ -711,7 +760,13 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
             if (notify) showCastBlockedMessage('当前无法释放');
             return false;
           }
-          if (notify) message.success(`已释放：${target.name}`);
+          if (notify) {
+            message.success(
+              tauntLockedTargetName
+                ? `已释放：${target.name}（强制目标：${tauntLockedTargetName}）`
+                : `已释放：${target.name}`,
+            );
+          }
           return true;
         } finally {
           setIsCasting(false);

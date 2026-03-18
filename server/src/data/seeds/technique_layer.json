@@ -2485,8 +2485,11 @@
           "value": 0.035
         }
       ],
+      "unlock_skill_ids": [
+        "skill-taixi-zhenyue-he"
+      ],
       "required_realm": "炼炁化神·结胎期",
-      "layer_desc": "玄甲返震诀通玄，坦度显著抬升"
+      "layer_desc": "玄甲返震诀通玄，坦度显著抬升并解锁镇岳喝令"
     },
     {
       "technique_id": "tech-taixi-ningtai-jue",
@@ -2565,8 +2568,11 @@
           "value": 0.095
         }
       ],
+      "upgrade_skill_ids": [
+        "skill-taixi-zhenyue-he"
+      ],
       "required_realm": "炼炁化神·结胎期",
-      "layer_desc": "玄甲返震诀归一，形成高压承伤体系"
+      "layer_desc": "玄甲返震诀归一，形成高压承伤体系，镇岳喝令更难撼动"
     },
     {
       "technique_id": "tech-taixi-ningtai-jue",

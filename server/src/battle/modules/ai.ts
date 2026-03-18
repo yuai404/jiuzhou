@@ -12,7 +12,7 @@ import { getNextRandom, getRandomInt } from '../utils/random.js';
 import { resolveSingleAllyTargetId } from '../utils/allyTargeting.js';
 import { getAvailableSkills, getNormalAttack } from './skill.js';
 import { getLowestHpTarget, getHighestThreatTarget, getHealTargets } from './target.js';
-import { isStunned, isFeared, getTauntSource } from './control.js';
+import { isStunned, isFeared, resolveTauntLockedTarget } from './control.js';
 
 type AIDecision = {
   skill: BattleSkill;
@@ -229,12 +229,9 @@ export function selectTargets(
 function selectSingleEnemyTarget(unit: BattleUnit, enemies: BattleUnit[]): string[] {
   if (enemies.length === 0) return [];
 
-  const tauntSourceId = getTauntSource(unit);
-  if (tauntSourceId) {
-    const tauntTarget = enemies.find((e) => e.id === tauntSourceId);
-    if (tauntTarget) {
-      return [tauntTarget.id];
-    }
+  const tauntTarget = resolveTauntLockedTarget(unit, enemies);
+  if (tauntTarget) {
+    return [tauntTarget.id];
   }
 
   const lowHpTarget = getLowestHpTarget(enemies);
