@@ -23,19 +23,24 @@
 
 import type {
   BattleSkill,
-  SkillEffect,
 } from "../../../battle/types.js";
 import type { SkillData } from "../../../battle/battleFactory.js";
 import type { SkillDefConfig } from "../../staticConfigLoader.js";
 import { getSkillDefinitions } from "../../staticConfigLoader.js";
 import { characterTechniqueService } from "../../characterTechniqueService.js";
-import { normalizeSkillCost } from "../../../shared/skillCost.js";
+import {
+  buildEffectiveTechniqueSkillData,
+} from "../../shared/techniqueSkillProgression.js";
 import {
   toNumber,
-  toRecord,
   toText,
   uniqueStringIds,
 } from "./helpers.js";
+
+export {
+  applySkillUpgradeChanges,
+  cloneSkillEffectList,
+} from "../../shared/techniqueSkillProgression.js";
 
 // ------ 常量 ------
 
@@ -65,33 +70,23 @@ export function normalizeSkillDamageType(raw: unknown): BattleSkill["damageType"
   return undefined;
 }
 
-export function cloneSkillEffectList(raw: unknown): SkillEffect[] {
-  if (!Array.isArray(raw)) return [];
-  const out: SkillEffect[] = [];
-  for (const row of raw) {
-    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-    out.push({ ...(row as SkillEffect) });
-  }
-  return out;
-}
-
 /** 静态配置行 -> 战斗用 SkillData */
 export function toBattleSkillData(row: SkillDefConfig): SkillData {
-  const cost = normalizeSkillCost(row);
+  const effective = buildEffectiveTechniqueSkillData(row);
   return {
     id: String(row.id),
     name: String(row.name || row.id),
-    cost_lingqi: cost.lingqi ?? 0,
-    cost_lingqi_rate: cost.lingqiRate ?? 0,
-    cost_qixue: cost.qixue ?? 0,
-    cost_qixue_rate: cost.qixueRate ?? 0,
-    cooldown: Math.max(0, Math.floor(Number(row.cooldown ?? 0) || 0)),
+    cost_lingqi: effective.cost_lingqi,
+    cost_lingqi_rate: effective.cost_lingqi_rate,
+    cost_qixue: effective.cost_qixue,
+    cost_qixue_rate: effective.cost_qixue_rate,
+    cooldown: effective.cooldown,
     target_type: String(row.target_type || "single_enemy"),
-    target_count: Math.max(1, Math.floor(Number(row.target_count ?? 1) || 1)),
+    target_count: effective.target_count,
     damage_type: String(row.damage_type || "none"),
     element: String(row.element || "none"),
-    effects: cloneSkillEffectList(row.effects),
-    ai_priority: Math.max(0, Math.floor(Number(row.ai_priority ?? 50) || 50)),
+    effects: effective.effects,
+    ai_priority: effective.ai_priority,
   };
 }
 
@@ -124,129 +119,6 @@ export function cloneBattleSkill(skill: BattleSkill): BattleSkill {
     cost: { ...skill.cost },
     effects: skill.effects.map((effect) => ({ ...effect })),
   };
-}
-
-// ------ 伤害效果判断 ------
-
-function cloneEffects(raw: unknown[]): unknown[] {
-  return raw.map((effect) => {
-    if (!effect || typeof effect !== "object" || Array.isArray(effect))
-      return effect;
-    return { ...(effect as Record<string, unknown>) };
-  });
-}
-
-export function isDamageEffect(effect: unknown): effect is Record<string, unknown> {
-  return Boolean(
-    effect &&
-    typeof effect === "object" &&
-    !Array.isArray(effect) &&
-    (effect as Record<string, unknown>).type === "damage",
-  );
-}
-
-export function findFirstDamageEffect(
-  effects: unknown[],
-): Record<string, unknown> | null {
-  for (const effect of effects) {
-    if (isDamageEffect(effect)) return { ...effect };
-  }
-  return null;
-}
-
-export function hasDamageEffect(effects: unknown[]): boolean {
-  return effects.some((effect) => isDamageEffect(effect));
-}
-
-// ------ 技能升级规则 ------
-
-type SkillUpgradeRule = {
-  layer: number;
-  changes: Record<string, unknown>;
-};
-
-export function parseSkillUpgradeRules(raw: unknown): SkillUpgradeRule[] {
-  if (!Array.isArray(raw)) return [];
-  const rules: SkillUpgradeRule[] = [];
-  for (let i = 0; i < raw.length; i++) {
-    const row = toRecord(raw[i]);
-    const changes = toRecord(row.changes);
-    if (Object.keys(changes).length === 0) continue;
-    const layer = Math.max(1, Math.floor(toNumber(row.layer) ?? i + 1));
-    rules.push({ layer, changes });
-  }
-  rules.sort((a, b) => a.layer - b.layer);
-  return rules;
-}
-
-export function applySkillUpgradeChanges(
-  base: {
-    cost_lingqi: number;
-    cost_lingqi_rate: number;
-    cost_qixue: number;
-    cost_qixue_rate: number;
-    cooldown: number;
-    target_count: number;
-    effects: unknown[];
-    ai_priority: number;
-  },
-  changes: Record<string, unknown>,
-): void {
-  const preservedDamageEffect = findFirstDamageEffect(base.effects);
-
-  const targetCount = toNumber(changes.target_count);
-  if (targetCount !== null) {
-    base.target_count = Math.max(1, Math.floor(targetCount));
-  }
-
-  const cooldownDelta = toNumber(changes.cooldown);
-  if (cooldownDelta !== null) {
-    base.cooldown = Math.max(0, Math.floor(base.cooldown + cooldownDelta));
-  }
-
-  const costLingqiDelta = toNumber(changes.cost_lingqi);
-  if (costLingqiDelta !== null) {
-    base.cost_lingqi = Math.max(
-      0,
-      Math.floor(base.cost_lingqi + costLingqiDelta),
-    );
-  }
-  const costLingqiRateDelta = toNumber(changes.cost_lingqi_rate);
-  if (costLingqiRateDelta !== null) {
-    base.cost_lingqi_rate = Math.max(0, base.cost_lingqi_rate + costLingqiRateDelta);
-  }
-
-  const costQixueDelta = toNumber(changes.cost_qixue);
-  if (costQixueDelta !== null) {
-    base.cost_qixue = Math.max(0, Math.floor(base.cost_qixue + costQixueDelta));
-  }
-  const costQixueRateDelta = toNumber(changes.cost_qixue_rate);
-  if (costQixueRateDelta !== null) {
-    base.cost_qixue_rate = Math.max(0, base.cost_qixue_rate + costQixueRateDelta);
-  }
-
-  const aiPriorityDelta = toNumber(changes.ai_priority);
-  if (aiPriorityDelta !== null) {
-    base.ai_priority = Math.max(
-      0,
-      Math.floor(base.ai_priority + aiPriorityDelta),
-    );
-  }
-
-  if (Array.isArray(changes.effects)) {
-    const nextEffects = cloneEffects(changes.effects);
-    if (preservedDamageEffect && !hasDamageEffect(nextEffects)) {
-      nextEffects.unshift({ ...preservedDamageEffect });
-    }
-    base.effects = nextEffects;
-  }
-  const addEffect = changes.addEffect;
-  if (addEffect && typeof addEffect === "object" && !Array.isArray(addEffect)) {
-    base.effects = [
-      ...base.effects,
-      { ...(addEffect as Record<string, unknown>) },
-    ];
-  }
 }
 
 // ------ 角色战斗技能加载 ------
@@ -295,26 +167,7 @@ export async function getCharacterBattleSkillData(
     const row = byId.get(slot.skillId);
     if (!row) continue;
 
-    const skillData = {
-      cost_lingqi: Math.max(0, Math.floor(Number(row.cost_lingqi ?? 0) || 0)),
-      cost_lingqi_rate: Math.max(0, Number(row.cost_lingqi_rate ?? 0) || 0),
-      cost_qixue: Math.max(0, Math.floor(Number(row.cost_qixue ?? 0) || 0)),
-      cost_qixue_rate: Math.max(0, Number(row.cost_qixue_rate ?? 0) || 0),
-      cooldown: Math.max(0, Math.floor(Number(row.cooldown ?? 0) || 0)),
-      target_count: Math.max(1, Math.floor(Number(row.target_count ?? 1) || 1)),
-      effects: cloneSkillEffectList(
-        Array.isArray(row.effects) ? row.effects : (row.effects ?? []),
-      ),
-      ai_priority: Math.max(0, Math.floor(Number(row.ai_priority ?? 50) || 50)),
-    };
-
-    if (slot.upgradeLevel > 0) {
-      const rules = parseSkillUpgradeRules(row.upgrades);
-      const applyRules = rules.slice(0, slot.upgradeLevel);
-      for (const rule of applyRules) {
-        applySkillUpgradeChanges(skillData, rule.changes);
-      }
-    }
+    const skillData = buildEffectiveTechniqueSkillData(row, slot.upgradeLevel);
 
     skills.push({
       id: String(row.id),

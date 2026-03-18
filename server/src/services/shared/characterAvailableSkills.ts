@@ -21,6 +21,7 @@
 
 import { query } from '../../config/database.js';
 import { getSkillDefinitions, getTechniqueDefinitions, type SkillDefConfig } from '../staticConfigLoader.js';
+import { buildEffectiveTechniqueSkillData } from './techniqueSkillProgression.js';
 import { isCharacterVisibleTechniqueDefinition } from './techniqueUsageScope.js';
 import { getTechniqueLayersByTechniqueIdsStatic } from './techniqueUpgradeRules.js';
 
@@ -114,6 +115,7 @@ export const loadCharacterAvailableSkillEntries = async (
   const skillMap = getEnabledSkillDefMap();
   const maxLayerByTechnique = new Map(equipped.map((entry) => [entry.techniqueId, entry.currentLayer] as const));
   const unlockedByTechnique = new Map<string, Set<string>>();
+  const upgradeCountByTechniqueAndSkill = new Map<string, number>();
 
   for (const row of layerRows) {
     const techniqueId = row.techniqueId;
@@ -124,6 +126,10 @@ export const loadCharacterAvailableSkillEntries = async (
     const unlockedSet = unlockedByTechnique.get(techniqueId) ?? new Set<string>();
     for (const skillId of unlockedSkillIds) {
       unlockedSet.add(skillId);
+    }
+    for (const skillId of row.upgradeSkillIds) {
+      const key = `${techniqueId}:${skillId}`;
+      upgradeCountByTechniqueAndSkill.set(key, (upgradeCountByTechniqueAndSkill.get(key) ?? 0) + 1);
     }
     unlockedByTechnique.set(techniqueId, unlockedSet);
   }
@@ -140,6 +146,8 @@ export const loadCharacterAvailableSkillEntries = async (
       const dedupKey = `${equippedEntry.techniqueId}:${skillId}`;
       if (dedup.has(dedupKey)) continue;
       dedup.add(dedupKey);
+      const upgradeLevel = upgradeCountByTechniqueAndSkill.get(dedupKey) ?? 0;
+      const effectiveSkill = buildEffectiveTechniqueSkillData(skillDef, upgradeLevel);
       entries.push({
         skillId,
         techniqueId: equippedEntry.techniqueId,
@@ -147,16 +155,16 @@ export const loadCharacterAvailableSkillEntries = async (
         skillName: String(skillDef.name || skillId),
         skillIcon: String(skillDef.icon || ''),
         description: typeof skillDef.description === 'string' ? skillDef.description : null,
-        costLingqi: Number(skillDef.cost_lingqi ?? 0) || 0,
-        costLingqiRate: Number(skillDef.cost_lingqi_rate ?? 0) || 0,
-        costQixue: Number(skillDef.cost_qixue ?? 0) || 0,
-        costQixueRate: Number(skillDef.cost_qixue_rate ?? 0) || 0,
-        cooldown: Number(skillDef.cooldown ?? 0) || 0,
+        costLingqi: effectiveSkill.cost_lingqi,
+        costLingqiRate: effectiveSkill.cost_lingqi_rate,
+        costQixue: effectiveSkill.cost_qixue,
+        costQixueRate: effectiveSkill.cost_qixue_rate,
+        cooldown: effectiveSkill.cooldown,
         targetType: String(skillDef.target_type || ''),
-        targetCount: Number(skillDef.target_count ?? 1) || 1,
+        targetCount: effectiveSkill.target_count,
         damageType: typeof skillDef.damage_type === 'string' ? skillDef.damage_type : null,
         element: String(skillDef.element || 'none'),
-        effects: Array.isArray(skillDef.effects) ? skillDef.effects : [],
+        effects: effectiveSkill.effects,
       });
     }
   }

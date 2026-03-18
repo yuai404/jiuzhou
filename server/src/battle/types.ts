@@ -392,6 +392,12 @@ export interface BattleSetBonusEffect {
 export interface BattleState {
   battleId: string;
   battleType: 'pve' | 'pvp';
+  /**
+   * 技能冷却推进口径。
+   * - round_start: 旧口径，回合开始时全体统一递减（仅用于恢复旧存档时识别迁移来源）
+   * - self_action_end: 新口径，单位行动结束后仅推进自身冷却
+   */
+  cooldownTimingMode?: 'round_start' | 'self_action_end';
   
   teams: {
     attacker: BattleTeam;

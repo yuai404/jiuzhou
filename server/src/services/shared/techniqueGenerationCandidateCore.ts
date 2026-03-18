@@ -94,6 +94,18 @@ const asNumber = (raw: unknown, fallback = 0): number => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+const readAliasedField = (
+  row: Record<string, unknown>,
+  ...keys: string[]
+): unknown => {
+  for (const key of keys) {
+    if (key in row) {
+      return row[key];
+    }
+  }
+  return undefined;
+};
+
 const clamp = (value: number, min: number, max: number): number => {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, value));
@@ -135,7 +147,36 @@ const normalizeEffects = (raw: unknown): unknown[] => {
     .filter((entry) => DAMAGE_EFFECT_TYPE_SET.has(String((entry as Record<string, unknown>).type || '')));
 };
 
-const sanitizeCandidateFromModel = (
+const normalizeTechniqueLayerSkillIds = (
+  raw: unknown,
+  sanitizedSkillIdSet: ReadonlySet<string>,
+): string[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => asString(entry))
+    .filter((id) => sanitizedSkillIdSet.has(id));
+};
+
+/**
+ * 统一清洗 AI 返回的功法 candidate。
+ *
+ * 作用：
+ * 1) 收敛模型输出 JSON 到服务端标准结构，避免战斗/预览/落库各自兼容字段名。
+ * 2) 同时接受 camelCase 与 snake_case，专门兜住 AI 在 `skills/layers` 上混用命名造成的字段丢失。
+ * 3) 不做什么：不校验业务合法性，不决定发布态，也不写数据库。
+ *
+ * 输入/输出：
+ * - 输入：模型原始 JSON、目标功法类型、品质、最大层数。
+ * - 输出：清洗后的 `TechniqueGenerationCandidate`；结构非法时返回 `null`。
+ *
+ * 数据流/状态流：
+ * 文本模型输出 -> 本函数字段归一化 -> validateTechniqueGenerationCandidate -> 落草稿/发布/战斗链路复用。
+ *
+ * 关键边界条件与坑点：
+ * 1) AI 偶发把 `upgradeSkillIds/unlockSkillIds/costLingqi/...` 写成 snake_case；若这里只认 camelCase，后续战斗会静默吃掉升级冷却等结构化字段。
+ * 2) 本函数只做“命名口径归一化 + 基础数值裁剪”，不替调用方吞掉缺失层、重复技能等业务错误，业务合法性仍由 validate 阶段统一拦截。
+ */
+export const sanitizeTechniqueGenerationCandidateFromModel = (
   raw: unknown,
   techniqueType: GeneratedTechniqueType,
   quality: TechniqueQuality,
@@ -156,14 +197,14 @@ const sanitizeCandidateFromModel = (
     type: techniqueType,
     quality,
     maxLayer,
-    requiredRealm: asString(rawTechnique.requiredRealm) || DEFAULT_REQUIRED_REALM,
-    attributeType: asString(rawTechnique.attributeType) === 'physical' ? 'physical' : 'magic',
-    attributeElement: asString(rawTechnique.attributeElement) || 'none',
+    requiredRealm: asString(readAliasedField(rawTechnique, 'requiredRealm', 'required_realm')) || DEFAULT_REQUIRED_REALM,
+    attributeType: asString(readAliasedField(rawTechnique, 'attributeType', 'attribute_type')) === 'physical' ? 'physical' : 'magic',
+    attributeElement: asString(readAliasedField(rawTechnique, 'attributeElement', 'attribute_element')) || 'none',
     tags: Array.isArray(rawTechnique.tags)
       ? rawTechnique.tags.map((entry) => asString(entry)).filter(Boolean)
       : [],
     description: asString(rawTechnique.description),
-    longDesc: asString(rawTechnique.longDesc),
+    longDesc: asString(readAliasedField(rawTechnique, 'longDesc', 'long_desc')),
   };
 
   const rawSkills = Array.isArray(source.skills) ? source.skills : [];
@@ -178,18 +219,18 @@ const sanitizeCandidateFromModel = (
       description: asString(row.description) || `${name}（AI生成）`,
       icon: typeof row.icon === 'string' ? row.icon : null,
       sourceType: 'technique',
-      costLingqi: Math.floor(clamp(asNumber(row.costLingqi, 10), 0, 80)),
-      costLingqiRate: clamp(asNumber(row.costLingqiRate, 0), 0, 1),
-      costQixue: Math.floor(clamp(asNumber(row.costQixue, 0), 0, 120)),
-      costQixueRate: clamp(asNumber(row.costQixueRate, 0), 0, 0.95),
+      costLingqi: Math.floor(clamp(asNumber(readAliasedField(row, 'costLingqi', 'cost_lingqi'), 10), 0, 80)),
+      costLingqiRate: clamp(asNumber(readAliasedField(row, 'costLingqiRate', 'cost_lingqi_rate'), 0), 0, 1),
+      costQixue: Math.floor(clamp(asNumber(readAliasedField(row, 'costQixue', 'cost_qixue'), 0), 0, 120)),
+      costQixueRate: clamp(asNumber(readAliasedField(row, 'costQixueRate', 'cost_qixue_rate'), 0), 0, 0.95),
       cooldown: Math.floor(clamp(asNumber(row.cooldown, 1), 0, 6)),
-      targetType: toTargetType(row.targetType),
-      targetCount: Math.floor(clamp(asNumber(row.targetCount, 1), 1, 6)),
-      damageType: toDamageType(row.damageType),
+      targetType: toTargetType(readAliasedField(row, 'targetType', 'target_type')),
+      targetCount: Math.floor(clamp(asNumber(readAliasedField(row, 'targetCount', 'target_count'), 1), 1, 6)),
+      damageType: toDamageType(readAliasedField(row, 'damageType', 'damage_type')),
       element: asString(row.element) || technique.attributeElement || 'none',
       effects: normalizeEffects(row.effects),
       triggerType: 'active',
-      aiPriority: Math.floor(clamp(asNumber(row.aiPriority, 50), 0, 100)),
+      aiPriority: Math.floor(clamp(asNumber(readAliasedField(row, 'aiPriority', 'ai_priority'), 50), 0, 100)),
       upgrades: Array.isArray(row.upgrades)
         ? row.upgrades.flatMap((entry) => {
             if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
@@ -210,8 +251,8 @@ const sanitizeCandidateFromModel = (
       const layerNo = Math.floor(clamp(asNumber(row.layer, 0), 1, maxLayer));
       return {
         layer: layerNo,
-        costSpiritStones: Math.floor(clamp(asNumber(row.costSpiritStones, 0), 0, 1_000_000)),
-        costExp: Math.floor(clamp(asNumber(row.costExp, 0), 0, 1_000_000)),
+        costSpiritStones: Math.floor(clamp(asNumber(readAliasedField(row, 'costSpiritStones', 'cost_spirit_stones'), 0), 0, 1_000_000)),
+        costExp: Math.floor(clamp(asNumber(readAliasedField(row, 'costExp', 'cost_exp'), 0), 0, 1_000_000)),
         costMaterials: [],
         passives: Array.isArray(row.passives)
           ? row.passives
@@ -225,13 +266,15 @@ const sanitizeCandidateFromModel = (
               })
               .filter((entry): entry is { key: string; value: number } => entry !== null)
           : [],
-        unlockSkillIds: Array.isArray(row.unlockSkillIds)
-          ? row.unlockSkillIds.map((entry) => asString(entry)).filter((id) => sanitizedSkillIdSet.has(id))
-          : [],
-        upgradeSkillIds: Array.isArray(row.upgradeSkillIds)
-          ? row.upgradeSkillIds.map((entry) => asString(entry)).filter((id) => sanitizedSkillIdSet.has(id))
-          : [],
-        layerDesc: asString(row.layerDesc) || `第${layerNo}层`,
+        unlockSkillIds: normalizeTechniqueLayerSkillIds(
+          readAliasedField(row, 'unlockSkillIds', 'unlock_skill_ids'),
+          sanitizedSkillIdSet,
+        ),
+        upgradeSkillIds: normalizeTechniqueLayerSkillIds(
+          readAliasedField(row, 'upgradeSkillIds', 'upgrade_skill_ids'),
+          sanitizedSkillIdSet,
+        ),
+        layerDesc: asString(readAliasedField(row, 'layerDesc', 'layer_desc')) || `第${layerNo}层`,
       };
     })
     .filter((row): row is TechniqueGenerationCandidate['layers'][number] => row !== null)
@@ -480,7 +523,7 @@ const tryCallExternalGenerator = async (params: {
       });
     }
 
-    const candidate = sanitizeCandidateFromModel(parsed.data, techniqueType, quality, maxLayer);
+    const candidate = sanitizeTechniqueGenerationCandidateFromModel(parsed.data, techniqueType, quality, maxLayer);
     if (!candidate) {
       return buildTechniqueGenerationAttemptFailure({
         stage: 'candidate_sanitize_failed',

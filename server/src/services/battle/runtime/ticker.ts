@@ -22,6 +22,7 @@
 import type { BattleSkill, BattleState, BattleUnit } from "../../../battle/types.js";
 import { canUseSkill, isFeared, isStunned } from "../../../battle/modules/control.js";
 import { getNormalAttack } from "../../../battle/modules/skill.js";
+import { getSkillCooldownRemainingRounds } from "../../../battle/utils/cooldown.js";
 import { resolveSingleAllyTargetId } from "../../../battle/utils/allyTargeting.js";
 import { getGameServer } from "../../../game/gameServer.js";
 import {
@@ -166,7 +167,7 @@ const canCastSkillForAutoSkip = (
 ): boolean => {
   if (skill.triggerType !== "active") return false;
   if (!canUseSkill(unit, skill.damageType)) return false;
-  if ((unit.skillCooldowns[skill.id] || 0) > 0) return false;
+  if (getSkillCooldownRemainingRounds(unit, skill.id) > 0) return false;
   if (skill.cost.lingqi && unit.lingqi < skill.cost.lingqi) return false;
   if (skill.cost.qixue && unit.qixue <= skill.cost.qixue) return false;
 

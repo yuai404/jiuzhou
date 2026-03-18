@@ -42,6 +42,10 @@ import {
   getMergedUnlockedTechniqueBonuses,
   type TechniqueBonus,
 } from './bonusShared';
+import {
+  buildTechniqueLayerSkillProgression,
+  type TechniqueSkillProgressionEntry,
+} from './techniqueSkillProgression';
 import './index.scss';
 
 
@@ -62,7 +66,7 @@ type TechniqueSkill = {
   target_count?: number;
   damage_type?: string | null;
   element?: string;
-  effects?: unknown[];
+  effects?: TechniqueSkillProgressionEntry['effects'];
 };
 
 type TechniqueCostItem = { id: string; name: string; icon: string; amount: number };
@@ -166,7 +170,7 @@ const getTechniqueUnlockedInfo = (t: Technique): { bonuses: TechniqueBonus[]; sk
   const skillMap = new Map<string, TechniqueSkill>();
   unlockedLayers.forEach((lv) => {
     lv.skills.forEach((s) => {
-      if (!skillMap.has(s.id)) skillMap.set(s.id, s);
+      skillMap.set(s.id, s);
     });
   });
 
@@ -288,7 +292,7 @@ const buildTechniqueView = (
   layers: TechniqueLayerDto[],
   skills: SkillDefDto[],
 ): Technique => {
-  const skillMap = new Map(skills.map((s) => [s.id, s]));
+  const layerSkillProgression = buildTechniqueLayerSkillProgression(layers, skills, resolveIcon);
   return {
     id: technique.id,
     name: technique.name,
@@ -304,26 +308,7 @@ const buildTechniqueView = (
         value: formatTechniqueBonusAmount(p.key, p.value),
         amount: p.value,
       }));
-      const unlockSkills = (Array.isArray(lv.unlock_skill_ids) ? lv.unlock_skill_ids : []).map((id) => {
-        const def = skillMap.get(id) ?? null;
-        return {
-          id,
-          name: def?.name ?? id,
-          icon: resolveIcon(def?.icon),
-          // 保存完整技能数据用于Tooltip
-          description: def?.description ?? undefined,
-          cost_lingqi: def?.cost_lingqi ?? undefined,
-          cost_lingqi_rate: def?.cost_lingqi_rate ?? undefined,
-          cost_qixue: def?.cost_qixue ?? undefined,
-          cost_qixue_rate: def?.cost_qixue_rate ?? undefined,
-          cooldown: def?.cooldown ?? undefined,
-          target_type: def?.target_type ?? undefined,
-          target_count: def?.target_count ?? undefined,
-          damage_type: def?.damage_type ?? undefined,
-          element: def?.element ?? undefined,
-          effects: Array.isArray(def?.effects) ? def.effects : undefined,
-        };
-      });
+      const unlockSkills = layerSkillProgression.get(lv.layer) ?? [];
       const cost: TechniqueCostItem[] = [];
       if (lv.cost_spirit_stones > 0) cost.push({ id: 'spirit_stones', name: '灵石', icon: lingshiIcon, amount: lv.cost_spirit_stones });
       if (lv.cost_exp > 0) cost.push({ id: 'exp', name: '经验', icon: tongqianIcon, amount: lv.cost_exp });
@@ -1429,7 +1414,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                       </div>
 
                       <div className="tech-layer-mobile-section">
-                        <div className="tech-layer-mobile-label">技能</div>
+                        <div className="tech-layer-mobile-label">技能变化</div>
                         {row.skills.length ? (
                           <div className="tech-layer-mobile-skills">
                             {row.skills.map((s) => (
@@ -1490,7 +1475,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                       ),
                     },
                     {
-                      title: '解锁技能',
+                      title: '技能变化',
                       dataIndex: 'skills',
                       key: 'skills',
                       render: (list: TechniqueSkill[]) => (
@@ -1604,7 +1589,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                     ))}
                     {cost.length === 0 ? <div className="tech-empty">无</div> : null}
                   </div>
-                  <div className="tech-detail-section-title">本次解锁</div>
+                  <div className="tech-detail-section-title">本次变化</div>
                   <div className="tech-cultivate-unlock">
                     <div className="tech-cultivate-unlock-title">加成（第 {nextLayer} 层）</div>
                     <div className="tech-layer-bonuses">
@@ -1616,7 +1601,7 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
                       ))}
                       {unlockBonuses.length === 0 ? <div className="tech-empty">无</div> : null}
                     </div>
-                    <div className="tech-cultivate-unlock-title">技能（第 {nextLayer} 层）</div>
+                    <div className="tech-cultivate-unlock-title">技能变化（第 {nextLayer} 层）</div>
                     <div className="tech-layer-skills">
                       {unlockSkills.map((s) => (
                         <Tooltip key={`${t.id}-unlock-s-${s.id}`} title={renderSkillTooltip(s)} placement="top" classNames={SKILL_TOOLTIP_CLASS_NAMES}>

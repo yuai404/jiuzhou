@@ -253,6 +253,7 @@ export function createPVEBattle(
   const state: BattleState = {
     battleId,
     battleType: 'pve',
+    cooldownTimingMode: 'self_action_end',
     teams: {
       attacker: {
         odwnerId: playerData.user_id,
@@ -305,6 +306,7 @@ export function createPVPBattle(
   const state: BattleState = {
     battleId,
     battleType: 'pvp',
+    cooldownTimingMode: 'self_action_end',
     teams: {
       attacker: {
         odwnerId: player1Data.user_id,

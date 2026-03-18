@@ -16,6 +16,7 @@
 import { redis } from "../../config/redis.js";
 import { BattleEngine } from "../../battle/battleEngine.js";
 import type { BattleState } from "../../battle/types.js";
+import { migrateRecoveredLegacyBattleCooldownState } from "../../battle/utils/cooldown.js";
 import {
   activeBattles,
   setBattleParticipantsForBattle,
@@ -83,6 +84,7 @@ export async function recoverBattlesFromRedis(): Promise<number> {
           continue;
         }
 
+        migrateRecoveredLegacyBattleCooldownState(state);
         const engine = new BattleEngine(state);
         activeBattles.set(battleId, engine);
         setBattleParticipantsForBattle(battleId, participants);

@@ -196,8 +196,6 @@ export class BattleEngine {
       // 气血/灵气恢复（只有属性值才恢复，没有基础恢复）
       this.recoverResources(unit);
       
-      // 技能冷却递减
-      this.reduceCooldowns(unit);
     }
     
     // 检查是否有单位死亡（可能改变phase为finished）
@@ -232,10 +230,12 @@ export class BattleEngine {
   }
   
   /**
-   * 技能冷却递减
+   * 当前单位行动结束后推进自身技能冷却
    */
-  private reduceCooldowns(unit: BattleUnit): void {
-    reduceUnitSkillCooldowns(unit);
+  private progressUnitCooldownsAfterAction(unit: BattleUnit, usedSkillId: string | null): void {
+    reduceUnitSkillCooldowns(unit, {
+      skipSkillIds: usedSkillId ? [usedSkillId] : [],
+    });
   }
   
   /**
@@ -269,7 +269,7 @@ export class BattleEngine {
     }
     
     // 推进行动
-    this.advanceAction();
+    this.advanceAction(skill.id);
     
     return { success: true };
   }
@@ -298,7 +298,7 @@ export class BattleEngine {
         skillName: '跳过',
         targets: [],
       });
-      this.advanceAction();
+      this.advanceAction(null);
       return;
     }
 
@@ -307,7 +307,7 @@ export class BattleEngine {
       const skill = playerSkillSelector(currentUnit);
       const targetIds = selectTargets(this.state, currentUnit, skill);
       executeSkill(this.state, currentUnit, skill, targetIds);
-      this.advanceAction();
+      this.advanceAction(skill.id);
       return;
     }
 
@@ -318,7 +318,7 @@ export class BattleEngine {
         currentUnit.partnerSkillPolicy.slots,
       );
       executeSkill(this.state, currentUnit, decision.skill, decision.targetIds);
-      this.advanceAction();
+      this.advanceAction(decision.skill.id);
       return;
     }
 
@@ -329,7 +329,7 @@ export class BattleEngine {
     executeSkill(this.state, currentUnit, decision.skill, decision.targetIds);
 
     // 推进行动
-    this.advanceAction();
+    this.advanceAction(decision.skill.id);
   }
 
   /**
@@ -600,10 +600,17 @@ export class BattleEngine {
    * 正确做法：找到当前单位在"全量列表"中的位置，向后扫描第一个存活且可行动的单位。
    * 若当前队伍已无可行动单位，则切换队伍。
    */
-  private advanceAction(): void {
+  private advanceAction(usedSkillId: string | null = null): void {
     if (this.checkBattleEnd()) return;
 
     const team = this.state.teams[this.state.currentTeam];
+    const currentUnit = this.state.currentUnitId
+      ? team.units.find((unit) => unit.id === this.state.currentUnitId) ?? null
+      : null;
+
+    if (currentUnit) {
+      this.progressUnitCooldownsAfterAction(currentUnit, usedSkillId);
+    }
 
     // 在全量列表中找到当前单位的位置，向后找下一个可行动单位
     const currentIdx = this.state.currentUnitId
