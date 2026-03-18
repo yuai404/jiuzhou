@@ -34,6 +34,7 @@ import { resolveIdleBattleRewards } from './idleBattleRewardResolver.js';
 import { toPgTextArrayLiteral } from './pgTextArrayLiteral.js';
 import { rowToIdleSessionRow } from './rowMappers.js';
 import { idleSessionService } from './idleSessionService.js';
+import type { IdleRoomMonsterSlot } from './idleBattleSimulationCore.js';
 import {
   clearIdleExecutionLoopRegistry,
   registerIdleExecutionLoop,
@@ -236,6 +237,7 @@ export function startExecutionLoop(session: IdleSessionRow, userId: number): voi
   let batchIndex = session.totalBattles + 1;
   const buffer = createBuffer();
   const runtime = { running: false, wakeRequested: false };
+  let cachedRoomMonsters: IdleRoomMonsterSlot[] | null = null;
 
   registerIdleExecutionLoop(session.id);
   loopRuntimeStates.set(session.id, runtime);
@@ -290,6 +292,16 @@ export function startExecutionLoop(session: IdleSessionRow, userId: number): voi
     scheduleNext(0);
   }
 
+  async function getCachedRoomMonsters(): Promise<IdleRoomMonsterSlot[]> {
+    if (cachedRoomMonsters) {
+      return cachedRoomMonsters;
+    }
+
+    const room = await getRoomInMap(session.mapId, session.roomId);
+    cachedRoomMonsters = room?.monsters ?? [];
+    return cachedRoomMonsters;
+  }
+
   async function runSingleTick(): Promise<void> {
     runtime.running = true;
     try {
@@ -300,9 +312,8 @@ export function startExecutionLoop(session: IdleSessionRow, userId: number): voi
         return;
       }
 
-      // 1. 获取房间怪物配置（主线程查询，传递给 Worker）
-      const room = await getRoomInMap(session.mapId, session.roomId);
-      const roomMonsters = room?.monsters ?? [];
+      // 1. 获取房间怪物配置（会话级缓存，避免每轮重复解析同一房间）
+      const roomMonsters = await getCachedRoomMonsters();
 
       // 2. 分发任务到 Worker
       const workerPool = getWorkerPool();

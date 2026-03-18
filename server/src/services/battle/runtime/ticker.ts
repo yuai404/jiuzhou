@@ -43,6 +43,7 @@ import { saveBattleToRedis } from "./persistence.js";
 const BATTLE_REDIS_SAVE_INTERVAL_MS = 2000;
 const MAX_BATTLE_LOG_DELTA = 80;
 const PLAYER_ACTION_TIMEOUT_MS = 30_000;
+const lastWaitingPlayerTurnKeyByBattleId = new Map<string, string>();
 
 type PlayerTurnTimeoutState = {
   turnKey: string;
@@ -233,6 +234,10 @@ function clearPlayerTurnTimeoutState(battleId: string): void {
   playerTurnTimeoutStateByBattleId.delete(battleId);
 }
 
+function clearWaitingPlayerTurnState(battleId: string): void {
+  lastWaitingPlayerTurnKeyByBattleId.delete(battleId);
+}
+
 function buildPlayerTurnKey(state: BattleState, currentUnit: BattleUnit): string {
   return [
     String(state.roundCount ?? ""),
@@ -264,6 +269,20 @@ function shouldTakeoverPlayerTurnByTimeout(
   return true;
 }
 
+function shouldEmitWaitingPlayerTurnState(
+  battleId: string,
+  state: BattleState,
+  currentUnit: BattleUnit,
+): boolean {
+  const turnKey = buildPlayerTurnKey(state, currentUnit);
+  const previousTurnKey = lastWaitingPlayerTurnKeyByBattleId.get(battleId);
+  if (previousTurnKey === turnKey) {
+    return false;
+  }
+  lastWaitingPlayerTurnKeyByBattleId.set(battleId, turnKey);
+  return true;
+}
+
 // ------ tick 驱动 ------
 
 /**
@@ -278,6 +297,7 @@ async function tickBattle(battleId: string): Promise<void> {
     const engine = activeBattles.get(battleId);
     if (!engine) {
       clearPlayerTurnTimeoutState(battleId);
+      clearWaitingPlayerTurnState(battleId);
       stopBattleTicker(battleId);
       return;
     }
@@ -285,6 +305,7 @@ async function tickBattle(battleId: string): Promise<void> {
     const state = engine.getState();
     if (state.phase === "finished") {
       clearPlayerTurnTimeoutState(battleId);
+      clearWaitingPlayerTurnState(battleId);
       const { finishBattle } = await import("../settlement.js");
       const { getBattleMonsters } = await import("../settlement.js");
       const monsters = await getBattleMonsters(engine);
@@ -296,12 +317,14 @@ async function tickBattle(battleId: string): Promise<void> {
     const currentUnit = engine.getCurrentUnit();
     if (!currentUnit) {
       clearPlayerTurnTimeoutState(battleId);
+      clearWaitingPlayerTurnState(battleId);
       return;
     }
 
     if (currentUnit.type === "player") {
       if (state.currentTeam !== "attacker") {
         clearPlayerTurnTimeoutState(battleId);
+        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
         emitBattleUpdate(battleId, {
           kind: "battle_state",
@@ -312,6 +335,7 @@ async function tickBattle(battleId: string): Promise<void> {
       }
       if (isStunned(currentUnit) || isFeared(currentUnit)) {
         clearPlayerTurnTimeoutState(battleId);
+        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
         emitBattleUpdate(battleId, {
           kind: "battle_state",
@@ -328,6 +352,7 @@ async function tickBattle(battleId: string): Promise<void> {
         )
       ) {
         clearPlayerTurnTimeoutState(battleId);
+        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
         emitBattleUpdate(battleId, {
           kind: "battle_state",
@@ -338,6 +363,7 @@ async function tickBattle(battleId: string): Promise<void> {
       }
       if (!canPlayerUseAnySkillThisTurn(state, currentUnit)) {
         clearPlayerTurnTimeoutState(battleId);
+        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
         emitBattleUpdate(battleId, {
           kind: "battle_state",
@@ -347,12 +373,16 @@ async function tickBattle(battleId: string): Promise<void> {
         return;
       }
       if (shouldTakeoverPlayerTurnByTimeout(battleId, state, currentUnit)) {
+        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
         emitBattleUpdate(battleId, {
           kind: "battle_state",
           battleId,
           state: engine.getState(),
         });
+        return;
+      }
+      if (!shouldEmitWaitingPlayerTurnState(battleId, state, currentUnit)) {
         return;
       }
       emitBattleUpdate(battleId, {
@@ -364,6 +394,7 @@ async function tickBattle(battleId: string): Promise<void> {
     }
 
     clearPlayerTurnTimeoutState(battleId);
+    clearWaitingPlayerTurnState(battleId);
     engine.aiAction();
     emitBattleUpdate(battleId, {
       kind: "battle_state",
@@ -392,6 +423,7 @@ export function startBattleTicker(battleId: string): void {
 
 export function stopBattleTicker(battleId: string): void {
   clearPlayerTurnTimeoutState(battleId);
+  clearWaitingPlayerTurnState(battleId);
   const t = battleTickers.get(battleId);
   if (t) clearInterval(t);
   battleTickers.delete(battleId);
