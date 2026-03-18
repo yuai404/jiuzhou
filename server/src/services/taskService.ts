@@ -105,6 +105,17 @@ type CharacterTaskRealmState = {
   subRealm: string | null;
 };
 
+type RecurringTaskResetPlan = {
+  autoAcceptTaskIds: string[];
+  dailyTaskIds: string[];
+  eventTaskIds: string[];
+};
+
+type RecurringTaskResetInflightEntry = {
+  promise: Promise<void>;
+  realmStateKey: string | null;
+};
+
 const asNonEmptyString = (v: unknown): string | null => {
   if (typeof v !== 'string') return null;
   const s = v.trim();
@@ -353,6 +364,102 @@ const loadCharacterTaskRealmState = async (
   };
 };
 
+const buildRecurringTaskResetPlan = (
+  characterRealmState: CharacterTaskRealmState,
+): RecurringTaskResetPlan => {
+  const autoAcceptTaskIds: string[] = [];
+  const dailyTaskIds: string[] = [];
+  const eventTaskIds: string[] = [];
+
+  for (const taskDef of getStaticTaskDefinitions()) {
+    if (!taskDef.enabled) continue;
+    if (taskDef.category !== 'daily' && taskDef.category !== 'event') continue;
+    if (!isTaskDefinitionUnlockedForCharacter(taskDef, characterRealmState)) continue;
+    const taskId = taskDef.id.trim();
+    if (!taskId) continue;
+
+    autoAcceptTaskIds.push(taskId);
+    if (taskDef.category === 'daily') {
+      dailyTaskIds.push(taskId);
+      continue;
+    }
+    eventTaskIds.push(taskId);
+  }
+
+  return {
+    autoAcceptTaskIds,
+    dailyTaskIds,
+    eventTaskIds,
+  };
+};
+
+const buildCharacterTaskRealmStateKey = (
+  characterRealmState?: CharacterTaskRealmState,
+): string | null => {
+  if (!characterRealmState) return null;
+  return `${characterRealmState.realm}::${characterRealmState.subRealm ?? ''}`;
+};
+
+const recurringTaskResetInflight = new Map<number, RecurringTaskResetInflightEntry>();
+
+const runRecurringTaskProgressReset = async (
+  characterId: number,
+  dbClient?: PoolClient,
+  characterRealmState?: CharacterTaskRealmState,
+): Promise<void> => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return;
+  const runner = dbClient ?? { query };
+  const resolvedCharacterRealmState = characterRealmState ?? await loadCharacterTaskRealmState(cid, dbClient);
+  if (!resolvedCharacterRealmState) return;
+
+  const resetPlan = buildRecurringTaskResetPlan(resolvedCharacterRealmState);
+
+  if (resetPlan.autoAcceptTaskIds.length > 0) {
+    // 日常/周常任务为自动接取：缺失进度行时自动补齐，避免首次必须手动“接取”。
+    await runner.query(
+      `
+        INSERT INTO character_task_progress
+          (character_id, task_id, status, progress, tracked, accepted_at, completed_at, claimed_at, updated_at)
+        SELECT
+          $1,
+          recurring_task.task_id,
+          'ongoing',
+          '{}'::jsonb,
+          false,
+          NOW(),
+          NULL,
+          NULL,
+          NOW()
+        FROM unnest($2::varchar[]) AS recurring_task(task_id)
+        ON CONFLICT (character_id, task_id) DO NOTHING
+      `,
+      [cid, resetPlan.autoAcceptTaskIds],
+    );
+  }
+
+  if (resetPlan.dailyTaskIds.length === 0 && resetPlan.eventTaskIds.length === 0) return;
+
+  await runner.query(
+    `
+      UPDATE character_task_progress
+      SET status = 'ongoing',
+          progress = '{}'::jsonb,
+          accepted_at = NOW(),
+          completed_at = NULL,
+          claimed_at = NULL,
+          updated_at = NOW()
+      WHERE character_id = $1
+        AND (
+          (task_id = ANY($2::varchar[]) AND accepted_at < date_trunc('day', NOW()))
+          OR
+          (task_id = ANY($3::varchar[]) AND accepted_at < date_trunc('week', NOW()))
+        )
+    `,
+    [cid, resetPlan.dailyTaskIds, resetPlan.eventTaskIds],
+  );
+};
+
 const isTaskDefinitionUnlockedForCharacter = (
   taskDef: Pick<TaskDefinition, 'category' | 'realm'>,
   characterRealm: CharacterTaskRealmState,
@@ -386,91 +493,31 @@ const resetRecurringTaskProgressIfNeeded = async (
 ): Promise<void> => {
   const cid = Number(characterId);
   if (!Number.isFinite(cid) || cid <= 0) return;
-  const runner = dbClient ?? { query };
-  const resolvedCharacterRealmState = characterRealmState ?? await loadCharacterTaskRealmState(cid, dbClient);
-  if (!resolvedCharacterRealmState) return;
-  const autoAcceptRecurringTaskIds = getStaticTaskDefinitions()
-    .filter((entry) => (
-      entry.enabled
-      && (entry.category === 'daily' || entry.category === 'event')
-      && isTaskDefinitionUnlockedForCharacter(entry, resolvedCharacterRealmState)
-    ))
-    .map((entry) => entry.id)
-    .filter((taskId) => taskId.trim().length > 0);
-
-  if (autoAcceptRecurringTaskIds.length > 0) {
-    // 日常/周常任务为自动接取：缺失进度行时自动补齐，避免首次必须手动“接取”。
-    await runner.query(
-      `
-        INSERT INTO character_task_progress
-          (character_id, task_id, status, progress, tracked, accepted_at, completed_at, claimed_at, updated_at)
-        SELECT
-          $1,
-          daily_task.task_id,
-          'ongoing',
-          '{}'::jsonb,
-          false,
-          NOW(),
-          NULL,
-          NULL,
-          NOW()
-        FROM unnest($2::varchar[]) AS daily_task(task_id)
-        ON CONFLICT (character_id, task_id) DO NOTHING
-      `,
-      [cid, autoAcceptRecurringTaskIds],
-    );
+  if (dbClient) {
+    await runRecurringTaskProgressReset(cid, dbClient, characterRealmState);
+    return;
   }
 
-  const progressRes = await runner.query(
-    `
-      SELECT task_id
-      FROM character_task_progress
-      WHERE character_id = $1
-    `,
-    [cid],
-  );
-
-  const taskIds = (progressRes.rows as Array<Record<string, unknown>>)
-    .map((row) => asNonEmptyString(row.task_id))
-    .filter((taskId): taskId is string => Boolean(taskId));
-  if (taskIds.length === 0) return;
-
-  const taskDefMap = await getTaskDefinitionsByIds(taskIds, dbClient);
-  const dailyTaskIds = new Set<string>();
-  const eventTaskIds = new Set<string>();
-
-  for (const row of progressRes.rows as Array<Record<string, unknown>>) {
-    const taskId = asNonEmptyString(row.task_id);
-    if (!taskId) continue;
-    const taskDef = taskDefMap.get(taskId);
-    if (!taskDef || !taskDef.enabled) continue;
-    if (!isTaskDefinitionUnlockedForCharacter(taskDef, resolvedCharacterRealmState)) continue;
-    if (taskDef.category === 'daily') dailyTaskIds.add(taskId);
-    if (taskDef.category === 'event') eventTaskIds.add(taskId);
+  const realmStateKey = buildCharacterTaskRealmStateKey(characterRealmState);
+  const inflight = recurringTaskResetInflight.get(cid);
+  if (inflight && inflight.realmStateKey === realmStateKey) {
+    await inflight.promise;
+    return;
   }
 
-  const dailyIds = Array.from(dailyTaskIds);
-  const eventIds = Array.from(eventTaskIds);
-  if (dailyIds.length === 0 && eventIds.length === 0) return;
-
-  await runner.query(
-    `
-      UPDATE character_task_progress
-      SET status = 'ongoing',
-          progress = '{}'::jsonb,
-          accepted_at = NOW(),
-          completed_at = NULL,
-          claimed_at = NULL,
-          updated_at = NOW()
-      WHERE character_id = $1
-        AND (
-          (task_id = ANY($2::varchar[]) AND accepted_at < date_trunc('day', NOW()))
-          OR
-          (task_id = ANY($3::varchar[]) AND accepted_at < date_trunc('week', NOW()))
-        )
-    `,
-    [cid, dailyIds, eventIds],
-  );
+  const entry: RecurringTaskResetInflightEntry = {
+    promise: Promise.resolve(),
+    realmStateKey,
+  };
+  const request = runRecurringTaskProgressReset(cid, undefined, characterRealmState).finally(() => {
+    const latest = recurringTaskResetInflight.get(cid);
+    if (latest === entry) {
+      recurringTaskResetInflight.delete(cid);
+    }
+  });
+  entry.promise = request;
+  recurringTaskResetInflight.set(cid, entry);
+  await request;
 };
 
 export const getTaskOverview = async (
@@ -583,18 +630,9 @@ export const getTaskOverview = async (
 export const getBountyTaskOverview = async (characterId: number): Promise<{ tasks: BountyTaskOverviewDto[] }> => {
   const cid = Number(characterId);
   if (!Number.isFinite(cid) || cid <= 0) return { tasks: [] };
-  await resetRecurringTaskProgressIfNeeded(cid);
-
-  await query(
-    `
-      DELETE FROM bounty_instance
-      WHERE source_type = 'daily'
-        AND (
-          (expires_at IS NOT NULL AND expires_at <= NOW())
-          OR (refresh_date IS NOT NULL AND refresh_date < CURRENT_DATE)
-        )
-    `,
-  );
+  const characterRealmState = await loadCharacterTaskRealmState(cid);
+  if (!characterRealmState) return { tasks: [] };
+  await resetRecurringTaskProgressIfNeeded(cid, undefined, characterRealmState);
 
   const res = await query(
     `
@@ -622,8 +660,10 @@ export const getBountyTaskOverview = async (characterId: number): Promise<{ task
         AND c.status IN ('claimed','completed')
         AND (
           i.source_type <> 'daily'
-          OR i.expires_at IS NULL
-          OR i.expires_at > NOW()
+          OR (
+            i.refresh_date = CURRENT_DATE
+            AND (i.expires_at IS NULL OR i.expires_at > NOW())
+          )
         )
         AND (
           i.source_type <> 'player'

@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_ICON as coin01 } from '../../shared/resolveIcon';
 import {
   claimTaskReward,
-  getBountyTaskOverview,
-  getTaskOverview,
   setTaskTracked,
   submitTaskToNpc,
   submitBountyMaterials,
@@ -20,6 +18,10 @@ import {
   hasExpiredBountyTaskOverviewRow,
   isActiveBountyTaskOverviewRow,
 } from '../../shared/taskIndicator';
+import {
+  loadSharedBountyTaskOverview,
+  loadSharedTaskOverview,
+} from '../../shared/taskOverviewRequests';
 import { formatTaskRewardsToText } from '../../shared/taskRewardText';
 import MainQuestPanel from './MainQuestPanel';
 import {
@@ -52,6 +54,7 @@ const formatRewardAmount = (amount: number, amountMax?: number): string => {
 interface TaskModalProps {
   open: boolean;
   onClose: () => void;
+  taskOverviewRequestScopeKey: string;
   onTrackedChange?: () => void;
   onTaskCompletedChange?: () => void;
 }
@@ -59,6 +62,7 @@ interface TaskModalProps {
 const TaskModal: React.FC<TaskModalProps> = ({
   open,
   onClose,
+  taskOverviewRequestScopeKey,
   onTrackedChange,
   onTaskCompletedChange,
 }) => {
@@ -193,7 +197,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setTaskListLoading(true);
       setTaskListLoaded(false);
       try {
-        const response = await getTaskOverview();
+        const response = await loadSharedTaskOverview(taskOverviewRequestScopeKey, { forceRefresh });
         if (!response.success || !response.data) return;
         setTaskRowsByCategory(groupTaskOverviewRowsByCategory(response.data.tasks || []));
         setTaskListLoaded(true);
@@ -201,7 +205,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         setTaskListLoading(false);
       }
     });
-  }, [runCategoryRequest, setTaskListLoaded, setTaskListLoading]);
+  }, [runCategoryRequest, setTaskListLoaded, setTaskListLoading, taskOverviewRequestScopeKey]);
 
   const loadBountyTaskOverview = useCallback(async (forceRefresh: boolean): Promise<void> => {
     if (!forceRefresh && loadedByCategoryRef.current.bounty) return;
@@ -210,7 +214,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setCategoryLoading('bounty', true);
       setCategoryLoaded('bounty', false);
       try {
-        const response = await getBountyTaskOverview();
+        const response = await loadSharedBountyTaskOverview(taskOverviewRequestScopeKey, { forceRefresh });
         if (!response.success || !response.data) return;
         setBountyTasks(mapBountyTaskOverviewRows(response.data.tasks || []));
         setCategoryLoaded('bounty', true);
@@ -218,7 +222,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         setCategoryLoading('bounty', false);
       }
     });
-  }, [runCategoryRequest, setCategoryLoaded, setCategoryLoading]);
+  }, [runCategoryRequest, setCategoryLoaded, setCategoryLoading, taskOverviewRequestScopeKey]);
 
   const ensureCategoryLoaded = useCallback(async (targetCategory: TaskCategory): Promise<void> => {
     if (targetCategory === 'main') {

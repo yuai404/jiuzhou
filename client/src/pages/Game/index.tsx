@@ -47,7 +47,6 @@ import {
   claimTaskReward,
   createDungeonInstance,
   gatherRoomResource,
-  getBountyTaskOverview,
   getDungeonInstanceByBattleId,
   pickupRoomItem,
   getInventoryItems,
@@ -109,6 +108,11 @@ import {
   countCompletableTaskOverviewRows,
   getNextBountyTaskExpiryTs,
 } from './shared/taskIndicator';
+import {
+  clearTaskOverviewRequestScope,
+  loadSharedBountyTaskOverview,
+  loadSharedTaskOverview,
+} from './shared/taskOverviewRequests';
 import { useRealtimeMemberPresence } from './shared/useRealtimeMemberPresence';
 
 interface GameProps {
@@ -597,6 +601,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const [arenaBattleId, setArenaBattleId] = useState<string | null>(null);
   const [dungeonInstanceId, setDungeonInstanceId] = useState<string | null>(null);
   const [autoMode, setAutoMode] = useState(true); // 默认开启自动战斗
+  const taskOverviewRequestScopeKeyRef = useRef<string>(`game-task-overview-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const [equippedItems, setEquippedItems] = useState<
     Array<{ id: number; name: string; icon: string; equippedSlot: string; item: InventoryItemDto }>
   >([]);
@@ -665,6 +670,12 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   useEffect(() => {
     hasLocalBattleTargetsRef.current = battleEnemies.length > 0;
   }, [battleEnemies]);
+
+  useEffect(() => {
+    return () => {
+      clearTaskOverviewRequestScope(taskOverviewRequestScopeKeyRef.current);
+    };
+  }, []);
 
   const activateDungeonBattleContext = useCallback((instanceId: string, battleId: string) => {
     clearBattleAutoCloseTimer();
@@ -1583,8 +1594,8 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     }
 
     const [taskResult, bountyResult] = await Promise.allSettled([
-      getTaskOverview(),
-      getBountyTaskOverview(),
+      loadSharedTaskOverview(taskOverviewRequestScopeKeyRef.current),
+      loadSharedBountyTaskOverview(taskOverviewRequestScopeKeyRef.current),
     ]);
 
     const nowTs = Date.now();
@@ -2470,6 +2481,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         <TaskModal
           open={taskModalOpen}
           onClose={() => setTaskModalOpen(false)}
+          taskOverviewRequestScopeKey={taskOverviewRequestScopeKeyRef.current}
           onTrackedChange={() => {
             void (async () => {
               await refreshTrackedRoomIds();
