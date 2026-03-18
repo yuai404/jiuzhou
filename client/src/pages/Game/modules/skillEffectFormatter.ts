@@ -1,6 +1,7 @@
 import { formatMarkEffectText } from "../shared/markEffectText";
 import { translateControlName } from "../shared/controlNameMap";
 import { formatElementLabel as formatSharedElementLabel } from "../shared/elementTheme";
+import { translateKnownBuffKeyName } from "../shared/buffNameMap";
 
 type SkillEffectContext = {
   damageType?: string | null | undefined;
@@ -42,17 +43,6 @@ const ATTR_LABEL: Record<string, string> = {
   max_qixue: '气血上限',
   max_lingqi: '灵气上限',
   kongzhi_kangxing: '控制抗性',
-};
-
-const BUFF_KEY_NAME: Record<string, string> = {
-  'debuff-burn': '灼烧',
-  'buff-hot': '持续治疗',
-  'buff-dodge-next': '下一次闪避',
-  'buff-reflect-damage': '受击反震',
-  'debuff-heal-forbid': '断脉',
-  'buff-next-skill-chaos': '下一式异变',
-  'buff-aura': '光环',
-  'debuff-aura': '光环',
 };
 
 const PERCENT_BUFF_ATTR_SET = new Set([
@@ -221,8 +211,9 @@ const formatBuffName = (
 ): { name: string; attr: string; buffKey: string } => {
   const buffKey = normalizeBuffKey(effect.buffKey);
   const attr = resolveBuffAttr(effect, buffKey);
+  const knownBuffName = translateKnownBuffKeyName(buffKey);
 
-  if (buffKey && BUFF_KEY_NAME[buffKey]) return { name: BUFF_KEY_NAME[buffKey], attr, buffKey };
+  if (knownBuffName) return { name: knownBuffName, attr, buffKey };
   if (!buffKey && !attr) {
     return { name: effectType === 'buff' ? '增益效果' : '减益效果', attr: '', buffKey: '' };
   }

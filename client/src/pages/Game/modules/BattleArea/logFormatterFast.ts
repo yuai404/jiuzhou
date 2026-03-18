@@ -1,5 +1,6 @@
 import type {
   BattleActionTargetDto,
+  BattleAuraSubResultDto,
   BattleLogEntryDto,
   BattleRewardsDto,
   BattleStateDto,
@@ -66,8 +67,83 @@ const buildHitDetail = (target: BattleActionTargetDto): string[] => {
   return [hitLines.join('；')];
 };
 
+/**
+ * 统一汇总“目标实际受到了什么效果”的文案片段。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把伤害、治疗、资源变化、状态获得/移除等共用效果文案收口到单一入口，供主动技能日志与光环日志共同复用。
+ * 2. 做什么：保证同一种 battle result 片段在不同日志类型里使用完全一致的中文表达，避免“同效果两套文案”。
+ * 3. 不做什么：不负责目标名拼接，不负责命中/暴击/招架等仅主动攻击才有的细节。
+ *
+ * 输入/输出：
+ * - 输入：battle result 中可共用的效果字段集合。
+ * - 输出：按展示顺序排好的中文片段数组。
+ *
+ * 数据流/状态流：
+ * - action target / aura subResult -> 本函数提取共用效果片段 -> 各日志构造器再包上目标名与句式。
+ *
+ * 关键边界条件与坑点：
+ * 1. `resources` 只展示 `qixue` / `lingqi`，与现有战斗日志口径保持一致，避免未知资源类型直接暴露给玩家。
+ * 2. `buffsApplied` / `buffsRemoved` 必须统一走 `translateBuffNames`，否则 aura 子 Buff 会再次退化成内部 key。
+ */
+const buildCommonEffectParts = (params: {
+  damage?: number | null | undefined;
+  heal?: number | null | undefined;
+  resources?: Array<{ type: string; amount: number | string | null | undefined }> | null | undefined;
+  buffsApplied?: string[] | null | undefined;
+  buffsRemoved?: string[] | null | undefined;
+}): string[] => {
+  const parts: string[] = [];
+  const damage = toSafeInt(params.damage);
+  if (damage > 0) {
+    parts.push(`伤害-${damage}`);
+  }
+
+  const heal = toSafeInt(params.heal);
+  if (heal > 0) {
+    parts.push(`治疗+${heal}`);
+  }
+
+  const resources = (params.resources ?? [])
+    .map((row) => ({
+      type: String(row.type || '').trim(),
+      amount: toSafeInt(row.amount),
+    }))
+    .filter((row) => row.amount > 0 && (row.type === 'qixue' || row.type === 'lingqi'));
+  for (const resource of resources) {
+    if (resource.type === 'qixue') {
+      parts.push(`气血+${resource.amount}`);
+      continue;
+    }
+    parts.push(`灵气+${resource.amount}`);
+  }
+
+  const buffsApplied = translateBuffNames(params.buffsApplied);
+  if (buffsApplied.length > 0) {
+    parts.push(`获得状态:${buffsApplied.join('、')}`);
+  }
+
+  const buffsRemoved = translateBuffNames(params.buffsRemoved);
+  if (buffsRemoved.length > 0) {
+    parts.push(`移除状态:${buffsRemoved.join('、')}`);
+  }
+
+  return parts;
+};
+
+const buildNamedSummary = (
+  name: string | number | null | undefined,
+  fallback: string,
+  parts: string[],
+): string => {
+  const normalizedName = normalizeName(name, fallback);
+  if (parts.length === 0) {
+    return normalizedName;
+  }
+  return `${normalizedName}（${parts.join('，')}）`;
+};
+
 const buildTargetSummary = (target: BattleActionTargetDto): string => {
-  const name = normalizeName(target.targetName, '未知目标');
   const parts: string[] = [];
 
   if (target.controlResisted) {
@@ -89,39 +165,15 @@ const buildTargetSummary = (target: BattleActionTargetDto): string => {
 
     const shieldAbsorbed = toSafeInt(target.shieldAbsorbed);
     if (shieldAbsorbed > 0) parts.push(`护盾吸收${shieldAbsorbed}`);
-
-    const damage = toSafeInt(target.damage);
-    if (damage > 0) parts.push(`伤害-${damage}`);
   }
 
-  const heal = toSafeInt(target.heal);
-  if (heal > 0) {
-    parts.push(`治疗+${heal}`);
-  }
-
-  const resources = (target.resources ?? [])
-    .map((row) => ({
-      type: String(row.type || '').trim(),
-      amount: toSafeInt(row.amount),
-    }))
-    .filter((row) => row.amount > 0 && (row.type === 'qixue' || row.type === 'lingqi'));
-  for (const resource of resources) {
-    if (resource.type === 'qixue') {
-      parts.push(`气血+${resource.amount}`);
-      continue;
-    }
-    parts.push(`灵气+${resource.amount}`);
-  }
-
-  const buffsApplied = translateBuffNames(target.buffsApplied);
-  if (buffsApplied.length > 0) {
-    parts.push(`获得状态:${buffsApplied.join('、')}`);
-  }
-
-  const buffsRemoved = translateBuffNames(target.buffsRemoved);
-  if (buffsRemoved.length > 0) {
-    parts.push(`移除状态:${buffsRemoved.join('、')}`);
-  }
+  parts.push(...buildCommonEffectParts({
+    damage: target.hits.length === 0 ? target.damage : 0,
+    heal: target.heal,
+    resources: target.resources,
+    buffsApplied: target.buffsApplied,
+    buffsRemoved: target.buffsRemoved,
+  }));
 
   const marksApplied = (target.marksApplied ?? [])
     .map((entry) => normalizeName(entry, ''))
@@ -151,11 +203,7 @@ const buildTargetSummary = (target: BattleActionTargetDto): string => {
     parts.push(`消耗势:${momentumConsumed.join('、')}`);
   }
 
-  if (parts.length === 0) {
-    return name;
-  }
-
-  return `${name}（${parts.join('，')}）`;
+  return buildNamedSummary(target.targetName, '未知目标', parts);
 };
 
 const buildActionLogLine = (log: Extract<BattleLogEntryDto, { type: 'action' }>): string => {
@@ -203,6 +251,31 @@ const buildDeathLogLine = (log: Extract<BattleLogEntryDto, { type: 'death' }>): 
   return `${roundText} ${unitName} 倒下`;
 };
 
+const buildAuraSubResultSummary = (subResult: BattleAuraSubResultDto): string => {
+  const parts = buildCommonEffectParts({
+    damage: subResult.damage,
+    heal: subResult.heal,
+    resources: subResult.resources,
+    buffsApplied: subResult.buffsApplied,
+  });
+  return buildNamedSummary(subResult.targetName, '未知目标', parts);
+};
+
+const buildAuraLogLine = (log: Extract<BattleLogEntryDto, { type: 'aura' }>): string => {
+  const roundText = buildRoundLabel(log.round);
+  const unitName = normalizeName(log.unitName, '未知单位');
+  const buffName = normalizeName(translateBuffName(log.buffName), String(log.buffName));
+  const subResults = (log.subResults ?? [])
+    .map((subResult) => buildAuraSubResultSummary(subResult))
+    .filter(Boolean);
+
+  if (subResults.length === 0) {
+    return `${roundText} ${unitName} 的【${buffName}】生效`;
+  }
+
+  return `${roundText} ${unitName} 的【${buffName}】生效：${subResults.join('；')}`;
+};
+
 const formatResultText = (result: BattleStateDto['result']): string => {
   if (result === 'attacker_win') return '得胜';
   if (result === 'defender_win') return '落败';
@@ -225,6 +298,7 @@ export const formatBattleLogLineFast = (log: BattleLogEntryDto): string | null =
   if (log.type === 'hot') return buildHotLogLine(log);
   if (log.type === 'buff_expire') return buildBuffExpireLogLine(log);
   if (log.type === 'death') return buildDeathLogLine(log);
+  if (log.type === 'aura') return buildAuraLogLine(log);
   return null;
 };
 

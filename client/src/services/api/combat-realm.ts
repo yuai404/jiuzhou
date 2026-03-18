@@ -65,6 +65,15 @@ export type BattleActionTargetResourceDto = {
   amount: number;
 };
 
+export type BattleAuraSubResultDto = {
+  targetId: string;
+  targetName: string;
+  damage?: number;
+  heal?: number;
+  buffsApplied?: string[];
+  resources?: BattleActionTargetResourceDto[];
+};
+
 export type BattleLogEntryDto =
   | {
       type: 'action';
@@ -79,6 +88,15 @@ export type BattleLogEntryDto =
   | { type: 'hot'; round: number; unitId: string; unitName: string; buffName: string; heal: number }
   | { type: 'buff_expire'; round: number; unitId: string; unitName: string; buffName: string }
   | { type: 'death'; round: number; unitId: string; unitName: string; killerId?: string; killerName?: string }
+  | {
+      type: 'aura';
+      round: number;
+      unitId: string;
+      unitName: string;
+      buffName: string;
+      auraTarget: string;
+      subResults: BattleAuraSubResultDto[];
+    }
   | { type: 'round_start' | 'round_end'; round: number };
 
 export interface BattleCooldownMetaDto {

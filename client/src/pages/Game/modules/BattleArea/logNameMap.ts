@@ -1,4 +1,5 @@
 import { translateControlName } from "../../shared/controlNameMap";
+import { translateKnownBuffKeyName } from "../../shared/buffNameMap";
 export { translateControlName } from "../../shared/controlNameMap";
 
 const ATTR_LABEL_MAP: Record<string, string> = {
@@ -32,12 +33,6 @@ const ATTR_LABEL_MAP: Record<string, string> = {
   tu_kangxing: '土抗性',
 };
 
-const SPECIAL_BUFF_LABEL_MAP: Record<string, string> = {
-  'buff-hot': '持续治疗',
-  'debuff-burn': '灼烧',
-  'buff-dodge-next': '闪避强化',
-};
-
 const ATTR_KEY_ALIAS: Record<string, string> = {
   'max-lingqi': 'max_lingqi',
   'max-qixue': 'max_qixue',
@@ -68,7 +63,7 @@ export function translateBuffName(buffName: string | null | undefined): string {
   const raw = String(buffName ?? '').trim();
   if (!raw) return '';
 
-  const special = SPECIAL_BUFF_LABEL_MAP[raw];
+  const special = translateKnownBuffKeyName(raw);
   if (special) return special;
 
   if (raw.startsWith('control-')) {

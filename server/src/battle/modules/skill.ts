@@ -79,6 +79,74 @@ const resolveCasterSkillCost = (caster: BattleUnit, skill: BattleSkill) => {
 };
 
 const PERCENT_BUFF_ATTR_SET = DEFAULT_PERCENT_BUFF_ATTR_SET;
+const AURA_TARGET_LABEL: Record<AuraTargetType, string> = {
+  all_ally: '全体友方',
+  all_enemy: '全体敌方',
+  self: '自身',
+};
+
+const DAMAGE_TYPE_LABEL: Record<'physical' | 'magic' | 'true', string> = {
+  physical: '物理',
+  magic: '法术',
+  true: '真实',
+};
+
+const RESOURCE_TYPE_LABEL: Record<'qixue' | 'lingqi', string> = {
+  qixue: '气血',
+  lingqi: '灵气',
+};
+
+const ATTR_LABEL: Record<string, string> = {
+  max_qixue: '气血上限',
+  max_lingqi: '灵气上限',
+  wugong: '物攻',
+  fagong: '法攻',
+  wufang: '物防',
+  fafang: '法防',
+  mingzhong: '命中',
+  shanbi: '闪避',
+  zhaojia: '招架',
+  baoji: '暴击',
+  baoshang: '暴伤',
+  jianbaoshang: '暴伤减免',
+  jianfantan: '反伤减免',
+  kangbao: '抗暴',
+  zengshang: '增伤',
+  zhiliao: '治疗',
+  jianliao: '减疗',
+  xixue: '吸血',
+  lengque: '冷却',
+  sudu: '速度',
+  qixue_huifu: '气血恢复',
+  lingqi_huifu: '灵气恢复',
+  kongzhi_kangxing: '控制抗性',
+  jin_kangxing: '金抗性',
+  mu_kangxing: '木抗性',
+  shui_kangxing: '水抗性',
+  huo_kangxing: '火抗性',
+  tu_kangxing: '土抗性',
+};
+
+const CONTROL_LABEL: Record<string, string> = {
+  stun: '眩晕',
+  freeze: '冻结',
+  silence: '沉默',
+  disarm: '缴械',
+  root: '定身',
+  taunt: '嘲讽',
+  fear: '恐惧',
+};
+
+const KNOWN_BUFF_LABEL: Record<string, string> = {
+  'debuff-burn': '灼烧',
+  'buff-hot': '持续治疗',
+  'buff-dodge-next': '下一次闪避',
+  'buff-reflect-damage': '受击反震',
+  'debuff-heal-forbid': '断脉',
+  'buff-next-skill-chaos': '下一式异变',
+  'buff-aura': '增益光环',
+  'debuff-aura': '减益光环',
+};
 
 type BuffRuntimeData = {
   attrModifiers?: AttrModifier[];
@@ -126,6 +194,128 @@ function createSkillExecutionContext(): SkillExecutionContext {
     consumedNextSkillBuffIds: [],
   };
 }
+
+const normalizeBattleAttrKey = (raw: string): string => {
+  const lowered = raw.trim().toLowerCase();
+  if (!lowered) return '';
+  if (lowered === 'max-lingqi') return 'max_lingqi';
+  if (lowered === 'max-qixue') return 'max_qixue';
+  if (lowered === 'kongzhi-kangxing') return 'kongzhi_kangxing';
+  return lowered.replace(/-/g, '_');
+};
+
+const formatSignedPercent = (value: number): string => {
+  const percent = Math.abs(value) * 100;
+  return Number.isInteger(percent) ? `${percent}%` : `${Number(percent.toFixed(2))}%`;
+};
+
+const formatSignedInt = (value: number): string => {
+  return `${Math.abs(Math.floor(value))}`;
+};
+
+const translateBattleBuffName = (buffKey: string): string => {
+  const raw = buffKey.trim();
+  if (!raw) return '';
+
+  const known = KNOWN_BUFF_LABEL[raw];
+  if (known) return known;
+
+  if (raw.startsWith('control-')) {
+    return CONTROL_LABEL[raw.slice('control-'.length)] ?? raw;
+  }
+
+  const matched = /^(buff|debuff)-([a-z0-9_-]+)-(up|down)$/i.exec(raw);
+  if (!matched) return raw;
+
+  const [, kind, attrRaw, directionRaw] = matched;
+  const attrKey = normalizeBattleAttrKey(attrRaw);
+  const attrLabel = ATTR_LABEL[attrKey] ?? attrKey;
+  const direction = directionRaw.toLowerCase() === 'down'
+    ? '降低'
+    : directionRaw.toLowerCase() === 'up'
+      ? '提升'
+      : kind.toLowerCase() === 'buff'
+        ? '提升'
+        : '降低';
+  return `${attrLabel}${direction}`;
+};
+
+/**
+ * 光环获得摘要构造器
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：在光环被施加时直接生成一次“范围 + 具体效果”的精简文案，避免前端只能看到 `buff-aura` 内部 key。
+ * 2. 做什么：把光环子效果的展示规则集中在技能执行层，保证所有 action 日志对光环的首次展示一致。
+ * 3. 不做什么：不负责每回合结算日志，不负责完整技能说明卡的长文案排版。
+ *
+ * 输入/输出：
+ * - 输入：光环类型（buff/debuff）与已解析的运行时 aura。
+ * - 输出：形如 `增益光环（全体友方：物防提升15%、持续治疗+80）` 的单行摘要。
+ *
+ * 数据流/状态流：
+ * - 技能效果 -> buildBuffRuntimeData 解析 aura 运行时数据 -> 本函数提炼可读摘要 -> 写入 action log 的 buffsApplied。
+ *
+ * 关键边界条件与坑点：
+ * 1. 这里只展示一次概览，所以文案必须短；同一个子效果的细节过长时优先保留核心类型和值。
+ * 2. 必须基于运行时 aura 快照生成，避免技能描述值与实战实际值不一致。
+ */
+const buildAuraApplySummary = (
+  buffType: 'buff' | 'debuff',
+  aura: AuraEffect,
+): string => {
+  const auraName = buffType === 'buff' ? '增益光环' : '减益光环';
+  const targetLabel = AURA_TARGET_LABEL[aura.auraTarget] ?? '范围';
+  const effectLabels = aura.effects
+    .map((sub): string => {
+      if (sub.type === 'damage') {
+        const damageType = DAMAGE_TYPE_LABEL[sub.damageType ?? 'physical'] ?? '伤害';
+        return `${damageType}伤害${Math.max(1, Math.floor(sub.resolvedValue))}`;
+      }
+      if (sub.type === 'heal') {
+        return `治疗+${Math.max(1, Math.floor(sub.resolvedValue))}`;
+      }
+      if (sub.type === 'resource') {
+        const resourceType = RESOURCE_TYPE_LABEL[sub.resourceType ?? 'lingqi'] ?? '资源';
+        const value = Math.floor(sub.resolvedValue);
+        return `${resourceType}${value >= 0 ? '+' : '-'}${formatSignedInt(value)}`;
+      }
+      if (sub.type === 'restore_lingqi') {
+        return `灵气+${Math.max(1, Math.floor(sub.resolvedValue))}`;
+      }
+      if (sub.type === 'buff' || sub.type === 'debuff') {
+        const attrModifiers = sub.attrModifiers ?? [];
+        if (attrModifiers.length > 0) {
+          return attrModifiers
+            .map((modifier) => {
+              const attrKey = normalizeBattleAttrKey(modifier.attr);
+              const attrLabel = ATTR_LABEL[attrKey] ?? attrKey;
+              const direction = modifier.value >= 0 ? '提升' : '降低';
+              const valueText = modifier.mode === 'percent'
+                ? formatSignedPercent(modifier.value)
+                : formatSignedInt(modifier.value);
+              return `${attrLabel}${direction}${valueText}`;
+            })
+            .join('、');
+        }
+        if (sub.hot) {
+          return `持续治疗+${Math.max(1, Math.floor(sub.hot.heal))}`;
+        }
+        if (sub.dot) {
+          const buffName = translateBattleBuffName(sub.buffDefId ?? 'debuff-burn');
+          return `${buffName}${Math.max(1, Math.floor(sub.dot.damage))}`;
+        }
+        if (sub.healForbidden) {
+          return '断脉';
+        }
+        return translateBattleBuffName(sub.buffDefId ?? (sub.type === 'buff' ? 'buff-aura' : 'debuff-aura'));
+      }
+      return '';
+    })
+    .filter((label) => label.length > 0);
+
+  if (effectLabels.length === 0) return auraName;
+  return `${auraName}（${targetLabel}：${effectLabels.join('、')}）`;
+};
 
 function applyContextBonus(value: number, bonusRate: number): number {
   if (value === 0) return 0;
@@ -1087,7 +1277,12 @@ function executeBuffEffect(
     tags: [],
     dispellable: !isAura,
   }, duration, stacks);
-  
+
+  if (isAura && runtimeData.aura) {
+    result.buffsApplied?.push(buildAuraApplySummary(buffType, runtimeData.aura));
+    return;
+  }
+
   result.buffsApplied?.push(buffDefId);
 }
 
