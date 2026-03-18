@@ -1648,9 +1648,15 @@ const Game: FC<GameProps> = ({ onLogout }) => {
 
   useEffect(() => {
     if (!characterId) return;
-    return gameSocket.onCharacterUpdate(() => {
+    let isSyncingCurrentCharacter = true;
+    const unsubscribe = gameSocket.onCharacterUpdate(() => {
+      // `onCharacterUpdate` 订阅时会同步回放当前角色，首页首屏刷新已由上面的
+      // `characterId` 初始化 effect 承担，这里跳过这次同步回放，避免任务总览重复请求。
+      if (isSyncingCurrentCharacter) return;
       queueTaskIndicatorRefresh();
     });
+    isSyncingCurrentCharacter = false;
+    return unsubscribe;
   }, [characterId, queueTaskIndicatorRefresh]);
 
   const spiritStones = character?.spiritStones || 0;
