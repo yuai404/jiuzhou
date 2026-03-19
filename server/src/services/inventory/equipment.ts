@@ -951,7 +951,7 @@ export const getAffixPoolPreview = async (
   };
 }> => {
   const row = await query(
-    `SELECT ii.item_def_id, ii.affixes, ii.locked, ii.location, ii.qty
+    `SELECT ii.item_def_id, ii.affixes, ii.locked, ii.location, ii.qty, ii.quality_rank
      FROM item_instance ii
      WHERE ii.id = $1 AND ii.owner_character_id = $2
      LIMIT 1`,
@@ -965,6 +965,7 @@ export const getAffixPoolPreview = async (
     locked: boolean;
     location: string;
     qty: number;
+    quality_rank: number | null;
   };
 
   const itemDef = getStaticItemDef(r.item_def_id);
@@ -991,6 +992,14 @@ export const getAffixPoolPreview = async (
   const realmRank = getEquipRealmRankForReroll(itemDef.equip_req_realm);
   const ownedKeys = new Set(affixes.map((a) => a.key));
 
+  // 计算 attrFactor，与实际洗炼时的计算逻辑保持一致
+  const resolvedQualityMultiplier = getQualityMultiplierForReroll(r.quality_rank);
+  const defQualityMultiplier = getQualityMultiplierForReroll(resolveQualityRankFromName(itemDef.quality, 1));
+  const attrFactor =
+    Number.isFinite(defQualityMultiplier) && defQualityMultiplier > 0
+      ? resolvedQualityMultiplier / defQualityMultiplier
+      : 1;
+
   const previewAffixes = poolDef.affixes.map((affix) => ({
     key: affix.key,
     name: affix.name,
@@ -999,11 +1008,16 @@ export const getAffixPoolPreview = async (
     apply_type: affix.apply_type,
     tiers: affix.tiers
       .filter((tier) => Number(tier.realm_rank_min ?? 0) <= realmRank)
-      .map((tier) => ({
-        tier: Number(tier.tier ?? 1),
-        min: Number(tier.min ?? 0),
-        max: Number(tier.max ?? 0),
-      })),
+      .map((tier) => {
+        const min = Number(tier.min ?? 0);
+        const max = Number(tier.max ?? 0);
+        // 应用 attrFactor 缩放，与 rollAffixValue 保持一致
+        return {
+          tier: Number(tier.tier ?? 1),
+          min: Number.isFinite(attrFactor) && attrFactor !== 1 ? min * attrFactor : min,
+          max: Number.isFinite(attrFactor) && attrFactor !== 1 ? max * attrFactor : max,
+        };
+      }),
     owned: ownedKeys.has(affix.key),
   }));
 
