@@ -19,6 +19,7 @@
  */
 import type { PartnerRecruitPreviewDto } from './partnerRecruitJobShared.js';
 import type { PartnerRecruitUnlockState } from './partnerRecruitUnlock.js';
+import { PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH } from './partnerRecruitBaseModel.js';
 
 export type PartnerRecruitResultStatus = 'generated_draft' | 'failed' | null;
 
@@ -28,6 +29,7 @@ export interface PartnerRecruitJobDto {
   startedAt: string;
   finishedAt: string | null;
   previewExpireAt: string | null;
+  requestedBaseModel: string | null;
   preview: PartnerRecruitPreviewDto | null;
   errorMessage: string | null;
 }
@@ -40,6 +42,10 @@ export interface PartnerRecruitStatusDto {
   cooldownHours: number;
   cooldownUntil: string | null;
   cooldownRemainingSeconds: number;
+  customBaseModelMaxLength: typeof PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH;
+  customBaseModelTokenCost: number;
+  customBaseModelTokenItemName: string;
+  customBaseModelTokenAvailableQty: number;
   currentJob: PartnerRecruitJobDto | null;
   hasUnreadResult: boolean;
   resultStatus: PartnerRecruitResultStatus;
@@ -52,6 +58,10 @@ type BuildPartnerRecruitStatusDtoParams = {
   cooldownHours: number;
   cooldownUntil: string | null;
   cooldownRemainingSeconds: number;
+  customBaseModelMaxLength: typeof PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH;
+  customBaseModelTokenCost: number;
+  customBaseModelTokenItemName: string;
+  customBaseModelTokenAvailableQty: number;
   currentJob: PartnerRecruitJobDto | null;
   hasUnreadResult: boolean;
   resultStatus: PartnerRecruitResultStatus;
@@ -67,6 +77,10 @@ export const buildPartnerRecruitStatusDto = (
     cooldownHours,
     cooldownUntil,
     cooldownRemainingSeconds,
+    customBaseModelMaxLength,
+    customBaseModelTokenCost,
+    customBaseModelTokenItemName,
+    customBaseModelTokenAvailableQty,
     currentJob,
     hasUnreadResult,
     resultStatus,
@@ -81,6 +95,10 @@ export const buildPartnerRecruitStatusDto = (
       cooldownHours,
       cooldownUntil: null,
       cooldownRemainingSeconds: 0,
+      customBaseModelMaxLength,
+      customBaseModelTokenCost,
+      customBaseModelTokenItemName,
+      customBaseModelTokenAvailableQty,
       currentJob: null,
       hasUnreadResult: false,
       resultStatus: null,
@@ -95,6 +113,10 @@ export const buildPartnerRecruitStatusDto = (
     cooldownHours,
     cooldownUntil,
     cooldownRemainingSeconds,
+    customBaseModelMaxLength,
+    customBaseModelTokenCost,
+    customBaseModelTokenItemName,
+    customBaseModelTokenAvailableQty,
     currentJob,
     hasUnreadResult,
     resultStatus,

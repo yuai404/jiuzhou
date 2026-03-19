@@ -32,12 +32,17 @@ test('buildPartnerRecruitStatusDto: 未开放时应返回锁定态 DTO 并清空
     cooldownHours: 12,
     cooldownUntil: '2026-03-11T10:00:00.000Z',
     cooldownRemainingSeconds: 1800,
+    customBaseModelMaxLength: 12,
+    customBaseModelTokenCost: 1,
+    customBaseModelTokenItemName: '高级招募令',
+    customBaseModelTokenAvailableQty: 2,
     currentJob: {
       generationId: 'job-1',
       status: 'pending',
       startedAt: '2026-03-11T09:00:00.000Z',
       finishedAt: null,
       previewExpireAt: null,
+      requestedBaseModel: '雪狐',
       preview: null,
       errorMessage: null,
     },
@@ -52,6 +57,10 @@ test('buildPartnerRecruitStatusDto: 未开放时应返回锁定态 DTO 并清空
   assert.equal(status.cooldownHours, 12);
   assert.equal(status.cooldownUntil, null);
   assert.equal(status.cooldownRemainingSeconds, 0);
+  assert.equal(status.customBaseModelMaxLength, 12);
+  assert.equal(status.customBaseModelTokenCost, 1);
+  assert.equal(status.customBaseModelTokenItemName, '高级招募令');
+  assert.equal(status.customBaseModelTokenAvailableQty, 2);
   assert.equal(status.currentJob, null);
   assert.equal(status.hasUnreadResult, false);
   assert.equal(status.resultStatus, null);
@@ -64,6 +73,7 @@ test('buildPartnerRecruitStatusDto: 已开放时应保留真实动态状态', ()
     startedAt: '2026-03-11T09:00:00.000Z',
     finishedAt: '2026-03-11T09:05:00.000Z',
     previewExpireAt: '2026-03-12T09:05:00.000Z',
+    requestedBaseModel: '雪狐',
     preview: null,
     errorMessage: null,
   };
@@ -78,6 +88,10 @@ test('buildPartnerRecruitStatusDto: 已开放时应保留真实动态状态', ()
     cooldownHours: 12,
     cooldownUntil: '2026-03-11T10:00:00.000Z',
     cooldownRemainingSeconds: 1800,
+    customBaseModelMaxLength: 12,
+    customBaseModelTokenCost: 1,
+    customBaseModelTokenItemName: '高级招募令',
+    customBaseModelTokenAvailableQty: 2,
     currentJob,
     hasUnreadResult: true,
     resultStatus: 'generated_draft',
@@ -87,6 +101,10 @@ test('buildPartnerRecruitStatusDto: 已开放时应保留真实动态状态', ()
   assert.equal(status.unlockRealm, '炼神返虚·养神期');
   assert.equal(status.cooldownUntil, '2026-03-11T10:00:00.000Z');
   assert.equal(status.cooldownRemainingSeconds, 1800);
+  assert.equal(status.customBaseModelMaxLength, 12);
+  assert.equal(status.customBaseModelTokenCost, 1);
+  assert.equal(status.customBaseModelTokenItemName, '高级招募令');
+  assert.equal(status.customBaseModelTokenAvailableQty, 2);
   assert.deepEqual(status.currentJob, currentJob);
   assert.equal(status.hasUnreadResult, true);
   assert.equal(status.resultStatus, 'generated_draft');

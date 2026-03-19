@@ -1106,6 +1106,24 @@
       ]
     },
     {
+      "id": "token-004",
+      "name": "高级招募令",
+      "category": "consumable",
+      "sub_category": "token",
+      "quality": "地",
+      "stack_max": 9999,
+      "bind_type": "pickup",
+      "tradeable": false,
+      "icon": "/assets/items/gaoji_zhaomu_ling.webp",
+      "description": "启用伙伴自定义底模时额外消耗的令牌",
+      "long_desc": "以灵契金箔炼成的高阶招募令，勾选伙伴招募中的自定义底模后会额外消耗一枚，用于锁定本次招募的底模方向。",
+      "tags": [
+        "令牌",
+        "伙伴",
+        "招募"
+      ]
+    },
+    {
       "id": "quest-001",
       "name": "秘境钥匙",
       "category": "quest",

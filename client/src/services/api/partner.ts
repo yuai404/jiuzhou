@@ -171,6 +171,7 @@ export type PartnerRecruitJobDto = {
   startedAt: string;
   finishedAt: string | null;
   previewExpireAt: string | null;
+  requestedBaseModel: string | null;
   preview: PartnerRecruitPreviewDto | null;
   errorMessage: string | null;
 };
@@ -183,6 +184,10 @@ export type PartnerRecruitStatusDto = {
   cooldownHours: number;
   cooldownUntil: string | null;
   cooldownRemainingSeconds: number;
+  customBaseModelMaxLength: number;
+  customBaseModelTokenCost: number;
+  customBaseModelTokenItemName: string;
+  customBaseModelTokenAvailableQty: number;
   currentJob: PartnerRecruitJobDto | null;
   hasUnreadResult: boolean;
   resultStatus: PartnerRecruitResultStatusDto;
@@ -408,8 +413,16 @@ export const getPartnerRecruitStatus = (): Promise<PartnerRecruitStatusResponse>
   return api.get('/partner/recruit/status');
 };
 
-export const generatePartnerRecruitDraft = (): Promise<PartnerRecruitGenerateResponse> => {
-  return api.post('/partner/recruit/generate');
+export const generatePartnerRecruitDraft = (
+  params: {
+    customBaseModelEnabled: boolean;
+    requestedBaseModel?: string;
+  },
+): Promise<PartnerRecruitGenerateResponse> => {
+  return api.post('/partner/recruit/generate', {
+    customBaseModelEnabled: params.customBaseModelEnabled,
+    requestedBaseModel: params.requestedBaseModel,
+  });
 };
 
 export const confirmPartnerRecruitDraft = (

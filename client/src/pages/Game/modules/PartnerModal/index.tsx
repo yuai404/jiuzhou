@@ -1,5 +1,5 @@
 import { ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons';
-import { App, Button, Drawer, Empty, InputNumber, Modal, Progress, Segmented, Skeleton, Tag, Tooltip } from 'antd';
+import { App, Button, Drawer, Empty, Input, InputNumber, Modal, Progress, Segmented, Skeleton, Switch, Tag, Tooltip } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import {
   activatePartner,
@@ -114,6 +114,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const [dragOverSkillId, setDragOverSkillId] = useState<string | null>(null);
   const [injectExpValue, setInjectExpValue] = useState<number | null>(null);
   const [techniqueResultText, setTechniqueResultText] = useState('');
+  const [customBaseModelEnabled, setCustomBaseModelEnabled] = useState(false);
+  const [recruitBaseModelInput, setRecruitBaseModelInput] = useState('');
   const [techniqueUpgradeCosts, setTechniqueUpgradeCosts] = useState<Record<string, PartnerTechniqueUpgradeCostDto | null>>({});
   const [expandedTechniqueSkills, setExpandedTechniqueSkills] = useState<Record<string, boolean>>({});
   const markingRecruitViewedRef = useRef(false);
@@ -184,6 +186,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       setDragOverSkillId(null);
       setInjectExpValue(null);
       setTechniqueResultText('');
+      setCustomBaseModelEnabled(false);
+      setRecruitBaseModelInput('');
       setTechniqueUpgradeCosts({});
       setExpandedTechniqueSkills({});
       setActionKey('');
@@ -248,6 +252,23 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const recruitIndicator = useMemo(() => buildPartnerRecruitIndicator(recruitStatus), [recruitStatus]);
   const recruitPanelView = useMemo(() => resolvePartnerRecruitPanelView(recruitStatus), [recruitStatus]);
   const recruitActionState = useMemo(() => resolvePartnerRecruitActionState(recruitStatus), [recruitStatus]);
+  const recruitBaseModelInputTrimmed = recruitBaseModelInput.trim();
+  const recruitBaseModelInputLength = Array.from(recruitBaseModelInputTrimmed).length;
+  const hasCustomBaseModelToken = recruitStatus !== null
+    && recruitStatus.customBaseModelTokenAvailableQty >= recruitStatus.customBaseModelTokenCost;
+  const customBaseModelTokenEnough = !customBaseModelEnabled
+    || (
+      recruitStatus !== null
+      && recruitStatus.customBaseModelTokenAvailableQty >= recruitStatus.customBaseModelTokenCost
+    );
+  const customBaseModelRequestReady = !customBaseModelEnabled || recruitBaseModelInputTrimmed.length > 0;
+  const canSubmitRecruit = recruitActionState.canGenerate && customBaseModelTokenEnough && customBaseModelRequestReady;
+
+  useEffect(() => {
+    if (!hasCustomBaseModelToken && customBaseModelEnabled) {
+      setCustomBaseModelEnabled(false);
+    }
+  }, [customBaseModelEnabled, hasCustomBaseModelToken]);
 
   const characterExp = overview?.characterExp ?? 0;
 
@@ -519,10 +540,13 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   }, [message, selectedPartner, skillPolicyDraftEntries]);
 
   const handleGenerateRecruit = useCallback(async () => {
-    if (!recruitActionState.canGenerate) return;
+    if (!canSubmitRecruit) return;
     setActionKey('recruit-generate');
     try {
-      const res = await generatePartnerRecruitDraft();
+      const res = await generatePartnerRecruitDraft({
+        customBaseModelEnabled,
+        requestedBaseModel: customBaseModelEnabled ? recruitBaseModelInputTrimmed || undefined : undefined,
+      });
       if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '开始招募失败'));
       message.success(res.message || '伙伴招募已开始');
       await refreshRecruitStatus();
@@ -532,7 +556,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     } finally {
       setActionKey('');
     }
-  }, [message, recruitActionState.canGenerate, refreshRecruitStatus]);
+  }, [canSubmitRecruit, customBaseModelEnabled, message, recruitBaseModelInputTrimmed, refreshRecruitStatus]);
 
   const handleConfirmRecruit = useCallback(async (generationId: string) => {
     setActionKey(`recruit-confirm-${generationId}`);
@@ -1034,6 +1058,15 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     );
   };
 
+  const renderRecruitRequestedBaseModel = (requestedBaseModel: string | null) => {
+    if (!requestedBaseModel) return null;
+    return (
+      <div className="partner-tag-row">
+        <Tag color="geekblue">指定底模 {requestedBaseModel}</Tag>
+      </div>
+    );
+  };
+
   const renderRecruitPanel = () => {
     const coolingDown = isPartnerRecruitCoolingDown(recruitStatus);
     const cooldownText = recruitStatus
@@ -1043,9 +1076,9 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       ? '--'
       : !recruitStatus.unlocked
         ? '未开放'
-      : coolingDown
-        ? `剩余${cooldownText}`
-        : '可招募';
+        : coolingDown
+          ? `剩余${cooldownText}`
+          : '可招募';
     const shouldShowSpiritStoneCost = Boolean(recruitStatus?.unlocked) && (recruitStatus?.spiritStoneCost ?? 0) > 0;
     const cooldownRuleText = !recruitStatus
       ? '--'
@@ -1054,7 +1087,6 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         : recruitStatus.cooldownHours === 0
           ? '当前环境已关闭伙伴招募冷却，可连续招募。'
           : `每次开始招募后会进入冷却，当前冷却时长为 ${recruitStatus.cooldownHours} 小时。`;
-
     return (
       <div className="partner-pane-card">
         <div className="partner-section-title">
@@ -1068,6 +1100,9 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
           <div className="partner-recruit-meta-card">
             <div className="partner-stat-label">招募规则</div>
             <div className="partner-meta">每次招募会生成一名专属伙伴预览，确认后才会正式入队。</div>
+            {typeof recruitStatus?.customBaseModelMaxLength === 'number' ? (
+              <div className="partner-meta">自定义底模默认关闭，勾选启用后需额外消耗高级招募令。</div>
+            ) : null}
           </div>
           <div className="partner-recruit-meta-card">
             <div className="partner-stat-label">冷却状态</div>
@@ -1082,6 +1117,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
             <div className="partner-meta">
               正在推演新的伙伴灵识与天生功法，请稍候片刻。任务编号：{recruitPanelView.job.generationId}
             </div>
+            {renderRecruitRequestedBaseModel(recruitPanelView.job.requestedBaseModel)}
             <Button loading disabled>
               正在招募中
             </Button>
@@ -1103,6 +1139,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                 <Tag color="orange">保留至 {new Date(recruitPanelView.job.previewExpireAt).toLocaleString()}</Tag>
               ) : null}
             </div>
+            {renderRecruitRequestedBaseModel(recruitPanelView.job.requestedBaseModel)}
             {renderRecruitPreview(recruitPanelView.preview)}
             <div className="partner-action-row partner-recruit-action-row partner-recruit-result-action-row">
               <Button
@@ -1130,6 +1167,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         {recruitPanelView.kind === 'failed' ? (
           <div className="partner-recruit-state-card">
             <div className="partner-section-title">招募结果</div>
+            {renderRecruitRequestedBaseModel(recruitPanelView.job.requestedBaseModel)}
             <div className="partner-meta">{recruitPanelView.errorMessage}</div>
           </div>
         ) : null}
@@ -1145,12 +1183,54 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
           </div>
         ) : null}
 
+        {recruitActionState.showGenerateButton && recruitStatus?.unlocked ? (
+          <div className="partner-recruit-state-card">
+            <div className="partner-section-title">
+              <span>自定义底模</span>
+              <Switch
+                checked={customBaseModelEnabled}
+                onChange={setCustomBaseModelEnabled}
+                disabled={!hasCustomBaseModelToken}
+                checkedChildren="开"
+                unCheckedChildren="关"
+              />
+            </div>
+            {!hasCustomBaseModelToken ? (
+              <div className="partner-meta">
+                {recruitStatus.customBaseModelTokenItemName}不足，当前无法启用自定义底模。
+              </div>
+            ) : null}
+            {customBaseModelEnabled ? (
+              <>
+                <div className="partner-meta">
+                  需消耗 {recruitStatus.customBaseModelTokenItemName} x{recruitStatus.customBaseModelTokenCost}。
+                </div>
+                <Input
+                  value={recruitBaseModelInput}
+                  onChange={(event) => setRecruitBaseModelInput(event.target.value)}
+                  placeholder="留空则随机，例如：狐、龙、雪女"
+                  maxLength={recruitStatus.customBaseModelMaxLength}
+                  disabled={!recruitActionState.canGenerate}
+                />
+                <div className="partner-meta">
+                  当前输入 {recruitBaseModelInputLength}/{recruitStatus.customBaseModelMaxLength}
+                </div>
+                {!customBaseModelTokenEnough ? (
+                  <div className="partner-meta">
+                    {recruitStatus.customBaseModelTokenItemName}不足，当前仅有 {recruitStatus.customBaseModelTokenAvailableQty} 枚。
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
         {recruitActionState.showGenerateButton ? (
           <div className="partner-action-row partner-recruit-action-row">
             <Button
               type="primary"
               loading={actionKey === 'recruit-generate'}
-              disabled={!recruitActionState.canGenerate}
+              disabled={!canSubmitRecruit}
               onClick={() => {
                 void handleGenerateRecruit();
               }}

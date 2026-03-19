@@ -1129,6 +1129,7 @@ model partner_recruit_job {
   status                 String                 @db.VarChar(32)
   quality_rolled         String                 @db.VarChar(8)
   spirit_stones_cost     BigInt
+  requested_base_model   String?                @db.VarChar(32)
   cooldown_started_at    DateTime               @db.Timestamptz(6)
   finished_at            DateTime?              @db.Timestamptz(6)
   viewed_at              DateTime?              @db.Timestamptz(6)

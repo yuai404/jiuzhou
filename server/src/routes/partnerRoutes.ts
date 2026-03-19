@@ -101,8 +101,22 @@ router.get('/recruit/status', asyncHandler(async (req, res) => {
 router.post('/recruit/generate', asyncHandler(async (req, res) => {
   const userId = req.userId!;
   const characterId = req.characterId!;
+  const customBaseModelEnabledRaw = req.body?.customBaseModelEnabled;
+  const requestedBaseModelRaw = req.body?.requestedBaseModel;
+  if (customBaseModelEnabledRaw !== undefined && customBaseModelEnabledRaw !== null && typeof customBaseModelEnabledRaw !== 'boolean') {
+    return sendResult(res, { success: false, message: 'customBaseModelEnabled 参数无效' });
+  }
+  if (requestedBaseModelRaw !== undefined && requestedBaseModelRaw !== null && typeof requestedBaseModelRaw !== 'string') {
+    return sendResult(res, { success: false, message: 'requestedBaseModel 参数无效' });
+  }
+
   const quality = partnerRecruitService.resolveQualityForNewRecruit();
-  const result = await partnerRecruitService.createRecruitJob(characterId, quality);
+  const result = await partnerRecruitService.createRecruitJob(
+    characterId,
+    quality,
+    customBaseModelEnabledRaw === true,
+    typeof requestedBaseModelRaw === 'string' ? requestedBaseModelRaw : null,
+  );
   if (!result.success || !result.data) {
     return sendResult(res, result);
   }

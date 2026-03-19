@@ -58,6 +58,7 @@ export type PartnerRecruitJobStateInput = {
   viewedAt: string | null;
   errorMessage: string | null;
   previewExpireAt: string | null;
+  requestedBaseModel: string | null;
   preview: PartnerRecruitPreviewDto | null;
 };
 
@@ -67,6 +68,7 @@ export type PartnerRecruitJobView = {
   startedAt: string;
   finishedAt: string | null;
   previewExpireAt: string | null;
+  requestedBaseModel: string | null;
   preview: PartnerRecruitPreviewDto | null;
   errorMessage: string | null;
 };
@@ -106,6 +108,7 @@ export const buildPartnerRecruitJobState = (
     startedAt: input.startedAt,
     finishedAt: input.finishedAt,
     previewExpireAt: input.previewExpireAt,
+    requestedBaseModel: input.requestedBaseModel,
     preview: input.preview,
     errorMessage: input.errorMessage,
   };

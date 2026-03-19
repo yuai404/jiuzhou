@@ -25,6 +25,7 @@ import {
   isFeatureUnlocked,
 } from './featureUnlockService.js';
 import {
+  getItemDefinitionById,
   getPartnerDefinitionById,
   getSkillDefinitions,
   getTechniqueDefinitions,
@@ -32,6 +33,8 @@ import {
   refreshGeneratedTechniqueSnapshots,
   type PartnerDefConfig,
 } from './staticConfigLoader.js';
+import { addItemToInventory } from './inventory/index.js';
+import { consumeMaterialByDefId } from './inventory/shared/consume.js';
 import { partnerService } from './partnerService.js';
 import {
   generateTechniqueTextModelSeed,
@@ -72,7 +75,12 @@ import {
   PARTNER_RECRUIT_FORM_RULES,
 } from './shared/partnerRecruitCreativeDirection.js';
 import {
-  resolvePartnerRecruitBaseModelBySeed,
+  guardPartnerRecruitRequestedBaseModel,
+  PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH,
+  PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST,
+  PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_ITEM_DEF_ID,
+  resolvePartnerRecruitBaseModel,
+  validatePartnerRecruitRequestedBaseModelSelection,
 } from './shared/partnerRecruitBaseModel.js';
 import {
   buildPartnerRecruitUnlockState,
@@ -119,6 +127,7 @@ type RecruitJobRow = {
   finishedAt: string | null;
   viewedAt: string | null;
   errorMessage: string | null;
+  requestedBaseModel: string | null;
   previewPartnerDefId: string | null;
 };
 
@@ -175,6 +184,15 @@ const normalizeGeneratedId = (prefix: string): string => {
 const buildPartnerRecruitGenerationId = (): string => normalizeGeneratedId('partner-recruit');
 const buildGeneratedPartnerDefId = (): string => normalizeGeneratedId('partner-gen');
 const buildGeneratedTechniqueId = (): string => normalizeGeneratedId('tech-partner');
+
+const getPartnerRecruitCustomBaseModelTokenName = (): string => {
+  const itemDef = getItemDefinitionById(PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_ITEM_DEF_ID);
+  const itemName = asString(itemDef?.name);
+  if (!itemName) {
+    throw new Error(`伙伴招募自定义底模消耗道具未配置：${PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_ITEM_DEF_ID}`);
+  }
+  return itemName;
+};
 
 const resolveCombatStyleAttributeType = (combatStyle: PartnerRecruitCombatStyle): {
   attributeType: 'physical' | 'magic';
@@ -423,40 +441,62 @@ const buildPreviewFromPartnerDefinition = (
  * 1) promptNoiseHash 必须与 seed 同源，否则“请求看起来有扰动，实际 seed 不是同一次”会让排查失真。
  * 2) 基础类型必须与 seed 绑定，保证同一次招募请求里的创作约束可复现，而不是每次重试又随机成另一种主体。
  */
-export const buildPartnerRecruitTextModelRequest = (
-  quality: PartnerRecruitQuality,
-  seed = generateTechniqueTextModelSeed(),
-): {
+export const buildPartnerRecruitTextModelRequest = (params: {
+  quality: PartnerRecruitQuality;
+  seed?: number;
+  requestedBaseModel?: string | null;
+}): {
   responseFormat: ReturnType<typeof buildPartnerRecruitResponseFormat>;
   systemMessage: string;
   userMessage: string;
   seed: number;
   timeoutMs: number;
   promptNoiseHash: string;
+  requestedBaseModel: string | null;
   baseModel: string;
 } => {
+  const seed = params.seed ?? generateTechniqueTextModelSeed();
   const promptNoiseHash = buildPartnerRecruitPromptNoiseHash(seed);
-  const baseModel = resolvePartnerRecruitBaseModelBySeed(seed);
+  const baseModelSelection = resolvePartnerRecruitBaseModel({
+    seed,
+    requestedBaseModel: params.requestedBaseModel,
+  });
   const timeoutMs = 300_000;
 
   return {
-    responseFormat: buildPartnerRecruitResponseFormat(quality),
+    responseFormat: buildPartnerRecruitResponseFormat(params.quality),
     systemMessage: PARTNER_RECRUIT_PROMPT_SYSTEM_MESSAGE,
-    userMessage: JSON.stringify(buildPartnerRecruitPromptInput(quality, {
-      baseModel,
+    userMessage: JSON.stringify(buildPartnerRecruitPromptInput(params.quality, {
+      baseModel: baseModelSelection.baseModel,
       promptNoiseHash,
     })),
     seed,
     timeoutMs,
     promptNoiseHash,
-    baseModel,
+    requestedBaseModel: baseModelSelection.requestedBaseModel,
+    baseModel: baseModelSelection.baseModel,
   };
 };
 
 const tryCallPartnerRecruitTextModel = async (
-  quality: PartnerRecruitQuality,
+  params: {
+    quality: PartnerRecruitQuality;
+    requestedBaseModel?: string | null;
+  },
 ): Promise<RecruitTextAttemptResult> => {
-  const request = buildPartnerRecruitTextModelRequest(quality);
+    const requestedBaseModelValidation = await guardPartnerRecruitRequestedBaseModel(params.requestedBaseModel);
+    if (!requestedBaseModelValidation.success) {
+      return {
+        success: false,
+      reason: requestedBaseModelValidation.message,
+      modelName: 'gpt-4o-mini',
+    };
+  }
+
+  const request = buildPartnerRecruitTextModelRequest({
+    ...params,
+    requestedBaseModel: requestedBaseModelValidation.value,
+  });
   const external = await callConfiguredTextModel(request);
   if (!external) {
     return {
@@ -484,7 +524,7 @@ const tryCallPartnerRecruitTextModel = async (
         modelName,
       };
     }
-    if (draft.partner.quality !== quality) {
+    if (draft.partner.quality !== params.quality) {
       return {
         success: false,
         reason: '伙伴生成模型返回的品质与本次抽取品质不一致',
@@ -650,6 +690,7 @@ class PartnerRecruitService {
           finished_at,
           viewed_at,
           error_message,
+          requested_base_model,
           preview_partner_def_id
         FROM partner_recruit_job
         WHERE character_id = $1
@@ -670,6 +711,7 @@ class PartnerRecruitService {
       finishedAt: toIsoString(row.finished_at),
       viewedAt: toIsoString(row.viewed_at),
       errorMessage: asString(row.error_message) || null,
+      requestedBaseModel: asString(row.requested_base_model) || null,
       previewPartnerDefId: asString(row.preview_partner_def_id) || null,
     };
   }
@@ -690,11 +732,54 @@ class PartnerRecruitService {
     return Math.max(0, Math.floor(asNumber((result.rows[0] as Record<string, unknown>).spirit_stones, 0)));
   }
 
+  private async loadCharacterUserId(characterId: number, forUpdate: boolean): Promise<number | null> {
+    const lockSql = forUpdate ? 'FOR UPDATE' : '';
+    const result = await query(
+      `
+        SELECT user_id
+        FROM characters
+        WHERE id = $1
+        LIMIT 1
+        ${lockSql}
+      `,
+      [characterId],
+    );
+    if (result.rows.length <= 0) return null;
+    const userId = Number((result.rows[0] as Record<string, unknown>).user_id);
+    if (!Number.isInteger(userId) || userId <= 0) return null;
+    return userId;
+  }
+
+  private async loadCustomBaseModelTokenAvailableQty(characterId: number, forUpdate: boolean): Promise<number> {
+    const lockSql = forUpdate ? 'FOR UPDATE' : '';
+    const result = await query(
+      `
+        SELECT qty
+        FROM item_instance
+        WHERE owner_character_id = $1
+          AND item_def_id = $2
+          AND location IN ('bag', 'warehouse')
+          AND locked = false
+        ${lockSql}
+      `,
+      [characterId, PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_ITEM_DEF_ID],
+    );
+    return result.rows.reduce((totalQty, row) => {
+      const currentQty = Number((row as Record<string, unknown>).qty ?? 0);
+      if (!Number.isFinite(currentQty) || currentQty <= 0) {
+        return totalQty;
+      }
+      return totalQty + Math.floor(currentQty);
+    }, 0);
+  }
+
   async getRecruitStatus(characterId: number): Promise<ServiceResult<PartnerRecruitStatusDto>> {
     const featureUnlocked = await isFeatureUnlocked(characterId, PARTNER_SYSTEM_FEATURE_CODE);
     if (!featureUnlocked) {
       return { success: false, message: '伙伴系统尚未解锁', code: 'PARTNER_SYSTEM_LOCKED' };
     }
+    const customBaseModelTokenItemName = getPartnerRecruitCustomBaseModelTokenName();
+    const customBaseModelTokenAvailableQty = await this.loadCustomBaseModelTokenAvailableQty(characterId, false);
 
     const unlockState = await this.getPartnerRecruitUnlockStateTx(characterId, false);
     if (!unlockState.success || !unlockState.data) {
@@ -713,6 +798,10 @@ class PartnerRecruitService {
           cooldownHours: cooldownState.cooldownHours,
           cooldownUntil: cooldownState.cooldownUntil,
           cooldownRemainingSeconds: cooldownState.cooldownRemainingSeconds,
+          customBaseModelMaxLength: PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH,
+          customBaseModelTokenCost: PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST,
+          customBaseModelTokenItemName,
+          customBaseModelTokenAvailableQty,
           currentJob: null,
           hasUnreadResult: false,
           resultStatus: null,
@@ -741,6 +830,7 @@ class PartnerRecruitService {
           viewedAt: latestJob.viewedAt,
           errorMessage: latestJob.errorMessage,
           previewExpireAt: buildPartnerRecruitPreviewExpireAt(latestJob.finishedAt),
+          requestedBaseModel: latestJob.requestedBaseModel,
           preview,
         }
       : null);
@@ -755,6 +845,10 @@ class PartnerRecruitService {
         cooldownHours: cooldownState.cooldownHours,
         cooldownUntil: cooldownState.cooldownUntil,
         cooldownRemainingSeconds: cooldownState.cooldownRemainingSeconds,
+        customBaseModelMaxLength: PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH,
+        customBaseModelTokenCost: PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST,
+        customBaseModelTokenItemName,
+        customBaseModelTokenAvailableQty,
         currentJob: jobState.currentJob,
         hasUnreadResult: jobState.hasUnreadResult,
         resultStatus: jobState.resultStatus,
@@ -763,8 +857,25 @@ class PartnerRecruitService {
   }
 
   @Transactional
-  private async createRecruitJobTx(characterId: number, quality: PartnerRecruitQuality): Promise<ServiceResult<{ generationId: string }>> {
+  private async createRecruitJobTx(
+    characterId: number,
+    quality: PartnerRecruitQuality,
+    customBaseModelEnabled: boolean,
+    requestedBaseModel: string | null,
+  ): Promise<ServiceResult<{ generationId: string }>> {
     await this.discardExpiredDraftJobsTx(characterId);
+
+    const requestedBaseModelValidation = await validatePartnerRecruitRequestedBaseModelSelection({
+      enabled: customBaseModelEnabled,
+      requestedBaseModel,
+    });
+    if (!requestedBaseModelValidation.success) {
+      return {
+        success: false,
+        message: requestedBaseModelValidation.message,
+        code: 'RECRUIT_BASE_MODEL_INVALID',
+      };
+    }
 
     const unlockState = await this.assertPartnerRecruitUnlocked(characterId, true);
     if (!unlockState.success) {
@@ -807,6 +918,18 @@ class PartnerRecruitService {
       };
     }
 
+    if (requestedBaseModelValidation.value) {
+      const customBaseModelTokenAvailableQty = await this.loadCustomBaseModelTokenAvailableQty(characterId, true);
+      if (customBaseModelTokenAvailableQty < PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST) {
+        const tokenItemName = getPartnerRecruitCustomBaseModelTokenName();
+        return {
+          success: false,
+          message: `${tokenItemName}不足，启用自定义底模需消耗${PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST}枚`,
+          code: 'RECRUIT_CUSTOM_BASE_MODEL_TOKEN_NOT_ENOUGH',
+        };
+      }
+    }
+
     const generationId = buildPartnerRecruitGenerationId();
     await query(
       `
@@ -818,6 +941,21 @@ class PartnerRecruitService {
       [characterId, PARTNER_RECRUIT_SPIRIT_STONES_COST],
     );
 
+    if (requestedBaseModelValidation.value) {
+      const consumeTokenResult = await consumeMaterialByDefId(
+        characterId,
+        PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_ITEM_DEF_ID,
+        PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST,
+      );
+      if (!consumeTokenResult.success) {
+        return {
+          success: false,
+          message: consumeTokenResult.message,
+          code: 'RECRUIT_CUSTOM_BASE_MODEL_TOKEN_CONSUME_FAILED',
+        };
+      }
+    }
+
     await query(
       `
         INSERT INTO partner_recruit_job (
@@ -826,14 +964,21 @@ class PartnerRecruitService {
           status,
           quality_rolled,
           spirit_stones_cost,
+          requested_base_model,
           cooldown_started_at,
           created_at,
           updated_at
         ) VALUES (
-          $1, $2, 'pending', $3, $4, NOW(), NOW(), NOW()
+          $1, $2, 'pending', $3, $4, $5, NOW(), NOW(), NOW()
         )
       `,
-      [generationId, characterId, quality, PARTNER_RECRUIT_SPIRIT_STONES_COST],
+      [
+        generationId,
+        characterId,
+        quality,
+        PARTNER_RECRUIT_SPIRIT_STONES_COST,
+        requestedBaseModelValidation.value,
+      ],
     );
 
     return {
@@ -845,8 +990,13 @@ class PartnerRecruitService {
     };
   }
 
-  async createRecruitJob(characterId: number, quality: PartnerRecruitQuality): Promise<ServiceResult<{ generationId: string }>> {
-    return this.createRecruitJobTx(characterId, quality);
+  async createRecruitJob(
+    characterId: number,
+    quality: PartnerRecruitQuality,
+    customBaseModelEnabled: boolean,
+    requestedBaseModel: string | null,
+  ): Promise<ServiceResult<{ generationId: string }>> {
+    return this.createRecruitJobTx(characterId, quality, customBaseModelEnabled, requestedBaseModel);
   }
 
   @Transactional
@@ -858,7 +1008,7 @@ class PartnerRecruitService {
   ): Promise<void> {
     const jobRes = await query(
       `
-        SELECT status, spirit_stones_cost
+        SELECT status, spirit_stones_cost, requested_base_model
         FROM partner_recruit_job
         WHERE id = $1 AND character_id = $2
         FOR UPDATE
@@ -869,6 +1019,7 @@ class PartnerRecruitService {
     const row = jobRes.rows[0] as Record<string, unknown>;
     const status = asString(row.status);
     const spiritStonesCost = Math.max(0, Math.floor(asNumber(row.spirit_stones_cost, 0)));
+    const requestedBaseModel = asString(row.requested_base_model) || null;
     if (status === 'accepted' || status === 'discarded' || status === 'failed' || status === 'refunded') return;
 
     await query(
@@ -880,6 +1031,20 @@ class PartnerRecruitService {
       `,
       [characterId, spiritStonesCost],
     );
+    if (requestedBaseModel) {
+      const userId = await this.loadCharacterUserId(characterId, true);
+      if (userId) {
+        await addItemToInventory(
+          characterId,
+          userId,
+          PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_ITEM_DEF_ID,
+          PARTNER_RECRUIT_CUSTOM_BASE_MODEL_TOKEN_COST,
+          {
+            obtainedFrom: 'partner_recruit_refund',
+          },
+        );
+      }
+    }
     await query(
       `
         UPDATE partner_recruit_job
@@ -1028,12 +1193,51 @@ class PartnerRecruitService {
     generationId: string;
     quality: PartnerRecruitQuality;
   }): Promise<ServiceResult<{ status: Extract<PartnerRecruitJobStatus, 'generated_draft' | 'failed' | 'refunded'>; preview: PartnerRecruitPreviewDto | null; errorMessage: string | null }>> {
+    const job = await query(
+      `
+        SELECT status, requested_base_model
+        FROM partner_recruit_job
+        WHERE id = $1 AND character_id = $2
+        LIMIT 1
+      `,
+      [args.generationId, args.characterId],
+    );
+    if (job.rows.length <= 0) {
+      return {
+        success: true,
+        message: '招募任务不存在',
+        data: {
+          status: 'failed',
+          preview: null,
+          errorMessage: '招募任务不存在',
+        },
+      };
+    }
+
+    const jobRow = job.rows[0] as Record<string, unknown>;
+    const jobStatus = asString(jobRow.status);
+    if (jobStatus !== 'pending') {
+      return {
+        success: true,
+        message: '招募任务状态异常',
+        data: {
+          status: 'failed',
+          preview: null,
+          errorMessage: '招募任务状态异常',
+        },
+      };
+    }
+
+    const requestedBaseModel = asString(jobRow.requested_base_model) || null;
     const maxAttempts = 3;
     let lastFailure = '伙伴生成失败';
     let lastModelName = '';
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const result = await tryCallPartnerRecruitTextModel(args.quality);
+      const result = await tryCallPartnerRecruitTextModel({
+        quality: args.quality,
+        requestedBaseModel,
+      });
       if (!result.success) {
         lastFailure = result.reason;
         lastModelName = result.modelName;
