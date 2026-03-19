@@ -159,18 +159,10 @@ export class BattleEngine {
       throw new Error(validation.error);
     }
     
-    // 判定先手
-    this.determineFirstMover();
-    
     // 初始化
     this.state.roundCount = 1;
-    this.state.currentTeam = this.state.firstMover;
     this.state.currentUnitId = null;
     this.state.phase = 'roundStart';
-    
-    // 按速度排序队内单位
-    this.sortUnitsBySpeed(this.state.teams.attacker.units);
-    this.sortUnitsBySpeed(this.state.teams.defender.units);
 
     // 被动技能进场自动施放（光环等，在首回合开始前生效）
     this.processPassiveSkills();
@@ -201,6 +193,33 @@ export class BattleEngine {
    */
   private sortUnitsBySpeed(units: BattleUnit[]): void {
     units.sort((a, b) => b.currentAttrs.sudu - a.currentAttrs.sudu);
+  }
+
+  /**
+   * 刷新当前回合行动顺序。
+   *
+   * 作用（做什么 / 不做什么）：
+   * 1) 做什么：把“重算队伍总速度、重定先手方、按当前速度重排队内顺序”集中到单一入口。
+   * 2) 做什么：确保被动光环、回合开始 buff/debuff、持续一回合的速度效果，都能在本回合行动阶段真正参与排程。
+   * 3) 不做什么：不在行动进行中动态重排，避免已行动单位因为顺序变化再次出手。
+   *
+   * 输入/输出：
+   * - 输入：直接读取 `state.teams.*.units[].currentAttrs.sudu`。
+   * - 输出：更新 `teams.*.totalSpeed`、`firstMover`、`currentTeam` 与队内数组顺序。
+   *
+   * 数据流/状态流：
+   * roundStart 效果结算 -> currentAttrs.sudu 变化 -> 本方法刷新排程快照 -> action 阶段读取 currentTeam/currentUnitId。
+   *
+   * 关键边界条件与坑点：
+   * 1) 必须在回合开始效果全部结算后调用，否则速度 buff 只会改面板，不会改出手顺序。
+   * 2) 这里只能用于“新一轮行动尚未开始”的时机；若在行动中途调用，会破坏当前通过数组顺序记录的已行动进度。
+   */
+  private refreshRoundActionOrder(): void {
+    this.updateTeamSpeed();
+    this.determineFirstMover();
+    this.sortUnitsBySpeed(this.state.teams.attacker.units);
+    this.sortUnitsBySpeed(this.state.teams.defender.units);
+    this.state.currentTeam = this.state.firstMover;
   }
 
   /**
@@ -268,6 +287,7 @@ export class BattleEngine {
     
     // 检查是否有单位死亡（可能改变phase为finished）
     if (!this.checkBattleEnd()) {
+      this.refreshRoundActionOrder();
       this.state.phase = 'action';
       // 回合开始处理完毕后，将 currentUnitId 指向先手方第一个可行动单位
       this.state.currentUnitId = this.getFirstActableUnitId(this.state.currentTeam);
@@ -758,11 +778,7 @@ export class BattleEngine {
     
     // 开始新回合
     this.state.roundCount++;
-    this.state.currentTeam = this.state.firstMover;
     this.state.currentUnitId = null;
-    
-    // 重新计算速度总和（可能因Buff变化）
-    this.updateTeamSpeed();
     
     // 处理新回合开始
     this.processRoundStart();
