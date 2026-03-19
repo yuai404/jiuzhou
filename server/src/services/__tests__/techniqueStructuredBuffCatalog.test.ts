@@ -2,20 +2,20 @@
  * 功法结构化 Buff 目录测试
  *
  * 作用（做什么 / 不做什么）：
- * 1) 做什么：验证 AI 生成功法共享目录已经收录 reflect_damage，并允许该类 Buff 通过结果校验。
+ * 1) 做什么：验证 AI 生成功法共享目录已经收录 reflect_damage，以及当前明确开放的内置光环属性白名单。
  * 2) 不做什么：不测试外部模型调用、不覆盖完整 prompt 文本，仅锁定目录提炼与白名单校验。
  *
  * 输入/输出：
- * - 输入：静态技能种子提炼出的结构化 Buff 目录，以及一个 reflect_damage Buff 效果样例。
+ * - 输入：静态技能种子 + 内置光环属性白名单提炼出的结构化 Buff 目录，以及若干 Buff 效果样例。
  * - 输出：目录包含关系断言，以及 validateTechniqueStructuredBuffEffect 的校验结果。
  *
  * 数据流/状态流：
- * - skill_def.json 中的静态技能效果 -> techniqueStructuredBuffCatalog 提炼 -> AI prompt/结果校验复用
- * - 本测试直接验证提炼产物，确保新 Buff 不会只在战斗层可用、却被 AI 白名单挡掉
+ * - skill_def.json 中的静态技能效果 + techniqueStructuredBuffCatalog 内置白名单 -> 目录提炼 -> AI prompt/结果校验复用
+ * - 本测试直接验证提炼产物，确保新 Buff/新属性不会只在战斗层可用、却被 AI 白名单挡掉
  *
  * 关键边界条件与坑点：
  * 1) 目录来源必须是真实静态种子，避免只改约束文案却没有可提炼样例。
- * 2) reflect_damage 不依赖 attrKey/applyType，校验时不应误走属性 Buff 的必填分支。
+ * 2) 内置光环属性不能散落在 prompt 或测试里手填，必须走目录单一入口，否则 attrKey/buffKey 很容易漏一半。
  */
 
 import test from 'node:test';
@@ -39,4 +39,58 @@ test('reflect_damage Buff 应通过 AI 生成功法结果校验', () => {
   });
 
   assert.deepEqual(validation, { success: true });
+});
+
+test('结构化 Buff 目录应包含新增的内置光环属性白名单', () => {
+  const catalog = getTechniqueStructuredBuffCatalog();
+
+  assert.equal(catalog.attrKeyEnum.includes('max_qixue'), true);
+  assert.equal(catalog.attrKeyEnum.includes('baoji'), true);
+  assert.equal(catalog.attrKeyEnum.includes('kangbao'), true);
+  assert.equal(catalog.attrKeyEnum.includes('lengque'), true);
+  assert.equal(catalog.buffKeyEnumByType.buff.includes('buff-max-qixue-up'), true);
+  assert.equal(catalog.buffKeyEnumByType.buff.includes('buff-baoji-up'), true);
+  assert.equal(catalog.buffKeyEnumByType.debuff.includes('debuff-kangbao-down'), true);
+  assert.equal(catalog.buffKeyEnumByType.debuff.includes('debuff-lengque-down'), true);
+});
+
+test('新增内置光环属性应通过结构化 Buff 校验', () => {
+  const cases = [
+    {
+      type: 'buff' as const,
+      buffKind: 'attr',
+      buffKey: 'buff-max-qixue-up',
+      attrKey: 'max_qixue',
+      applyType: 'percent' as const,
+      value: 0.18,
+    },
+    {
+      type: 'buff' as const,
+      buffKind: 'attr',
+      buffKey: 'buff-baoji-up',
+      attrKey: 'baoji',
+      applyType: 'flat' as const,
+      value: 0.12,
+    },
+    {
+      type: 'debuff' as const,
+      buffKind: 'attr',
+      buffKey: 'debuff-kangbao-down',
+      attrKey: 'kangbao',
+      applyType: 'flat' as const,
+      value: 0.15,
+    },
+    {
+      type: 'buff' as const,
+      buffKind: 'attr',
+      buffKey: 'buff-lengque-up',
+      attrKey: 'lengque',
+      applyType: 'flat' as const,
+      value: 0.08,
+    },
+  ];
+
+  cases.forEach((effect) => {
+    assert.deepEqual(validateTechniqueStructuredBuffEffect(effect), { success: true });
+  });
 });

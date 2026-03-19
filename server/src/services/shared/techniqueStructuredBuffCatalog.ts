@@ -2,7 +2,7 @@
  * 功法生成结构化 Buff 目录
  *
  * 作用（做什么 / 不做什么）：
- * 1) 做什么：从现有静态技能/怪物预定义效果中提炼允许的 buffKind、attrKey、buffKey，并提供统一校验。
+ * 1) 做什么：从现有静态技能/怪物预定义效果提炼允许的 buffKind/buffKey，并补充少量运行时已支持的内置光环属性白名单，统一提供校验。
  * 2) 不做什么：不直接调用 AI、不负责战斗执行、不处理数据库读写。
  *
  * 输入/输出：
@@ -10,11 +10,11 @@
  * - 输出：功法生成可复用的结构化 Buff 目录与校验结果。
  *
  * 数据流/状态流：
- * 静态种子 skill_def/monster_def -> 提炼共享目录 -> prompt 约束 / 生成结果校验共同复用。
+ * 静态种子 skill_def/monster_def + 内置光环属性白名单 -> 提炼共享目录 -> prompt 约束 / 生成结果校验共同复用。
  *
  * 关键边界条件与坑点：
  * 1) 只能读取静态预定义数据，不能把历史 AI 生成产物再回灌进白名单，否则脏数据会污染后续约束。
- * 2) 目录只接受战斗运行时已支持的 buffKind，避免 prompt 放行但运行时落空。
+ * 2) 内置补充项只能放“战斗运行时已支持、且当前任务明确需要开放”的属性，避免白名单和真实结算能力脱节。
  */
 
 import type { SkillEffect } from '../../battle/types.js';
@@ -72,6 +72,12 @@ export type TechniqueStructuredBuffValidationResult =
 let techniqueBuffCatalogCache: TechniqueBuffCatalogCache | null = null;
 
 const SUPPORTED_BUFF_KIND_SET: ReadonlySet<string> = new Set<string>(STRUCTURED_BUFF_KIND_LIST);
+const BUILT_IN_AURA_ATTR_KEY_LIST = [
+  'max_qixue',
+  'baoji',
+  'kangbao',
+  'lengque',
+] as const;
 
 const toNonEmptyText = (value: string | null | undefined): string => {
   if (typeof value !== 'string') return '';
@@ -153,6 +159,24 @@ const collectStructuredBuffEntries = (): TechniqueBuffCatalogEntry[] => {
 };
 
 const collectBuiltInTechniqueBuffEntries = (): TechniqueBuffCatalogEntry[] => {
+  const builtInAttrEntries = BUILT_IN_AURA_ATTR_KEY_LIST.flatMap((attrKey) => {
+    const attrKeyToken = attrKey.replace(/_/g, '-');
+    return [
+      {
+        type: 'buff' as const,
+        buffKind: 'attr',
+        buffKey: `buff-${attrKeyToken}-up`,
+        attrKey,
+      },
+      {
+        type: 'debuff' as const,
+        buffKind: 'attr',
+        buffKey: `debuff-${attrKeyToken}-down`,
+        attrKey,
+      },
+    ];
+  });
+
   return [
     {
       type: 'debuff',
@@ -174,6 +198,7 @@ const collectBuiltInTechniqueBuffEntries = (): TechniqueBuffCatalogEntry[] => {
       buffKind: 'aura',
       buffKey: 'debuff-aura',
     },
+    ...builtInAttrEntries,
   ];
 };
 
