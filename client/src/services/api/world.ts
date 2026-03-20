@@ -304,6 +304,7 @@ export interface DungeonInstanceSnapshotDto {
   id: string;
   dungeonId: string;
   difficultyId: string;
+  difficultyRank: number;
   status: DungeonInstanceStatus;
   currentStage: number;
   currentWave: number;
@@ -361,8 +362,8 @@ export interface GetDungeonInstanceResponse {
   };
 }
 
-export const getDungeonInstance = (instanceId: string): Promise<GetDungeonInstanceResponse> => {
-  return api.get(`/dungeon/instance/${instanceId}`);
+export const getDungeonInstance = (instanceId: string, requestConfig?: RequestConfig): Promise<GetDungeonInstanceResponse> => {
+  return api.get(`/dungeon/instance/${instanceId}`, requestConfig);
 };
 
 export interface GetDungeonInstanceByBattleIdResponse {
@@ -373,8 +374,8 @@ export interface GetDungeonInstanceByBattleIdResponse {
   };
 }
 
-export const getDungeonInstanceByBattleId = (battleId: string): Promise<GetDungeonInstanceByBattleIdResponse> => {
-  return api.get(`/dungeon/instance/by-battle/${encodeURIComponent(battleId)}`);
+export const getDungeonInstanceByBattleId = (battleId: string, requestConfig?: RequestConfig): Promise<GetDungeonInstanceByBattleIdResponse> => {
+  return api.get(`/dungeon/instance/by-battle/${encodeURIComponent(battleId)}`, requestConfig);
 };
 
 export interface InfoTargetDetailResponse {

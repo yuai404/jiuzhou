@@ -16,6 +16,7 @@
 
 import crypto from 'crypto';
 import { query } from '../../config/database.js';
+import { getDungeonDifficultyById } from '../staticConfigLoader.js';
 import { getDungeonAndDifficulty } from './shared/stageData.js';
 import {
   parseParticipants,
@@ -33,6 +34,7 @@ type DungeonInstanceSnapshot = {
   id: string;
   dungeonId: string;
   difficultyId: string;
+  difficultyRank: number;
   status: DungeonInstanceStatus;
   currentStage: number;
   currentWave: number;
@@ -57,11 +59,17 @@ const buildDungeonInstanceSnapshot = (
 ): DungeonInstanceSnapshot => {
   const dataObj = asObject(inst.instance_data) ?? {};
   const currentBattleId = typeof dataObj.currentBattleId === 'string' ? dataObj.currentBattleId : null;
+  const difficultyDef = getDungeonDifficultyById(inst.difficulty_id);
+  const difficultyRank =
+    difficultyDef && Number.isFinite(difficultyDef.difficulty_rank)
+      ? Math.floor(difficultyDef.difficulty_rank)
+      : 1;
 
   return {
     id: inst.id,
     dungeonId: inst.dungeon_id,
     difficultyId: inst.difficulty_id,
+    difficultyRank,
     status: inst.status,
     currentStage: asNumber(inst.current_stage, 1),
     currentWave: asNumber(inst.current_wave, 1),

@@ -53,6 +53,7 @@ import {
   gatherRoomResource,
   getCurrentBattleSession,
   getBattleSessionByBattleId,
+  getDungeonInstance,
   getGameHomeOverview,
   pickupRoomItem,
   SILENT_API_REQUEST_CONFIG,
@@ -128,6 +129,11 @@ import {
 import { hydratePhoneBindingStatus, invalidatePhoneBindingStatus } from './shared/usePhoneBindingStatus';
 import { useRealtimeMemberPresence } from './shared/useRealtimeMemberPresence';
 import type { BattleAdvanceMode } from './modules/BattleArea/autoNextPolicy';
+import {
+  normalizeLastDungeonSelection,
+  type LastDungeonSelection,
+  type MapModalCategory,
+} from './modules/MapModal/lastDungeonSelection';
 
 interface GameProps {
   onLogout?: () => void;
@@ -669,7 +675,8 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const [mobileChatDrawerOpen, setMobileChatDrawerOpen] = useState(false);
   const [playerInfoOpen, setPlayerInfoOpen] = useState(false);
   const [mapModalOpen, setMapModalOpen] = useState(false);
-  const [mapModalCategory, setMapModalCategory] = useState<'world' | 'dungeon' | 'event'>('world');
+  const [mapModalCategory, setMapModalCategory] = useState<MapModalCategory>('world');
+  const [lastDungeonSelection, setLastDungeonSelection] = useState<LastDungeonSelection | null>(null);
   const [bagModalOpen, setBagModalOpen] = useState(false);
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const [techniqueModalOpen, setTechniqueModalOpen] = useState(false);
@@ -758,6 +765,20 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const viewModeRef = useRef<'map' | 'battle'>('map');
   const hasLocalBattleTargetsRef = useRef(false);
   const pendingBattleSessionRestoreBattleIdRef = useRef<string | null>(null);
+  const rememberLastDungeonSelection = useCallback((selection?: LastDungeonSelection | null) => {
+    const normalizedSelection = normalizeLastDungeonSelection(selection);
+    if (!normalizedSelection) return;
+    setLastDungeonSelection((prev) => (
+      prev?.dungeonId === normalizedSelection.dungeonId && prev.rank === normalizedSelection.rank
+        ? prev
+        : normalizedSelection
+    ));
+  }, []);
+  const activeDungeonInstanceId = useMemo(() => {
+    if (!activeBattleSession || activeBattleSession.type !== 'dungeon') return '';
+    if (!('instanceId' in activeBattleSession.context)) return '';
+    return activeBattleSession.context.instanceId.trim();
+  }, [activeBattleSession]);
   const lastTeamBattleReplayIdentityRef = useRef<TeamBattleReplayIdentity | null>(null);
   const homeOverviewLoadingRef = useRef(false);
   const homeOverviewRequestSeqRef = useRef(0);
@@ -790,6 +811,29 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   useEffect(() => {
     activeBattleSessionRef.current = activeBattleSession;
   }, [activeBattleSession]);
+
+  useEffect(() => {
+    if (!activeDungeonInstanceId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await getDungeonInstance(activeDungeonInstanceId, SILENT_API_REQUEST_CONFIG);
+        const instance = res?.data?.instance;
+        if (cancelled || !res?.success || !instance) {
+          return;
+        }
+        rememberLastDungeonSelection({
+          dungeonId: instance.dungeonId,
+          rank: instance.difficultyRank,
+        });
+      } catch {
+        void 0;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDungeonInstanceId, rememberLastDungeonSelection]);
 
   useEffect(() => {
     reconnectBattleIdRef.current = reconnectBattleId;
@@ -2851,6 +2895,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         open={mapModalOpen}
         onClose={() => setMapModalOpen(false)}
         initialCategory={mapModalCategory}
+        lastDungeonSelection={lastDungeonSelection}
         dungeonNoStaminaCostEnabled={character?.dungeonNoStaminaCost === true}
         onEnter={({ mapId, roomId }) => {
           if (viewMode === 'battle') {
@@ -2888,6 +2933,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
               return;
             }
 
+            rememberLastDungeonSelection({ dungeonId, rank });
             setBattleEnemies([]);
             setBattleAllies(buildAllyGroup(character));
             activateBattleSessionContext(session);

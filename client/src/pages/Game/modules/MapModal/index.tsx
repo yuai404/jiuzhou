@@ -15,10 +15,15 @@ import {
 } from '../../../../services/api';
 import { useIsMobile } from '../../shared/responsive';
 import { getRealmRankFromLiteral as getRealmRank, normalizeRealmText } from '../../shared/realm';
+import {
+  resolveInitialDungeonSelection,
+  type LastDungeonSelection,
+  type MapModalCategory,
+} from './lastDungeonSelection';
 import WaveDetailPanel from './WaveDetailPanel';
 import './index.scss';
 
-type MapCategory = 'world' | 'dungeon' | 'event';
+type MapCategory = MapModalCategory;
 
 type MapDrop = { name: string; quality: string; from: string };
 
@@ -135,6 +140,7 @@ interface MapModalProps {
   open: boolean;
   onClose: () => void;
   initialCategory?: MapCategory;
+  lastDungeonSelection?: LastDungeonSelection | null;
   dungeonNoStaminaCostEnabled?: boolean;
   onEnter?: (target: { mapId: string; roomId: string }) => void;
   onEnterDungeon?: (target: { dungeonId: string; rank: number }) => void;
@@ -144,6 +150,7 @@ const MapModal: React.FC<MapModalProps> = ({
   open,
   onClose,
   initialCategory,
+  lastDungeonSelection = null,
   dungeonNoStaminaCostEnabled = false,
   onEnter,
   onEnterDungeon,
@@ -161,6 +168,7 @@ const MapModal: React.FC<MapModalProps> = ({
   const [listLoading, setListLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
+  const [hasUserChosenActiveId, setHasUserChosenActiveId] = useState(false);
   const isMobile = useIsMobile();
   const [dungeonRankById, setDungeonRankById] = useState<Record<string, number>>({});
   const [dungeonDifficultyOptionsById, setDungeonDifficultyOptionsById] = useState<Record<string, DungeonDifficultyOption[]>>({});
@@ -168,7 +176,9 @@ const MapModal: React.FC<MapModalProps> = ({
   const [dungeonDifficultyResolvedById, setDungeonDifficultyResolvedById] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (open) setShowMobileDetail(false);
+    if (!open) return;
+    setShowMobileDetail(false);
+    setHasUserChosenActiveId(false);
   }, [open]);
 
   useEffect(() => {
@@ -180,6 +190,7 @@ const MapModal: React.FC<MapModalProps> = ({
     setDetailById({});
     setDetailLoading(false);
     setDungeonDifficultyResolvedById({});
+    setHasUserChosenActiveId(false);
   }, [open]);
 
   useEffect(() => {
@@ -321,6 +332,39 @@ const MapModal: React.FC<MapModalProps> = ({
       setDungeonDifficultyLoadingById((prev) => ({ ...prev, [dungeonId]: false }));
     }
   }, [dungeonDifficultyLoadingById, dungeonDifficultyOptionsById, dungeonDifficultyResolvedById]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialCategory && initialCategory !== category) {
+      setCategory(initialCategory);
+      setQuery('');
+      setActiveId('');
+      setHasUserChosenActiveId(false);
+      return;
+    }
+    const nextSelection = resolveInitialDungeonSelection({
+      category,
+      filteredIds: filtered.map((entry) => entry.id),
+      activeId: hasUserChosenActiveId ? activeId : '',
+      lastSelection: lastDungeonSelection,
+    });
+    if (nextSelection.activeId && nextSelection.activeId !== activeId) {
+      setActiveId(nextSelection.activeId);
+    }
+    if (!nextSelection.activeId || nextSelection.rank === null || category !== 'dungeon') {
+      return;
+    }
+    const nextSelectionRank = nextSelection.rank;
+    setDungeonRankById((prev) => {
+      if (prev[nextSelection.activeId] === nextSelectionRank) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [nextSelection.activeId]: nextSelectionRank,
+      };
+    });
+  }, [activeId, category, filtered, hasUserChosenActiveId, initialCategory, lastDungeonSelection, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -617,17 +661,6 @@ const MapModal: React.FC<MapModalProps> = ({
       className="map-modal"
       destroyOnHidden
       maskClosable
-      afterOpenChange={(visible) => {
-        if (!visible) return;
-        if (initialCategory && initialCategory !== category) {
-          setCategory(initialCategory);
-          setQuery('');
-          setActiveId('');
-          return;
-        }
-        if (activeId && filtered.some((m) => m.id === activeId)) return;
-        setActiveId(filtered[0]?.id ?? '');
-      }}
     >
       <div className="map-modal-shell">
         <div className={`map-modal-left ${showMobileDetail ? 'mobile-hidden' : ''}`}>
@@ -635,7 +668,11 @@ const MapModal: React.FC<MapModalProps> = ({
             <Tabs
               size="small"
               activeKey={category}
-              onChange={(k) => setCategory(k as MapCategory)}
+              onChange={(k) => {
+                setCategory(k as MapCategory);
+                setActiveId('');
+                setHasUserChosenActiveId(false);
+              }}
               items={(Object.keys(categoryLabels) as MapCategory[]).map((key) => ({
                 key,
                 label: categoryLabels[key],
@@ -661,11 +698,13 @@ const MapModal: React.FC<MapModalProps> = ({
                     role="button"
                     tabIndex={0}
                     onClick={() => {
+                      setHasUserChosenActiveId(true);
                       setActiveId(m.id);
                       setShowMobileDetail(true);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        setHasUserChosenActiveId(true);
                         setActiveId(m.id);
                         setShowMobileDetail(true);
                       }

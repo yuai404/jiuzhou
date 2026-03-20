@@ -17,11 +17,11 @@
  * 2) worker 只执行单任务，线程生命周期统一由 runner 管理。
  */
 import { parentPort } from 'worker_threads';
-import { partnerFusionService } from '../services/partnerFusionService.js';
 import type {
   PartnerFusionWorkerMessage,
   PartnerFusionWorkerResponse,
 } from './partnerFusionWorkerShared.js';
+import { executePartnerFusionWorkerTask } from './partnerFusionWorkerExecution.js';
 
 if (!parentPort) {
   throw new Error('[PartnerFusionWorker] parentPort 未定义，无法启动 Worker');
@@ -39,21 +39,10 @@ parentPort.on('message', (message: PartnerFusionWorkerMessage) => {
         return;
       }
 
-      const result = await partnerFusionService.processPendingFusionJob({
+      const response = await executePartnerFusionWorkerTask({
         characterId: message.payload.characterId,
         fusionId: message.payload.fusionId,
       });
-
-      const response: PartnerFusionWorkerResponse = {
-        type: 'result',
-        payload: {
-          fusionId: message.payload.fusionId,
-          characterId: message.payload.characterId,
-          status: result.data?.status ?? 'failed',
-          preview: result.data?.preview ?? null,
-          errorMessage: result.data?.errorMessage ?? result.message,
-        },
-      };
       parentPort!.postMessage(response);
     } catch (error) {
       const response: PartnerFusionWorkerResponse = {
