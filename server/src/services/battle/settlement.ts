@@ -257,11 +257,10 @@ async function finishBattleCore(
       }
     : null;
 
-  // 秘境战斗跳过冷却：波次之间无冷却间隔，发起时也通过 skipped 策略绕过校验
-  const cooldownNow = Date.now();
-  let cooldownUntilMs: number;
+  // 秘境战斗跳过冷却：波次之间无冷却间隔，结算包也不再向客户端下发冷却元数据。
+  let cooldownUntilMs: number | null = null;
   if (isDungeonBattle) {
-    cooldownUntilMs = cooldownNow;
+    cooldownUntilMs = null;
   } else {
     const participantCharacterIds = participants
       .map((entry) => Math.floor(Number(entry.characterId)))
@@ -290,8 +289,12 @@ async function finishBattleCore(
       logCursor: finalLogCursor,
       state,
       isTeamBattle: participantCount > 1,
-      battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
-      nextBattleAvailableAt: cooldownUntilMs,
+      ...(isDungeonBattle
+        ? {}
+        : {
+            battleStartCooldownMs: BATTLE_START_COOLDOWN_MS,
+            nextBattleAvailableAt: cooldownUntilMs,
+          }),
     },
   };
 
@@ -316,6 +319,17 @@ async function finishBattleCore(
   } catch (error) {
     console.warn("竞技场战斗结算失败:", error);
   }
+
+  activeBattles.delete(state.battleId);
+  battleParticipants.delete(state.battleId);
+  removeBattleCharacterIndex(state.battleId);
+  removeBattleParticipantIndex(state.battleId);
+  stopBattleTicker(state.battleId);
+  finishedBattleResults.set(state.battleId, {
+    result: battleResult,
+    at: Date.now(),
+  });
+  void removeBattleFromRedis(state.battleId);
 
   try {
     const gameServer = getGameServer();
@@ -360,17 +374,6 @@ async function finishBattleCore(
   } catch (error) {
     console.warn(`[battle] 推送战斗结束事件失败: ${battleId}`, error);
   }
-
-  activeBattles.delete(state.battleId);
-  battleParticipants.delete(state.battleId);
-  removeBattleCharacterIndex(state.battleId);
-  removeBattleParticipantIndex(state.battleId);
-  stopBattleTicker(state.battleId);
-  finishedBattleResults.set(state.battleId, {
-    result: battleResult,
-    at: Date.now(),
-  });
-  void removeBattleFromRedis(state.battleId);
 
   return battleResult;
 }

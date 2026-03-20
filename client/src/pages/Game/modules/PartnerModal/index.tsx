@@ -1497,6 +1497,9 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
                               </div>
                               <div className="partner-tag-row">
                                 <Tag className={getItemQualityTagClassName(partner.quality)}>{partner.quality}</Tag>
+                                <Tag className={getElementToneClassName(partner.element)}>
+                                  {formatPartnerElementLabel(partner.element)}
+                                </Tag>
                                 {partner.fusionStatus === 'fusion_locked' ? <Tag color="magenta">归契中</Tag> : null}
                                 {shouldShowDisabledReason ? <Tag color="default">{disabledReason}</Tag> : null}
                                 {isSelected ? <Tag color="blue">已选中</Tag> : null}

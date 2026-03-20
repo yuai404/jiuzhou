@@ -586,20 +586,29 @@ export const nextDungeonInstance = async (
     const monsterDefIds = buildMonsterDefIdsFromWave(nextStageWave.wave.monsters, 5);
     if (monsterDefIds.length === 0) return { success: false, message: '该波次未配置怪物' };
 
-    await query(`UPDATE dungeon_instance SET current_stage = $2, current_wave = $3 WHERE id = $1`, [
-      instanceId,
-      nextStage,
-      nextWave,
-    ]);
+    return runDungeonStartFlow({
+      startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds),
+      commitOnBattleStarted: async ({ battleId, state }) => {
+        await query(`UPDATE dungeon_instance SET current_stage = $2, current_wave = $3 WHERE id = $1`, [
+          instanceId,
+          nextStage,
+          nextWave,
+        ]);
 
-    const battleRes = await startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds);
-    if (!battleRes.success || !battleRes.data?.battleId) return { success: false, message: battleRes.message || '开启战斗失败' };
+        await query(
+          `UPDATE dungeon_instance SET instance_data = jsonb_set(COALESCE(instance_data, '{}'::jsonb), '{currentBattleId}', to_jsonb($1::text), true) WHERE id = $2`,
+          [battleId, instanceId]
+        );
 
-    const battleId = String(battleRes.data.battleId);
-    await query(
-      `UPDATE dungeon_instance SET instance_data = jsonb_set(COALESCE(instance_data, '{}'::jsonb), '{currentBattleId}', to_jsonb($1::text), true) WHERE id = $2`,
-      [battleId, instanceId]
-    );
-
-  return { success: true, data: { instanceId, status: 'running', battleId, state: battleRes.data.state } };
+        return {
+          success: true,
+          data: {
+            instanceId,
+            status: 'running' as DungeonInstanceStatus,
+            battleId,
+            state,
+          },
+        };
+      },
+    });
 };
