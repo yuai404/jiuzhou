@@ -28,7 +28,7 @@ import {
 } from './techniqueTextModelShared.js';
 import { resolveTechniqueGenerationRequestFailure } from './techniqueGenerationRequestFailure.js';
 import {
-  buildTechniqueAuraAttackPercentBudgetPromptRule,
+  buildTechniqueAuraAttackPercentRetryCorrectionRules,
   buildTechniqueGeneratorPromptInput,
   buildTechniqueGenerationResponseFormat,
   TECHNIQUE_EFFECT_TYPE_LIST,
@@ -311,13 +311,10 @@ const buildTechniqueGenerationRetryCorrectionRules = (reason: string): string[] 
   if (reason.includes(AURA_ATTACK_PERCENT_BUDGET_FAILURE_TOKEN)) {
     const auraAttackPercentBudgetMax = Number(reason.match(AURA_ATTACK_PERCENT_BUDGET_REASON_PATTERN)?.[1] ?? Number.NaN);
     rules.push(
-      '光环 auraEffects 里的进攻类百分比 attr 增益要共用同一份预算，不要把法攻、物攻、暴击、暴伤、增伤等一起堆满。',
-      '如果 auraEffects 同时包含多个进攻类百分比 Buff，它们的 value 总和不能超过当前品质允许的光环进攻总预算。',
-      '想保留多种进攻向加成时，请压低每项 value，让总和仍落在光环总预算内。',
+      ...buildTechniqueAuraAttackPercentRetryCorrectionRules(
+        Number.isFinite(auraAttackPercentBudgetMax) ? auraAttackPercentBudgetMax : undefined,
+      ),
     );
-    if (Number.isFinite(auraAttackPercentBudgetMax)) {
-      rules.push(buildTechniqueAuraAttackPercentBudgetPromptRule(auraAttackPercentBudgetMax));
-    }
   }
 
   return rules;

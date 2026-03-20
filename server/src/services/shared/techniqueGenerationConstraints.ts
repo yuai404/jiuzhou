@@ -254,6 +254,37 @@ export const buildTechniqueAuraAttackPercentBudgetPromptRule = (maxTotal: number
   return `buffKind=aura 的 auraEffects 中，attrKey 属于 ${TECHNIQUE_AURA_ATTACK_PERCENT_ATTR_KEYS.join('/')} 的正向百分比 buff 会共用同一份进攻预算；这些 value 必须累计求和，当前品质总上限为 ${maxTotal}。`;
 };
 
+/**
+ * 光环进攻预算重试纠偏规则
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1) 做什么：集中生成 auraEffects 进攻百分比超预算后的纠偏文案，供重试提示与其他定向清单复用。
+ * 2) 不做什么：不直接修改模型结果，也不承担运行时校验；只输出统一中文约束。
+ *
+ * 输入/输出：
+ * - 输入：当前品质的光环进攻总预算上限。
+ * - 输出：一组可直接拼入 retryGuidance / checklist 的规则字符串。
+ *
+ * 数据流/状态流：
+ * 光环预算规则源 -> 本函数展开统一纠偏文案 -> retry correctionRules / prompt checklist 复用。
+ *
+ * 关键边界条件与坑点：
+ * 1) 这里强调的是“同一个 auraEffects 内的累计预算”，不能误读成每个 attrKey 各有一份独立预算。
+ * 2) 要同时覆盖基础技能与升级链路；否则模型会把超预算从 `upgrades` 挪到 `skill.effects` 继续违规。
+ */
+export const buildTechniqueAuraAttackPercentRetryCorrectionRules = (maxTotal?: number): string[] => {
+  const rules = [
+    '光环 auraEffects 里的进攻类百分比 attr 增益要共用同一份预算，不要把法攻、物攻、暴击、暴伤、增伤等一起堆满。',
+    '如果 auraEffects 同时包含多个进攻类百分比 Buff，它们的 value 总和不能超过当前品质允许的光环进攻总预算。',
+    '无论写在 skill.effects 还是 upgrades.changes.effects/addEffect，只要指向同一个 auraEffects，其中所有进攻类百分比 buff 的 value 都必须累计求和。',
+    '想保留多种进攻向加成时，请压低每项 value，让总和仍落在光环总预算内。',
+  ];
+  if (typeof maxTotal === 'number' && Number.isFinite(maxTotal)) {
+    rules.push(buildTechniqueAuraAttackPercentBudgetPromptRule(maxTotal));
+  }
+  return rules;
+};
+
 const buildTechniquePromptBuffConfigRules = () => {
   const catalog = getTechniqueStructuredBuffCatalog();
   return {
@@ -923,7 +954,10 @@ export const buildTechniqueGeneratorPromptInput = (params: {
       upgradeGuide: TECHNIQUE_PROMPT_UPGRADE_SCHEMA,
       upgradeRule:
         `upgrades 每项必须是 {layer,changes}。changes 只允许 target_count/cooldown/cost_lingqi/cost_lingqi_rate/cost_qixue/cost_qixue_rate/ai_priority/effects/addEffect。严禁 effectChanges/effectIndex/description，也严禁把 scaleRate/value/baseValue/valueType/scaleAttr/duration/chance 这类 effect 字段直接写在 changes 顶层。若 changes.effects 或 addEffect 中包含 damage，且同时填写 scaleRate 与 hit_count，则升级后的总倍率（scaleRate × hit_count）不能大于 ${TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE}。`,
-      outputChecklist: [...TECHNIQUE_PROMPT_OUTPUT_CHECKLIST],
+      outputChecklist: [
+        ...TECHNIQUE_PROMPT_OUTPUT_CHECKLIST,
+        buildTechniqueAuraAttackPercentBudgetPromptRule(auraAttackPercentTotalMax),
+      ],
     },
     outputShape: TECHNIQUE_PROMPT_OUTPUT_SHAPE,
   };

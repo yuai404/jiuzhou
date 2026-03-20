@@ -156,6 +156,12 @@ test('buildTechniqueGenerationRetryPromptContext: 光环进攻类百分比总和
   );
   assert.equal(
     retryGuidance?.correctionRules?.includes(
+      '无论写在 skill.effects 还是 upgrades.changes.effects/addEffect，只要指向同一个 auraEffects，其中所有进攻类百分比 buff 的 value 都必须累计求和。',
+    ),
+    true,
+  );
+  assert.equal(
+    retryGuidance?.correctionRules?.includes(
       buildTechniqueAuraAttackPercentBudgetPromptRule(0.1),
     ),
     true,
@@ -260,6 +266,12 @@ test('buildTechniqueGenerationTextModelRequest: 主提示应明确升级链路�
   assert.equal(
     parsedUserMessage.constraints?.outputChecklist?.includes(
       'buffKind=aura 若包含多个进攻类百分比 attr Buff，它们的 value 总和不能超过 numericRanges.effect.auraAttackPercentTotalMax',
+    ),
+    true,
+  );
+  assert.equal(
+    parsedUserMessage.constraints?.outputChecklist?.includes(
+      buildTechniqueAuraAttackPercentBudgetPromptRule(0.2),
     ),
     true,
   );
