@@ -693,6 +693,11 @@ export class BattleEngine {
    * 坑点：不能用下标 +1，因为行动过程中可能有单位死亡导致列表缩短。
    * 正确做法：找到当前单位在"全量列表"中的位置，向后扫描第一个存活且可行动的单位。
    * 若当前队伍已无可行动单位，则切换队伍。
+   *
+   * 额外约束：
+   * - “本回合已经行动过”的唯一事实来源就是 `canAct`。
+   * - 当前单位行动结束后必须在这里立即失去行动资格，避免 `currentUnitId` 丢失后，
+   *   修复逻辑又从队首把已经行动过的单位重新选回来。
    */
   private advanceAction(usedSkillId: string | null = null): void {
     if (this.checkBattleEnd()) return;
@@ -704,6 +709,7 @@ export class BattleEngine {
 
     if (currentUnit?.isAlive && currentUnit.canAct) {
       this.progressUnitCooldownsAfterAction(currentUnit, usedSkillId);
+      currentUnit.canAct = false;
     }
 
     // 在全量列表中找到当前单位的位置，向后找下一个可行动单位
