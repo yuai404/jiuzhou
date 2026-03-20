@@ -192,9 +192,11 @@ const pickBetterEmbeddedTechniqueCandidate = (
   next: EmbeddedTechniqueJsonObjectCandidate,
 ): EmbeddedTechniqueJsonObjectCandidate => {
   if (!current) return next;
+  // 优先比较匹配数量：有匹配的候选永远优先于无匹配的候选（即使后者文本更长）
   if (next.matchCount !== current.matchCount) {
     return next.matchCount > current.matchCount ? next : current;
   }
+  // 两者匹配数相同且都 > 0 时，才比较文本长度（越长越完整）
   if (next.textLength !== current.textLength) {
     return next.textLength > current.textLength ? next : current;
   }
@@ -206,6 +208,7 @@ const extractEmbeddedJsonObject = (
   preferredTopLevelKeys: readonly string[],
 ): TechniqueModelJsonObject | null => {
   let bestCandidate: EmbeddedTechniqueJsonObjectCandidate | null = null;
+  let anyCandidateHasMatch = false;
   let candidateStart = -1;
   let depth = 0;
   let inString = false;
@@ -254,14 +257,23 @@ const extractEmbeddedJsonObject = (
     const candidateText = text.slice(candidateStart, index + 1);
     const parsed = tryParseJsonObject(candidateText);
     if (parsed) {
+      const matchCount = countPreferredTopLevelKeyMatches(parsed, preferredTopLevelKeys);
+      if (matchCount > 0) {
+        anyCandidateHasMatch = true;
+      }
       bestCandidate = pickBetterEmbeddedTechniqueCandidate(bestCandidate, {
         data: parsed,
-        matchCount: countPreferredTopLevelKeyMatches(parsed, preferredTopLevelKeys),
+        matchCount,
         textLength: candidateText.length,
         endIndex: index,
       });
     }
     candidateStart = -1;
+  }
+
+  // 当指定了优先键但没有任何候选匹配到时，说明解析出的对象都不是目标结构，应返回 null
+  if (preferredTopLevelKeys.length > 0 && !anyCandidateHasMatch) {
+    return null;
   }
 
   return bestCandidate?.data ?? null;

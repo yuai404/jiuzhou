@@ -23,8 +23,8 @@ import {
   buildTechniqueGenerationRetryPromptContext,
   buildTechniqueGenerationTextModelRequest,
 } from '../shared/techniqueGenerationCandidateCore.js';
+import { buildTechniqueAuraAttackPercentBudgetPromptRule } from '../shared/techniqueGenerationConstraints.js';
 import {
-  getTechniqueAuraAttackPercentMaxTotal,
   TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE,
 } from '../shared/techniqueSkillGenerationSpec.js';
 import {
@@ -133,7 +133,7 @@ test('buildTechniqueGenerationRetryPromptContext: 升级项超预算总伤害倍
 test('buildTechniqueGenerationRetryPromptContext: 光环进攻类百分比总和超预算时应注入定向纠偏约束', () => {
   const promptContext = buildTechniqueGenerationRetryPromptContext({
     promptContext: { source: 'unit-test' },
-    previousFailureReason: `AI结果技能效果非法：skill.effects 非法：auraEffects 进攻类百分比增益总和不能大于 ${getTechniqueAuraAttackPercentMaxTotal('玄')}`,
+    previousFailureReason: 'AI结果技能效果非法：skill.effects 非法：auraEffects 进攻类百分比增益总和不能大于 0.1',
   });
 
   type RetryPromptContext = {
@@ -151,6 +151,12 @@ test('buildTechniqueGenerationRetryPromptContext: 光环进攻类百分比总和
   assert.equal(
     retryGuidance?.correctionRules?.includes(
       '如果 auraEffects 同时包含多个进攻类百分比 Buff，它们的 value 总和不能超过当前品质允许的光环进攻总预算。',
+    ),
+    true,
+  );
+  assert.equal(
+    retryGuidance?.correctionRules?.includes(
+      buildTechniqueAuraAttackPercentBudgetPromptRule(0.1),
     ),
     true,
   );
@@ -242,6 +248,12 @@ test('buildTechniqueGenerationTextModelRequest: 主提示应明确升级链路�
   assert.equal(
     parsedUserMessage.constraints?.generalRules?.includes(
       'buffKind=aura 的 auraEffects 若包含进攻类百分比 attr 增益（如法攻/物攻/暴击/暴伤/增伤），这些 value 的合计不能超过 numericRanges.effect.auraAttackPercentTotalMax',
+    ),
+    true,
+  );
+  assert.equal(
+    parsedUserMessage.constraints?.generalRules?.includes(
+      buildTechniqueAuraAttackPercentBudgetPromptRule(0.2),
     ),
     true,
   );

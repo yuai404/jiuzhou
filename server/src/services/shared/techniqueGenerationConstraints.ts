@@ -59,6 +59,7 @@ import {
   validateTechniqueStructuredBuffEffect,
 } from './techniqueStructuredBuffCatalog.js';
 import {
+  ATTACK_ATTR_KEY_SET,
   TECHNIQUE_PASSIVE_KEY_MEANING_MAP,
   TECHNIQUE_PASSIVE_KEYS,
   TECHNIQUE_PASSIVE_MODE_BY_KEY,
@@ -229,6 +230,29 @@ export const TECHNIQUE_PROMPT_FATE_SWAP_MODE_ENUM = TECHNIQUE_SKILL_FATE_SWAP_MO
 
 export const TECHNIQUE_PROMPT_AURA_TARGET_ENUM = TECHNIQUE_SKILL_AURA_TARGET_LIST;
 export const TECHNIQUE_PROMPT_AURA_SUB_EFFECT_TYPE_ENUM = TECHNIQUE_SKILL_AURA_SUB_EFFECT_TYPE_LIST;
+const TECHNIQUE_AURA_ATTACK_PERCENT_ATTR_KEYS = Object.freeze(Array.from(ATTACK_ATTR_KEY_SET).sort());
+
+/**
+ * 光环进攻预算提示语生成器
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1) 做什么：把会计入光环进攻总预算的 attrKey 集合与当前品质的明确数值上限收敛成单一提示语，供首轮 prompt 与重试提示共用。
+ * 2) 不做什么：不负责运行时校验，也不决定哪些属性属于 attack bucket；归类仍以 `ATTACK_ATTR_KEY_SET` 为准。
+ *
+ * 输入/输出：
+ * - 输入：当前品质允许的光环进攻百分比总预算。
+ * - 输出：可直接塞进 prompt/generalRules 的中文规则字符串。
+ *
+ * 数据流/状态流：
+ * characterAttrRegistry.attack bucket -> 本函数拼装明确口径 -> 功法生成 prompt / 重试提示复用。
+ *
+ * 关键边界条件与坑点：
+ * 1) 这里强调的是“多项相加后的总和上限”，不是每个 attrKey 各自都能冲到同一个上限。
+ * 2) 只覆盖正向百分比 attack attr Buff；固定值、防御类、治疗类与其他桶属性不应被误写进这条说明。
+ */
+export const buildTechniqueAuraAttackPercentBudgetPromptRule = (maxTotal: number): string => {
+  return `buffKind=aura 的 auraEffects 中，attrKey 属于 ${TECHNIQUE_AURA_ATTACK_PERCENT_ATTR_KEYS.join('/')} 的正向百分比 buff 会共用同一份进攻预算；这些 value 必须累计求和，当前品质总上限为 ${maxTotal}。`;
+};
 
 const buildTechniquePromptBuffConfigRules = () => {
   const catalog = getTechniqueStructuredBuffCatalog();
@@ -835,7 +859,11 @@ export const buildTechniqueGeneratorPromptInput = (params: {
         }
       : {}),
     constraints: {
-      generalRules: [...TECHNIQUE_PROMPT_GENERAL_RULES, TEXT_MODEL_PROMPT_NOISE_CONSTRAINT],
+      generalRules: [
+        ...TECHNIQUE_PROMPT_GENERAL_RULES,
+        buildTechniqueAuraAttackPercentBudgetPromptRule(auraAttackPercentTotalMax),
+        TEXT_MODEL_PROMPT_NOISE_CONSTRAINT,
+      ],
       fieldSemantics: TECHNIQUE_PROMPT_FIELD_SEMANTICS,
       typeEnum: [techniqueType],
       realmEnum: [...TECHNIQUE_PROMPT_REALM_ENUM],

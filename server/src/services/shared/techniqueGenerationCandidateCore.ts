@@ -28,6 +28,7 @@ import {
 } from './techniqueTextModelShared.js';
 import { resolveTechniqueGenerationRequestFailure } from './techniqueGenerationRequestFailure.js';
 import {
+  buildTechniqueAuraAttackPercentBudgetPromptRule,
   buildTechniqueGeneratorPromptInput,
   buildTechniqueGenerationResponseFormat,
   TECHNIQUE_EFFECT_TYPE_LIST,
@@ -274,6 +275,7 @@ const DUPLICATE_EFFECT_FAILURE_TOKEN = '不允许包含重复 effect';
 const UPGRADE_UNSUPPORTED_FIELD_REASON_PATTERN = /upgrades\.changes 包含未支持字段：([A-Za-z0-9_]+)/;
 const UPGRADE_DAMAGE_TOTAL_SCALE_FAILURE_TOKEN = 'scaleRate × hit_count 不能大于';
 const AURA_ATTACK_PERCENT_BUDGET_FAILURE_TOKEN = 'auraEffects 进攻类百分比增益总和不能大于';
+const AURA_ATTACK_PERCENT_BUDGET_REASON_PATTERN = /auraEffects 进攻类百分比增益总和不能大于 ([0-9]+(?:\.[0-9]+)?)/;
 
 const buildTechniqueGenerationRetryCorrectionRules = (reason: string): string[] => {
   const rules = [
@@ -307,11 +309,15 @@ const buildTechniqueGenerationRetryCorrectionRules = (reason: string): string[] 
   }
 
   if (reason.includes(AURA_ATTACK_PERCENT_BUDGET_FAILURE_TOKEN)) {
+    const auraAttackPercentBudgetMax = Number(reason.match(AURA_ATTACK_PERCENT_BUDGET_REASON_PATTERN)?.[1] ?? Number.NaN);
     rules.push(
       '光环 auraEffects 里的进攻类百分比 attr 增益要共用同一份预算，不要把法攻、物攻、暴击、暴伤、增伤等一起堆满。',
       '如果 auraEffects 同时包含多个进攻类百分比 Buff，它们的 value 总和不能超过当前品质允许的光环进攻总预算。',
       '想保留多种进攻向加成时，请压低每项 value，让总和仍落在光环总预算内。',
     );
+    if (Number.isFinite(auraAttackPercentBudgetMax)) {
+      rules.push(buildTechniqueAuraAttackPercentBudgetPromptRule(auraAttackPercentBudgetMax));
+    }
   }
 
   return rules;
