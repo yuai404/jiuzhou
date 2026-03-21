@@ -55,6 +55,8 @@
 }
 
 .battle-top-action {
+  flex-shrink: 0;
+  white-space: nowrap;
   border-radius: 8px;
 }
 
@@ -565,7 +567,7 @@
     min-height: 40px;
     padding: 7px 10px;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .battle-top-left {
@@ -679,7 +681,7 @@
   }
 
   .battle-top-right {
-    width: 100%;
+    flex-shrink: 0;
     justify-content: flex-end;
   }
 }
