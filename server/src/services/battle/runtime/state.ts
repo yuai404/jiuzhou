@@ -27,6 +27,7 @@ import {
   scheduleBattleCooldownPush,
 } from "../cooldownManager.js";
 import type { BattleResult, BattleStartCooldownValidation } from "../battleTypes.js";
+import { resolveBattleStartedDispatchPolicy } from "./startDispatchPolicy.js";
 
 // ============================================================
 // 全局状态 Map / Set（所有模块通过 import 访问同一实例）
@@ -462,11 +463,20 @@ export function registerStartedBattle(
   syncBattleCharacterIndex(battleId, engine.getState());
   // 延迟导入避免循环依赖：state.ts <-> ticker.ts
   import("./ticker.js").then(({ emitBattleUpdate, startBattleTicker }) => {
-    emitBattleUpdate(battleId, {
-      kind: "battle_started",
-      battleId,
-      state: engine.getState(),
+    const dispatchPolicy = resolveBattleStartedDispatchPolicy({
+      registeredEngine: engine,
+      activeEngine: activeBattles.get(battleId),
     });
+    if (dispatchPolicy === "skip") {
+      return;
+    }
+    if (dispatchPolicy === "emit_and_start") {
+      emitBattleUpdate(battleId, {
+        kind: "battle_started",
+        battleId,
+        state: engine.getState(),
+      });
+    }
     startBattleTicker(battleId);
   });
 }
