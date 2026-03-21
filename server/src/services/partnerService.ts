@@ -89,6 +89,11 @@ import {
   resolveTechniqueCostMultiplierByQuality,
   scaleTechniqueBaseCostByQuality,
 } from './shared/techniqueUpgradeRules.js';
+import {
+  deleteManagedAvatarIfReplaced,
+  isValidManagedAvatarUrl,
+  normalizeManagedAvatarValue,
+} from './uploadService.js';
 
 export type {
   PartnerComputedAttrsDto,
@@ -860,6 +865,7 @@ class PartnerService {
     partnerId: number,
     itemInstanceId: number,
     nickname: string,
+    avatar?: string | null,
   ): Promise<PartnerResult<PartnerRenameResultDto>> {
     try {
       const unlockState = await assertPartnerSystemUnlocked(characterId);
@@ -885,6 +891,11 @@ class PartnerService {
         return { success: false, message: nicknameValidation.message };
       }
 
+      const normalizedAvatar = normalizeManagedAvatarValue(avatar);
+      if (normalizedAvatar && !isValidManagedAvatarUrl(normalizedAvatar)) {
+        return { success: false, message: '头像地址不合法' };
+      }
+
       const consumeResult = await consumeRenameCardItemInstance(characterId, itemInstanceId);
       if (!consumeResult.success) {
         return { success: false, message: consumeResult.message };
@@ -894,11 +905,14 @@ class PartnerService {
         `
           UPDATE character_partner
           SET nickname = $2,
+              avatar = $3,
               updated_at = NOW()
           WHERE id = $1
         `,
-        [partnerId, nicknameValidation.nickname],
+        [partnerId, nicknameValidation.nickname, normalizedAvatar],
       );
+
+      await deleteManagedAvatarIfReplaced(partnerRow.avatar, normalizedAvatar);
 
       const refreshedPartner = await loadSinglePartnerRow(characterId, partnerId, false);
       if (!refreshedPartner) {

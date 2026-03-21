@@ -24,7 +24,10 @@ import {
   notifyUnifiedApiError,
   SILENT_API_REQUEST_CONFIG,
 } from '../../../services/api';
-import CharacterRenameModal from './CharacterRenameModal';
+import CharacterRenameModal, {
+  type CharacterRenameAvatarConfig,
+  type CharacterRenameSubmitPayload,
+} from './CharacterRenameModal';
 
 export interface RenameCardContext {
   itemInstanceId: number;
@@ -43,11 +46,12 @@ interface RenameCardFlowCopy {
 
 interface UseRenameCardFlowOptions {
   currentName: string;
+  avatarConfig?: CharacterRenameAvatarConfig;
   copy: RenameCardFlowCopy;
   refresh: () => Promise<void>;
   requestRename: (
     context: RenameCardContext,
-    name: string,
+    payload: CharacterRenameSubmitPayload,
     requestConfig: typeof SILENT_API_REQUEST_CONFIG,
   ) => Promise<{ success: boolean; message: string }>;
   onAfterSuccess?: () => void | Promise<void>;
@@ -55,6 +59,7 @@ interface UseRenameCardFlowOptions {
 
 export const useRenameCardFlow = ({
   currentName,
+  avatarConfig,
   copy,
   refresh,
   requestRename,
@@ -79,14 +84,14 @@ export const useRenameCardFlow = ({
     setRenameContext(context);
   }, []);
 
-  const handleSubmitRename = useCallback(async (name: string) => {
+  const handleSubmitRename = useCallback(async (payload: CharacterRenameSubmitPayload) => {
     if (!renameContext || renameSubmitting) {
       return;
     }
 
     setRenameSubmitting(true);
     try {
-      const result = await requestRename(renameContext, name, SILENT_API_REQUEST_CONFIG);
+      const result = await requestRename(renameContext, payload, SILENT_API_REQUEST_CONFIG);
       message.success(result.message || copy.successFallbackMessage);
       await refresh();
       window.dispatchEvent(new Event('inventory:changed'));
@@ -110,12 +115,13 @@ export const useRenameCardFlow = ({
         inputPlaceholder={copy.inputPlaceholder}
         submitText={copy.submitText}
         initialName={currentName}
+        avatarConfig={avatarConfig}
         submitting={renameSubmitting}
         onCancel={closeRename}
         onSubmit={handleSubmitRename}
       />
     );
-  }, [closeRename, copy, currentName, handleSubmitRename, renameContext, renameSubmitting]);
+  }, [avatarConfig, closeRename, copy, currentName, handleSubmitRename, renameContext, renameSubmitting]);
 
   return {
     renameSubmitting,

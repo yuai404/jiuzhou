@@ -25,7 +25,7 @@ export const COS_REGION = process.env.COS_REGION ?? "";
 /** COS 对象键前缀，末尾含 '/' */
 export const COS_AVATAR_PREFIX = process.env.COS_AVATAR_PREFIX || "avatars/";
 /** AI 生成图片对象键前缀，末尾含 '/' */
-export const COS_GENERATED_IMAGE_PREFIX = process.env.COS_GENERATED_IMAGE_PREFIX || "generated/";
+export const COS_GENERATED_IMAGE_PREFIX = process.env.COS_GENERATED_IMAGE_PREFIX || "jiuzhou/generated/";
 
 /**
  * 自定义域名（不含协议和末尾 /），例如 'oss.example.com'

@@ -3,9 +3,12 @@ import test from 'node:test';
 
 import {
   buildPartnerBattleSkillData,
+  buildPartnerDisplay,
   toPartnerBattleSkillData,
   type PartnerEffectiveSkillEntry,
+  type PartnerRow,
 } from '../shared/partnerView.js';
+import { getPartnerDefinitionById } from '../staticConfigLoader.js';
 
 /**
  * 伙伴有效技能转战斗技能回归测试
@@ -114,4 +117,47 @@ test('buildPartnerBattleSkillData: 应按传入顺序输出完整伙伴战斗技
       ['skill-partner-upgraded-aura', 'passive', 17],
     ],
   );
+});
+
+test('buildPartnerDisplay: 应优先使用伙伴实例头像，没有实例头像时回退模板头像', () => {
+  const definition = getPartnerDefinitionById('partner-qingmu-xiaoou');
+  assert.ok(definition, '测试依赖的伙伴模板 partner-qingmu-xiaoou 不存在');
+
+  const baseRow: PartnerRow = {
+    id: 1001,
+    character_id: 2001,
+    partner_def_id: definition.id,
+    nickname: '青木小鸥',
+    avatar: null,
+    level: 1,
+    progress_exp: 0,
+    growth_max_qixue: 1000,
+    growth_wugong: 1000,
+    growth_fagong: 1000,
+    growth_wufang: 1000,
+    growth_fafang: 1000,
+    growth_sudu: 1000,
+    is_active: false,
+    obtained_from: 'test',
+    obtained_ref_id: null,
+    created_at: new Date('2026-03-21T00:00:00.000Z'),
+    updated_at: new Date('2026-03-21T00:00:00.000Z'),
+  };
+
+  const withTemplateAvatar = buildPartnerDisplay({
+    row: baseRow,
+    definition,
+    techniqueRows: [],
+  });
+  assert.equal(withTemplateAvatar.avatar, definition.avatar ?? null);
+
+  const withInstanceAvatar = buildPartnerDisplay({
+    row: {
+      ...baseRow,
+      avatar: '/uploads/avatars/custom-partner-avatar.webp',
+    },
+    definition,
+    techniqueRows: [],
+  });
+  assert.equal(withInstanceAvatar.avatar, '/uploads/avatars/custom-partner-avatar.webp');
 });

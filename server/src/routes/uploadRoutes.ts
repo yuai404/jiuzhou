@@ -23,8 +23,10 @@ import { Router, NextFunction, Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { requireAuth } from "../middleware/auth.js";
 import {
+  acceptAvatarLocalUpload,
   avatarUpload,
   COS_ENABLED,
+  confirmAvatarAsset,
   confirmAvatar,
   updateAvatarLocal,
   deleteAvatar,
@@ -44,39 +46,66 @@ import {
 
 const router = Router();
 
+const parseAvatarUploadRequest = (
+  req: Request,
+): { contentType: string; normalizedFileSize: number } => {
+  const { contentType, fileSize } = req.body as {
+    contentType?: string;
+    fileSize?: number;
+  };
+  const normalizedFileSize = Number(fileSize);
+  if (!contentType || !isAllowedAvatarMimeType(contentType)) {
+    throw new BusinessError("只支持 JPG、PNG、GIF、WEBP 格式的图片");
+  }
+
+  if (
+    !Number.isFinite(normalizedFileSize) ||
+    normalizedFileSize <= 0 ||
+    normalizedFileSize > AVATAR_UPLOAD_MAX_FILE_SIZE_BYTES
+  ) {
+    throw new BusinessError("图片大小不能超过2MB");
+  }
+
+  return {
+    contentType,
+    normalizedFileSize,
+  };
+};
+
+const sendAvatarUploadStsResponse = async (
+  res: Response,
+  contentType: string,
+  normalizedFileSize: number,
+): Promise<void> => {
+  if (!COS_ENABLED) {
+    sendSuccess(res, {
+      cosEnabled: false,
+      maxFileSizeBytes: AVATAR_UPLOAD_MAX_FILE_SIZE_BYTES,
+    });
+    return;
+  }
+
+  const payload = await issueAvatarUploadSts(contentType, normalizedFileSize);
+  sendSuccess(res, payload);
+};
+
 // ─── COS 直传：获取临时密钥 ───
 
 router.post(
   "/avatar/sts",
   requireAuth,
   asyncHandler(async (req: Request, res: Response) => {
-    const { contentType, fileSize } = req.body as {
-      contentType?: string;
-      fileSize?: number;
-    };
-    const normalizedFileSize = Number(fileSize);
-    if (!contentType || !isAllowedAvatarMimeType(contentType)) {
-      throw new BusinessError("只支持 JPG、PNG、GIF、WEBP 格式的图片");
-    }
+    const { contentType, normalizedFileSize } = parseAvatarUploadRequest(req);
+    await sendAvatarUploadStsResponse(res, contentType, normalizedFileSize);
+  }),
+);
 
-    if (
-      !Number.isFinite(normalizedFileSize) ||
-      normalizedFileSize <= 0 ||
-      normalizedFileSize > AVATAR_UPLOAD_MAX_FILE_SIZE_BYTES
-    ) {
-      throw new BusinessError("图片大小不能超过2MB");
-    }
-
-    if (!COS_ENABLED) {
-      sendSuccess(res, {
-        cosEnabled: false,
-        maxFileSizeBytes: AVATAR_UPLOAD_MAX_FILE_SIZE_BYTES,
-      });
-      return;
-    }
-
-    const payload = await issueAvatarUploadSts(contentType, normalizedFileSize);
-    sendSuccess(res, payload);
+router.post(
+  "/avatar-asset/sts",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { contentType, normalizedFileSize } = parseAvatarUploadRequest(req);
+    await sendAvatarUploadStsResponse(res, contentType, normalizedFileSize);
   }),
 );
 
@@ -99,6 +128,21 @@ router.post(
       await safePushCharacterUpdate(userId);
     }
 
+    sendResult(res, result);
+  }),
+);
+
+router.post(
+  "/avatar-asset/confirm",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { avatarUrl } = req.body as { avatarUrl?: string };
+
+    if (!avatarUrl) {
+      throw new BusinessError("缺少 avatarUrl");
+    }
+
+    const result = await confirmAvatarAsset(avatarUrl);
     sendResult(res, result);
   }),
 );
@@ -172,6 +216,23 @@ router.post(
       await safePushCharacterUpdate(userId);
     }
 
+    sendResult(res, result);
+  }),
+);
+
+router.post(
+  "/avatar-asset",
+  requireAuth,
+  ensureLocalAvatarUploadEnabled,
+  avatarUploadMiddleware,
+  asyncHandler(async (req: Request, res: Response) => {
+    const file = req.file;
+
+    if (!file) {
+      throw new BusinessError("请选择图片文件");
+    }
+
+    const result = await acceptAvatarLocalUpload(file);
     sendResult(res, result);
   }),
 );

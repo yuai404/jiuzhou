@@ -452,12 +452,20 @@ export const injectPartnerExp = (
 };
 
 export const renamePartnerWithCard = (
-  partnerId: number,
-  itemInstanceId: number,
-  nickname: string,
+  params: {
+    partnerId: number;
+    itemInstanceId: number;
+    nickname: string;
+    avatar?: string | null;
+  },
   requestConfig?: AxiosRequestConfig,
 ): Promise<PartnerRenameResponse> => {
-  return api.post('/partner/renameWithCard', { partnerId, itemInstanceId, nickname }, requestConfig);
+  return api.post('/partner/renameWithCard', {
+    partnerId: params.partnerId,
+    itemInstanceId: params.itemInstanceId,
+    nickname: params.nickname,
+    avatar: params.avatar,
+  }, requestConfig);
 };
 
 export const learnPartnerTechnique = (

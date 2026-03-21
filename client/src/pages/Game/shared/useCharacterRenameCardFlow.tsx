@@ -48,8 +48,8 @@ export const useCharacterRenameCardFlow = ({
       failureFallbackMessage: '改名失败',
     },
     refresh,
-    requestRename: (context: RenameCardContext, name, requestConfig) => {
-      return renameCharacterWithCard(context.itemInstanceId, name, requestConfig);
+    requestRename: (context: RenameCardContext, payload, requestConfig) => {
+      return renameCharacterWithCard(context.itemInstanceId, payload.name, requestConfig);
     },
     onAfterSuccess,
   });

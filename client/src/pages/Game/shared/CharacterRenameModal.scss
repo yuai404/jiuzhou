@@ -1,0 +1,89 @@
+.character-rename-avatar-section {
+  margin-bottom: 16px;
+}
+
+.character-rename-avatar-label {
+  margin-bottom: 8px;
+  color: var(--ant-color-text, rgba(255, 255, 255, 0.88));
+  font-size: 14px;
+  line-height: 1.5715;
+}
+
+.character-rename-avatar-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--ant-color-border, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  background: var(--ant-color-bg-elevated, rgba(255, 255, 255, 0.04));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.character-rename-avatar-trigger:hover:not(:disabled) {
+  border-color: var(--ant-color-primary, #1677ff);
+  transform: translateY(-1px);
+}
+
+.character-rename-avatar-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.character-rename-avatar-image,
+.character-rename-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.character-rename-avatar-image {
+  object-fit: cover;
+  background: var(--ant-color-fill-content, rgba(255, 255, 255, 0.08));
+}
+
+.character-rename-avatar-placeholder {
+  background: var(--ant-color-fill-tertiary, rgba(255, 255, 255, 0.06));
+  color: var(--ant-color-text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 24px;
+}
+
+.character-rename-avatar-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.character-rename-avatar-title {
+  color: var(--ant-color-text, rgba(255, 255, 255, 0.92));
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.character-rename-avatar-tip {
+  color: var(--ant-color-text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .character-rename-avatar-trigger {
+    align-items: flex-start;
+  }
+
+  .character-rename-avatar-image,
+  .character-rename-avatar-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+  }
+}

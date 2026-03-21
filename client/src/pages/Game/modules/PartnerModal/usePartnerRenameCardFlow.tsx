@@ -19,10 +19,10 @@
  */
 import type { ReactNode } from 'react';
 
-import { renamePartnerWithCard, type PartnerDetailDto } from '../../../../services/api';
+import { renamePartnerWithCard, uploadAvatarAsset, type PartnerDetailDto } from '../../../../services/api';
 import { dispatchPartnerChangedEvent } from '../../shared/partnerTradeEvents';
 import { useRenameCardFlow, type RenameCardContext } from '../../shared/useRenameCardFlow';
-import { getPartnerDisplayName } from '../../shared/partnerDisplay';
+import { getPartnerDisplayName, resolvePartnerAvatar } from '../../shared/partnerDisplay';
 
 interface UsePartnerRenameCardFlowOptions {
   partner: PartnerDetailDto | null;
@@ -42,6 +42,14 @@ export const usePartnerRenameCardFlow = ({
 } => {
   const { renameSubmitting, openRename, renameModalNode } = useRenameCardFlow({
     currentName: partner ? getPartnerDisplayName(partner) : '',
+    avatarConfig: partner ? {
+      initialAvatar: partner.avatar,
+      label: '伙伴头像',
+      avatarAlt: getPartnerDisplayName(partner),
+      uploadRequest: uploadAvatarAsset,
+      resolvePreviewUrl: resolvePartnerAvatar,
+      helperText: '上传后的头像会在本次改名确认时一并保存',
+    } : undefined,
     copy: {
       title: '伙伴改名',
       inputLabel: '新伙伴名',
@@ -52,11 +60,16 @@ export const usePartnerRenameCardFlow = ({
       failureFallbackMessage: '伙伴改名失败',
     },
     refresh,
-    requestRename: (context: RenameCardContext, name, requestConfig) => {
+    requestRename: (context: RenameCardContext, payload, requestConfig) => {
       if (!partner) {
         throw new Error('当前未选中伙伴');
       }
-      return renamePartnerWithCard(partner.id, context.itemInstanceId, name, requestConfig);
+      return renamePartnerWithCard({
+        partnerId: partner.id,
+        itemInstanceId: context.itemInstanceId,
+        nickname: payload.name,
+        avatar: payload.avatar,
+      }, requestConfig);
     },
     onAfterSuccess: () => {
       dispatchPartnerChangedEvent();

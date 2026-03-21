@@ -33,6 +33,7 @@ import { getItemDefinitionById } from '../services/staticConfigLoader.js';
 import { normalizePartnerNameInput } from '../services/shared/partnerNameRules.js';
 import { getSingleParam, getSingleQueryValue, parseNonEmptyText, parsePositiveInt } from '../services/shared/httpParam.js';
 import { resolveTechniqueBookLearning } from '../services/shared/techniqueBookRules.js';
+import { normalizeManagedAvatarValue } from '../services/uploadService.js';
 
 const router = Router();
 
@@ -292,6 +293,7 @@ router.post('/renameWithCard', asyncHandler(async (req, res) => {
   const partnerId = parsePositiveInt(req.body?.partnerId);
   const itemInstanceId = parsePositiveInt(req.body?.itemInstanceId ?? req.body?.itemId);
   const nickname = normalizePartnerNameInput(String(req.body?.nickname || ''));
+  const avatar = normalizeManagedAvatarValue(req.body?.avatar);
   if (!partnerId) {
     return sendResult(res, { success: false, message: 'partnerId 参数无效' });
   }
@@ -302,7 +304,7 @@ router.post('/renameWithCard', asyncHandler(async (req, res) => {
     return sendResult(res, { success: false, message: '伙伴名不能为空' });
   }
 
-  const result = await partnerService.renameWithCard(characterId, partnerId, itemInstanceId, nickname);
+  const result = await partnerService.renameWithCard(characterId, partnerId, itemInstanceId, nickname, avatar);
   if (result.success) {
     await safePushCharacterUpdate(userId);
   }

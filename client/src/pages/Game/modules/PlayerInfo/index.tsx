@@ -1,5 +1,4 @@
 import { App, Button, Progress, Tooltip, Upload } from 'antd';
-import type { UploadProps } from 'antd';
 import { UserOutlined, LoadingOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { gameSocket, type CharacterData } from '../../../../services/gameSocket';
@@ -11,12 +10,12 @@ import {
   addAttributePoint,
   removeAttributePoint,
   type RealmOverviewDto,
-  type UploadResponse,
 } from '../../../../services/api';
 import { CHARACTER_PRIMARY_ATTR_META_LIST } from '../../shared/characterPrimaryAttrMeta';
 import { formatPercent, formatRecovery } from '../../shared/formatAttr';
 import PhoneBindingDialog from '../../shared/PhoneBindingDialog';
 import PlayerName from '../../shared/PlayerName';
+import { useAvatarUploadFlow } from '../../shared/avatarUploadFlow';
 import { usePhoneBindingStatus } from '../../shared/usePhoneBindingStatus';
 import { useDeferredGameRequest } from '../../shared/useDeferredGameRequest';
 import './index.scss';
@@ -37,7 +36,6 @@ const PlayerInfo: React.FC<PlayerInfoProps> = ({
   const realmOverviewRequestSeqRef = useRef(0);
   const [character, setCharacter] = useState<CharacterData | null>(null);
   const [realmOverview, setRealmOverview] = useState<RealmOverviewDto | null>(initialRealmOverview ?? null);
-  const [uploading, setUploading] = useState(false);
   const [processingPoint, setProcessingPoint] = useState<string | null>(null);
   const [phoneBindingDialogOpen, setPhoneBindingDialogOpen] = useState(false);
   const [shouldLoadPhoneBindingStatus, setShouldLoadPhoneBindingStatus] = useState(false);
@@ -159,36 +157,14 @@ const PlayerInfo: React.FC<PlayerInfoProps> = ({
     };
   }, [character]);
 
-  // 头像上传处理
-  const handleAvatarUpload: UploadProps<UploadResponse>['customRequest'] = async (options) => {
-    const file = options.file as File;
-    setUploading(true);
-
-    try {
-      const result = await uploadAvatar(file, {
-        onProgress: (percent) => {
-          options.onProgress?.({ percent });
-        },
-      });
-      if (result.success) {
-        options.onSuccess?.(result);
-        if (result.avatarUrl) {
-          gameSocket.updateCharacterLocal({ avatar: result.avatarUrl });
-        }
-        message.success('头像上传成功');
-        // 刷新角色数据
-        gameSocket.refreshCharacter();
-      } else {
-        const uploadError = new Error(result.message || '头像上传失败');
-        options.onError?.(uploadError);
-      }
-    } catch (error) {
-      const uploadError = error instanceof Error ? error : new Error('头像上传失败');
-      options.onError?.(uploadError);
-    } finally {
-      setUploading(false);
-    }
-  };
+  const { uploading, customRequest: handleAvatarUpload } = useAvatarUploadFlow({
+    uploadRequest: uploadAvatar,
+    successMessage: '头像上传成功',
+    onUploaded: (avatarUrl) => {
+      gameSocket.updateCharacterLocal({ avatar: avatarUrl });
+      gameSocket.refreshCharacter();
+    },
+  });
 
   // 加点处理
   const handleAddPoint = async (attribute: 'jing' | 'qi' | 'shen') => {

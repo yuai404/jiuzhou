@@ -164,7 +164,64 @@ const isValidCosAvatarUrl = (url: string): boolean => {
 
 export { COS_ENABLED };
 
-type UploadResult = { success: boolean; message: string; avatarUrl?: string };
+export type UploadResult = { success: boolean; message: string; avatarUrl?: string };
+
+export const normalizeManagedAvatarValue = (
+  avatarValue: string | null | undefined,
+): string | null => {
+  const normalizedValue = String(avatarValue ?? '').trim();
+  return normalizedValue || null;
+};
+
+const isValidLocalAvatarUrl = (avatarUrl: string): boolean => {
+  return /^\/uploads\/avatars\/[a-zA-Z0-9._-]+$/.test(avatarUrl);
+};
+
+export const isValidManagedAvatarUrl = (avatarUrl: string): boolean => {
+  return isValidLocalAvatarUrl(avatarUrl) || isValidCosAvatarUrl(avatarUrl);
+};
+
+export const confirmAvatarAsset = async (
+  avatarUrl: string,
+): Promise<UploadResult> => {
+  if (!isValidManagedAvatarUrl(avatarUrl)) {
+    return { success: false, message: "头像地址不合法" };
+  }
+
+  return { success: true, message: "头像上传成功", avatarUrl };
+};
+
+export const getLocalUploadedAvatarUrl = (
+  file: Express.Multer.File,
+): string => {
+  return `/uploads/avatars/${file.filename}`;
+};
+
+export const acceptAvatarLocalUpload = async (
+  file: Express.Multer.File,
+): Promise<UploadResult> => {
+  return {
+    success: true,
+    message: "头像上传成功",
+    avatarUrl: getLocalUploadedAvatarUrl(file),
+  };
+};
+
+export const deleteManagedAvatarIfReplaced = async (
+  previousAvatar: string | null | undefined,
+  nextAvatar: string | null | undefined,
+): Promise<void> => {
+  const normalizedPreviousAvatar = normalizeManagedAvatarValue(previousAvatar);
+  const normalizedNextAvatar = normalizeManagedAvatarValue(nextAvatar);
+  if (!normalizedPreviousAvatar || normalizedPreviousAvatar === normalizedNextAvatar) {
+    return;
+  }
+  if (!isValidManagedAvatarUrl(normalizedPreviousAvatar)) {
+    return;
+  }
+
+  await deleteOldAvatar(normalizedPreviousAvatar);
+};
 
 /**
  * 确认客户端直传完成，更新 DB 中的头像 URL 并清理旧头像。
@@ -189,9 +246,7 @@ export const confirmAvatar = async (
     [avatarUrl, userId],
   );
 
-  if (oldAvatar) {
-    void deleteOldAvatar(oldAvatar);
-  }
+  await deleteManagedAvatarIfReplaced(oldAvatar, avatarUrl);
 
   return { success: true, message: "头像更新成功", avatarUrl };
 };
@@ -207,16 +262,14 @@ export const updateAvatarLocal = async (
   );
   const oldAvatar: string | undefined = oldResult.rows[0]?.avatar;
 
-  const avatarUrl = `/uploads/avatars/${file.filename}`;
+  const avatarUrl = getLocalUploadedAvatarUrl(file);
 
   await query(
     "UPDATE characters SET avatar = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2",
     [avatarUrl, userId],
   );
 
-  if (oldAvatar) {
-    void deleteOldAvatar(oldAvatar);
-  }
+  await deleteManagedAvatarIfReplaced(oldAvatar, avatarUrl);
 
   return { success: true, message: "头像更新成功", avatarUrl };
 };
