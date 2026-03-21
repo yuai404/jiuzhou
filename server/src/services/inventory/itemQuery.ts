@@ -251,7 +251,6 @@ const enrichInventoryItemsWithDefs = (
       ? {
           ...def,
           name: generatedTechniqueBookDisplay.name,
-          icon: generatedTechniqueBookDisplay.icon ?? def.icon,
           quality: generatedTechniqueBookDisplay.quality ?? def.quality,
           description: generatedTechniqueBookDisplay.description,
           long_desc: generatedTechniqueBookDisplay.longDesc,
