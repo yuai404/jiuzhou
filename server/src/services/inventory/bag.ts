@@ -1120,6 +1120,125 @@ export const expandInventory = async (
 // 整理背包（重新排列物品）
 // ============================================
 
+type SortInventoryRow = {
+  id: number;
+  item_def_id: string;
+  qty: number;
+  quality: string | null;
+  quality_rank: number | null;
+  bind_type: string;
+  metadata_text: string | null;
+  location_slot: number | null;
+};
+
+type SortInventoryCompactedRow = SortInventoryRow & {
+  category: string | null;
+  subCategory: string | null;
+  resolvedQualityRank: number;
+};
+
+type SortInventoryQtyUpdate = {
+  itemId: number;
+  nextQty: number;
+};
+
+/**
+ * 整理阶段普通堆叠实例归并器
+ *
+ * 作用：
+ * 1. 做什么：在一键整理前，先把“普通可堆叠实例”按统一口径合并，减少同类物品占格。
+ * 2. 做什么：把“哪些实例允许自动堆叠”的判定集中到这里，避免整理逻辑里到处散落同样条件。
+ * 3. 不做什么：不负责数据库写入、不负责槽位排序，也不改变带 metadata/品质信息的特殊实例。
+ *
+ * 输入/输出：
+ * - 输入：当前背包/仓库内已锁定的实例列表，以及每个 `item_def_id` 对应的 `stack_max`。
+ * - 输出：归并后的实例列表、需要更新数量的实例计划、以及需要删除的空实例 ID。
+ *
+ * 数据流：
+ * - sortInventory 先查出当前位置全部实例；
+ * - 本函数只在内存里按 `item_def_id + bind_type` 合并普通堆叠实例；
+ * - sortInventory 再统一执行数量更新、删除空实例、最后重排槽位。
+ *
+ * 关键边界条件与坑点：
+ * 1. 仅 `metadata/quality/quality_rank` 都为空的普通实例允许自动堆叠，和统一入包口径保持一致，避免特殊实例被误合并。
+ * 2. 归并时优先保留数量更大的旧实例，尽量减少写操作与实例 ID 抖动，降低整理后的列表波动。
+ */
+const compactRowsForSortStacking = (
+  rows: SortInventoryRow[],
+  stackMaxByItemDefId: Map<string, number>,
+): {
+  compactedRows: SortInventoryRow[];
+  qtyUpdates: SortInventoryQtyUpdate[];
+  deleteIds: number[];
+} => {
+  const compactedRows: SortInventoryRow[] = [];
+  const qtyUpdates: SortInventoryQtyUpdate[] = [];
+  const deleteIds: number[] = [];
+  const stackableGroups = new Map<string, SortInventoryRow[]>();
+
+  for (const row of rows) {
+    const stackMax = stackMaxByItemDefId.get(String(row.item_def_id || "").trim()) ?? 1;
+    const canAutoStack =
+      stackMax > 1 &&
+      row.metadata_text === null &&
+      row.quality === null &&
+      row.quality_rank === null;
+    if (!canAutoStack) {
+      compactedRows.push(row);
+      continue;
+    }
+
+    const groupKey = `${String(row.item_def_id || "").trim()}::${String(row.bind_type || "none").trim()}`;
+    const group = stackableGroups.get(groupKey);
+    if (group) {
+      group.push(row);
+      continue;
+    }
+    stackableGroups.set(groupKey, [row]);
+  }
+
+  for (const groupRows of stackableGroups.values()) {
+    const anchorRow = groupRows[0];
+    const stackMax = stackMaxByItemDefId.get(String(anchorRow.item_def_id || "").trim()) ?? 1;
+    const sortedGroupRows = [...groupRows].sort((left, right) => {
+      const qtyCompare = (Number(right.qty) || 0) - (Number(left.qty) || 0);
+      if (qtyCompare !== 0) return qtyCompare;
+      return Number(left.id) - Number(right.id);
+    });
+
+    let remainingQty = sortedGroupRows.reduce(
+      (sum, row) => sum + Math.max(0, Number(row.qty) || 0),
+      0,
+    );
+
+    for (const row of sortedGroupRows) {
+      if (remainingQty <= 0) {
+        deleteIds.push(Number(row.id));
+        continue;
+      }
+
+      const nextQty = Math.min(stackMax, remainingQty);
+      remainingQty -= nextQty;
+      if (nextQty !== row.qty) {
+        qtyUpdates.push({
+          itemId: Number(row.id),
+          nextQty,
+        });
+      }
+      compactedRows.push({
+        ...row,
+        qty: nextQty,
+      });
+    }
+  }
+
+  return {
+    compactedRows,
+    qtyUpdates,
+    deleteIds,
+  };
+};
+
 export const sortInventory = async (
   characterId: number,
   location: SlottedInventoryLocation = "bag",
@@ -1130,7 +1249,15 @@ export const sortInventory = async (
   const capacity = getSlottedCapacity(info, location);
   const itemResult = await query(
     `
-      SELECT id, item_def_id, qty, quality_rank, location_slot
+      SELECT
+        id,
+        item_def_id,
+        qty,
+        quality,
+        quality_rank,
+        bind_type,
+        metadata::text AS metadata_text,
+        location_slot
       FROM item_instance
       WHERE owner_character_id = $1 AND location = $2
       FOR UPDATE
@@ -1138,26 +1265,59 @@ export const sortInventory = async (
     [characterId, location],
   );
 
-  const rows = itemResult.rows as Array<{
-    id: number;
-    item_def_id: string;
-    qty: number;
-    quality_rank: number | null;
-    location_slot: number | null;
-  }>;
-  let minExistingSlot = 0;
+  const rows = itemResult.rows as SortInventoryRow[];
+  const defMap = getItemDefinitionsByIds(
+    rows.map((row) => String(row.item_def_id || "").trim()),
+  );
+  const stackMaxByItemDefId = new Map<string, number>();
   for (const row of rows) {
+    const itemDefId = String(row.item_def_id || "").trim();
+    if (stackMaxByItemDefId.has(itemDefId)) {
+      continue;
+    }
+    const itemDef = defMap.get(itemDefId);
+    stackMaxByItemDefId.set(
+      itemDefId,
+      Math.max(1, Math.floor(Number(itemDef?.stack_max) || 1)),
+    );
+  }
+  const { compactedRows, qtyUpdates, deleteIds } = compactRowsForSortStacking(
+    rows,
+    stackMaxByItemDefId,
+  );
+
+  for (const { itemId, nextQty } of qtyUpdates) {
+    await query(
+      `
+        UPDATE item_instance
+        SET qty = $1,
+            updated_at = NOW()
+        WHERE id = $2 AND owner_character_id = $3
+      `,
+      [nextQty, itemId, characterId],
+    );
+  }
+
+  for (const deleteId of deleteIds) {
+    await query(
+      `
+        DELETE FROM item_instance
+        WHERE id = $1 AND owner_character_id = $2
+      `,
+      [deleteId, characterId],
+    );
+  }
+
+  let minExistingSlot = 0;
+  for (const row of compactedRows) {
     const slot = Number(row.location_slot);
     if (Number.isInteger(slot) && slot < minExistingSlot) {
       minExistingSlot = slot;
     }
   }
-  const tempSlotStart = minExistingSlot - rows.length - 1;
+  const tempSlotStart = minExistingSlot - compactedRows.length - 1;
 
-  const defMap = getItemDefinitionsByIds(
-    rows.map((row) => String(row.item_def_id || "").trim()),
-  );
-  const sortableRows = rows.map((row) => {
+  const sortableRows: SortInventoryCompactedRow[] = compactedRows.map((row) => {
     const itemDef = defMap.get(String(row.item_def_id || "").trim()) ?? null;
     const category = itemDef?.category ? String(itemDef.category) : null;
     const subCategory = itemDef?.sub_category
