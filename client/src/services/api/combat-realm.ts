@@ -27,6 +27,21 @@ export type BattleUnitDto = {
   lingqi: number;
   currentAttrs: { max_qixue: number; max_lingqi: number; realm?: string };
   isAlive: boolean;
+  buffs: BattleBuffDto[];
+};
+
+export type BattleBuffDto = {
+  id: string;
+  buffDefId: string;
+  name: string;
+  type: 'buff' | 'debuff';
+  category: string;
+  sourceUnitId: string;
+  remainingDuration: number;
+  stacks: number;
+  maxStacks: number;
+  control?: string;
+  healForbidden?: boolean;
 };
 
 export type BattleActionTargetHitDto = {

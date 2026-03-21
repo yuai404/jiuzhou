@@ -1,1 +1,1 @@
-export type { BattleUnit } from './index';
+export type { BattleUnit } from './types';

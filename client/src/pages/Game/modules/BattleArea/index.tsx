@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { App, Button, Tag } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { App, Button } from 'antd';
 import {
   abandonBattle,
   battleAction,
@@ -7,6 +7,7 @@ import {
   SILENT_API_REQUEST_CONFIG,
   startPveBattleSession,
   toUnifiedApiError,
+  type BattleUnitDto,
   type BattleSessionSnapshotDto,
   type BattleStartResponse,
   type BattleLogEntryDto,
@@ -15,7 +16,6 @@ import {
 } from '../../../../services/api';
 import type { BattleRealtimePayload } from '../../../../services/battleRealtime';
 import { gameSocket, type BattleCooldownState } from '../../../../services/gameSocket';
-import PlayerName from '../../shared/PlayerName';
 import { normalizeBattleSessionFromRealtime } from '../../shared/battleSessionRealtime';
 import {
   FAST_BATTLE_LOG_SYSTEM_LINES,
@@ -30,19 +30,10 @@ import {
   shouldAutoStartLocalBattle,
 } from './localStartResolver';
 import { isCooldownDrivenAdvanceMode, type BattleAdvanceMode } from './autoNextPolicy';
+import { BattleTeamPanel } from './BattleTeamPanel';
+import type { BattleFloatText, BattleUnit } from './types';
+export type { BattleUnit } from './types';
 import './index.scss';
-
-export type BattleUnit = {
-  id: string;
-  name: string;
-  tag?: string;
-  hp: number;
-  maxHp: number;
-  qi: number;
-  maxQi: number;
-  isPlayer?: boolean;
-  monthCardActive?: boolean;
-};
 
 interface BattleAreaProps {
   enemies: BattleUnit[];
@@ -65,7 +56,6 @@ interface BattleAreaProps {
   onSessionChange?: (session: BattleSessionSnapshotDto | null) => void;
 }
 
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 const DEFAULT_BATTLE_START_COOLDOWN_MS = 3000;
 
 /**
@@ -119,14 +109,8 @@ const getBattleStartFailurePayload = (
   return payload;
 };
 
-const toPercent = (value: number, total: number) => {
-  if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return 0;
-  return clamp((value / total) * 100, 0, 100);
-};
-
 type BattleResult = 'idle' | 'running' | 'win' | 'lose' | 'draw';
 type BattleStartupStatus = 'none' | 'preparing' | 'cooldown';
-type FloatText = { id: string; unitId: string; value: number; dx: number; createdAt: number };
 
 let floatIdSeed = 0;
 const createFloatId = () => {
@@ -143,86 +127,11 @@ const calcTeamInfoFromState = (state: BattleStateDto | null | undefined): { isTe
   return { isTeamBattle: teamMemberCount > 1, teamMemberCount };
 };
 
-const StatBar: React.FC<{
-  value: number;
-  total: number;
-  tone: 'hp' | 'qi';
-}> = ({ value, total, tone }) => {
-  const percent = toPercent(value, total);
-  return (
-    <div className={`battle-bar battle-bar-${tone}`}>
-      <div className="battle-bar-track">
-        <div className="battle-bar-fill" style={{ width: `${percent}%` }} />
-      </div>
-      <div className="battle-bar-text">
-        {Math.max(0, Math.floor(value))}/{Math.max(0, Math.floor(total))}
-      </div>
-    </div>
-  );
-};
-
-const UnitCard: React.FC<{
-  unit: BattleUnit;
-  active?: boolean;
-  floats?: FloatText[];
-  selected?: boolean;
-  onClick?: () => void;
-}> = ({ unit, active, floats, selected, onClick }) => {
-  const dead = (Number(unit.hp) || 0) <= 0;
-  return (
-    <div
-      className={`battle-unit-card ${active ? 'active' : ''} ${selected ? 'selected' : ''} ${dead ? 'dead' : ''}`}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (!onClick) return;
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        onClick();
-      }}
-    >
-      <div className="battle-floats">
-        {(floats ?? []).map((f) => (
-          <div
-            key={f.id}
-            className={`battle-float ${f.value < 0 ? 'neg' : 'pos'}`}
-            style={{ '--dx': `${f.dx}px` } as CSSProperties}
-          >
-            {f.value < 0 ? `${f.value}` : `+${f.value}`}
-          </div>
-        ))}
-      </div>
-      <div className="battle-unit-head">
-        <div className="battle-unit-name">
-          <PlayerName
-            name={unit.name}
-            monthCardActive={unit.monthCardActive}
-          />
-          {unit.isPlayer ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>队友</Tag> : null}
-        </div>
-        <div className="battle-unit-tag">{unit.tag || '凡人'}</div>
-      </div>
-      <div className="battle-unit-bars">
-        <StatBar value={unit.hp} total={unit.maxHp} tone="hp" />
-        <StatBar value={unit.qi} total={unit.maxQi} tone="qi" />
-      </div>
-    </div>
-  );
-};
-
-const toClientUnit = (u: {
-  id: string;
-  name: string;
-  qixue: number;
-  lingqi: number;
-  currentAttrs: { max_qixue: number; max_lingqi: number; realm?: string };
-  type: 'player' | 'monster' | 'npc' | 'summon' | 'partner';
-  monthCardActive?: boolean;
-}): BattleUnit => {
+const toClientUnit = (u: BattleUnitDto): BattleUnit => {
   return {
     id: u.id,
     name: u.name,
+    unitType: u.type,
     tag: u.currentAttrs?.realm || (u.type === 'monster' ? '凡兽' : u.type === 'partner' ? '伙伴' : '凡人'),
     hp: Number(u.qixue) || 0,
     maxHp: Number(u.currentAttrs?.max_qixue) || 0,
@@ -230,6 +139,7 @@ const toClientUnit = (u: {
     maxQi: Number(u.currentAttrs?.max_lingqi) || 0,
     isPlayer: u.type === 'player',
     monthCardActive: u.monthCardActive,
+    buffs: u.buffs,
   };
 };
 
@@ -347,7 +257,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
   const [battleId, setBattleId] = useState<string | null>(null);
   const [selectedEnemyId, setSelectedEnemyId] = useState<string | null>(null);
   const [selectedAllyId, setSelectedAllyId] = useState<string | null>(null);
-  const [floats, setFloats] = useState<FloatText[]>([]);
+  const [floats, setFloats] = useState<BattleFloatText[]>([]);
   const [result, setResult] = useState<BattleResult>('idle');
   const [startupStatus, setStartupStatus] = useState<BattleStartupStatus>('none');
   const [isTeamBattle, setIsTeamBattle] = useState(false);
@@ -1382,7 +1292,7 @@ const BattleArea: React.FC<BattleAreaProps> = ({
   const floatsByUnit = useMemo(() => {
     const now = Date.now();
     const valid = floats.filter((f) => now - f.createdAt < 1200);
-    const map: Record<string, FloatText[]> = {};
+    const map: Record<string, BattleFloatText[]> = {};
     valid.forEach((f) => {
       (map[f.unitId] ||= []).push(f);
     });
@@ -1411,43 +1321,27 @@ const BattleArea: React.FC<BattleAreaProps> = ({
       </div>
 
       <div className="battle-area-panels">
-        <section className="battle-panel battle-panel-enemy">
-          <div className="battle-panel-inner">
-            <div className="battle-units">
-              {(enemyUnits ?? []).map((u) => (
-                <UnitCard
-                  key={u.id}
-                  unit={u}
-                  active={activeUnitId === u.id}
-                  selected={selectedEnemyId === u.id}
-                  floats={floatsByUnit[u.id]}
-                  onClick={() => setSelectedEnemyId((prev) => (prev === u.id ? null : u.id))}
-                />
-              ))}
-              {(enemyUnits ?? []).length === 0 ? <div className="battle-empty">{enemyEmptyText}</div> : null}
-            </div>
-          </div>
-        </section>
+        <BattleTeamPanel
+          team="enemy"
+          units={enemyUnits}
+          emptyText={enemyEmptyText}
+          activeUnitId={activeUnitId}
+          selectedUnitId={selectedEnemyId}
+          floatsByUnit={floatsByUnit}
+          onToggleUnit={(unitId) => setSelectedEnemyId((prev) => (prev === unitId ? null : unitId))}
+        />
 
         <div className="battle-divider" />
 
-        <section className="battle-panel battle-panel-ally">
-          <div className="battle-panel-inner">
-            <div className="battle-units">
-              {(allyUnits ?? []).map((u) => (
-                <UnitCard
-                  key={u.id}
-                  unit={u}
-                  active={activeUnitId === u.id}
-                  selected={selectedAllyId === u.id}
-                  floats={floatsByUnit[u.id]}
-                  onClick={() => setSelectedAllyId((prev) => (prev === u.id ? null : u.id))}
-                />
-              ))}
-              {(allyUnits ?? []).length === 0 ? <div className="battle-empty">{allyEmptyText}</div> : null}
-            </div>
-          </div>
-        </section>
+        <BattleTeamPanel
+          team="ally"
+          units={allyUnits}
+          emptyText={allyEmptyText}
+          activeUnitId={activeUnitId}
+          selectedUnitId={selectedAllyId}
+          floatsByUnit={floatsByUnit}
+          onToggleUnit={(unitId) => setSelectedAllyId((prev) => (prev === unitId ? null : unitId))}
+        />
       </div>
     </div>
   );
