@@ -29,3 +29,38 @@ export const normalizeBattleSessionFromRealtime = (params: {
   }
   return params.session ?? null;
 };
+
+/**
+ * 判断 Game 父层是否应直接同步当前持有战斗的终态 session。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把“当前 battle 进入终态时，父层是否也要吃到 session 变更”收口成单一判定，避免 `Game` 在 `battle_finished` / `battle_abandoned` 分支各写一套。
+ * 2. 做什么：确保普通地图战斗即使正在由 BattleArea 展示，父层仍会同步 `waiting_transition` session，从而继续按最新 `canAdvance/nextAction` 计算自动推进模式。
+ * 3. 不做什么：不直接改 React state、不决定视图切换，也不处理非终态 realtime。
+ *
+ * 输入/输出：
+ * - 输入：终态 realtime 的 kind、battleId、父层当前持有的 session battleId、当前视图模式，以及是否附带 session。
+ * - 输出：是否应由父层立刻消费这条终态 session 更新。
+ *
+ * 数据流/状态流：
+ * - socket `battle:update` 终态消息 -> 本函数 -> Game 父层同步 activeBattleSession。
+ *
+ * 关键边界条件与坑点：
+ * 1. 只允许更新“当前持有中的同一场 battle”，避免旁路终态消息误覆盖当前 session。
+ * 2. `battle_abandoned` 即使没有 session 载荷，也必须允许父层清空当前会话；`battle_finished` 则必须显式带 session 才能覆盖。
+ */
+export const shouldApplyTerminalRealtimeSessionToOwnedBattle = (params: {
+  kind: BattleRealtimeKind;
+  battleId: string;
+  currentSessionBattleId: string | null | undefined;
+  viewMode: 'map' | 'battle';
+  hasSessionPayload: boolean;
+}): boolean => {
+  const currentSessionBattleId = params.currentSessionBattleId ?? null;
+  if (!currentSessionBattleId) return false;
+  if (params.viewMode !== 'battle') return false;
+  if (params.battleId !== currentSessionBattleId) return false;
+  if (params.kind === 'battle_abandoned') return true;
+  if (params.kind !== 'battle_finished') return false;
+  return params.hasSessionPayload;
+};

@@ -33,6 +33,7 @@ import {
 } from '../characterComputedService.js';
 import {
   createBattleSessionRecord,
+  deleteBattleSessionRecord,
   listBattleSessionRecords,
   toBattleSessionSnapshot,
   updateBattleSessionRecord,
@@ -47,6 +48,7 @@ import { PLAYER_DRIVEN_PVE_BATTLE_START_POLICY } from '../battle/shared/startPol
 import { startResolvedPVEBattleByPolicy } from '../battle/pve.js';
 import { resolveOrderedMonsters } from '../battle/shared/monsters.js';
 import { resolveTowerFloor } from './algorithm.js';
+import { canReuseTowerSession, pickLatestActiveTowerSession } from './activeSession.js';
 import {
   deleteTowerBattleRuntime,
   getTowerBattleRuntime,
@@ -409,6 +411,17 @@ const createTowerBattleForFloor = async (params: {
   };
 };
 
+const loadLiveBattleState = async (battleId: string | null): Promise<BattleState | null> => {
+  if (!battleId) {
+    return null;
+  }
+  const stateRes = await getBattleState(battleId);
+  if (!stateRes.success || !stateRes.data?.state) {
+    return null;
+  }
+  return stateRes.data.state as BattleState;
+};
+
 export const getTowerOverview = async (userId: number): Promise<{
   success: true;
   data: TowerOverviewDto;
@@ -426,16 +439,20 @@ export const getTowerOverview = async (userId: number): Promise<{
       };
     }
     const progress = await loadTowerProgressByCharacterId(characterId);
-    const activeSession = listBattleSessionRecords()
-      .filter((session) => session.ownerUserId === userId && session.type === 'tower')
-      .filter((session) => session.status === 'running' || session.status === 'waiting_transition')
-      .sort((left, right) => right.updatedAt - left.updatedAt)[0] ?? null;
+    const activeSession = pickLatestActiveTowerSession(listBattleSessionRecords(), userId);
+    const activeSessionState = activeSession
+      ? await loadLiveBattleState(activeSession.currentBattleId)
+      : null;
+    const visibleActiveSession =
+      activeSession && canReuseTowerSession(activeSession, activeSessionState)
+        ? toBattleSessionSnapshot(activeSession)
+        : null;
 
     return {
       success: true,
       data: buildTowerOverviewDto({
         progress,
-        activeSession: activeSession ? toBattleSessionSnapshot(activeSession) : null,
+        activeSession: visibleActiveSession,
         characterId,
       }),
     };
@@ -452,31 +469,26 @@ export const startTowerChallenge = async (userId: number): Promise<TowerStartRes
     const access = await assertTowerEntryAllowed(userId, {
       skipInBattleCheck: true,
     });
-    const existingTowerSession = listBattleSessionRecords()
-      .filter((session) => session.ownerUserId === userId && session.type === 'tower')
-      .filter((session) => session.status === 'running' || session.status === 'waiting_transition')
-      .sort((left, right) => right.updatedAt - left.updatedAt)[0] ?? null;
+    const existingTowerSession = pickLatestActiveTowerSession(listBattleSessionRecords(), userId);
 
     if (existingTowerSession) {
-      const stateRes =
-        existingTowerSession.currentBattleId
-          ? await getBattleState(existingTowerSession.currentBattleId)
-          : null;
-      return {
-        success: true,
-        data: {
-          session: toBattleSessionSnapshot(existingTowerSession),
-          ...(stateRes?.success && stateRes.data?.state
-            ? { state: stateRes.data.state as BattleState }
-            : {}),
-        },
-      };
+      const existingState = await loadLiveBattleState(existingTowerSession.currentBattleId);
+      if (canReuseTowerSession(existingTowerSession, existingState)) {
+        return {
+          success: true,
+          data: {
+            session: toBattleSessionSnapshot(existingTowerSession),
+            state: existingState,
+          },
+        };
+      }
+      deleteBattleSessionRecord(existingTowerSession.sessionId);
     }
 
     const progress = await loadTowerProgressByCharacterId(access.characterId);
     if (progress.currentRunId && progress.currentBattleId) {
-      const restoredState = await getBattleState(progress.currentBattleId);
-      if (restoredState.success && restoredState.data?.state && progress.currentFloor) {
+      const restoredState = await loadLiveBattleState(progress.currentBattleId);
+      if (restoredState && progress.currentFloor) {
         const restoredSession = createTowerSessionRecord({
           ownerUserId: userId,
           runId: progress.currentRunId,
@@ -491,7 +503,7 @@ export const startTowerChallenge = async (userId: number): Promise<TowerStartRes
           success: true,
           data: {
             session: toBattleSessionSnapshot(restoredSession),
-            state: restoredState.data.state as BattleState,
+            state: restoredState,
           },
         };
       }

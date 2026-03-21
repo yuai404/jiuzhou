@@ -109,6 +109,10 @@ import {
 import { PARTNER_FEATURE_UNLOCK_HINT, hasCharacterFeature } from './shared/featureUnlocks';
 import { formatMainQuestRewardTexts } from './shared/mainQuestRewardText';
 import { shouldActivateBattleSessionView } from './shared/battleSessionRestore';
+import {
+  normalizeBattleSessionFromRealtime,
+  shouldApplyTerminalRealtimeSessionToOwnedBattle,
+} from './shared/battleSessionRealtime';
 import { formatTaskRewardsToText } from './shared/taskRewardText';
 import {
   resolveRealtimeBattleViewSyncMode,
@@ -1842,6 +1846,24 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       const currentSessionBattleId = activeBattleSessionRef.current?.currentBattleId ?? null;
       if (!battleId) return;
 
+      if (shouldApplyTerminalRealtimeSessionToOwnedBattle({
+        kind,
+        battleId,
+        currentSessionBattleId,
+        viewMode: viewModeRef.current,
+        hasSessionPayload: Boolean(data.session),
+      })) {
+        applyBattleSessionChange(
+          normalizeBattleSessionFromRealtime({
+            kind,
+            session: data.session ?? null,
+          }),
+          {
+            collapseTransientBattleView: true,
+          },
+        );
+      }
+
       if (kind === 'battle_started' || kind === 'battle_state') {
         clearBattleAutoCloseTimer();
         if (battleId === currentSessionBattleId && viewModeRef.current === 'battle') {
@@ -1896,7 +1918,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       clearBattleAutoCloseTimer();
       unsub();
     };
-  }, [applyBattleViewUiState, clearBattleAutoCloseTimer, restoreBattleSessionContext, syncRealtimeBattleView]);
+  }, [applyBattleSessionChange, applyBattleViewUiState, clearBattleAutoCloseTimer, restoreBattleSessionContext, syncRealtimeBattleView]);
 
   useEffect(() => {
     if (!characterId) return;

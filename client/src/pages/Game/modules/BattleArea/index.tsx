@@ -34,6 +34,10 @@ import {
   shouldAutoStartLocalBattle,
 } from './localStartResolver';
 import { isCooldownDrivenAdvanceMode, type BattleAdvanceMode } from './autoNextPolicy';
+import {
+  buildBattleCooldownReplayKey,
+  shouldReplayLatestBattleCooldown,
+} from './battleCooldownReplay';
 import { BattleTeamPanel } from './BattleTeamPanel';
 import type { BattleFloatText, BattleUnit } from './types';
 export type { BattleUnit } from './types';
@@ -278,6 +282,7 @@ const BattleAreaComponent: React.FC<BattleAreaProps> = ({
   const floatDxIndexRef = useRef(0);
   const floatTimerSetRef = useRef<Set<number>>(new Set());
   const nextingRef = useRef(false);
+  const lastHandledCooldownKeyRef = useRef('');
   const battleIdRef = useRef<string | null>(null);
   const battleStateRef = useRef<BattleStateDto | null>(null);
   const battleLogsRef = useRef<BattleLogEntryDto[]>([]);
@@ -298,6 +303,7 @@ const BattleAreaComponent: React.FC<BattleAreaProps> = ({
     () => resolveLocalBattleMonsterIds(enemies),
     [enemies],
   );
+  const currentCharacterId = gameSocket.getCharacter()?.id ?? null;
 
   useEffect(() => {
     const handleBattleAvatarVisibilityChange = (event: Event) => {
@@ -856,67 +862,89 @@ const BattleAreaComponent: React.FC<BattleAreaProps> = ({
     void startBattle(localBattleMonsterIds, { retryOnCooldown: true, silentCooldown: true });
   }, [allowLocalStart, localBattleMonsterIds, resolvedExternalBattleId, startBattle]);
 
-  // 监听服务端冷却结束推送
-  useEffect(() => {
-    const handleCooldownEvent = (detail: BattleCooldownState) => {
-      const myCharacterId = gameSocket.getCharacter()?.id;
+  const consumeBattleCooldown = useCallback((detail: BattleCooldownState) => {
+    if (detail.characterId !== currentCharacterId) {
+      return;
+    }
+    const replayKey = buildBattleCooldownReplayKey(detail);
+    if (replayKey && replayKey === lastHandledCooldownKeyRef.current) {
+      return;
+    }
+    lastHandledCooldownKeyRef.current = replayKey;
 
-      if (detail.characterId === myCharacterId) {
-        if (detail.kind === 'sync' && detail.remainingMs > 0) {
-          const currentState = battleStateRef.current;
-          const isFinishedWin = currentState?.phase === 'finished' && currentState.result === 'attacker_win';
-          const remainingMs = Math.max(0, Math.floor(detail.remainingMs));
-          battleCooldownActiveRef.current = true;
-          if (resolvedAllowAutoNext && finishedBattleAdvanceMode === 'auto_local_retry' && isFinishedWin) {
-            activateCooldownWait(
-              remainingMs,
-              true,
-              { kind: 'restart_local', monsterIds: [...lastMonsterIdsRef.current] },
-              `冷却中，${(remainingMs / 1000).toFixed(2)}秒后自动重试`,
-            );
-            return;
-          }
-          if (resolvedAllowAutoNext && finishedBattleAdvanceMode === 'auto_session_cooldown' && isFinishedWin) {
-            activateCooldownWait(
-              remainingMs,
-              true,
-              null,
-              `冷却中，${(remainingMs / 1000).toFixed(2)}秒后自动继续`,
-            );
-            return;
-          }
-          clearPendingCooldownAction();
-          setWaitingForCooldown(true);
-          setStartupStatus('cooldown');
-          return;
-        }
-
-        const pendingAction = pendingCooldownActionRef.current;
-        battleCooldownActiveRef.current = false;
-        clearPendingCooldownAction();
-        setWaitingForCooldown(false);
-        setStartupStatus('none');
-        if (!resolvedAllowAutoNext || !pendingAction) {
-          return;
-        }
-        if (pendingAction.kind === 'restart_local') {
-          void startBattle(pendingAction.monsterIds, { retryOnCooldown: true, silentCooldown: true });
-          return;
-        }
-        if (pendingAction.kind === 'advance_session' && onNext && !nextingRef.current) {
-          void onNext();
-        }
+    if (detail.kind === 'sync' && detail.remainingMs > 0) {
+      const currentState = battleStateRef.current;
+      const isFinishedWin = currentState?.phase === 'finished' && currentState.result === 'attacker_win';
+      const remainingMs = Math.max(0, Math.floor(detail.remainingMs));
+      battleCooldownActiveRef.current = true;
+      if (resolvedAllowAutoNext && finishedBattleAdvanceMode === 'auto_local_retry' && isFinishedWin) {
+        activateCooldownWait(
+          remainingMs,
+          true,
+          { kind: 'restart_local', monsterIds: [...lastMonsterIdsRef.current] },
+          `冷却中，${(remainingMs / 1000).toFixed(2)}秒后自动重试`,
+        );
+        return;
       }
-    };
-    return gameSocket.onBattleCooldown(handleCooldownEvent);
+      if (resolvedAllowAutoNext && finishedBattleAdvanceMode === 'auto_session_cooldown' && isFinishedWin) {
+        activateCooldownWait(
+          remainingMs,
+          true,
+          null,
+          `冷却中，${(remainingMs / 1000).toFixed(2)}秒后自动继续`,
+        );
+        return;
+      }
+      clearPendingCooldownAction();
+      setWaitingForCooldown(true);
+      setStartupStatus('cooldown');
+      return;
+    }
+
+    const pendingAction = pendingCooldownActionRef.current;
+    battleCooldownActiveRef.current = false;
+    clearPendingCooldownAction();
+    setWaitingForCooldown(false);
+    setStartupStatus('none');
+    if (!resolvedAllowAutoNext || !pendingAction) {
+      return;
+    }
+    if (pendingAction.kind === 'restart_local') {
+      void startBattle(pendingAction.monsterIds, { retryOnCooldown: true, silentCooldown: true });
+      return;
+    }
+    if (pendingAction.kind === 'advance_session' && onNext && !nextingRef.current) {
+      void onNext();
+    }
   }, [
     activateCooldownWait,
     clearPendingCooldownAction,
+    currentCharacterId,
     finishedBattleAdvanceMode,
     onNext,
     resolvedAllowAutoNext,
     startBattle,
   ]);
+
+  // 监听服务端冷却结束推送
+  useEffect(() => {
+    return gameSocket.onBattleCooldown(consumeBattleCooldown);
+  }, [consumeBattleCooldown]);
+
+  useEffect(() => {
+    const latestCooldownState = gameSocket.getLatestBattleCooldown();
+    if (!latestCooldownState) {
+      return;
+    }
+    if (!shouldReplayLatestBattleCooldown({
+      cooldownState: latestCooldownState,
+      characterId: currentCharacterId,
+      lastHandledKey: lastHandledCooldownKeyRef.current,
+    })) {
+      return;
+    }
+    consumeBattleCooldown(latestCooldownState);
+  }, [consumeBattleCooldown, currentCharacterId]);
 
   useEffect(() => {
     if (!resolvedExternalBattleId) return;
