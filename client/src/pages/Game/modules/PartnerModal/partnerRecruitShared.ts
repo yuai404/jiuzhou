@@ -3,7 +3,7 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：集中定义伙伴招募红点、主视图、冷却文案与按钮可用态，避免弹窗组件里散落同类判断。
- * 2. 做什么：把服务端 `currentJob/hasUnreadResult/resultStatus/cooldown*` 收敛成稳定的前端展示语义。
+ * 2. 做什么：把服务端 `currentJob`、`hasUnreadResult`、`resultStatus`、`cooldown*`、`qualityRates` 收敛成稳定的前端展示语义。
  * 3. 不做什么：不发请求、不持有 React 状态，也不直接渲染 DOM。
  *
  * 输入/输出：
@@ -15,10 +15,11 @@
  *
  * 关键边界条件与坑点：
  * 1. `pending` 只表示生成中，不能亮红点；否则玩家会把“处理中”误以为“有结果待看”。
- * 2. 生成按钮禁用与冷却提示必须共用同一组纯函数，避免展示和点击拦截不一致。
+ * 2. 生成按钮禁用、冷却提示与品质概率文案必须共用同一组纯函数，避免展示和点击拦截不一致。
  */
 import type {
   PartnerRecruitJobDto,
+  PartnerRecruitQualityRateDto,
   PartnerRecruitResultStatusDto,
   PartnerRecruitStatusResponse,
 } from '../../../../services/api';
@@ -56,6 +57,11 @@ export type PartnerRecruitCooldownDisplay = {
   statusText: string;
   ruleText: string;
   bypassedByCustomBaseModel: boolean;
+};
+
+export type PartnerRecruitQualityRateItem = {
+  quality: PartnerRecruitQualityRateDto['quality'];
+  rateText: string;
 };
 
 export const buildPartnerRecruitIndicator = (
@@ -126,6 +132,16 @@ export const isPartnerRecruitCoolingDown = (
 export const formatPartnerRecruitCooldownRemaining = (
   cooldownRemainingSeconds: number,
 ): string => formatGameCooldownRemaining(cooldownRemainingSeconds);
+
+export const resolvePartnerRecruitQualityRateItems = (
+  status: PartnerRecruitStatusData | null,
+): PartnerRecruitQualityRateItem[] => {
+  if (!status) return [];
+  return status.qualityRates.map((entry) => ({
+    quality: entry.quality,
+    rateText: `${entry.rate}%`,
+  }));
+};
 
 export const shouldPartnerRecruitBypassCooldown = (
   status: PartnerRecruitStatusData | null,

@@ -20,6 +20,7 @@
 import type { PartnerRecruitPreviewDto } from './partnerRecruitJobShared.js';
 import type { PartnerRecruitUnlockState } from './partnerRecruitUnlock.js';
 import { PARTNER_RECRUIT_CUSTOM_BASE_MODEL_MAX_LENGTH } from './partnerRecruitBaseModel.js';
+import type { PartnerRecruitQualityRateEntry } from './partnerRecruitRules.js';
 
 export type PartnerRecruitResultStatus = 'generated_draft' | 'failed' | null;
 
@@ -50,6 +51,7 @@ export interface PartnerRecruitStatusDto {
   currentJob: PartnerRecruitJobDto | null;
   hasUnreadResult: boolean;
   resultStatus: PartnerRecruitResultStatus;
+  qualityRates: PartnerRecruitQualityRateEntry[];
 }
 
 type BuildPartnerRecruitStatusDtoParams = {
@@ -67,6 +69,7 @@ type BuildPartnerRecruitStatusDtoParams = {
   currentJob: PartnerRecruitJobDto | null;
   hasUnreadResult: boolean;
   resultStatus: PartnerRecruitResultStatus;
+  qualityRates: PartnerRecruitQualityRateEntry[];
 };
 
 export const buildPartnerRecruitStatusDto = (
@@ -87,6 +90,7 @@ export const buildPartnerRecruitStatusDto = (
     currentJob,
     hasUnreadResult,
     resultStatus,
+    qualityRates,
   } = params;
 
   if (!unlockState.unlocked) {
@@ -106,6 +110,7 @@ export const buildPartnerRecruitStatusDto = (
       currentJob: null,
       hasUnreadResult: false,
       resultStatus: null,
+      qualityRates,
     };
   }
 
@@ -125,5 +130,6 @@ export const buildPartnerRecruitStatusDto = (
     currentJob,
     hasUnreadResult,
     resultStatus,
+    qualityRates,
   };
 };

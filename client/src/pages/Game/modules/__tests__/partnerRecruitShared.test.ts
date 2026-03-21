@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PartnerRecruitStatusDto } from '../../../../services/api/partner';
 import {
+  resolvePartnerRecruitQualityRateItems,
   resolvePartnerRecruitActionState,
   resolvePartnerRecruitCooldownDisplay,
   resolvePartnerRecruitSubmitState,
@@ -24,6 +25,12 @@ const buildRecruitStatus = (
   currentJob: null,
   hasUnreadResult: false,
   resultStatus: null,
+  qualityRates: [
+    { quality: '黄', weight: 4, rate: 40 },
+    { quality: '玄', weight: 3, rate: 30 },
+    { quality: '地', weight: 2, rate: 20 },
+    { quality: '天', weight: 1, rate: 10 },
+  ],
   ...overrides,
 });
 
@@ -76,5 +83,14 @@ describe('partnerRecruitShared', () => {
 
     expect(submitState.canSubmit).toBe(false);
     expect(submitState.disabledReason).toContain('高级招募令不足');
+  });
+
+  it('应把服务端下发的品质概率格式化为招募面板展示项', () => {
+    expect(resolvePartnerRecruitQualityRateItems(buildRecruitStatus())).toEqual([
+      { quality: '黄', rateText: '40%' },
+      { quality: '玄', rateText: '30%' },
+      { quality: '地', rateText: '20%' },
+      { quality: '天', rateText: '10%' },
+    ]);
   });
 });

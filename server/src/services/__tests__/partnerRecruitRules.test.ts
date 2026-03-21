@@ -25,6 +25,7 @@ import {
   buildPartnerRecruitPromptInput,
   buildPartnerRecruitResponseFormat,
   fillPartnerRecruitBaseAttrs,
+  resolvePartnerRecruitQualityRateEntries,
   resolvePartnerRecruitTechniqueSlotCount,
   validatePartnerRecruitDraft,
 } from '../shared/partnerRecruitRules.js';
@@ -102,6 +103,15 @@ test('resolvePartnerRecruitTechniqueSlotCount: 应按品质返回固定功法槽
   assert.equal(resolvePartnerRecruitTechniqueSlotCount('玄'), 4);
   assert.equal(resolvePartnerRecruitTechniqueSlotCount('地'), 5);
   assert.equal(resolvePartnerRecruitTechniqueSlotCount('天'), 6);
+});
+
+test('resolvePartnerRecruitQualityRateEntries: 应输出与当前权重同源的品质概率表', () => {
+  assert.deepEqual(resolvePartnerRecruitQualityRateEntries(), [
+    { quality: '黄', weight: 4, rate: 40 },
+    { quality: '玄', weight: 3, rate: 30 },
+    { quality: '地', weight: 2, rate: 20 },
+    { quality: '天', weight: 1, rate: 10 },
+  ]);
 });
 
 const buildValidDraft = (

@@ -73,6 +73,7 @@ import {
   resolvePartnerRecruitCooldownDisplay,
   resolvePartnerRecruitActionState,
   resolvePartnerRecruitPanelView,
+  resolvePartnerRecruitQualityRateItems,
   resolvePartnerRecruitSubmitState,
 } from './partnerRecruitShared';
 import { usePartnerRenameCardFlow } from './usePartnerRenameCardFlow';
@@ -327,6 +328,10 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const recruitCooldownDisplay = useMemo(
     () => resolvePartnerRecruitCooldownDisplay(recruitStatus, customBaseModelEnabled),
     [customBaseModelEnabled, recruitStatus],
+  );
+  const recruitQualityRateItems = useMemo(
+    () => resolvePartnerRecruitQualityRateItems(recruitStatus),
+    [recruitStatus],
   );
   const recruitBaseModelInputTrimmed = recruitBaseModelInput.trim();
   const recruitBaseModelInputLength = Array.from(recruitBaseModelInputTrimmed).length;
@@ -1278,6 +1283,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
 
   const renderRecruitPanel = () => {
     const shouldShowSpiritStoneCost = Boolean(recruitStatus?.unlocked) && (recruitStatus?.spiritStoneCost ?? 0) > 0;
+    const hasCustomBaseModelCapability = typeof recruitStatus?.customBaseModelMaxLength === 'number';
     return (
       <div className="partner-pane-card">
         <div className="partner-section-title">
@@ -1288,17 +1294,38 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         </div>
 
         <div className="partner-recruit-meta-grid">
-          <div className="partner-recruit-meta-card">
-            <div className="partner-stat-label">招募规则</div>
-            <div className="partner-meta">每次招募会生成一名专属伙伴预览，确认后才会正式入队。</div>
-            {typeof recruitStatus?.customBaseModelMaxLength === 'number' ? (
-              <div className="partner-meta">自定义底模默认关闭，勾选启用后需额外消耗高级招募令。</div>
-            ) : null}
+          <div className="partner-recruit-meta-card partner-recruit-summary-card">
+            <div className="partner-section-title">招募说明</div>
+            <div className="partner-recruit-summary-list">
+              <div className="partner-recruit-summary-item">
+                <div className="partner-stat-label">招募规则</div>
+                <div className="partner-meta">每次招募会生成一名专属伙伴预览，确认后才会正式入队。</div>
+                {hasCustomBaseModelCapability ? (
+                  <div className="partner-meta">自定义底模默认关闭，勾选启用后需额外消耗高级招募令。</div>
+                ) : null}
+              </div>
+              <div className="partner-recruit-summary-item">
+                <div className="partner-stat-label">冷却状态</div>
+                <div className="partner-recruit-cooldown-status">{recruitCooldownDisplay.statusText}</div>
+                <div className="partner-meta">{recruitCooldownDisplay.ruleText}</div>
+              </div>
+            </div>
           </div>
-          <div className="partner-recruit-meta-card">
-            <div className="partner-stat-label">冷却状态</div>
-            <div className="partner-meta">{recruitCooldownDisplay.statusText}</div>
-            <div className="partner-meta">{recruitCooldownDisplay.ruleText}</div>
+          <div className="partner-recruit-meta-card partner-recruit-rate-card">
+            <div className="partner-stat-label">品质概率</div>
+            {recruitQualityRateItems.length > 0 ? (
+              <div className="partner-recruit-quality-rate-list">
+                {recruitQualityRateItems.map((entry) => (
+                  <div key={entry.quality} className="partner-recruit-quality-rate-item">
+                    <Tag className={getItemQualityTagClassName(entry.quality)}>{entry.quality}品</Tag>
+                    <span className="partner-recruit-quality-rate-text">{entry.rateText}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="partner-meta">--</div>
+            )}
+            <div className="partner-meta">当前展示的是本期基础招募权重。</div>
           </div>
         </div>
 
@@ -1363,61 +1390,62 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
           </div>
         ) : null}
 
-        {recruitPanelView.kind === 'empty' ? (
-          <div className="partner-recruit-state-card">
-            <div className="partner-section-title">开始招募</div>
-            <div className="partner-meta">
-              {shouldShowSpiritStoneCost
-                ? '消耗灵石后异步生成伙伴形象、属性与天生功法。生成失败会自动退款。'
-                : '异步生成伙伴形象、属性与天生功法。'}
-            </div>
-          </div>
-        ) : null}
-
-        {recruitActionState.showGenerateButton && recruitStatus?.unlocked ? (
-          <div className="partner-recruit-state-card">
+        {recruitActionState.showGenerateButton ? (
+          <div className="partner-recruit-state-card partner-recruit-operation-card">
             <div className="partner-section-title">
-              <span>自定义底模</span>
-              <Switch
-                checked={customBaseModelEnabled}
-                onChange={setCustomBaseModelEnabled}
-                disabled={!hasCustomBaseModelToken}
-                checkedChildren="开"
-                unCheckedChildren="关"
-              />
+              <span>招募操作</span>
+              {customBaseModelEnabled ? <Tag color="geekblue">自定义底模已启用</Tag> : null}
             </div>
-            {!hasCustomBaseModelToken ? (
+            <div className="partner-recruit-operation-copy">
+              <div className="partner-stat-label">开始招募</div>
               <div className="partner-meta">
-                {recruitStatus.customBaseModelTokenItemName}不足，当前无法启用自定义底模。
+                {shouldShowSpiritStoneCost
+                  ? '消耗灵石后异步生成伙伴形象、属性与天生功法。生成失败会自动退款。'
+                  : '异步生成伙伴形象、属性与天生功法。'}
               </div>
-            ) : null}
-            {customBaseModelEnabled ? (
-              <>
-                <div className="partner-meta">
-                  需消耗 {recruitStatus.customBaseModelTokenItemName} x{recruitStatus.customBaseModelTokenCost}，留空则随机底模。
+            </div>
+            {recruitStatus?.unlocked && hasCustomBaseModelCapability ? (
+              <div className="partner-recruit-option-block">
+                <div className="partner-recruit-option-row">
+                  <div className="partner-recruit-option-copy">
+                    <div className="partner-stat-label">自定义底模</div>
+                    <div className="partner-meta">
+                      {!hasCustomBaseModelToken
+                        ? `${recruitStatus.customBaseModelTokenItemName}不足，当前无法启用自定义底模。`
+                        : `启用后需消耗 ${recruitStatus.customBaseModelTokenItemName} x${recruitStatus.customBaseModelTokenCost}，留空则随机底模。`}
+                    </div>
+                  </div>
+                  <Switch
+                    checked={customBaseModelEnabled}
+                    onChange={setCustomBaseModelEnabled}
+                    disabled={!hasCustomBaseModelToken}
+                    checkedChildren="开"
+                    unCheckedChildren="关"
+                  />
                 </div>
-                <Input
-                  value={recruitBaseModelInput}
-                  onChange={(event) => setRecruitBaseModelInput(event.target.value)}
-                  placeholder="留空则随机，例如：狐、龙、雪女"
-                  maxLength={recruitStatus.customBaseModelMaxLength}
-                  disabled={!recruitActionState.canGenerate}
-                />
-                <div className="partner-meta">
-                  当前输入 {recruitBaseModelInputLength}/{recruitStatus.customBaseModelMaxLength}
-                </div>
-                {!customBaseModelTokenEnough ? (
-                  <div className="partner-meta">
-                    {recruitStatus.customBaseModelTokenItemName}不足，当前仅有 {recruitStatus.customBaseModelTokenAvailableQty} 枚。
+                {customBaseModelEnabled ? (
+                  <div className="partner-recruit-base-model-form">
+                    <Input
+                      value={recruitBaseModelInput}
+                      onChange={(event) => setRecruitBaseModelInput(event.target.value)}
+                      placeholder="留空则随机，例如：狐、龙、雪女"
+                      maxLength={recruitStatus.customBaseModelMaxLength}
+                      disabled={!recruitActionState.canGenerate}
+                    />
+                    <div className="partner-recruit-base-model-meta">
+                      <div className="partner-meta">
+                        当前输入 {recruitBaseModelInputLength}/{recruitStatus.customBaseModelMaxLength}
+                      </div>
+                      {!customBaseModelTokenEnough ? (
+                        <div className="partner-meta">
+                          {recruitStatus.customBaseModelTokenItemName}不足，当前仅有 {recruitStatus.customBaseModelTokenAvailableQty} 枚。
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
-              </>
+              </div>
             ) : null}
-          </div>
-        ) : null}
-
-        {recruitActionState.showGenerateButton ? (
-          <>
             <div className="partner-action-row partner-recruit-action-row">
               <Button
                 type="primary"
@@ -1433,7 +1461,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
             {recruitSubmitState.disabledReason ? (
               <div className="partner-meta">{recruitSubmitState.disabledReason}</div>
             ) : null}
-          </>
+          </div>
         ) : null}
       </div>
     );

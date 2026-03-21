@@ -21,6 +21,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildPartnerRecruitStatusDto } from '../shared/partnerRecruitStatus.js';
 
+const EXPECTED_QUALITY_RATES = [
+  { quality: '黄', weight: 4, rate: 40 },
+  { quality: '玄', weight: 3, rate: 30 },
+  { quality: '地', weight: 2, rate: 20 },
+  { quality: '天', weight: 1, rate: 10 },
+] as const;
+
 test('buildPartnerRecruitStatusDto: 未开放时应返回锁定态 DTO 并清空动态状态', () => {
   const status = buildPartnerRecruitStatusDto({
     featureCode: 'partner',
@@ -49,6 +56,7 @@ test('buildPartnerRecruitStatusDto: 未开放时应返回锁定态 DTO 并清空
     },
     hasUnreadResult: true,
     resultStatus: 'failed',
+    qualityRates: [...EXPECTED_QUALITY_RATES],
   });
 
   assert.equal(status.featureCode, 'partner');
@@ -66,6 +74,7 @@ test('buildPartnerRecruitStatusDto: 未开放时应返回锁定态 DTO 并清空
   assert.equal(status.currentJob, null);
   assert.equal(status.hasUnreadResult, false);
   assert.equal(status.resultStatus, null);
+  assert.deepEqual(status.qualityRates, EXPECTED_QUALITY_RATES);
 });
 
 test('buildPartnerRecruitStatusDto: 已开放时应保留真实动态状态', () => {
@@ -98,6 +107,7 @@ test('buildPartnerRecruitStatusDto: 已开放时应保留真实动态状态', ()
     currentJob,
     hasUnreadResult: true,
     resultStatus: 'generated_draft',
+    qualityRates: [...EXPECTED_QUALITY_RATES],
   });
 
   assert.equal(status.unlocked, true);
@@ -112,4 +122,5 @@ test('buildPartnerRecruitStatusDto: 已开放时应保留真实动态状态', ()
   assert.deepEqual(status.currentJob, currentJob);
   assert.equal(status.hasUnreadResult, true);
   assert.equal(status.resultStatus, 'generated_draft');
+  assert.deepEqual(status.qualityRates, EXPECTED_QUALITY_RATES);
 });

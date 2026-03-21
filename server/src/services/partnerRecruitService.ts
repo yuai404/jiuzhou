@@ -58,6 +58,7 @@ import {
   PARTNER_RECRUIT_COOLDOWN_APPLY_JOB_STATUSES,
   PARTNER_RECRUIT_SPIRIT_STONES_COST,
   resolvePartnerRecruitQualityByWeight,
+  resolvePartnerRecruitQualityRateEntries,
   type PartnerRecruitDraft,
   type PartnerRecruitQuality,
 } from './shared/partnerRecruitRules.js';
@@ -389,6 +390,7 @@ class PartnerRecruitService {
 
     if (!unlockState.data.unlocked) {
       const cooldownState = buildPartnerRecruitCooldownState(null);
+      const qualityRates = resolvePartnerRecruitQualityRateEntries();
       return {
         success: true,
         message: '获取成功',
@@ -407,6 +409,7 @@ class PartnerRecruitService {
           currentJob: null,
           hasUnreadResult: false,
           resultStatus: null,
+          qualityRates,
         }),
       };
     }
@@ -418,6 +421,7 @@ class PartnerRecruitService {
     const cooldownState = buildPartnerRecruitCooldownState(latestCooldownStartedAt, new Date(), {
       cooldownReductionRate,
     });
+    const qualityRates = resolvePartnerRecruitQualityRateEntries();
     const preview = latestJob?.previewPartnerDefId
       ? buildGeneratedPartnerPreviewByPartnerDefId(latestJob.previewPartnerDefId)
       : null;
@@ -453,6 +457,7 @@ class PartnerRecruitService {
         currentJob: jobState.currentJob,
         hasUnreadResult: jobState.hasUnreadResult,
         resultStatus: jobState.resultStatus,
+        qualityRates,
       }),
     };
   }

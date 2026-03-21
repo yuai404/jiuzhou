@@ -105,6 +105,12 @@ export type PartnerRecruitPromptInputOptions = {
   fusionReferencePartners?: PartnerRecruitFusionReferencePartner[];
 };
 
+export type PartnerRecruitQualityRateEntry = {
+  quality: PartnerRecruitQuality;
+  weight: number;
+  rate: number;
+};
+
 const SECOND_MS = 1_000;
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 60 * MINUTE_SECONDS;
@@ -544,6 +550,34 @@ export const resolvePartnerRecruitQualityByWeight = (): PartnerRecruitQuality =>
     if (rolled <= 0) return entry.quality;
   }
   return '黄';
+};
+
+/**
+ * 伙伴招募品质概率展示表。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把伙伴招募当前真实权重转换为可直接展示的结构化概率表，避免前端再写一份常量。
+ * 2. 做什么：与 `resolvePartnerRecruitQualityByWeight` 共享同一份权重源，确保展示概率与实际抽取口径一致。
+ * 3. 不做什么：不执行随机抽取，也不引入活动/道具等额外修正逻辑。
+ *
+ * 输入/输出：
+ * - 输入：无。
+ * - 输出：按品质顺序排列的 `{ quality, weight, rate }` 数组，其中 `rate` 为百分比数值。
+ *
+ * 数据流/状态流：
+ * QUALITY_ROLL_TABLE -> 本函数 -> 招募状态 DTO -> 前端招募面板。
+ *
+ * 关键边界条件与坑点：
+ * 1. 概率展示必须直接从同一个权重表换算，不能手写 40/30/20/10，否则后续调权重时容易漏改 UI。
+ * 2. `rate` 当前按权重总和换算为百分比整数；若未来引入非整除权重，应只在这里统一定义展示精度。
+ */
+export const resolvePartnerRecruitQualityRateEntries = (): PartnerRecruitQualityRateEntry[] => {
+  const totalWeight = QUALITY_ROLL_TABLE.reduce((sum, entry) => sum + entry.weight, 0);
+  return QUALITY_ROLL_TABLE.map((entry) => ({
+    quality: entry.quality,
+    weight: entry.weight,
+    rate: totalWeight > 0 ? (entry.weight / totalWeight) * 100 : 0,
+  }));
 };
 
 export const getPartnerRecruitTechniqueMaxLayer = (

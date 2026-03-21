@@ -169,6 +169,12 @@ export type PartnerRecruitJobStatusDto =
 
 export type PartnerRecruitResultStatusDto = 'generated_draft' | 'failed' | null;
 
+export type PartnerRecruitQualityRateDto = {
+  quality: '黄' | '玄' | '地' | '天';
+  weight: number;
+  rate: number;
+};
+
 export type PartnerRecruitJobDto = {
   generationId: string;
   status: PartnerRecruitJobStatusDto;
@@ -196,6 +202,7 @@ export type PartnerRecruitStatusDto = {
   currentJob: PartnerRecruitJobDto | null;
   hasUnreadResult: boolean;
   resultStatus: PartnerRecruitResultStatusDto;
+  qualityRates: PartnerRecruitQualityRateDto[];
 };
 
 export type PartnerRecruitConfirmResponseDto = {
