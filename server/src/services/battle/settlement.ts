@@ -298,7 +298,7 @@ async function finishBattleCore(
     },
   };
 
-  const sessionSnapshot = markBattleSessionFinished(
+  const sessionSnapshot = await markBattleSessionFinished(
     battleId,
     result.result as "attacker_win" | "defender_win" | "draw",
   );

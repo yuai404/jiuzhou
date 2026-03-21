@@ -50,7 +50,13 @@ import type {
   BattleSessionSnapshot,
   BattleSessionStatus,
   BattleSessionType,
+  PveBattleSessionContext,
 } from './types.js';
+import {
+  deletePveResumeIntentByUserId,
+  getPveResumeIntentByUserId,
+  upsertPveResumeIntent,
+} from './pveResumeIntent.js';
 
 type BattleSessionResponse =
   | {
@@ -85,6 +91,53 @@ const getParticipantUserIdsForBattle = (
   ownerUserId: number,
 ): number[] => {
   return normalizeParticipantUserIds(battleParticipants.get(battleId) || [], ownerUserId);
+};
+
+const normalizePveMonsterIds = (monsterIds: string[]): string[] => {
+  const values = new Set<string>();
+  for (const monsterId of monsterIds) {
+    const normalized = String(monsterId ?? '').trim();
+    if (!normalized) continue;
+    values.add(normalized);
+    if (values.size >= 5) break;
+  }
+  return [...values];
+};
+
+const getPveBattleSessionContext = (
+  session: BattleSessionRecord | BattleSessionSnapshot,
+): PveBattleSessionContext | null => {
+  if (session.type !== 'pve') return null;
+  const context = session.context;
+  if (!('monsterIds' in context)) return null;
+  const monsterIds = normalizePveMonsterIds(context.monsterIds);
+  if (monsterIds.length <= 0) return null;
+  return { monsterIds };
+};
+
+const syncPveResumeIntentForSession = async (
+  session: BattleSessionRecord | BattleSessionSnapshot,
+): Promise<void> => {
+  const context = getPveBattleSessionContext(session);
+  if (!context || !session.currentBattleId) return;
+  await upsertPveResumeIntent({
+    ownerUserId: session.ownerUserId,
+    sessionId: session.sessionId,
+    monsterIds: context.monsterIds,
+    participantUserIds: normalizeParticipantUserIds(
+      session.participantUserIds,
+      session.ownerUserId,
+    ),
+    battleId: session.currentBattleId,
+    updatedAt: Date.now(),
+  });
+};
+
+const deletePveResumeIntentForSession = async (
+  session: BattleSessionRecord | BattleSessionSnapshot,
+): Promise<void> => {
+  if (session.type !== 'pve') return;
+  await deletePveResumeIntentByUserId(session.ownerUserId);
 };
 
 const createRunningSession = (params: {
@@ -276,6 +329,7 @@ export const startPVEBattleSession = async (
         .slice(0, 5),
     },
   });
+  await syncPveResumeIntentForSession(session);
   return buildSessionSuccess(session, battleRes.data.state);
 };
 
@@ -373,16 +427,34 @@ export const getCurrentBattleSessionDetail = async (
     .sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null;
 
   if (!session) {
-    return { success: true, data: { session: null } };
+    const resumeIntent = await getPveResumeIntentByUserId(userId);
+    if (!resumeIntent) {
+      return { success: true, data: { session: null } };
+    }
+    const battleRes = await startPVEBattle(userId, resumeIntent.monsterIds);
+    if (!battleRes.success || !battleRes.data?.battleId) {
+      return { success: false, message: battleRes.message || '恢复普通战斗失败' };
+    }
+    const restoredSession = createRunningSession({
+      type: 'pve',
+      ownerUserId: userId,
+      currentBattleId: String(battleRes.data.battleId),
+      context: {
+        monsterIds: normalizePveMonsterIds(resumeIntent.monsterIds),
+      },
+    });
+    await syncPveResumeIntentForSession(restoredSession);
+    return buildSessionSuccess(restoredSession, battleRes.data.state);
   }
 
   return getBattleSessionDetail(userId, session.sessionId);
 };
 
-const completeSessionReturnToMap = (
+const completeSessionReturnToMap = async (
   userId: number,
   session: BattleSessionRecord,
-): BattleSessionResponse => {
+): Promise<BattleSessionResponse> => {
+  await deletePveResumeIntentForSession(session);
   const nextStatus = getSessionFinalStatus(session.type, session.lastResult);
   const settledBattleId = session.currentBattleId;
   const snapshot = finalizeBattleSession({
@@ -442,6 +514,7 @@ export const advanceBattleSession = async (
     if (!updated) {
       return { success: false, message: '战斗会话不存在' };
     }
+    await syncPveResumeIntentForSession(updated);
     return buildSessionSuccess(updated, battleRes.data.state, false);
   }
 
@@ -499,10 +572,10 @@ export const advanceBattleSession = async (
   return completeSessionReturnToMap(userId, session);
 };
 
-export const markBattleSessionFinished = (
+export const markBattleSessionFinished = async (
   battleId: string,
   result: BattleSessionResult,
-): BattleSessionSnapshot | null => {
+): Promise<BattleSessionSnapshot | null> => {
   const snapshot = getBattleSessionSnapshotByBattleId(battleId);
   if (!snapshot) return null;
   const session = getBattleSessionRecord(snapshot.sessionId);
@@ -515,14 +588,25 @@ export const markBattleSessionFinished = (
     canAdvance: policy.canAdvance,
     lastResult: result,
   });
-  return updated ? toBattleSessionSnapshot(updated) : null;
+  if (!updated) return null;
+  if (updated.type === 'pve') {
+    if (policy.nextAction === 'advance') {
+      await syncPveResumeIntentForSession(updated);
+    } else {
+      await deletePveResumeIntentForSession(updated);
+    }
+  }
+  return toBattleSessionSnapshot(updated);
 };
 
-export const markBattleSessionAbandoned = (
+export const markBattleSessionAbandoned = async (
   battleId: string,
-): BattleSessionSnapshot | null => {
+): Promise<BattleSessionSnapshot | null> => {
   const snapshot = getBattleSessionSnapshotByBattleId(battleId);
   if (!snapshot) return null;
+  const session = getBattleSessionRecord(snapshot.sessionId);
+  if (!session) return null;
+  await deletePveResumeIntentForSession(session);
   return finalizeBattleSession({
     sessionId: snapshot.sessionId,
     patch: {
@@ -554,10 +638,10 @@ export const markBattleSessionAbandoned = (
  * 1. owner 被移除时不能只删 participantUserIds，否则 session.ownerUserId 仍可访问旧会话，必须直接 abandoned。
  * 2. participantUserIds 需要保留 owner，避免普通成员退出时把 owner 一并误删。
  */
-export const removeBattleSessionParticipantUser = (
+export const removeBattleSessionParticipantUser = async (
   battleId: string,
   userId: number,
-): BattleSessionSnapshot | null => {
+): Promise<BattleSessionSnapshot | null> => {
   const snapshot = getBattleSessionSnapshotByBattleId(battleId);
   if (!snapshot) return null;
 
@@ -579,7 +663,9 @@ export const removeBattleSessionParticipantUser = (
   const updated = updateBattleSessionRecord(session.sessionId, {
     participantUserIds: nextParticipantUserIds,
   });
-  return updated ? toBattleSessionSnapshot(updated) : null;
+  if (!updated) return null;
+  await syncPveResumeIntentForSession(updated);
+  return toBattleSessionSnapshot(updated);
 };
 
 export const getAttachedBattleSessionSnapshot = (
@@ -608,10 +694,10 @@ export const getAttachedBattleSessionSnapshot = (
  * 1. 只有 owner 才能终止 waiting_transition；普通队员即使还在 session.participantUserIds 里，也不能单方面结束整条会话。
  * 2. 广播名单必须在 abandoned 前拍下，否则 session 删除后就拿不到参与者了。
  */
-export const abandonWaitingTransitionBattleSession = (params: {
+export const abandonWaitingTransitionBattleSession = async (params: {
   battleId: string;
   userId: number;
-}): { success: true; data: { session: BattleSessionSnapshot; participantUserIds: number[] } } | { success: false; message: string } => {
+}): Promise<{ success: true; data: { session: BattleSessionSnapshot; participantUserIds: number[] } } | { success: false; message: string }> => {
   const snapshot = getBattleSessionSnapshotByBattleId(params.battleId);
   if (!snapshot) {
     return { success: false, message: '战斗不存在' };
@@ -637,7 +723,7 @@ export const abandonWaitingTransitionBattleSession = (params: {
     session.participantUserIds,
     session.ownerUserId,
   );
-  const abandonedSnapshot = markBattleSessionAbandoned(params.battleId);
+  const abandonedSnapshot = await markBattleSessionAbandoned(params.battleId);
   if (!abandonedSnapshot) {
     return { success: false, message: '战斗不存在' };
   }
@@ -708,12 +794,12 @@ export const canReceiveBattleSessionRealtime = (params: {
  * 1) 仅处理 waiting_transition 状态，不影响 running 会话（running 由活跃战斗循环处理）。
  * 2) owner 被移除时直接 abandoned 整条 session（与 removeBattleSessionParticipantUser 行为一致）。
  */
-export const cleanupUserWaitingTransitionSessions = (
+export const cleanupUserWaitingTransitionSessions = async (
   userId: number,
-): Array<{
+): Promise<Array<{
   battleId: string;
   removedUserIds: number[];
-}> => {
+}>> => {
   const sessions = listBattleSessionRecords()
     .filter((s) => s.status === 'waiting_transition')
     .filter((s) => ensureSessionAccess(userId, s));
@@ -730,11 +816,11 @@ export const cleanupUserWaitingTransitionSessions = (
         session.participantUserIds,
         session.ownerUserId,
       );
-      markBattleSessionAbandoned(battleId);
+      await markBattleSessionAbandoned(battleId);
       results.push({ battleId, removedUserIds });
       continue;
     }
-    removeBattleSessionParticipantUser(battleId, userId);
+    await removeBattleSessionParticipantUser(battleId, userId);
     results.push({ battleId, removedUserIds: [userId] });
   }
   return results;

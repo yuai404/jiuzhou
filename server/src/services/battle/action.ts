@@ -113,7 +113,7 @@ export async function abandonBattle(
   const engine = activeBattles.get(battleId);
 
   if (!engine) {
-    const waitingTransitionRes = abandonWaitingTransitionBattleSession({
+    const waitingTransitionRes = await abandonWaitingTransitionBattleSession({
       battleId,
       userId,
     });
@@ -215,7 +215,7 @@ export async function abandonBattle(
 
   try {
     const gameServer = getGameServer();
-    const sessionSnapshot = markBattleSessionAbandoned(battleId);
+    const sessionSnapshot = await markBattleSessionAbandoned(battleId);
     for (const participantUserId of participants) {
       if (!Number.isFinite(participantUserId)) continue;
       gameServer.emitToUser(

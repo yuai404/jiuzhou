@@ -66,7 +66,7 @@ async function removeUserFromTeamBattle(
   const participants = battleParticipants.get(battleId) || [];
   const nextParticipants = participants.filter((id) => id !== userId);
   setBattleParticipantsForBattle(battleId, nextParticipants);
-  removeBattleSessionParticipantUser(battleId, userId);
+  await removeBattleSessionParticipantUser(battleId, userId);
 }
 
 export async function onUserJoinTeam(userId: number): Promise<void> {
@@ -87,7 +87,7 @@ export async function onUserJoinTeam(userId: number): Promise<void> {
 
   // 加入队伍时清理残留的 waiting_transition 会话
   // （如 PVP 结束后 session 未被推进就进组，会被 getCurrentBattleSession 拉回上一场战斗）
-  cleanupUserWaitingTransitionSessions(userId);
+  await cleanupUserWaitingTransitionSessions(userId);
 }
 
 export async function onUserLeaveTeam(userId: number): Promise<void> {
@@ -122,7 +122,7 @@ export async function onUserLeaveTeam(userId: number): Promise<void> {
   // 战斗已结算但 session 仍停在 waiting_transition 时，上面的活跃战斗循环
   // 无法覆盖（activeBattles 已清理），需要补充清理残留会话，避免离队后
   // 玩家仍被 getCurrentBattleSession 拉回该 session。
-  const waitingTransitionCleanupResults = cleanupUserWaitingTransitionSessions(userId);
+  const waitingTransitionCleanupResults = await cleanupUserWaitingTransitionSessions(userId);
   if (waitingTransitionCleanupResults.length === 0) {
     return;
   }
