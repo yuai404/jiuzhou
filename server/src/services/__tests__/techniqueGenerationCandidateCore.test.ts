@@ -24,7 +24,6 @@ import { applySkillUpgradeChanges } from '../battle/shared/skills.js';
 import type { SkillEffect } from '../../battle/types.js';
 import { buildTechniqueGenerationResponseFormat } from '../shared/techniqueGenerationConstraints.js';
 import {
-  getTechniqueAuraAttackPercentMaxTotal,
   TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE,
 } from '../shared/techniqueSkillGenerationSpec.js';
 import {
@@ -750,7 +749,7 @@ test('validateTechniqueGenerationCandidate: 升级项不应放行超预算总伤
   });
 });
 
-test('validateTechniqueGenerationCandidate: 光环中的进攻类百分比增益总和不应超过光环总预算', () => {
+test('validateTechniqueGenerationCandidate: 光环中的进攻类百分比增益总和较高时不应被程序硬拦截', () => {
   const raw = {
     technique: {
       name: '焰轮辉界诀',
@@ -846,9 +845,5 @@ test('validateTechniqueGenerationCandidate: 光环中的进攻类百分比增益
     expectedQuality: '玄',
     expectedMaxLayer: 3,
   });
-  assert.deepEqual(validation, {
-    success: false,
-    message: `AI结果技能效果非法：skill.effects 非法：auraEffects 进攻类百分比增益总和不能大于 ${getTechniqueAuraAttackPercentMaxTotal('玄')}`,
-    code: 'GENERATOR_INVALID',
-  });
+  assert.deepEqual(validation, { success: true });
 });

@@ -28,7 +28,6 @@ import {
 } from './techniqueTextModelShared.js';
 import { resolveTechniqueGenerationRequestFailure } from './techniqueGenerationRequestFailure.js';
 import {
-  buildTechniqueAuraAttackPercentRetryCorrectionRules,
   buildTechniqueGeneratorPromptInput,
   buildTechniqueGenerationResponseFormat,
   TECHNIQUE_EFFECT_TYPE_LIST,
@@ -274,8 +273,6 @@ const normalizeTechniqueLayerSkillIds = (
 const DUPLICATE_EFFECT_FAILURE_TOKEN = '不允许包含重复 effect';
 const UPGRADE_UNSUPPORTED_FIELD_REASON_PATTERN = /upgrades\.changes 包含未支持字段：([A-Za-z0-9_]+)/;
 const UPGRADE_DAMAGE_TOTAL_SCALE_FAILURE_TOKEN = 'scaleRate × hit_count 不能大于';
-const AURA_ATTACK_PERCENT_BUDGET_FAILURE_TOKEN = 'auraEffects 进攻类百分比增益总和不能大于';
-const AURA_ATTACK_PERCENT_BUDGET_REASON_PATTERN = /auraEffects 进攻类百分比增益总和不能大于 ([0-9]+(?:\.[0-9]+)?)/;
 
 const buildTechniqueGenerationRetryCorrectionRules = (reason: string): string[] => {
   const rules = [
@@ -305,15 +302,6 @@ const buildTechniqueGenerationRetryCorrectionRules = (reason: string): string[] 
       `upgrades.changes 不能直接写 ${unsupportedField}；它属于单个 effect 的内部字段，不属于升级改动顶层键。`,
       `如果要修改已有效果中的 ${unsupportedField}，必须改写 changes.effects，提供完整 effects 数组；不要返回 changes.${unsupportedField}。`,
       '如果只是新增一个效果，请使用 changes.addEffect，并把该 effect 的全部字段写在 addEffect 对象内部。',
-    );
-  }
-
-  if (reason.includes(AURA_ATTACK_PERCENT_BUDGET_FAILURE_TOKEN)) {
-    const auraAttackPercentBudgetMax = Number(reason.match(AURA_ATTACK_PERCENT_BUDGET_REASON_PATTERN)?.[1] ?? Number.NaN);
-    rules.push(
-      ...buildTechniqueAuraAttackPercentRetryCorrectionRules(
-        Number.isFinite(auraAttackPercentBudgetMax) ? auraAttackPercentBudgetMax : undefined,
-      ),
     );
   }
 

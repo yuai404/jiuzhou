@@ -20,7 +20,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { SkillEffect } from '../../battle/types.js';
 import {
-  getTechniqueAuraAttackPercentMaxTotal,
   TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE,
   validateTechniqueSkillEffect,
   validateTechniqueSkillTargetCount,
@@ -176,7 +175,7 @@ test('升级项的 addEffect 不应放行超预算总伤害倍率', () => {
   });
 });
 
-test('光环中的进攻类百分比增益总和不应超过光环总预算', () => {
+test('光环中的进攻类百分比增益总和即使较高也不应被程序硬拦截', () => {
   const validation = validateTechniqueSkillEffect(
     {
       type: 'buff',
@@ -205,10 +204,7 @@ test('光环中的进攻类百分比增益总和不应超过光环总预算', ()
     { quality: '玄' },
   );
 
-  assert.deepEqual(validation, {
-    success: false,
-    reason: `auraEffects 进攻类百分比增益总和不能大于 ${getTechniqueAuraAttackPercentMaxTotal('玄')}`,
-  });
+  assert.deepEqual(validation, { success: true });
 });
 
 test('光环中的进攻类百分比增益总和在预算内时应允许通过', () => {

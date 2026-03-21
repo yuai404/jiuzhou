@@ -30,13 +30,6 @@ import {
   MOMENTUM_ID_LIST,
   MOMENTUM_OPERATION_LIST,
 } from '../../battle/modules/momentum.js';
-import {
-  DEFAULT_PERCENT_BUFF_ATTR_SET,
-  normalizeBuffApplyType,
-  normalizeBuffAttrKey,
-  normalizeBuffKind,
-} from '../../battle/utils/buffSpec.js';
-import { ATTACK_ATTR_KEY_SET } from './characterAttrRegistry.js';
 import type { GeneratedTechniqueQuality } from './techniquePassiveValueBudget.js';
 import { validateTechniqueStructuredBuffEffect } from './techniqueStructuredBuffCatalog.js';
 
@@ -59,18 +52,6 @@ type TechniqueSkillValidationContext = {
 
 export const TECHNIQUE_SKILL_EFFECT_MAX_COUNT = 4;
 export const TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE = 3.0;
-export const TECHNIQUE_AURA_ATTACK_PERCENT_MAX_TOTAL_BY_QUALITY: Record<GeneratedTechniqueQuality, number> = {
-  黄: 0.05,
-  玄: 0.10,
-  地: 0.15,
-  天: 0.20,
-};
-
-export const getTechniqueAuraAttackPercentMaxTotal = (
-  quality: GeneratedTechniqueQuality,
-): number => {
-  return TECHNIQUE_AURA_ATTACK_PERCENT_MAX_TOTAL_BY_QUALITY[quality];
-};
 
 export const TECHNIQUE_SKILL_EFFECT_TYPE_LIST = [
   'damage',
@@ -371,85 +352,6 @@ const validateUpgradeDamageEffectBudget = (
 };
 
 /**
- * 读取光环子效果中的进攻类百分比增益值
- *
- * 作用：
- * 1) 只统计 `buffKind=attr` 且属于进攻属性桶的百分比增益，供 aura 总预算统一校验复用。
- * 2) 不处理 flat 加成，也不区分法术/物理流派；这里只关心“会把输出直接抬高多少”。
- *
- * 输入/输出：
- * - 输入：单个 aura 子效果。
- * - 输出：可计入预算的正向百分比幅度；不命中规则则返回 0。
- *
- * 关键边界条件与坑点：
- * 1) 必须复用 battle 的 buff 归一化工具，避免 attrKey/applyType 在校验与运行时口径不一致。
- * 2) 这里只统计正向 buff；debuff 或非正数 value 不应占用光环进攻预算。
- */
-const readAuraAttackPercentBuffValue = (effect: SkillEffect): number => {
-  if (effect.type !== 'buff') {
-    return 0;
-  }
-  if (normalizeBuffKind(effect.buffKind) !== 'attr') {
-    return 0;
-  }
-
-  const attrKey = normalizeBuffAttrKey(effect.attrKey);
-  if (!attrKey || !ATTACK_ATTR_KEY_SET.has(attrKey)) {
-    return 0;
-  }
-
-  const applyType = normalizeBuffApplyType(effect.applyType)
-    ?? (DEFAULT_PERCENT_BUFF_ATTR_SET.has(attrKey) ? 'percent' : null);
-  if (applyType !== 'percent') {
-    return 0;
-  }
-
-  const value = asNumber(effect.value);
-  if (value === null || value <= 0) {
-    return 0;
-  }
-
-  return value;
-};
-
-/**
- * 校验光环中的进攻类百分比总预算
- *
- * 作用：
- * 1) 把 aura 内多个进攻乘区 Buff 的合计上限收敛到单一入口，避免法攻/增伤/暴击分别看都合法，但叠在一起超模。
- * 2) 光环预算与 layers.passives 的被动预算分离维护，避免调整技能强度时误伤原有被动体系。
- *
- * 输入/输出：
- * - 输入：光环子效果数组、当前功法品质。
- * - 输出：总预算校验结果。
- *
- * 关键边界条件与坑点：
- * 1) 无品质上下文时不擅自猜预算，直接跳过；由 candidate 校验链负责把 quality 传进来。
- * 2) 这里只限制“进攻类百分比 attr Buff 总和”，治疗、减伤、固定值与非攻击桶属性不在这条规则内。
- */
-const validateAuraAttackPercentBudget = (
-  auraEffects: SkillEffect[],
-  quality?: GeneratedTechniqueQuality,
-): TechniqueSkillGenerationValidationResult => {
-  if (!quality) {
-    return { success: true };
-  }
-
-  const attackPercentTotal = auraEffects.reduce((sum, subEffect) => {
-    return sum + readAuraAttackPercentBuffValue(subEffect);
-  }, 0);
-  const maxTotal = getTechniqueAuraAttackPercentMaxTotal(quality);
-  if (attackPercentTotal > maxTotal) {
-    return {
-      success: false,
-      reason: `auraEffects 进攻类百分比增益总和不能大于 ${maxTotal}`,
-    };
-  }
-
-  return { success: true };
-};
-
-/**
  * 校验光环效果配置
  *
  * 作用：校验 buffKind='aura' 时的 auraTarget 和 auraEffects 字段合法性。
@@ -499,11 +401,6 @@ const validateAuraEffect = (
     if (!subValidation.success) {
       return { success: false, reason: `auraEffects 子效果校验失败: ${subValidation.reason}` };
     }
-  }
-
-  const auraBudgetValidation = validateAuraAttackPercentBudget(normalizedAuraEffects, context.quality);
-  if (!auraBudgetValidation.success) {
-    return auraBudgetValidation;
   }
 
   return { success: true };

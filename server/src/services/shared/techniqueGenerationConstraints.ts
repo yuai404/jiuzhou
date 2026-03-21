@@ -31,7 +31,6 @@ import {
   TECHNIQUE_SKILL_FATE_SWAP_MODE_LIST,
   TECHNIQUE_SKILL_AURA_TARGET_LIST,
   TECHNIQUE_SKILL_AURA_SUB_EFFECT_TYPE_LIST,
-  getTechniqueAuraAttackPercentMaxTotal,
   TECHNIQUE_SKILL_EFFECT_MAX_COUNT,
   TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE,
   TECHNIQUE_SKILL_TRIGGER_TYPE_LIST,
@@ -194,7 +193,7 @@ export const TECHNIQUE_PROMPT_GENERAL_RULES = [
   '禁止输出 null/undefined 与空字符串占位；无意义的可选字段直接省略',
   '当 triggerType=passive 时，技能必须为自目标常驻被动：targetType=self、targetCount=1、cooldown=0、costLingqi=0、costLingqiRate=0、costQixue=0、costQixueRate=0',
   'buffKind=aura 时必须提供 auraTarget 和 auraEffects，auraEffects 中每个子效果遵循对应 type 的标准校验规则，子效果不允许嵌套光环',
-  'buffKind=aura 的 auraEffects 若包含进攻类百分比 attr 增益（如法攻/物攻/暴击/暴伤/增伤），这些 value 的合计不能超过 numericRanges.effect.auraAttackPercentTotalMax',
+  'buffKind=aura 的 auraEffects 若包含进攻类百分比 attr 增益（如法攻/物攻/暴击/暴伤/增伤），请参考接近天品强度的建议范围设计总和，不要再按品质拆固定上限，也不要为了凑满范围硬塞数值。',
   'buffKind=aura 的光环效果只能用于 triggerType=passive 的被动技能，costLingqi/costQixue/cooldown 必须为 0，进场自动生效，永久存在',
 ] as const;
 
@@ -231,58 +230,31 @@ export const TECHNIQUE_PROMPT_FATE_SWAP_MODE_ENUM = TECHNIQUE_SKILL_FATE_SWAP_MO
 export const TECHNIQUE_PROMPT_AURA_TARGET_ENUM = TECHNIQUE_SKILL_AURA_TARGET_LIST;
 export const TECHNIQUE_PROMPT_AURA_SUB_EFFECT_TYPE_ENUM = TECHNIQUE_SKILL_AURA_SUB_EFFECT_TYPE_LIST;
 const TECHNIQUE_AURA_ATTACK_PERCENT_ATTR_KEYS = Object.freeze(Array.from(ATTACK_ATTR_KEY_SET).sort());
+export const TECHNIQUE_AURA_ATTACK_PERCENT_SUGGESTED_RANGE = Object.freeze({
+  min: 0.10,
+  max: 0.25,
+});
 
 /**
- * 光环进攻预算提示语生成器
+ * 光环进攻区间提示语生成器
  *
  * 作用（做什么 / 不做什么）：
- * 1) 做什么：把会计入光环进攻总预算的 attrKey 集合与当前品质的明确数值上限收敛成单一提示语，供首轮 prompt 与重试提示共用。
+ * 1) 做什么：把会计入光环进攻强度参考区间的 attrKey 集合与“接近天品上限”的建议范围收敛成单一提示语，供首轮 prompt 与 checklist 共用。
  * 2) 不做什么：不负责运行时校验，也不决定哪些属性属于 attack bucket；归类仍以 `ATTACK_ATTR_KEY_SET` 为准。
  *
  * 输入/输出：
- * - 输入：当前品质允许的光环进攻百分比总预算。
+ * - 输入：无；统一使用共享建议范围。
  * - 输出：可直接塞进 prompt/generalRules 的中文规则字符串。
  *
  * 数据流/状态流：
- * characterAttrRegistry.attack bucket -> 本函数拼装明确口径 -> 功法生成 prompt / 重试提示复用。
+ * characterAttrRegistry.attack bucket -> 本函数拼装建议口径 -> 功法生成 prompt / checklist 复用。
  *
  * 关键边界条件与坑点：
- * 1) 这里强调的是“多项相加后的总和上限”，不是每个 attrKey 各自都能冲到同一个上限。
+ * 1) 这里强调的是“多项相加后的建议总和区间”，不是每个 attrKey 各自都要落在这个区间。
  * 2) 只覆盖正向百分比 attack attr Buff；固定值、防御类、治疗类与其他桶属性不应被误写进这条说明。
  */
-export const buildTechniqueAuraAttackPercentBudgetPromptRule = (maxTotal: number): string => {
-  return `buffKind=aura 的 auraEffects 中，attrKey 属于 ${TECHNIQUE_AURA_ATTACK_PERCENT_ATTR_KEYS.join('/')} 的正向百分比 buff 会共用同一份进攻预算；这些 value 必须累计求和，当前品质总上限为 ${maxTotal}。`;
-};
-
-/**
- * 光环进攻预算重试纠偏规则
- *
- * 作用（做什么 / 不做什么）：
- * 1) 做什么：集中生成 auraEffects 进攻百分比超预算后的纠偏文案，供重试提示与其他定向清单复用。
- * 2) 不做什么：不直接修改模型结果，也不承担运行时校验；只输出统一中文约束。
- *
- * 输入/输出：
- * - 输入：当前品质的光环进攻总预算上限。
- * - 输出：一组可直接拼入 retryGuidance / checklist 的规则字符串。
- *
- * 数据流/状态流：
- * 光环预算规则源 -> 本函数展开统一纠偏文案 -> retry correctionRules / prompt checklist 复用。
- *
- * 关键边界条件与坑点：
- * 1) 这里强调的是“同一个 auraEffects 内的累计预算”，不能误读成每个 attrKey 各有一份独立预算。
- * 2) 要同时覆盖基础技能与升级链路；否则模型会把超预算从 `upgrades` 挪到 `skill.effects` 继续违规。
- */
-export const buildTechniqueAuraAttackPercentRetryCorrectionRules = (maxTotal?: number): string[] => {
-  const rules = [
-    '光环 auraEffects 里的进攻类百分比 attr 增益要共用同一份预算，不要把法攻、物攻、暴击、暴伤、增伤等一起堆满。',
-    '如果 auraEffects 同时包含多个进攻类百分比 Buff，它们的 value 总和不能超过当前品质允许的光环进攻总预算。',
-    '无论写在 skill.effects 还是 upgrades.changes.effects/addEffect，只要指向同一个 auraEffects，其中所有进攻类百分比 buff 的 value 都必须累计求和。',
-    '想保留多种进攻向加成时，请压低每项 value，让总和仍落在光环总预算内。',
-  ];
-  if (typeof maxTotal === 'number' && Number.isFinite(maxTotal)) {
-    rules.push(buildTechniqueAuraAttackPercentBudgetPromptRule(maxTotal));
-  }
-  return rules;
+export const buildTechniqueAuraAttackPercentSoftRangePromptRule = (): string => {
+  return `buffKind=aura 的 auraEffects 中，attrKey 属于 ${TECHNIQUE_AURA_ATTACK_PERCENT_ATTR_KEYS.join('/')} 的正向百分比 buff 可以自由组合；这些 value 的总和建议大致控制在 ${TECHNIQUE_AURA_ATTACK_PERCENT_SUGGESTED_RANGE.min}~${TECHNIQUE_AURA_ATTACK_PERCENT_SUGGESTED_RANGE.max}，这是接近天品上限的参考区间，由你结合覆盖范围、附带代价与机制复杂度自行决定，不要求固定档位。`;
 };
 
 const buildTechniquePromptBuffConfigRules = () => {
@@ -580,7 +552,7 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
       'buffKind=aura 时必须提供 auraTarget（all_ally/all_enemy/self）和 auraEffects（子效果数组，长度 ≤ 4）',
       'buffKind=aura 时不需要 duration，光环永久存在直到施法者死亡',
       'auraEffects 子效果不需要 duration；光环每回合自动续上子效果',
-      'auraEffects 若同时给多个进攻类百分比 attr Buff（如法攻/物攻/暴击/暴伤/增伤），这些 value 总和不能超过 numericRanges.effect.auraAttackPercentTotalMax',
+      'auraEffects 若同时给多个进攻类百分比 attr Buff（如法攻/物攻/暴击/暴伤/增伤），请参考 numericRanges.effect.auraAttackPercentSuggestedRange 设计总和，不要再按品质拆固定档位，也不要为了凑满范围硬塞数值',
     ],
     defaultTemplate: {
       type: 'buff',
@@ -855,7 +827,7 @@ export const TECHNIQUE_PROMPT_OUTPUT_CHECKLIST = [
   '仅 random_enemy/random_ally 允许 targetCount > 1；self/single_*/all_* 的 targetCount 必须为 1',
   'layers.passives[].key 必须来自 allowedPassiveKeys，且 value 必须满足 passiveValueGuideByKey 的单层/累计上限',
   'buffKind=aura 时必须提供 auraTarget 和 auraEffects，子效果不允许嵌套光环',
-  'buffKind=aura 若包含多个进攻类百分比 attr Buff，它们的 value 总和不能超过 numericRanges.effect.auraAttackPercentTotalMax',
+  'buffKind=aura 若包含多个进攻类百分比 attr Buff，请参考 numericRanges.effect.auraAttackPercentSuggestedRange 设计总和，不要再按品质拆固定上限',
 ] as const;
 
 export const buildTechniqueGeneratorPromptInput = (params: {
@@ -873,7 +845,6 @@ export const buildTechniqueGeneratorPromptInput = (params: {
   const skillCountRange = TECHNIQUE_SKILL_COUNT_RANGE_BY_QUALITY[quality];
   const promptBuffConfigRules = buildTechniquePromptBuffConfigRules();
   const passiveValueGuideByKey = buildTechniquePassiveValueGuideByKey(quality);
-  const auraAttackPercentTotalMax = getTechniqueAuraAttackPercentMaxTotal(quality);
   const promptNoiseHash = normalizeTextModelPromptNoiseHash(params.promptNoiseHash);
   return {
     task: '生成完整功法定义',
@@ -883,16 +854,16 @@ export const buildTechniqueGeneratorPromptInput = (params: {
     promptNoiseHash,
     ...(params.retryGuidance
       ? {
-          retryGuidance: {
-            previousFailureReason: params.retryGuidance.previousFailureReason,
-            correctionRules: [...params.retryGuidance.correctionRules],
-          },
-        }
+        retryGuidance: {
+          previousFailureReason: params.retryGuidance.previousFailureReason,
+          correctionRules: [...params.retryGuidance.correctionRules],
+        },
+      }
       : {}),
     constraints: {
       generalRules: [
         ...TECHNIQUE_PROMPT_GENERAL_RULES,
-        buildTechniqueAuraAttackPercentBudgetPromptRule(auraAttackPercentTotalMax),
+        buildTechniqueAuraAttackPercentSoftRangePromptRule(),
         TEXT_MODEL_PROMPT_NOISE_CONSTRAINT,
       ],
       fieldSemantics: TECHNIQUE_PROMPT_FIELD_SEMANTICS,
@@ -926,7 +897,10 @@ export const buildTechniqueGeneratorPromptInput = (params: {
         ...TECHNIQUE_PROMPT_NUMERIC_RANGES,
         effect: {
           ...TECHNIQUE_PROMPT_NUMERIC_RANGES.effect,
-          auraAttackPercentTotalMax,
+          auraAttackPercentSuggestedRange: [
+            TECHNIQUE_AURA_ATTACK_PERCENT_SUGGESTED_RANGE.min,
+            TECHNIQUE_AURA_ATTACK_PERCENT_SUGGESTED_RANGE.max,
+          ],
         },
       },
       effectCommonFields: TECHNIQUE_PROMPT_EFFECT_COMMON_FIELDS,
@@ -956,7 +930,7 @@ export const buildTechniqueGeneratorPromptInput = (params: {
         `upgrades 每项必须是 {layer,changes}。changes 只允许 target_count/cooldown/cost_lingqi/cost_lingqi_rate/cost_qixue/cost_qixue_rate/ai_priority/effects/addEffect。严禁 effectChanges/effectIndex/description，也严禁把 scaleRate/value/baseValue/valueType/scaleAttr/duration/chance 这类 effect 字段直接写在 changes 顶层。若 changes.effects 或 addEffect 中包含 damage，且同时填写 scaleRate 与 hit_count，则升级后的总倍率（scaleRate × hit_count）不能大于 ${TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE}。`,
       outputChecklist: [
         ...TECHNIQUE_PROMPT_OUTPUT_CHECKLIST,
-        buildTechniqueAuraAttackPercentBudgetPromptRule(auraAttackPercentTotalMax),
+        buildTechniqueAuraAttackPercentSoftRangePromptRule(),
       ],
     },
     outputShape: TECHNIQUE_PROMPT_OUTPUT_SHAPE,
