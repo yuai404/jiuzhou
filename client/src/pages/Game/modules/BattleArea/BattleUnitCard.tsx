@@ -2,7 +2,7 @@
  * BattleArea 单位卡片组件
  *
  * 作用（做什么 / 不做什么）：
- * - 做什么：封装战斗单位框体、血灵条、浮字和状态标签，让敌我双方都复用同一张卡片结构。
+ * - 做什么：封装战斗单位框体、血灵条与浮字，让敌我双方都复用同一张卡片结构。
  * - 做什么：根据外部传入的尺寸档位切换卡片密度，保证 1~10 单位时都能用同一套组件完成展示。
  * - 不做什么：不管理战斗状态同步，不决定网格列数，也不处理选中目标之外的业务逻辑。
  *
@@ -16,15 +16,14 @@
  * - 点击事件回抛给 BattleArea 改写选中目标
  *
  * 关键边界条件与坑点：
- * 1. Buff 标签显示开关必须由布局层控制，卡片自身不能私自再做一套“空间够不够”的判断，否则敌我两边会出现口径漂移。
- * 2. 死亡单位仍需保留卡片占位，否则 2 行 5 列阵型会在战斗过程中不断跳动，影响目标选择和视觉稳定性。
+ * 1. 死亡单位仍需保留卡片占位，否则 2 行 5 列阵型会在战斗过程中不断跳动，影响目标选择和视觉稳定性。
+ * 2. 当前需求明确不展示战斗状态标签，因此这里不再消费 `unit.buffs`，避免在卡片层偷偷恢复一套局部展示逻辑。
  */
 
 import { memo, type CSSProperties } from 'react';
 import PlayerName from '../../shared/PlayerName';
 import { resolveBattleUnitBackgroundImage } from './battleUnitBackground';
 import type { BattleFieldCardSize } from './battleFieldLayout';
-import { resolveBattleUnitStatusTags } from './battleUnitStatusTags';
 import type { BattleFloatText, BattleUnit } from './types';
 
 type BattleTeamSide = 'enemy' | 'ally';
@@ -34,8 +33,6 @@ interface BattleUnitCardProps {
   team: BattleTeamSide;
   size: BattleFieldCardSize;
   showAvatarBackground: boolean;
-  showStatusRow: boolean;
-  statusTagLimit: number;
   active?: boolean;
   floats?: BattleFloatText[];
   selected?: boolean;
@@ -72,15 +69,12 @@ export const BattleUnitCard: React.FC<BattleUnitCardProps> = memo(({
   team,
   size,
   showAvatarBackground,
-  showStatusRow,
-  statusTagLimit,
   active,
   floats,
   selected,
   onToggleUnit,
 }) => {
   const dead = (Number(unit.hp) || 0) <= 0;
-  const statusTags = resolveBattleUnitStatusTags(unit.buffs, statusTagLimit);
   const backgroundImage = resolveBattleUnitBackgroundImage(unit, showAvatarBackground);
   const handleToggleUnit = () => {
     onToggleUnit(unit.id);
@@ -130,20 +124,6 @@ export const BattleUnitCard: React.FC<BattleUnitCardProps> = memo(({
             </div>
           </div>
         </div>
-
-        {showStatusRow && statusTags.length > 0 ? (
-          <div className="battle-unit-status-row">
-            {statusTags.map((tag) => (
-              <span
-                key={tag.id}
-                className={`battle-unit-status-tag tone-${tag.tone}`}
-                title={tag.label}
-              >
-                {tag.label}
-              </span>
-            ))}
-          </div>
-        ) : null}
 
         <div className="battle-unit-bars">
           <StatBar value={unit.hp} total={unit.maxHp} tone="hp" />

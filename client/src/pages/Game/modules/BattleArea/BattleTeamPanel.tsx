@@ -95,7 +95,7 @@ export const BattleTeamPanel: React.FC<BattleTeamPanelProps> = memo(({
     <section className={`battle-panel battle-panel-${team}`}>
       <div ref={innerRef} className="battle-panel-inner">
         <div
-          className={`battle-units battle-units-${layout.layout.size} ${layout.layout.showStatusRow ? 'has-status-row' : 'without-status-row'}`}
+          className={`battle-units battle-units-${layout.layout.size}`}
           style={{
             '--battle-team-columns': String(layout.formation.renderColumns),
             '--battle-team-rows': String(layout.formation.rows),
@@ -110,8 +110,6 @@ export const BattleTeamPanel: React.FC<BattleTeamPanelProps> = memo(({
                 team={team}
                 size={layout.layout.size}
                 showAvatarBackground={showAvatarBackground}
-                showStatusRow={layout.layout.showStatusRow}
-                statusTagLimit={layout.layout.statusTagLimit}
                 active={activeUnitId === unit.id}
                 selected={selectedUnitId === unit.id}
                 floats={floatsByUnit[unit.id]}

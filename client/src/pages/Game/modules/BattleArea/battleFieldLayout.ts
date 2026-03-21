@@ -2,18 +2,18 @@
  * BattleArea 战场网格尺寸计算
  *
  * 作用（做什么 / 不做什么）：
- * - 做什么：统一根据容器宽度和单位数量推导战场列数、尺寸档位、状态标签可见性，避免战斗双方各自手写一套布局判断。
+ * - 做什么：统一根据容器宽度和单位数量推导战场列数、尺寸档位与卡片缩放倍率，避免战斗双方各自手写一套布局判断。
  * - 做什么：把“每个阵营最多 2 行 5 列”的规则和“卡片等比例缩放倍率”收口在一个纯函数里，让 BattleArea 与样式层共享同一口径。
  * - 不做什么：不直接读取 DOM，不负责 React state，也不输出具体 CSS。
  *
  * 输入/输出：
  * - 输入：`unitCount`（当前阵营实际渲染槽位数量）、`occupiedColumnCount`（当前阵营实际占用列数）、`containerWidth` / `containerHeight`（战场内容区宽高）。
- * - 输出：BattleFieldLayout，包含列数、行数、尺寸档位、卡片最终缩放系数、状态标签开关与标签数量上限。
+ * - 输出：BattleFieldLayout，包含列数、行数、尺寸档位与卡片最终缩放系数。
  *
  * 数据流/状态流：
  * - BattleTeamPanel 通过 ResizeObserver 得到容器宽度
  * - 容器宽高 + 棋盘槽位数 + 已占列数 -> 本模块推导布局
- * - 布局结果 -> 网格列数 / 卡片尺寸 class / 等比例缩放 / Buff 标签显示策略
+ * - 布局结果 -> 网格列数 / 卡片尺寸 class / 等比例缩放
  *
  * 关键边界条件与坑点：
  * 1. 单位数量超过 10 不属于当前战场规范，本模块只保证 1~10 的布局稳定；超出时仍按最多 5 列推导，但不为异常输入追加兼容分支。
@@ -28,8 +28,6 @@ export type BattleFieldLayout = {
   rows: number;
   size: BattleFieldCardSize;
   cardScale: number;
-  showStatusRow: boolean;
-  statusTagLimit: number;
 };
 
 export const BATTLE_FIELD_MAX_COLUMNS = 5;
@@ -162,21 +160,10 @@ export const resolveBattleFieldLayout = (params: {
   );
   const sparseScale = resolveSparseCardScale(normalizedOccupiedColumnCount, size);
   const cardScale = resolveCardFitScale(size, effectiveSlotWidth, effectiveSlotHeight, sparseScale);
-  const showStatusRow = effectiveSlotWidth >= 118 && effectiveSlotHeight >= 120;
-
-  const statusTagLimit =
-    !showStatusRow ? 0
-      : size === 'showcase' ? 4
-        : size === 'wide' ? 3
-          : size === 'standard' ? 3
-            : 2;
-
   return {
     columns,
     rows,
     size,
     cardScale,
-    showStatusRow,
-    statusTagLimit,
   };
 };
