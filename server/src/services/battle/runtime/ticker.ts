@@ -19,6 +19,7 @@
  * 2) patchBattleUpdatePayload 剥离静态字段、使用日志增量减少传输量
  */
 
+import { BattleEngine } from "../../../battle/battleEngine.js";
 import type { BattleSkill, BattleState, BattleUnit } from "../../../battle/types.js";
 import {
   clearBattleLogStream,
@@ -141,6 +142,50 @@ export function emitBattleUpdate(battleId: string, payload: Record<string, unkno
   } catch (error) {
     console.warn(`[battle] 推送战斗更新失败: ${battleId}`, error);
   }
+}
+
+/**
+ * 统一派发一次“战斗推进后的实时消息”。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把“继续推送 battle_state”与“战斗已结束则立即结算并推送 battle_finished”收口到单一入口，避免 ticker 与玩家行动各写一套终态判断。
+ * 2. 做什么：确保终态只走 `finishBattle -> battle_finished` 单一路径，不再先额外发一帧 `battle_state(phase=finished)`。
+ * 3. 不做什么：不决定本次推进是玩家出手还是 AI 行动；调用方只负责先改引擎状态，再调用本函数。
+ *
+ * 输入/输出：
+ * - 输入：battleId 与已推进后的 BattleEngine。
+ * - 输出：Promise<void>，内部按当前 state 决定发 battle_state 还是触发结算。
+ *
+ * 数据流/状态流：
+ * playerAction / tickBattle 推进引擎
+ * -> 本函数读取最新 state
+ * -> 未结束则 emit battle_state
+ * -> 已结束则 finishBattle 并由结算路径统一发 battle_finished。
+ *
+ * 关键边界条件与坑点：
+ * 1. 终态不能先发 `battle_state` 再发 `battle_finished`，否则前端会先进入“已结束但缺少冷却/session”的半成品状态。
+ * 2. 本函数只读当前 engine 最新 state；调用方若在推进前缓存旧 state，再传进来会重新引入竞态。
+ */
+export async function emitBattleProgressUpdate(
+  battleId: string,
+  engine: BattleEngine,
+): Promise<void> {
+  const nextState = engine.getState();
+  if (nextState.phase !== "finished") {
+    emitBattleUpdate(battleId, {
+      kind: "battle_state",
+      battleId,
+      state: nextState,
+    });
+    return;
+  }
+
+  clearPlayerTurnTimeoutState(battleId);
+  clearWaitingPlayerTurnState(battleId);
+  const { finishBattle, getBattleMonsters } = await import("../settlement.js");
+  const monsters = await getBattleMonsters(engine);
+  await finishBattle(battleId, engine, monsters);
+  stopBattleTicker(battleId);
 }
 
 // ------ 自动操作 ------
@@ -315,13 +360,7 @@ async function tickBattle(battleId: string): Promise<void> {
 
     const state = engine.getState();
     if (state.phase === "finished") {
-      clearPlayerTurnTimeoutState(battleId);
-      clearWaitingPlayerTurnState(battleId);
-      const { finishBattle } = await import("../settlement.js");
-      const { getBattleMonsters } = await import("../settlement.js");
-      const monsters = await getBattleMonsters(engine);
-      await finishBattle(battleId, engine, monsters);
-      stopBattleTicker(battleId);
+      await emitBattleProgressUpdate(battleId, engine);
       return;
     }
 
@@ -334,36 +373,20 @@ async function tickBattle(battleId: string): Promise<void> {
       clearPlayerTurnTimeoutState(battleId);
       clearWaitingPlayerTurnState(battleId);
       if (engine.getState().phase === "finished") {
-        const { finishBattle } = await import("../settlement.js");
-        const { getBattleMonsters } = await import("../settlement.js");
-        const monsters = await getBattleMonsters(engine);
-        await finishBattle(battleId, engine, monsters);
-        stopBattleTicker(battleId);
+        await emitBattleProgressUpdate(battleId, engine);
       }
       return;
     }
 
     if (currentUnit.type === "player") {
       if (state.currentTeam !== "attacker") {
-        clearPlayerTurnTimeoutState(battleId);
-        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
-        emitBattleUpdate(battleId, {
-          kind: "battle_state",
-          battleId,
-          state: engine.getState(),
-        });
+        await emitBattleProgressUpdate(battleId, engine);
         return;
       }
       if (isStunned(currentUnit) || isFeared(currentUnit)) {
-        clearPlayerTurnTimeoutState(battleId);
-        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
-        emitBattleUpdate(battleId, {
-          kind: "battle_state",
-          battleId,
-          state: engine.getState(),
-        });
+        await emitBattleProgressUpdate(battleId, engine);
         return;
       }
       if (
@@ -373,35 +396,19 @@ async function tickBattle(battleId: string): Promise<void> {
           currentUnit,
         )
       ) {
-        clearPlayerTurnTimeoutState(battleId);
-        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
-        emitBattleUpdate(battleId, {
-          kind: "battle_state",
-          battleId,
-          state: engine.getState(),
-        });
+        await emitBattleProgressUpdate(battleId, engine);
         return;
       }
       if (!canPlayerUseAnySkillThisTurn(state, currentUnit)) {
-        clearPlayerTurnTimeoutState(battleId);
-        clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
-        emitBattleUpdate(battleId, {
-          kind: "battle_state",
-          battleId,
-          state: engine.getState(),
-        });
+        await emitBattleProgressUpdate(battleId, engine);
         return;
       }
       if (shouldTakeoverPlayerTurnByTimeout(battleId, state, currentUnit)) {
         clearWaitingPlayerTurnState(battleId);
         engine.aiAction(true);
-        emitBattleUpdate(battleId, {
-          kind: "battle_state",
-          battleId,
-          state: engine.getState(),
-        });
+        await emitBattleProgressUpdate(battleId, engine);
         return;
       }
       if (!shouldEmitWaitingPlayerTurnState(battleId, state, currentUnit)) {
@@ -418,11 +425,7 @@ async function tickBattle(battleId: string): Promise<void> {
     clearPlayerTurnTimeoutState(battleId);
     clearWaitingPlayerTurnState(battleId);
     engine.aiAction();
-    emitBattleUpdate(battleId, {
-      kind: "battle_state",
-      battleId,
-      state: engine.getState(),
-    });
+    await emitBattleProgressUpdate(battleId, engine);
   } catch (error) {
     console.error(
       `[battle] tickBattle 发生未处理异常，已停止 ticker: ${battleId}`,

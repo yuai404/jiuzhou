@@ -32,10 +32,9 @@ import {
   removeBattleParticipantIndex,
   setBattleStartCooldownByCharacterIds,
 } from "./runtime/state.js";
-import { stopBattleTicker, emitBattleUpdate } from "./runtime/ticker.js";
+import { emitBattleProgressUpdate, stopBattleTicker } from "./runtime/ticker.js";
 import { removeBattleFromRedis } from "./runtime/persistence.js";
 import { buildBattleAbandonedRealtimePayload } from "./runtime/realtime.js";
-import { finishBattle, getBattleMonsters } from "./settlement.js";
 import { settleArenaBattleIfNeeded } from "./pvp.js";
 import {
   abandonWaitingTransitionBattleSession,
@@ -79,22 +78,7 @@ export async function playerAction(
     if (!result.success) {
       return { success: false, message: result.error || "行动失败" };
     }
-    emitBattleUpdate(battleId, {
-      kind: "battle_state",
-      battleId,
-      state: engine.getState(),
-    });
-
-    const currentState = engine.getState();
-    if (currentState.phase === "finished") {
-      const monsters = await getBattleMonsters(engine);
-      await finishBattle(battleId, engine, monsters);
-      stopBattleTicker(battleId);
-      return {
-        success: true,
-        message: "行动已提交",
-      };
-    }
+    await emitBattleProgressUpdate(battleId, engine);
 
     return {
       success: true,
