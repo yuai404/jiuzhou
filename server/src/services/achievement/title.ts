@@ -8,6 +8,7 @@ import {
 import type { ServiceResult, TitleInfo, TitleListResult } from './types.js';
 import { invalidateCharacterComputedCache } from '../characterComputedService.js';
 import { listTitleDefinitionsByIds, getTitleDefinitionById } from '../titleDefinitionService.js';
+import { queueCharacterWritebackSnapshot } from '../playerWritebackCacheService.js';
 
 /**
  * 称号管理服务
@@ -42,8 +43,9 @@ class TitleService {
     titleName: string,
     _delta: Record<string, number>,
   ): Promise<void> {
-    const params: unknown[] = [characterId, titleName];
-    await query(`UPDATE characters SET title = $2, updated_at = NOW() WHERE id = $1`, params);
+    queueCharacterWritebackSnapshot(characterId, {
+      title: titleName,
+    });
   }
 
   async getTitleList(characterId: number): Promise<TitleListResult> {

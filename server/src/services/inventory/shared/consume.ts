@@ -21,7 +21,43 @@
  * 2. consumeCharacterCurrencies 在 silver/spiritStones 均为 0 时直接返回成功，不触发查询
  */
 import { query } from "../../../config/database.js";
+import {
+  applyPendingCharacterWriteback,
+  applyPendingInventoryItemWritebackRows,
+  queueCharacterWritebackSnapshot,
+  queueInventoryItemWritebackSnapshot,
+} from "../../playerWritebackCacheService.js";
 import { clampInt } from "./helpers.js";
+
+type CharacterCurrencyRow = {
+  id: number;
+  attribute_points: number;
+  jing: number;
+  qi: number;
+  shen: number;
+  silver: number;
+  spirit_stones: number;
+};
+
+const toCharacterWritebackSnapshot = (
+  row: CharacterCurrencyRow,
+): {
+  attribute_points: number;
+  jing: number;
+  qi: number;
+  shen: number;
+  silver: number;
+  spirit_stones: number;
+} => {
+  return {
+    attribute_points: Number(row.attribute_points) || 0,
+    jing: Number(row.jing) || 0,
+    qi: Number(row.qi) || 0,
+    shen: Number(row.shen) || 0,
+    silver: Number(row.silver) || 0,
+    spirit_stones: Number(row.spirit_stones) || 0,
+  };
+};
 
 /**
  * 按物品定义 ID 消耗指定数量的材料
@@ -35,7 +71,19 @@ export const consumeMaterialByDefId = async (
   const need = clampInt(qty, 1, 999999);
   const rowResult = await query(
     `
-      SELECT id, qty, locked
+      SELECT
+        id,
+        owner_character_id,
+        item_def_id,
+        qty,
+        location,
+        location_slot,
+        equipped_slot,
+        strengthen_level,
+        refine_level,
+        affixes,
+        affix_gen_version,
+        locked
       FROM item_instance
       WHERE owner_character_id = $1
         AND item_def_id = $2
@@ -50,11 +98,20 @@ export const consumeMaterialByDefId = async (
     return { success: false, message: "材料不足" };
   }
 
-  const rows = rowResult.rows as Array<{
+  const rows = applyPendingInventoryItemWritebackRows(characterId, rowResult.rows as Array<{
     id: number;
+    owner_character_id: number;
+    item_def_id: string;
     qty: number;
+    location: string;
+    location_slot: number | null;
+    equipped_slot: string | null;
+    strengthen_level: number;
+    refine_level: number;
+    affixes: unknown;
+    affix_gen_version: number | null;
     locked: boolean;
-  }>;
+  }>);
   const unlockedRows = rows.filter(
     (row) => !row.locked && (Number(row.qty) || 0) > 0,
   );
@@ -78,12 +135,11 @@ export const consumeMaterialByDefId = async (
 
     const consume = Math.min(rowQty, remaining);
     if (consume >= rowQty) {
-      await query("DELETE FROM item_instance WHERE id = $1", [row.id]);
+      queueInventoryItemWritebackSnapshot(characterId, row, null);
     } else {
-      await query(
-        "UPDATE item_instance SET qty = qty - $1, updated_at = NOW() WHERE id = $2",
-        [consume, row.id],
-      );
+      queueInventoryItemWritebackSnapshot(characterId, row, {
+        qty: rowQty - consume,
+      });
     }
     remaining -= consume;
   }
@@ -103,7 +159,19 @@ export const consumeSpecificItemInstance = async (
   const need = clampInt(qty, 1, 999999);
   const result = await query(
     `
-      SELECT id, item_def_id, qty, locked, location
+      SELECT
+        id,
+        owner_character_id,
+        item_def_id,
+        qty,
+        location,
+        location_slot,
+        equipped_slot,
+        strengthen_level,
+        refine_level,
+        affixes,
+        affix_gen_version,
+        locked
       FROM item_instance
       WHERE id = $1 AND owner_character_id = $2
       FOR UPDATE
@@ -115,13 +183,21 @@ export const consumeSpecificItemInstance = async (
   if (result.rows.length === 0)
     return { success: false, message: "道具不存在" };
 
-  const row = result.rows[0] as {
+  const row = applyPendingInventoryItemWritebackRows(characterId, result.rows as Array<{
     id: number;
+    owner_character_id: number;
     item_def_id: string;
     qty: number;
+    location_slot: number | null;
+    equipped_slot: string | null;
+    strengthen_level: number;
+    refine_level: number;
+    affixes: unknown;
+    affix_gen_version: number | null;
     locked: boolean;
     location: string;
-  };
+  }>)[0];
+  if (!row) return { success: false, message: "道具不存在" };
   if (row.locked) return { success: false, message: "道具已锁定" };
   if (!["bag", "warehouse"].includes(String(row.location))) {
     return { success: false, message: "道具当前位置不可消耗" };
@@ -130,12 +206,11 @@ export const consumeSpecificItemInstance = async (
     return { success: false, message: "道具数量不足" };
 
   if ((Number(row.qty) || 0) === need) {
-    await query("DELETE FROM item_instance WHERE id = $1", [row.id]);
+    queueInventoryItemWritebackSnapshot(characterId, row, null);
   } else {
-    await query(
-      "UPDATE item_instance SET qty = qty - $1, updated_at = NOW() WHERE id = $2",
-      [need, row.id],
-    );
+    queueInventoryItemWritebackSnapshot(characterId, row, {
+      qty: (Number(row.qty) || 0) - need,
+    });
   }
   return {
     success: true,
@@ -158,29 +233,38 @@ export const consumeCharacterCurrencies = async (
     return { success: true, message: "无需扣除货币" };
 
   const charResult = await query(
-    `SELECT silver, spirit_stones FROM characters WHERE id = $1 FOR UPDATE LIMIT 1`,
+    `
+      SELECT
+        id,
+        attribute_points,
+        jing,
+        qi,
+        shen,
+        silver,
+        spirit_stones
+      FROM characters
+      WHERE id = $1
+      FOR UPDATE
+      LIMIT 1
+    `,
     [characterId],
   );
   if (charResult.rows.length === 0)
     return { success: false, message: "角色不存在" };
 
-  const curSilver = Number(charResult.rows[0].silver ?? 0) || 0;
-  const curSpirit = Number(charResult.rows[0].spirit_stones ?? 0) || 0;
+  const current = applyPendingCharacterWriteback(charResult.rows[0] as CharacterCurrencyRow);
+  const curSilver = Number(current.silver ?? 0) || 0;
+  const curSpirit = Number(current.spirit_stones ?? 0) || 0;
   if (curSilver < silverCost)
     return { success: false, message: `银两不足，需要${silverCost}` };
   if (curSpirit < spiritCost)
     return { success: false, message: `灵石不足，需要${spiritCost}` };
 
-  await query(
-    `
-      UPDATE characters
-      SET silver = silver - $2,
-          spirit_stones = spirit_stones - $3,
-          updated_at = NOW()
-      WHERE id = $1
-    `,
-    [characterId, silverCost, spiritCost],
-  );
+  queueCharacterWritebackSnapshot(characterId, {
+    ...toCharacterWritebackSnapshot(current),
+    silver: curSilver - silverCost,
+    spirit_stones: curSpirit - spiritCost,
+  });
   return { success: true, message: "扣除成功" };
 };
 
@@ -198,21 +282,30 @@ export const addCharacterCurrencies = async (
     return { success: true, message: "无需增加货币" };
 
   const charResult = await query(
-    `SELECT id FROM characters WHERE id = $1 FOR UPDATE LIMIT 1`,
+    `
+      SELECT
+        id,
+        attribute_points,
+        jing,
+        qi,
+        shen,
+        silver,
+        spirit_stones
+      FROM characters
+      WHERE id = $1
+      FOR UPDATE
+      LIMIT 1
+    `,
     [characterId],
   );
   if (charResult.rows.length === 0)
     return { success: false, message: "角色不存在" };
 
-  await query(
-    `
-      UPDATE characters
-      SET silver = silver + $2,
-          spirit_stones = spirit_stones + $3,
-          updated_at = NOW()
-      WHERE id = $1
-    `,
-    [characterId, silverGain, spiritGain],
-  );
+  const current = applyPendingCharacterWriteback(charResult.rows[0] as CharacterCurrencyRow);
+  queueCharacterWritebackSnapshot(characterId, {
+    ...toCharacterWritebackSnapshot(current),
+    silver: (Number(current.silver) || 0) + silverGain,
+    spirit_stones: (Number(current.spirit_stones) || 0) + spiritGain,
+  });
   return { success: true, message: "增加成功" };
 };

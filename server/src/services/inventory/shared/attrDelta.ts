@@ -34,6 +34,10 @@ import {
 } from "../../staticConfigLoader.js";
 import { extractFlatAffixDeltas } from "../../shared/affixModifier.js";
 import { resolveQualityRankFromName } from "../../shared/itemQuality.js";
+import {
+  applyPendingInventoryItemWritebackRow,
+  applyPendingInventoryItemWritebackRows,
+} from "../../playerWritebackCacheService.js";
 import type { CharacterAttrKey, InventoryLocation } from "./types.js";
 import { allowedCharacterAttrKeys } from "./types.js";
 import { safeNumber, getStaticItemDef } from "./helpers.js";
@@ -116,14 +120,16 @@ export const getEquipmentAttrDeltaByInstanceId = async (
   );
 
   if (result.rows.length === 0) return null;
-  const row = result.rows[0] as {
+  const row = applyPendingInventoryItemWritebackRow(characterId, result.rows[0] as {
+    id: number;
     item_def_id: string;
     affixes: unknown;
     strengthen_level: unknown;
     refine_level: unknown;
     socketed_gems: unknown;
     quality_rank: unknown;
-  };
+  });
+  if (!row) return null;
   const itemDef = getStaticItemDef(row.item_def_id);
   if (!itemDef || itemDef.category !== "equipment") return null;
 
@@ -222,15 +228,19 @@ export const getEquippedSetBonusDelta = async (
 ): Promise<Map<CharacterAttrKey, number>> => {
   const equippedResult = await query(
     `
-      SELECT ii.item_def_id
+      SELECT ii.id, ii.item_def_id
       FROM item_instance ii
       WHERE ii.owner_character_id = $1 AND ii.location = 'equipped'
     `,
     [characterId],
   );
+  const equippedRows = applyPendingInventoryItemWritebackRows(
+    characterId,
+    equippedResult.rows as Array<{ id: number; item_def_id?: unknown }>,
+  );
 
   const counts = new Map<string, number>();
-  for (const row of equippedResult.rows as Array<{ item_def_id?: unknown }>) {
+  for (const row of equippedRows) {
     const itemDef = getStaticItemDef(row.item_def_id);
     const setId = String(itemDef?.set_id || "");
     if (!setId) continue;

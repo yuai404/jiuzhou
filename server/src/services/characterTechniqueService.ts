@@ -11,6 +11,10 @@ import { getRealmRankZeroBased } from './shared/realmRules.js';
 import { shouldValidateTechniqueLearnRealm } from './shared/techniqueLearnRule.js';
 import { scheduleCharacterBattleLoadoutRefreshByCharacterId } from './battle/shared/profileCache.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
+import {
+  loadCharacterWritebackRowByCharacterId,
+  queueCharacterWritebackSnapshot,
+} from './playerWritebackCacheService.js';
 import { getItemDefinitionById } from './staticConfigLoader.js';
 import {
   getItemMetaMap,
@@ -164,6 +168,22 @@ const reconcileEquippedSkillSlots = async (characterId: number): Promise<Reconci
     .filter((entry): entry is SkillSlotLite => Boolean(entry));
 
   return buildReconciledSkillSlots(removedSlots);
+};
+
+const queueTechniqueAttributeWriteback = (characterId: number, techniqueId: string | null): void => {
+  if (!techniqueId) {
+    queueCharacterWritebackSnapshot(characterId, {
+      attribute_type: 'physical',
+      attribute_element: 'none',
+    });
+    return;
+  }
+
+  const techniqueDef = getCharacterVisibleTechniqueDefMap().get(techniqueId) ?? null;
+  queueCharacterWritebackSnapshot(characterId, {
+    attribute_type: techniqueDef?.attribute_type ?? 'physical',
+    attribute_element: techniqueDef?.attribute_element ?? 'none',
+  });
 };
 
 /**
@@ -416,15 +436,10 @@ class CharacterTechniqueService {
     const costMaterials = layer.costMaterials;
 
     // 检查并扣除灵石和经验
-    const charResult = await query(
-      'SELECT spirit_stones, exp FROM characters WHERE id = $1 FOR UPDATE',
-      [characterId]
-    );
-    if (charResult.rows.length === 0) {
+    const char = await loadCharacterWritebackRowByCharacterId(characterId, { forUpdate: true });
+    if (!char) {
       return { success: false, message: '角色不存在' };
     }
-
-    const char = charResult.rows[0];
     if (char.spirit_stones < costStones) {
       return { success: false, message: `灵石不足，需要${costStones}，当前${char.spirit_stones}` };
     }
@@ -449,10 +464,10 @@ class CharacterTechniqueService {
     }
 
     // 扣除灵石和经验
-    await query(
-      'UPDATE characters SET spirit_stones = spirit_stones - $1, exp = exp - $2, updated_at = NOW() WHERE id = $3',
-      [costStones, costExp, characterId]
-    );
+    queueCharacterWritebackSnapshot(characterId, {
+      spirit_stones: char.spirit_stones - costStones,
+      exp: char.exp - costExp,
+    });
 
     // 扣除材料
     for (const mat of costMaterials) {
@@ -566,13 +581,7 @@ class CharacterTechniqueService {
 
     // 如果装备了主功法，更新角色属性类型
     if (slotType === 'main') {
-      const techniqueDef = getCharacterVisibleTechniqueDefMap().get(techniqueId) ?? null;
-      if (techniqueDef) {
-        await query(
-          'UPDATE characters SET attribute_type = $1, attribute_element = $2, updated_at = NOW() WHERE id = $3',
-          [techniqueDef.attribute_type ?? 'physical', techniqueDef.attribute_element ?? 'none', characterId]
-        );
-      }
+      queueTechniqueAttributeWriteback(characterId, techniqueId);
     } else if (wasMain) {
       const mainResult = await query(
         `SELECT technique_id
@@ -583,16 +592,9 @@ class CharacterTechniqueService {
       );
       if (mainResult.rows.length > 0) {
         const mainTechniqueId = typeof mainResult.rows[0].technique_id === 'string' ? mainResult.rows[0].technique_id : '';
-        const mainDef = getCharacterVisibleTechniqueDefMap().get(mainTechniqueId) ?? null;
-        await query(
-          'UPDATE characters SET attribute_type = $1, attribute_element = $2, updated_at = NOW() WHERE id = $3',
-          [mainDef?.attribute_type ?? 'physical', mainDef?.attribute_element ?? 'none', characterId]
-        );
+        queueTechniqueAttributeWriteback(characterId, mainTechniqueId);
       } else {
-        await query(
-          `UPDATE characters SET attribute_type = 'physical', attribute_element = 'none', updated_at = NOW() WHERE id = $1`,
-          [characterId]
-        );
+        queueTechniqueAttributeWriteback(characterId, null);
       }
     }
     const removedSlots = await reconcileEquippedSkillSlots(characterId);
@@ -630,10 +632,7 @@ class CharacterTechniqueService {
 
     // 如果卸下的是主功法，重置角色属性类型
     if (result.rows[0].slot_type === 'main') {
-      await query(
-        `UPDATE characters SET attribute_type = 'physical', attribute_element = 'none', updated_at = NOW() WHERE id = $1`,
-        [characterId]
-      );
+      queueTechniqueAttributeWriteback(characterId, null);
     }
     const removedSlots = await reconcileEquippedSkillSlots(characterId);
     await cleanupPersistedIdleConfigAutoSkillPolicy(characterId);

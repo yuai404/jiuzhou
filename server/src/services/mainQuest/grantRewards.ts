@@ -27,6 +27,10 @@ import { assertServiceSuccess } from '../shared/assertServiceSuccess.js';
 import { resolveQualityRankFromName } from '../shared/itemQuality.js';
 import { resolveRewardItemDisplayMeta } from '../shared/rewardDisplay.js';
 import { asString, asNumber, asArray } from '../shared/typeCoercion.js';
+import {
+  loadCharacterWritebackRowByCharacterId,
+  queueCharacterWritebackSnapshot,
+} from '../playerWritebackCacheService.js';
 import type { RewardResult } from './types.js';
 
 /** 发放任务节奖励（需事务上下文） */
@@ -44,25 +48,49 @@ export const grantSectionRewards = async (
   const obtainedFrom = asString(options?.obtainedFrom) || 'main_quest';
   const obtainedRefId = asString(options?.obtainedRefId) || undefined;
   const autoDisassembleSetting = options?.autoDisassembleSetting;
+  let characterWriteback = await loadCharacterWritebackRowByCharacterId(characterId, {
+    forUpdate: true,
+  });
 
   const exp = asNumber((rewards as { exp?: unknown }).exp, 0);
   if (exp > 0) {
-    await query(`UPDATE characters SET exp = exp + $1, updated_at = NOW() WHERE id = $2`, [exp, characterId]);
+    if (characterWriteback) {
+      characterWriteback = {
+        ...characterWriteback,
+        exp: characterWriteback.exp + exp,
+      };
+      queueCharacterWritebackSnapshot(characterId, {
+        exp: characterWriteback.exp,
+      });
+    }
     results.push({ type: 'exp', amount: exp });
   }
 
   const silver = asNumber((rewards as { silver?: unknown }).silver, 0);
   if (silver > 0) {
-    await query(`UPDATE characters SET silver = silver + $1, updated_at = NOW() WHERE id = $2`, [silver, characterId]);
+    if (characterWriteback) {
+      characterWriteback = {
+        ...characterWriteback,
+        silver: characterWriteback.silver + silver,
+      };
+      queueCharacterWritebackSnapshot(characterId, {
+        silver: characterWriteback.silver,
+      });
+    }
     results.push({ type: 'silver', amount: silver });
   }
 
   const spiritStones = asNumber((rewards as { spirit_stones?: unknown }).spirit_stones, 0);
   if (spiritStones > 0) {
-    await query(`UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = NOW() WHERE id = $2`, [
-      spiritStones,
-      characterId,
-    ]);
+    if (characterWriteback) {
+      characterWriteback = {
+        ...characterWriteback,
+        spirit_stones: characterWriteback.spirit_stones + spiritStones,
+      };
+      queueCharacterWritebackSnapshot(characterId, {
+        spirit_stones: characterWriteback.spirit_stones,
+      });
+    }
     results.push({ type: 'spirit_stones', amount: spiritStones });
   }
 
@@ -105,10 +133,13 @@ export const grantSectionRewards = async (
           });
         },
         addSilver: async (targetCharacterId, silverAmount) => {
-          await query(
-            `UPDATE characters SET silver = silver + $1, updated_at = NOW() WHERE id = $2`,
-            [silverAmount, targetCharacterId],
-          );
+          const current = await loadCharacterWritebackRowByCharacterId(targetCharacterId, {
+            forUpdate: true,
+          });
+          if (!current) return { success: false, message: '角色不存在' };
+          queueCharacterWritebackSnapshot(targetCharacterId, {
+            silver: current.silver + silverAmount,
+          });
           return { success: true, message: 'ok' };
         },
       });
@@ -174,7 +205,9 @@ export const grantSectionRewards = async (
   const normalizedTitles = [...titles, title].map((x) => asString(x)).map((x) => x.trim()).filter(Boolean);
   if (normalizedTitles.length > 0) {
     const finalTitle = normalizedTitles[normalizedTitles.length - 1];
-    await query(`UPDATE characters SET title = $1, updated_at = NOW() WHERE id = $2`, [finalTitle, characterId]);
+    queueCharacterWritebackSnapshot(characterId, {
+      title: finalTitle,
+    });
     for (const t of normalizedTitles) {
       results.push({ type: 'title', title: t });
     }

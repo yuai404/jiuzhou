@@ -1,4 +1,8 @@
 import { query } from '../../config/database.js';
+import {
+  loadCharacterWritebackRowByCharacterId,
+  queueCharacterWritebackSnapshot,
+} from '../playerWritebackCacheService.js';
 
 /**
  * Character Reward Settlement - 角色奖励资源延后结算工具
@@ -82,17 +86,14 @@ export const applyCharacterRewardDeltas = async (
   for (const characterId of sortedCharacterIds) {
     const delta = rewardMap.get(characterId);
     if (!delta || !hasRewardDelta(delta)) continue;
-
-    await query(
-      `
-        UPDATE characters
-        SET exp = exp + $2,
-            silver = silver + $3,
-            spirit_stones = spirit_stones + $4,
-            updated_at = NOW()
-        WHERE id = $1
-      `,
-      [characterId, delta.exp, delta.silver, delta.spiritStones],
-    );
+    const current = await loadCharacterWritebackRowByCharacterId(characterId, {
+      forUpdate: true,
+    });
+    if (!current) continue;
+    queueCharacterWritebackSnapshot(characterId, {
+      exp: current.exp + delta.exp,
+      silver: current.silver + delta.silver,
+      spirit_stones: current.spirit_stones + delta.spiritStones,
+    });
   }
 };

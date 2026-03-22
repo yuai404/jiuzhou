@@ -20,6 +20,10 @@ import { query } from '../config/database.js';
 import { Transactional } from '../decorators/transactional.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
 import {
+  loadCharacterWritebackRowByCharacterId,
+  queueCharacterWritebackSnapshot,
+} from './playerWritebackCacheService.js';
+import {
   PARTNER_SYSTEM_FEATURE_CODE,
   isFeatureUnlocked,
 } from './featureUnlockService.js';
@@ -211,26 +215,8 @@ const loadCharacterPartnerContext = async (
   characterId: number,
   forUpdate: boolean,
 ): Promise<CharacterPartnerContextRow | null> => {
-  const lockSql = forUpdate ? 'FOR UPDATE' : '';
-  const result = await query(
-    `
-      SELECT id, user_id, exp, spirit_stones, realm, sub_realm
-      FROM characters
-      WHERE id = $1
-      LIMIT 1
-      ${lockSql}
-    `,
-    [characterId],
-  );
-  if (result.rows.length <= 0) return null;
-  const row = result.rows[0] as {
-    id: number | string | bigint | null;
-    user_id: number | string | bigint | null;
-    exp: number | string | bigint | null;
-    spirit_stones: number | string | bigint | null;
-    realm: string | null;
-    sub_realm: string | null;
-  };
+  const row = await loadCharacterWritebackRowByCharacterId(characterId, { forUpdate });
+  if (!row) return null;
   return {
     characterId: normalizeInteger(row.id),
     userId: normalizeInteger(row.user_id),
@@ -805,15 +791,9 @@ class PartnerService {
         return { success: false, message: '角色经验不足' };
       }
 
-      await query(
-        `
-          UPDATE characters
-          SET exp = $2,
-              updated_at = NOW()
-          WHERE id = $1
-        `,
-        [characterId, injectPlan.remainingCharacterExp],
-      );
+      queueCharacterWritebackSnapshot(characterId, {
+        exp: injectPlan.remainingCharacterExp,
+      });
       await query(
         `
           UPDATE character_partner
@@ -1088,16 +1068,10 @@ class PartnerService {
         }
       }
 
-      await query(
-        `
-          UPDATE characters
-          SET spirit_stones = spirit_stones - $2,
-              exp = exp - $3,
-              updated_at = NOW()
-          WHERE id = $1
-        `,
-        [characterId, cost.spiritStones, cost.exp],
-      );
+      queueCharacterWritebackSnapshot(characterId, {
+        spirit_stones: character.spiritStones - cost.spiritStones,
+        exp: character.exp - cost.exp,
+      });
 
       for (const material of cost.materials) {
         let remainingQty = material.qty;

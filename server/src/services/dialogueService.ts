@@ -1,6 +1,10 @@
 import { query } from '../config/database.js';
 import { itemService } from './itemService.js';
 import { assertServiceSuccess } from './shared/assertServiceSuccess.js';
+import {
+  loadCharacterWritebackRowByCharacterId,
+  queueCharacterWritebackSnapshot,
+} from './playerWritebackCacheService.js';
 import { getDialogueDefinitions } from './staticConfigLoader.js';
 
 export type DialogueNodeType = 'narration' | 'npc' | 'player' | 'choice' | 'system' | 'action';
@@ -124,6 +128,12 @@ export const applyDialogueEffectsTx = async (
   effects: DialogueEffect[],
 ): Promise<{ success: boolean; message: string; results: unknown[] }> => {
   const results: unknown[] = [];
+  let characterWriteback = await loadCharacterWritebackRowByCharacterId(characterId, {
+    forUpdate: true,
+  });
+  if (!characterWriteback) {
+    return { success: false, message: '角色不存在', results };
+  }
   for (const effect of effects) {
     const type = typeof effect?.type === 'string' ? effect.type : '';
     const params = asObject(effect?.params);
@@ -131,10 +141,13 @@ export const applyDialogueEffectsTx = async (
       if (type === 'give_silver') {
         const amount = Number(params.amount) || 0;
         if (amount > 0) {
-          await query(`UPDATE characters SET silver = silver + $1, updated_at = NOW() WHERE id = $2`, [
-            amount,
-            characterId,
-          ]);
+          characterWriteback = {
+            ...characterWriteback,
+            silver: characterWriteback.silver + amount,
+          };
+          queueCharacterWritebackSnapshot(characterId, {
+            silver: characterWriteback.silver,
+          });
           results.push({ type: 'silver', amount });
         }
         continue;
@@ -142,10 +155,13 @@ export const applyDialogueEffectsTx = async (
       if (type === 'give_spirit_stones') {
         const amount = Number(params.amount) || 0;
         if (amount > 0) {
-          await query(`UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = NOW() WHERE id = $2`, [
-            amount,
-            characterId,
-          ]);
+          characterWriteback = {
+            ...characterWriteback,
+            spirit_stones: characterWriteback.spirit_stones + amount,
+          };
+          queueCharacterWritebackSnapshot(characterId, {
+            spirit_stones: characterWriteback.spirit_stones,
+          });
           results.push({ type: 'spirit_stones', amount });
         }
         continue;
@@ -153,10 +169,13 @@ export const applyDialogueEffectsTx = async (
       if (type === 'give_exp') {
         const amount = Number(params.amount) || 0;
         if (amount > 0) {
-          await query(`UPDATE characters SET exp = exp + $1, updated_at = NOW() WHERE id = $2`, [
-            amount,
-            characterId,
-          ]);
+          characterWriteback = {
+            ...characterWriteback,
+            exp: characterWriteback.exp + amount,
+          };
+          queueCharacterWritebackSnapshot(characterId, {
+            exp: characterWriteback.exp,
+          });
           results.push({ type: 'exp', amount });
         }
         continue;

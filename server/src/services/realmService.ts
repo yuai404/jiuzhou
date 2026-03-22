@@ -6,6 +6,10 @@ import { updateSectionProgress } from "./mainQuest/index.js";
 import { updateAchievementProgress } from "./achievementService.js";
 import { invalidateCharacterComputedCache } from "./characterComputedService.js";
 import {
+  loadCharacterWritebackRowByUserId,
+  queueCharacterWritebackSnapshot,
+} from "./playerWritebackCacheService.js";
+import {
   getDungeonDefinitions,
   getDungeonDifficultyById,
   getItemDefinitionsByIds,
@@ -1163,18 +1167,9 @@ class RealmService {
   async breakthroughToNextRealm(userId: number): Promise<RealmBreakthroughResult> {
     const cfg = await loadConfig();
 
-    const charRes = await query<CharacterRealmRow>(
-      `SELECT
-         id, realm, sub_realm, exp, spirit_stones, attribute_points
-       FROM characters
-       WHERE user_id = $1
-       FOR UPDATE`,
-      [userId],
-    );
-    if (charRes.rows.length === 0)
-      return { success: false, message: "角色不存在" };
+    const row = await loadCharacterWritebackRowByUserId(userId, { forUpdate: true });
+    if (!row) return { success: false, message: "角色不存在" };
 
-    const row = charRes.rows[0];
     const characterId = Number(row.id ?? 0) || 0;
     const realm = typeof row.realm === "string" ? row.realm.trim() : "凡人";
     const subRealm =
@@ -1252,19 +1247,13 @@ class RealmService {
     const newSpiritStones = spiritStones - costsBuilt.spiritStones;
     const newAttributePoints = attributePoints + apAdd;
 
-    await query(
-      `
-        UPDATE characters
-        SET realm = $1,
-            sub_realm = NULL,
-            exp = $2,
-            spirit_stones = $3,
-            attribute_points = $4,
-            updated_at = NOW()
-        WHERE id = $5
-      `,
-      [bt.to, newExp, newSpiritStones, newAttributePoints, characterId],
-    );
+    queueCharacterWritebackSnapshot(characterId, {
+      realm: bt.to,
+      sub_realm: null,
+      exp: newExp,
+      spirit_stones: newSpiritStones,
+      attribute_points: newAttributePoints,
+    });
 
     await updateSectionProgress(characterId, {
       type: "upgrade_realm",

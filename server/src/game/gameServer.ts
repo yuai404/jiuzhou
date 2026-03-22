@@ -11,8 +11,8 @@ import { verifyToken, verifySession } from "../services/authService.js";
 import { applyStaminaRecoveryByUserId } from "../services/staminaService.js";
 import {
   getCharacterComputedByUserId,
-  invalidateCharacterComputedCacheByUserId,
 } from "../services/characterComputedService.js";
+import { addAttributePoint } from "../services/attributeService.js";
 import { withUnlockedFeatures } from "../services/featureUnlockService.js";
 import { getRemainingCooldown } from "../services/battle/cooldownManager.js";
 import {
@@ -36,6 +36,10 @@ import { getMonthCardActiveMapByCharacterIds } from "../services/shared/monthCar
 import { assertChatPhoneBindingReady } from "../services/marketPhoneBindingService.js";
 import { AsyncShutdownGate } from "../utils/asyncShutdownGate.js";
 import { emitLatestGameTimeSnapshot } from "../services/gameTimeService.js";
+import {
+  flushAllPlayerWriteback,
+  flushPlayerWritebackByCharacterId,
+} from "../services/playerWritebackCacheService.js";
 
 // 玩家会话
 interface PlayerSession {
@@ -450,12 +454,12 @@ class GameServer {
             return;
           }
 
-          const success = await this.saveAttributePoints(
+          const result = await addAttributePoint(
             session.userId,
             attribute,
             amount,
           );
-          if (success) {
+          if (result.success) {
             // 重新加载角色数据
             const updatedCharacter = await this.loadCharacter(session.userId);
             this.syncCharacterSocketBinding(socket.id, session.character, updatedCharacter);
@@ -468,7 +472,7 @@ class GameServer {
               character: updatedCharacter,
             });
           } else {
-            socket.emit("game:error", { message: "加点失败" });
+            socket.emit("game:error", { message: result.message });
           }
         }),
       );
@@ -495,6 +499,9 @@ class GameServer {
           if (!this.shutdownGate.isShuttingDown()) {
             void this.runTrackedTask(async () => {
               await this.touchCharacterLastOfflineAt(session.userId);
+              if (session.character) {
+                await flushPlayerWritebackByCharacterId(session.character.id);
+              }
             });
           }
           this.cancelQueuedCharacterPush(session.userId);
@@ -789,32 +796,6 @@ class GameServer {
     }
   }
 
-  // 保存加点
-  private async saveAttributePoints(
-    userId: number,
-    attribute: "jing" | "qi" | "shen",
-    amount: number,
-  ): Promise<boolean> {
-    try {
-      const updateSQL = `
-        UPDATE characters 
-        SET ${attribute} = ${attribute} + $1,
-            attribute_points = attribute_points - $1,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $2 AND attribute_points >= $1
-        RETURNING *
-      `;
-      const result = await query(updateSQL, [amount, userId]);
-      if (result.rows.length > 0) {
-        await invalidateCharacterComputedCacheByUserId(userId);
-      }
-      return result.rows.length > 0;
-    } catch (error) {
-      console.error("保存加点失败:", error);
-      return false;
-    }
-  }
-
   // 向指定用户推送角色更新
   private cancelQueuedCharacterPush(userId: number): void {
     const timer = this.characterPushTimers.get(userId);
@@ -1066,6 +1047,7 @@ class GameServer {
         this.io.close(() => resolve());
       });
       await this.shutdownGate.waitForIdle();
+      await flushAllPlayerWriteback();
 
       this.characterPushInFlight.clear();
       this.characterSocketMap.clear();

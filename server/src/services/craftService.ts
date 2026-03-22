@@ -2,6 +2,10 @@ import { query } from '../config/database.js';
 import { Transactional } from '../decorators/transactional.js';
 import { addItemToInventory } from './inventory/index.js';
 import { lockCharacterInventoryMutex } from './inventoryMutex.js';
+import {
+  loadCharacterWritebackRowByUserId,
+  queueCharacterWritebackSnapshot,
+} from './playerWritebackCacheService.js';
 import { recordCraftItemEvent } from './taskService.js';
 import { REALM_ORDER } from './shared/realmRules.js';
 import { normalizeRecipeRateToPercent, normalizeRecipeRateToRatio } from './shared/recipeRate.js';
@@ -186,16 +190,8 @@ const getCharacterByUserId = async (
     }
   | null
 > => {
-  const sql = `
-    SELECT id, realm, exp, silver, spirit_stones
-    FROM characters
-    WHERE user_id = $1
-    ${forUpdate ? 'FOR UPDATE' : ''}
-    LIMIT 1
-  `;
-  const res = await query(sql, [userId]);
-  if (!res.rows?.[0]) return null;
-  const row = res.rows[0] as Record<string, unknown>;
+  const row = await loadCharacterWritebackRowByUserId(userId, { forUpdate });
+  if (!row) return null;
   const id = clampInt(row.id, 0, Number.MAX_SAFE_INTEGER);
   if (id <= 0) return null;
   return {
@@ -552,18 +548,11 @@ class CraftService {
     }
 
     if (totalSilverCost > 0 || totalSpiritCost > 0 || totalExpCost > 0) {
-      await query(
-        `
-          UPDATE characters
-          SET
-            silver = silver - $2,
-            spirit_stones = spirit_stones - $3,
-            exp = exp - $4,
-            updated_at = NOW()
-          WHERE id = $1
-        `,
-        [character.id, totalSilverCost, totalSpiritCost, totalExpCost],
-      );
+      queueCharacterWritebackSnapshot(character.id, {
+        silver: character.silver - totalSilverCost,
+        spirit_stones: character.spiritStones - totalSpiritCost,
+        exp: character.exp - totalExpCost,
+      });
     }
 
     const successRateRatio = normalizeRecipeRateToRatio(recipe.success_rate, recipeType, 1);

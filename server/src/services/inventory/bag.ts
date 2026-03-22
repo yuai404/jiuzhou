@@ -36,6 +36,11 @@ import { lockCharacterInventoryMutex } from "../inventoryMutex.js";
 import { resolveQualityRankFromName } from "../shared/itemQuality.js";
 import { normalizeItemInstanceObtainedFrom } from "../shared/itemInstanceSource.js";
 import { tryInsertItemInstanceWithSlot } from "../shared/itemInstanceSlotInsert.js";
+import {
+  applyPendingInventoryItemTotal,
+  applyPendingInventoryItemWritebackRows,
+  applyPendingInventoryUsageToInfo,
+} from "../playerWritebackCacheService.js";
 import type {
   InventoryInfo,
   InventoryItem,
@@ -91,11 +96,11 @@ export const getInventoryInfo = async (
       "INSERT INTO inventory (character_id) VALUES ($1) ON CONFLICT DO NOTHING",
       [characterId],
     );
-    return createDefaultInventoryInfo();
+    return applyPendingInventoryUsageToInfo(characterId, createDefaultInventoryInfo());
   }
 
-  const info = result.rows[0];
-  return info;
+  const info = result.rows[0] as InventoryInfo;
+  return applyPendingInventoryUsageToInfo(characterId, info);
 };
 
 // ============================================
@@ -135,12 +140,14 @@ export const getInventoryItems = async (
 
   const result = await query(sql, [characterId, location, pageSize, offset]);
 
-  const total =
+  const totalFromDb =
     result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
-  const items = result.rows.map((row) => {
+  const itemsFromDb = result.rows.map((row) => {
     const { total_count, ...item } = row;
     return item as InventoryItem;
   });
+  const items = applyPendingInventoryItemWritebackRows(characterId, itemsFromDb);
+  const total = applyPendingInventoryItemTotal(characterId, location, totalFromDb);
 
   return { items, total };
 };

@@ -23,6 +23,7 @@ import { query } from '../../config/database.js';
 import { Transactional } from '../../decorators/transactional.js';
 import { getMapDefinitions } from '../staticConfigLoader.js';
 import { getMainQuestProgress } from '../mainQuest/index.js';
+import { applyPendingCharacterWriteback } from '../playerWritebackCacheService.js';
 import { grantPermanentTitleTx } from '../achievement/titleOwnership.js';
 import { generateWanderAiEpisodeDraft, isWanderAiAvailable, type WanderAiPreviousEpisodeContext } from './ai.js';
 import { buildDateKey, resolveWanderGenerationDayKey, shouldBypassWanderDailyLimit } from './rules.js';
@@ -280,7 +281,8 @@ class WanderService {
       `,
       [characterId],
     );
-    return result.rows[0] ?? null;
+    const row = result.rows[0];
+    return row ? applyPendingCharacterWriteback(row) : null;
   }
 
   private async loadTodayEpisodeRow(characterId: number, today: string): Promise<WanderEpisodeRow | null> {

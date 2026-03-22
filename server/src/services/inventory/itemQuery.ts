@@ -43,6 +43,7 @@ import { resolveQualityRankFromName } from "../shared/itemQuality.js";
 import { resolveItemCanDisassemble } from "../shared/itemDisassembleRule.js";
 import { resolveGeneratedTechniqueBookDisplay } from "../shared/generatedTechniqueBookView.js";
 import { buildAffixPoolSlotCacheKey } from "../shared/affixPoolSlotResolver.js";
+import { applyPendingInventoryItemWritebackRows } from "../playerWritebackCacheService.js";
 import type {
   InventoryInfo,
   InventoryItem,
@@ -77,7 +78,11 @@ export const getEquippedItemDefIds = async (
      WHERE ii.owner_character_id = $1 AND ii.location = 'equipped'`,
     [characterId],
   );
-  return (result.rows as Array<{ item_def_id?: unknown }>)
+  const rows = applyPendingInventoryItemWritebackRows(
+    characterId,
+    result.rows as Array<{ id?: unknown; item_def_id?: unknown } & Record<string, unknown>>,
+  );
+  return rows
     .map((row) => String(row.item_def_id || "").trim())
     .filter((id) => id.length > 0);
 };

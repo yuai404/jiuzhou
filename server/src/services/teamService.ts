@@ -6,6 +6,7 @@ import { updateAchievementProgress } from './achievementService.js';
 import { idleSessionService } from './idle/idleSessionService.js';
 import { createCacheLayer } from './shared/cacheLayer.js';
 import { getMonthCardActiveMapByCharacterIds } from './shared/monthCardBenefits.js';
+import { loadCharacterWritebackRowByCharacterId } from './playerWritebackCacheService.js';
 import { REALM_ORDER } from './shared/realmRules.js';
 
 /**
@@ -466,16 +467,10 @@ export const createTeam = async (characterId: number, name?: string, goal?: stri
   }
 
   // 获取角色信息
-  const charResult = await query(
-    `SELECT nickname, current_map_id FROM characters WHERE id = $1`,
-    [characterId]
-  );
-
-  if (charResult.rows.length === 0) {
+  const character = await loadCharacterWritebackRowByCharacterId(characterId);
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
-
-  const character = charResult.rows[0];
   const teamId = crypto.randomUUID();
   const teamName = name || `${character.nickname}的小队`;
   const teamGoal = goal || '组队冒险';
@@ -972,16 +967,11 @@ export const updateTeamSettings = async (
  */
 export const getNearbyTeams = async (characterId: number, mapId?: string) => {
   // 获取角色当前地图
-  const charResult = await query(
-    `SELECT current_map_id FROM characters WHERE id = $1`,
-    [characterId]
-  );
-
-  if (charResult.rows.length === 0) {
+  const character = await loadCharacterWritebackRowByCharacterId(characterId);
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
-
-  const currentMapId = mapId || charResult.rows[0].current_map_id;
+  const currentMapId = mapId || character.current_map_id;
 
   // 查询同地图的公开队伍
   const teamsResult = await query<TeamBrowseRow>(

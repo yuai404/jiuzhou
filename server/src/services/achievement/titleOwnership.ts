@@ -1,4 +1,5 @@
 import { query } from '../../config/database.js';
+import { queueCharacterWritebackSnapshot } from '../playerWritebackCacheService.js';
 import { asFiniteNonNegativeInt, asNonEmptyString } from './shared.js';
 import { PVP_WEEKLY_TITLE_IDS } from './pvpWeeklyTitleConfig.js';
 
@@ -92,22 +93,27 @@ export const clearExpiredEquippedPvpWeeklyTitlesTx = async (
     return [];
   }
 
-  await query(
+  const equippedTitleRes = await query(
     `
-      UPDATE characters c
-      SET title = '散修',
-          updated_at = NOW()
-      WHERE c.id = ANY($1::int[])
-        AND NOT EXISTS (
-          SELECT 1
-          FROM character_title ct
-          WHERE ct.character_id = c.id
-            AND ct.is_equipped = true
-            AND (ct.expires_at IS NULL OR ct.expires_at > NOW())
-        )
+      SELECT DISTINCT ct.character_id
+      FROM character_title ct
+      WHERE ct.character_id = ANY($1::int[])
+        AND ct.is_equipped = true
+        AND (ct.expires_at IS NULL OR ct.expires_at > NOW())
     `,
     [characterIds],
   );
+  const equippedCharacterIdSet = new Set(
+    equippedTitleRes.rows
+      .map((row) => asFiniteNonNegativeInt(row.character_id, 0))
+      .filter((id) => id > 0),
+  );
+  for (const characterId of characterIds) {
+    if (equippedCharacterIdSet.has(characterId)) continue;
+    queueCharacterWritebackSnapshot(characterId, {
+      title: '散修',
+    });
+  }
 
   return characterIds;
 };

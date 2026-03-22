@@ -20,6 +20,7 @@
 import { query } from '../config/database.js';
 import { Transactional } from '../decorators/transactional.js';
 import { invalidateCharacterComputedCache } from './characterComputedService.js';
+import { loadCharacterWritebackRowByUserId, queueCharacterWritebackSnapshot } from './playerWritebackCacheService.js';
 import { getInsightGrowthConfig } from './staticConfigLoader.js';
 import {
   buildInsightPctBonusByLevel,
@@ -86,20 +87,8 @@ const normalizeInteger = (value: unknown): number => {
 };
 
 const loadCharacterInsightRow = async (userId: number, forUpdate: boolean): Promise<CharacterInsightRow | null> => {
-  const lockSql = forUpdate ? 'FOR UPDATE' : '';
-  const result = await query(
-    `
-      SELECT id, realm, sub_realm, exp
-      FROM characters
-      WHERE user_id = $1
-      LIMIT 1
-      ${lockSql}
-    `,
-    [userId],
-  );
-  if (result.rows.length <= 0) return null;
-
-  const row = result.rows[0] as Record<string, unknown>;
+  const row = await loadCharacterWritebackRowByUserId(userId, { forUpdate });
+  if (!row) return null;
   return {
     characterId: normalizeInteger(row.id),
     realm: typeof row.realm === 'string' ? row.realm : '凡人',
@@ -298,15 +287,9 @@ class InsightService {
 
       const currentBonusPct = injectPlan.afterBonusPct;
 
-      await query(
-        `
-          UPDATE characters
-          SET exp = $2,
-              updated_at = NOW()
-          WHERE id = $1
-        `,
-        [character.characterId, injectPlan.remainingExp],
-      );
+      queueCharacterWritebackSnapshot(character.characterId, {
+        exp: injectPlan.remainingExp,
+      });
 
       await query(
         `

@@ -1,8 +1,8 @@
 /**
  * 属性加点服务
  */
-import { query } from '../config/database.js';
-import { invalidateCharacterComputedCacheByUserId } from './characterComputedService.js';
+import { getCharacterComputedByUserId } from './characterComputedService.js';
+import { queueCharacterWritebackSnapshot } from './playerWritebackCacheService.js';
 
 type AttributeKey = 'jing' | 'qi' | 'shen';
 
@@ -33,42 +33,36 @@ export const addAttributePoint = async (
   }
 
   // 检查可用属性点
-  const checkSQL = 'SELECT attribute_points FROM characters WHERE user_id = $1';
-  const checkResult = await query(checkSQL, [userId]);
-
-  if (checkResult.rows.length === 0) {
+  const character = await getCharacterComputedByUserId(userId, {
+    bypassStaticCache: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
 
-  const availablePoints = checkResult.rows[0].attribute_points;
+  const availablePoints = character.attribute_points;
   if (availablePoints < amount) {
     return { success: false, message: '属性点不足' };
   }
 
-  // 执行加点（触发器会自动计算派生属性）
-  const updateSQL = `
-    UPDATE characters 
-    SET ${attribute} = ${attribute} + $1,
-        attribute_points = attribute_points - $1,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $2
-    RETURNING ${attribute} as new_value, attribute_points as remaining_points
-  `;
-
-  const result = await query(updateSQL, [amount, userId]);
-
-  if (result.rows.length === 0) {
-    return { success: false, message: '加点失败' };
-  }
-  await invalidateCharacterComputedCacheByUserId(userId);
+  const nextValue = Number(character[attribute]) + amount;
+  const remainingPoints = availablePoints - amount;
+  queueCharacterWritebackSnapshot(character.id, {
+    attribute_points: remainingPoints,
+    jing: character.jing + (attribute === 'jing' ? amount : 0),
+    qi: character.qi + (attribute === 'qi' ? amount : 0),
+    shen: character.shen + (attribute === 'shen' ? amount : 0),
+    silver: character.silver,
+    spirit_stones: character.spirit_stones,
+  });
 
   return {
     success: true,
     message: '加点成功',
     data: {
       attribute,
-      newValue: result.rows[0].new_value,
-      remainingPoints: result.rows[0].remaining_points,
+      newValue: nextValue,
+      remainingPoints,
     },
   };
 };
@@ -90,42 +84,36 @@ export const removeAttributePoint = async (
   }
 
   // 检查当前属性值
-  const checkSQL = `SELECT ${attribute} FROM characters WHERE user_id = $1`;
-  const checkResult = await query(checkSQL, [userId]);
-
-  if (checkResult.rows.length === 0) {
+  const character = await getCharacterComputedByUserId(userId, {
+    bypassStaticCache: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
 
-  const currentValue = checkResult.rows[0][attribute];
+  const currentValue = character[attribute];
   if (currentValue < amount) {
     return { success: false, message: '属性点不足以减少' };
   }
 
-  // 执行减点（触发器会自动计算派生属性）
-  const updateSQL = `
-    UPDATE characters 
-    SET ${attribute} = ${attribute} - $1,
-        attribute_points = attribute_points + $1,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $2
-    RETURNING ${attribute} as new_value, attribute_points as remaining_points
-  `;
-
-  const result = await query(updateSQL, [amount, userId]);
-
-  if (result.rows.length === 0) {
-    return { success: false, message: '减点失败' };
-  }
-  await invalidateCharacterComputedCacheByUserId(userId);
+  const nextValue = Number(currentValue) - amount;
+  const remainingPoints = character.attribute_points + amount;
+  queueCharacterWritebackSnapshot(character.id, {
+    attribute_points: remainingPoints,
+    jing: character.jing - (attribute === 'jing' ? amount : 0),
+    qi: character.qi - (attribute === 'qi' ? amount : 0),
+    shen: character.shen - (attribute === 'shen' ? amount : 0),
+    silver: character.silver,
+    spirit_stones: character.spirit_stones,
+  });
 
   return {
     success: true,
     message: '减点成功',
     data: {
       attribute,
-      newValue: result.rows[0].new_value,
-      remainingPoints: result.rows[0].remaining_points,
+      newValue: nextValue,
+      remainingPoints,
     },
   };
 };
@@ -142,47 +130,34 @@ export const batchAddPoints = async (
   }
 
   // 检查可用属性点
-  const checkSQL = 'SELECT attribute_points FROM characters WHERE user_id = $1';
-  const checkResult = await query(checkSQL, [userId]);
-
-  if (checkResult.rows.length === 0) {
+  const character = await getCharacterComputedByUserId(userId, {
+    bypassStaticCache: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
 
-  const availablePoints = checkResult.rows[0].attribute_points;
+  const availablePoints = character.attribute_points;
   if (availablePoints < totalPoints) {
     return { success: false, message: '属性点不足' };
   }
 
-  // 构建更新SQL
-  const updates: string[] = [];
-  if (points.jing) updates.push(`jing = jing + ${points.jing}`);
-  if (points.qi) updates.push(`qi = qi + ${points.qi}`);
-  if (points.shen) updates.push(`shen = shen + ${points.shen}`);
-  updates.push(`attribute_points = attribute_points - ${totalPoints}`);
-  updates.push('updated_at = CURRENT_TIMESTAMP');
-
-  const updateSQL = `
-    UPDATE characters 
-    SET ${updates.join(', ')}
-    WHERE user_id = $1
-    RETURNING jing, qi, shen, attribute_points as remaining_points
-  `;
-
-  const result = await query(updateSQL, [userId]);
-
-  if (result.rows.length === 0) {
-    return { success: false, message: '加点失败' };
-  }
-  await invalidateCharacterComputedCacheByUserId(userId);
+  queueCharacterWritebackSnapshot(character.id, {
+    attribute_points: availablePoints - totalPoints,
+    jing: character.jing + (points.jing || 0),
+    qi: character.qi + (points.qi || 0),
+    shen: character.shen + (points.shen || 0),
+    silver: character.silver,
+    spirit_stones: character.spirit_stones,
+  });
 
   return {
     success: true,
     message: '批量加点成功',
     data: {
       attribute: 'jing',
-      newValue: result.rows[0].jing,
-      remainingPoints: result.rows[0].remaining_points,
+      newValue: character.jing + (points.jing || 0),
+      remainingPoints: availablePoints - totalPoints,
     },
   };
 };
@@ -192,27 +167,24 @@ export const resetAttributePoints = async (
   userId: number
 ): Promise<{ success: boolean; message: string; totalPoints?: number }> => {
   // 获取当前精气神总点数
-  const checkSQL = 'SELECT jing, qi, shen FROM characters WHERE user_id = $1';
-  const checkResult = await query(checkSQL, [userId]);
-
-  if (checkResult.rows.length === 0) {
+  const character = await getCharacterComputedByUserId(userId, {
+    bypassStaticCache: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
 
-  const { jing, qi, shen } = checkResult.rows[0];
+  const { jing, qi, shen } = character;
   const totalPoints = jing + qi + shen;
 
-  // 重置属性
-  const resetSQL = `
-    UPDATE characters 
-    SET jing = 0, qi = 0, shen = 0,
-        attribute_points = attribute_points + $1,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $2
-  `;
-
-  await query(resetSQL, [totalPoints, userId]);
-  await invalidateCharacterComputedCacheByUserId(userId);
+  queueCharacterWritebackSnapshot(character.id, {
+    attribute_points: character.attribute_points + totalPoints,
+    jing: 0,
+    qi: 0,
+    shen: 0,
+    silver: character.silver,
+    spirit_stones: character.spirit_stones,
+  });
 
   return {
     success: true,

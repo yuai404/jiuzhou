@@ -53,6 +53,11 @@ import {
   initializeAfdianMessageRetryService,
   stopAfdianMessageRetryService,
 } from "../services/afdianMessageRetryService.js";
+import {
+  flushAllPlayerWriteback,
+  startPlayerWritebackFlushLoop,
+  stopPlayerWritebackFlushLoop,
+} from "../services/playerWritebackCacheService.js";
 
 export interface StartServerOptions {
   httpServer: HttpServer;
@@ -108,6 +113,8 @@ export const startServerWithPipeline = async (
   console.log("✓ 云游奇遇 worker 协调器已就绪\n");
   await initializeAfdianMessageRetryService();
   console.log("✓ 爱发电私信重试调度器已就绪\n");
+  startPlayerWritebackFlushLoop();
+  console.log("✓ 玩家写回缓存调度器已就绪\n");
 
   await initGameTimeService();
   await initArenaWeeklySettlementService();
@@ -153,6 +160,9 @@ export const registerGracefulShutdown = (httpServer: HttpServer): void => {
 
       await getGameServer().shutdown();
       console.log("✓ 游戏 Socket 服务已关闭");
+      await flushAllPlayerWriteback();
+      stopPlayerWritebackFlushLoop();
+      console.log("✓ 玩家写回缓存已刷写");
 
       // 2. 停止所有后台任务和定时器
       console.log("正在停止后台服务...");

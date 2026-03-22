@@ -29,6 +29,10 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { query } from "../config/database.js";
 import {
+  loadCharacterWritebackRowByUserId,
+  queueCharacterWritebackSnapshot,
+} from "./playerWritebackCacheService.js";
+import {
   cosClient,
   COS_BUCKET,
   COS_REGION,
@@ -235,16 +239,16 @@ export const confirmAvatar = async (
     return { success: false, message: "头像地址不合法" };
   }
 
-  const oldResult = await query(
-    "SELECT avatar FROM characters WHERE user_id = $1",
-    [userId],
-  );
-  const oldAvatar: string | undefined = oldResult.rows[0]?.avatar;
-
-  await query(
-    "UPDATE characters SET avatar = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2",
-    [avatarUrl, userId],
-  );
+  const character = await loadCharacterWritebackRowByUserId(userId, {
+    forUpdate: true,
+  });
+  const oldAvatar = typeof character?.avatar === "string" ? character.avatar : undefined;
+  if (!character) {
+    return { success: false, message: "角色不存在" };
+  }
+  queueCharacterWritebackSnapshot(character.id, {
+    avatar: avatarUrl,
+  });
 
   await deleteManagedAvatarIfReplaced(oldAvatar, avatarUrl);
 
@@ -256,18 +260,18 @@ export const updateAvatarLocal = async (
   userId: number,
   file: Express.Multer.File,
 ): Promise<UploadResult> => {
-  const oldResult = await query(
-    "SELECT avatar FROM characters WHERE user_id = $1",
-    [userId],
-  );
-  const oldAvatar: string | undefined = oldResult.rows[0]?.avatar;
+  const character = await loadCharacterWritebackRowByUserId(userId, {
+    forUpdate: true,
+  });
+  const oldAvatar = typeof character?.avatar === "string" ? character.avatar : undefined;
+  if (!character) {
+    return { success: false, message: "角色不存在" };
+  }
 
   const avatarUrl = getLocalUploadedAvatarUrl(file);
-
-  await query(
-    "UPDATE characters SET avatar = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2",
-    [avatarUrl, userId],
-  );
+  queueCharacterWritebackSnapshot(character.id, {
+    avatar: avatarUrl,
+  });
 
   await deleteManagedAvatarIfReplaced(oldAvatar, avatarUrl);
 
@@ -278,20 +282,21 @@ export const updateAvatarLocal = async (
 export const deleteAvatar = async (
   userId: number,
 ): Promise<{ success: boolean; message: string }> => {
-  const result = await query(
-    "SELECT avatar FROM characters WHERE user_id = $1",
-    [userId],
-  );
-  const avatar: string | undefined = result.rows[0]?.avatar;
+  const character = await loadCharacterWritebackRowByUserId(userId, {
+    forUpdate: true,
+  });
+  if (!character) {
+    return { success: false, message: "角色不存在" };
+  }
+  const avatar = typeof character.avatar === "string" ? character.avatar : undefined;
 
   if (avatar) {
     await deleteOldAvatar(avatar);
   }
 
-  await query(
-    "UPDATE characters SET avatar = NULL, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1",
-    [userId],
-  );
+  queueCharacterWritebackSnapshot(character.id, {
+    avatar: null,
+  });
 
   return { success: true, message: "头像删除成功" };
 };

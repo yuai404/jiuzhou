@@ -15,6 +15,7 @@
  */
 
 import { query } from '../../../config/database.js';
+import { applyPendingCharacterWriteback } from '../../playerWritebackCacheService.js';
 import { asObject, asArray, asString } from './typeUtils.js';
 import type { DungeonInstanceParticipant } from '../types.js';
 
@@ -62,7 +63,8 @@ export const getParticipantNicknameMap = async (participants: DungeonInstancePar
 
   const rows = await query('SELECT id, nickname FROM characters WHERE id = ANY($1::int[])', [characterIds]);
   const nicknameMap = new Map<number, string>();
-  for (const row of rows.rows as Array<Record<string, unknown>>) {
+  for (const rawRow of rows.rows as Array<Record<string, unknown>>) {
+    const row = applyPendingCharacterWriteback(rawRow);
     const characterId = Number(row.id);
     if (!Number.isFinite(characterId) || characterId <= 0) continue;
     const nickname = asString(row.nickname, '').trim();

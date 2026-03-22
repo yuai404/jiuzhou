@@ -33,6 +33,10 @@ import {
   getCharacterComputedByCharacterId,
   type CharacterComputedRow,
 } from './characterComputedService.js';
+import {
+  loadCharacterWritebackRowByCharacterId,
+  queueCharacterWritebackSnapshot,
+} from './playerWritebackCacheService.js';
 import { getItemDefinitionById, getItemDefinitions, getTechniqueDefinitions } from './staticConfigLoader.js';
 import { getGemLevel, isGemItemDefinition } from './shared/gemItemSemantics.js';
 import { unbindEquipmentBindingByInstanceId } from './inventory/equipmentUnbind.js';
@@ -861,30 +865,24 @@ class ItemService {
       }
     }
   
-    const setClauses = ['updated_at = NOW()'];
-    const setValues: number[] = [characterId];
-    let paramIdx = 2;
-  
-    if (deltaExp !== 0) {
-      setClauses.push(`exp = exp + $${paramIdx}`);
-      setValues.push(deltaExp);
-      paramIdx++;
+    const hasCharacterWriteback =
+      deltaExp !== 0 || deltaSilver !== 0 || deltaSpiritStones !== 0;
+    if (hasCharacterWriteback) {
+      const characterWriteback = await loadCharacterWritebackRowByCharacterId(characterId, {
+        forUpdate: true,
+      });
+      if (!characterWriteback) {
+        return { success: false, message: '角色不存在' };
+      }
+
+      queueCharacterWritebackSnapshot(characterId, {
+        ...(deltaExp !== 0 ? { exp: characterWriteback.exp + deltaExp } : {}),
+        ...(deltaSilver !== 0 ? { silver: characterWriteback.silver + deltaSilver } : {}),
+        ...(deltaSpiritStones !== 0
+          ? { spirit_stones: characterWriteback.spirit_stones + deltaSpiritStones }
+          : {}),
+      });
     }
-    if (deltaSilver > 0) {
-      setClauses.push(`silver = silver + $${paramIdx}`);
-      setValues.push(deltaSilver);
-      paramIdx++;
-    }
-    if (deltaSpiritStones > 0) {
-      setClauses.push(`spirit_stones = spirit_stones + $${paramIdx}`);
-      setValues.push(deltaSpiritStones);
-      paramIdx++;
-    }
-  
-    const updatedCharResult = await query(
-      `UPDATE characters SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id`,
-      setValues
-    );
   
     for (const lootItem of lootItemsToAdd) {
       const addRes = await addItemToInventory(characterId, userId, lootItem.itemDefId, lootItem.qty, {
@@ -957,7 +955,9 @@ class ItemService {
       }
     }
 
-    const updatedChar = updatedCharResult.rows.length > 0
+    const shouldReturnUpdatedCharacter =
+      hasCharacterWriteback || deltaQixue !== 0 || deltaLingqi !== 0 || deltaStamina !== 0;
+    const updatedChar = shouldReturnUpdatedCharacter
       ? await getCharacterComputedByCharacterId(characterId, { bypassStaticCache: true })
       : undefined;
     return {

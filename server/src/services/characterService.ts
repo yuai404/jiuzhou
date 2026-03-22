@@ -12,6 +12,10 @@ import {
   invalidateCharacterComputedCache,
   type CharacterComputedRow,
 } from './characterComputedService.js';
+import {
+  loadCharacterWritebackRowByUserId,
+  queueCharacterWritebackSnapshot,
+} from './playerWritebackCacheService.js';
 import { withUnlockedFeatures } from './featureUnlockService.js';
 import { createInventoryForCharacter } from './shared/inventoryPersistence.js';
 import { primeCharacterIdByUserIdCache } from './shared/characterId.js';
@@ -168,15 +172,9 @@ export const renameCharacterWithCard = async (
       return { success: false, message: consumeResult.message, broadcastContent: null };
     }
 
-    await query(
-      `
-        UPDATE characters
-        SET nickname = $1,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-      `,
-      [nicknameValidation.nickname, characterId],
-    );
+    queueCharacterWritebackSnapshot(characterId, {
+      nickname: nicknameValidation.nickname,
+    });
 
     await characterServiceSideEffects.invalidateCharacterComputedCacheByCharacterId(characterId);
 
@@ -234,21 +232,18 @@ export const updateCharacterPosition = async (
     return { success: false, message: '位置参数过长' };
   }
 
-  const sql = `
-    UPDATE characters
-    SET current_map_id = $1,
-        current_room_id = $2,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $3
-    RETURNING id
-  `;
-  const result = await query(sql, [mapId, roomId, userId]);
-
-  if (result.rowCount === 0) {
+  const character = await loadCharacterWritebackRowByUserId(userId, {
+    forUpdate: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
+  queueCharacterWritebackSnapshot(character.id, {
+    current_map_id: mapId,
+    current_room_id: roomId,
+  });
 
-  const characterId = Number(result.rows?.[0]?.id);
+  const characterId = Number(character.id);
   if (Number.isFinite(characterId) && characterId > 0) {
     await updateSectionProgress(characterId, { type: 'reach', roomId });
     await updateAchievementProgress(characterId, `map:discover:${mapId}`, 1);
@@ -262,17 +257,15 @@ export const updateCharacterAutoCastSkills = async (
   userId: number,
   enabled: boolean,
 ): Promise<{ success: boolean; message: string }> => {
-  const sql = `
-    UPDATE characters
-    SET auto_cast_skills = $1,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $2
-  `;
-  const result = await query(sql, [Boolean(enabled), userId]);
-
-  if (result.rowCount === 0) {
+  const character = await loadCharacterWritebackRowByUserId(userId, {
+    forUpdate: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
+  queueCharacterWritebackSnapshot(character.id, {
+    auto_cast_skills: Boolean(enabled),
+  });
 
   return { success: true, message: '设置已保存' };
 };
@@ -287,19 +280,16 @@ export const updateCharacterAutoDisassembleSettings = async (
       enabled,
       rules,
     });
-    const parsedRulesJson = rules === undefined ? null : JSON.stringify(normalized.rules);
-    const sql = `
-      UPDATE characters
-      SET auto_disassemble_enabled = $1,
-          auto_disassemble_rules = COALESCE($2::jsonb, auto_disassemble_rules, '[]'::jsonb),
-          updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = $3
-    `;
-    const result = await query(sql, [normalized.enabled, parsedRulesJson, userId]);
-
-    if (result.rowCount === 0) {
+    const character = await loadCharacterWritebackRowByUserId(userId, {
+      forUpdate: true,
+    });
+    if (!character) {
       return { success: false, message: '角色不存在' };
     }
+    queueCharacterWritebackSnapshot(character.id, {
+      auto_disassemble_enabled: normalized.enabled,
+      ...(rules === undefined ? {} : { auto_disassemble_rules: normalized.rules }),
+    });
 
     return { success: true, message: '设置已保存' };
   } catch (error) {
@@ -312,17 +302,15 @@ export const updateCharacterDungeonNoStaminaCostSetting = async (
   userId: number,
   enabled: boolean,
 ): Promise<{ success: boolean; message: string }> => {
-  const sql = `
-    UPDATE characters
-    SET dungeon_no_stamina_cost = $1,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE user_id = $2
-  `;
-  const result = await query(sql, [Boolean(enabled), userId]);
-
-  if (result.rowCount === 0) {
+  const character = await loadCharacterWritebackRowByUserId(userId, {
+    forUpdate: true,
+  });
+  if (!character) {
     return { success: false, message: '角色不存在' };
   }
+  queueCharacterWritebackSnapshot(character.id, {
+    dungeon_no_stamina_cost: Boolean(enabled),
+  });
 
   return { success: true, message: '设置已保存' };
 };

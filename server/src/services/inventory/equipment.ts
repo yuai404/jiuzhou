@@ -58,6 +58,7 @@ import {
   getCharacterComputedByCharacterId,
   invalidateCharacterComputedCache,
 } from "../characterComputedService.js";
+import { queueInventoryItemWritebackSnapshot } from "../playerWritebackCacheService.js";
 import {
   getRealmRankOneBasedForEquipment,
   getRealmRankOneBasedStrict,
@@ -82,6 +83,36 @@ import { consumeMaterialByDefId, consumeCharacterCurrencies } from "./shared/con
 import { getEnhanceItemState, getRefineItemState, getRerollItemState } from "./shared/validation.js";
 import { clampInt, getStaticItemDef } from "./shared/helpers.js";
 import { findEmptySlots } from "./bag.js";
+
+const toPendingInventorySnapshot = (
+  characterId: number,
+  item: {
+    id: number;
+    itemDefId: string;
+    qty: number;
+    location: InventoryLocation | string;
+    locationSlot: number | null;
+    equippedSlot: string | null;
+    strengthenLevel: number;
+    refineLevel: number;
+    affixes: unknown;
+    affixGenVersion: number | null;
+  },
+) => {
+  return {
+    id: item.id,
+    owner_character_id: characterId,
+    item_def_id: item.itemDefId,
+    qty: item.qty,
+    location: String(item.location),
+    location_slot: item.locationSlot,
+    equipped_slot: item.equippedSlot,
+    strengthen_level: item.strengthenLevel,
+    refine_level: item.refineLevel,
+    affixes: item.affixes,
+    affix_gen_version: item.affixGenVersion,
+  };
+};
 
 // ============================================
 // 穿戴装备
@@ -475,21 +506,24 @@ export const enhanceEquipment = async (
         : curLv;
 
   if (success) {
-    await query(
-      "UPDATE item_instance SET strengthen_level = $1, updated_at = NOW() WHERE id = $2 AND owner_character_id = $3",
-      [targetLv, itemInstanceId, characterId],
+    queueInventoryItemWritebackSnapshot(
+      characterId,
+      toPendingInventorySnapshot(characterId, item),
+      { strengthen_level: targetLv },
     );
   } else if (downgraded) {
-    await query(
-      "UPDATE item_instance SET strengthen_level = $1, updated_at = NOW() WHERE id = $2 AND owner_character_id = $3",
-      [resultLevel, itemInstanceId, characterId],
+    queueInventoryItemWritebackSnapshot(
+      characterId,
+      toPendingInventorySnapshot(characterId, item),
+      { strengthen_level: resultLevel ?? 0 },
     );
   } else if (destroyed) {
     if (String(item.location) === "equipped") {
       const beforeSetBonus = await getEquippedSetBonusDelta(characterId);
-      await query(
-        "DELETE FROM item_instance WHERE id = $1 AND owner_character_id = $2",
-        [itemInstanceId, characterId],
+      queueInventoryItemWritebackSnapshot(
+        characterId,
+        toPendingInventorySnapshot(characterId, item),
+        null,
       );
       if (beforeDiffRes.before) {
         await applyCharacterAttrDelta(
@@ -503,9 +537,10 @@ export const enhanceEquipment = async (
       mergeDelta(setBonusDelta, invertDelta(beforeSetBonus));
       await applyCharacterAttrDelta(characterId, setBonusDelta);
     } else {
-      await query(
-        "DELETE FROM item_instance WHERE id = $1 AND owner_character_id = $2",
-        [itemInstanceId, characterId],
+      queueInventoryItemWritebackSnapshot(
+        characterId,
+        toPendingInventorySnapshot(characterId, item),
+        null,
       );
     }
   }
@@ -521,7 +556,6 @@ export const enhanceEquipment = async (
       return { success: false, message: applyDiffRes.message };
     }
   }
-  await invalidateCharacterComputedCache(characterId);
   const character = await getCharacterComputedByCharacterId(characterId, {
     bypassStaticCache: true,
   });
@@ -633,9 +667,10 @@ export const refineEquipment = async (
     : getRefineFailResultLevel(curLv, targetLv);
 
   if (resultLevel !== curLv) {
-    await query(
-      "UPDATE item_instance SET refine_level = $1, updated_at = NOW() WHERE id = $2 AND owner_character_id = $3",
-      [resultLevel, itemInstanceId, characterId],
+    queueInventoryItemWritebackSnapshot(
+      characterId,
+      toPendingInventorySnapshot(characterId, item),
+      { refine_level: resultLevel },
     );
   }
 
@@ -648,7 +683,6 @@ export const refineEquipment = async (
   if (!applyDiffRes.success) {
     return { success: false, message: applyDiffRes.message };
   }
-  await invalidateCharacterComputedCache(characterId);
   const character = await getCharacterComputedByCharacterId(characterId, {
     bypassStaticCache: true,
   });
@@ -1156,15 +1190,13 @@ export const rerollEquipmentAffixes = async (
       return { success: false, message: currencyRes.message };
     }
 
-    await query(
-      `
-        UPDATE item_instance
-        SET affixes = $1::jsonb,
-            affix_gen_version = 5,
-            updated_at = NOW()
-        WHERE id = $2 AND owner_character_id = $3
-      `,
-      [JSON.stringify(rerolledAffixes), itemInstanceId, characterId],
+    queueInventoryItemWritebackSnapshot(
+      characterId,
+      toPendingInventorySnapshot(characterId, item),
+      {
+        affixes: rerolledAffixes,
+        affix_gen_version: 5,
+      },
     );
 
     const applyDiffRes = await applyEquipmentDiffIfEquipped(
@@ -1176,7 +1208,6 @@ export const rerollEquipmentAffixes = async (
     if (!applyDiffRes.success) {
       return { success: false, message: applyDiffRes.message };
     }
-    await invalidateCharacterComputedCache(characterId);
     const character = await getCharacterComputedByCharacterId(characterId, {
       bypassStaticCache: true,
     });

@@ -17,11 +17,7 @@
  * 1) 这里只处理单角色查询；批量场景仍应使用专门的批量查询模块，避免在循环里重复调用。
  * 2) 广播文案依赖昵称可读性，因此空白昵称不能直接透传，必须在这里统一裁剪并返回 `null`。
  */
-import { query } from '../../config/database.js';
-
-type CharacterNicknameRow = {
-  nickname?: string | null;
-};
+import { loadCharacterWritebackRowByCharacterId } from '../playerWritebackCacheService.js';
 
 const normalizeCharacterId = (characterId: number): number | null => {
   const normalized = Number(characterId);
@@ -37,19 +33,11 @@ export const getCharacterNicknameById = async (characterId: number): Promise<str
     return null;
   }
 
-  const result = await query(
-    `
-      SELECT nickname
-      FROM characters
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [normalizedCharacterId],
-  );
-  if (result.rows.length <= 0) {
+  const character = await loadCharacterWritebackRowByCharacterId(normalizedCharacterId);
+  if (!character) {
     return null;
   }
 
-  const nickname = (result.rows[0] as CharacterNicknameRow).nickname?.trim();
+  const nickname = character.nickname?.trim();
   return nickname || null;
 };

@@ -52,6 +52,11 @@ import {
   CHARACTER_RATIO_ATTR_KEY_SET,
   TITLE_EFFECT_KEY_SET,
 } from './shared/characterAttrRegistry.js';
+import {
+  applyPendingCharacterWriteback,
+  applyPendingInventoryItemWritebackRows,
+  getPlayerWritebackRuntimeVersion,
+} from './playerWritebackCacheService.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -336,6 +341,7 @@ const buildSignature = (base: CharacterBaseRow, monthCardFuyuanBonus: number): s
     base.attribute_type,
     base.attribute_element,
     monthCardFuyuanBonus,
+    getPlayerWritebackRuntimeVersion(base.id),
   ].join('|');
 };
 
@@ -598,17 +604,21 @@ const loadEquippedAttrBonuses = async (characterId: number, effectiveLevel: numb
     `,
     [characterId],
   );
+  const equippedRows = applyPendingInventoryItemWritebackRows(
+    characterId,
+    equippedResult.rows as Array<Record<string, unknown>>,
+  );
 
   const itemDefIds = Array.from(
     new Set(
-      (equippedResult.rows as Array<Record<string, unknown>>)
+      equippedRows
         .map((row) => String(row.item_def_id || '').trim())
         .filter((itemDefId) => itemDefId.length > 0),
     ),
   );
   const defs = getItemDefinitionsByIds(itemDefIds);
   const setCountMap = new Map<string, number>();
-  for (const row of equippedResult.rows as Array<Record<string, unknown>>) {
+  for (const row of equippedRows) {
     const itemDefId = String(row.item_def_id || '').trim();
     if (!itemDefId) continue;
     const def = defs.get(itemDefId);
@@ -906,7 +916,7 @@ const selectBaseCharacterByUserId = async (userId: number): Promise<CharacterBas
     [userId],
   );
   if (result.rows.length <= 0) return null;
-  return result.rows[0] as CharacterBaseRow;
+  return applyPendingCharacterWriteback(result.rows[0] as CharacterBaseRow);
 };
 
 const selectBaseCharacterByCharacterId = async (characterId: number): Promise<CharacterBaseRow | null> => {
@@ -923,7 +933,7 @@ const selectBaseCharacterByCharacterId = async (characterId: number): Promise<Ch
     [characterId],
   );
   if (result.rows.length <= 0) return null;
-  return result.rows[0] as CharacterBaseRow;
+  return applyPendingCharacterWriteback(result.rows[0] as CharacterBaseRow);
 };
 
 const ensureResourceState = async (
@@ -1058,7 +1068,7 @@ export const getCharacterComputedBatchByCharacterIds = async (
     [ids],
   );
 
-  const rows = result.rows as CharacterBaseRow[];
+  const rows = (result.rows as CharacterBaseRow[]).map((row) => applyPendingCharacterWriteback(row));
   const monthCardFuyuanBonusMap = await loadMonthCardFuyuanBonusMap(rows.map((row) => row.id));
   await Promise.all(
     rows.map(async (row) => {

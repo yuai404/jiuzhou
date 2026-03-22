@@ -28,6 +28,7 @@ import {
 } from "../../equipmentAffixRerollService.js";
 import { resolveQualityRankFromName } from "../../shared/itemQuality.js";
 import type { GeneratedAffix } from "../../equipmentService.js";
+import { applyPendingInventoryItemWritebackRow } from "../../playerWritebackCacheService.js";
 import type { InventoryLocation } from "./types.js";
 import { clampInt, getStaticItemDef } from "./helpers.js";
 
@@ -45,9 +46,15 @@ export const getEnhanceItemState = async (
     id: number;
     qty: number;
     location: InventoryLocation | string;
+    locationSlot: number | null;
+    equippedSlot: string | null;
     locked: boolean;
     strengthenLevel: number;
+    refineLevel: number;
+    affixes: unknown;
+    affixGenVersion: number | null;
     equipReqRealm: string | null;
+    itemDefId: string;
   };
 }> => {
   const itemResult = await query(
@@ -56,8 +63,13 @@ export const getEnhanceItemState = async (
         ii.id,
         ii.qty,
         ii.location,
+        ii.location_slot,
+        ii.equipped_slot,
         ii.locked,
         ii.strengthen_level,
+        ii.refine_level,
+        ii.affixes,
+        ii.affix_gen_version,
         ii.item_def_id
       FROM item_instance ii
       WHERE ii.id = $1 AND ii.owner_character_id = $2
@@ -70,14 +82,21 @@ export const getEnhanceItemState = async (
   if (itemResult.rows.length === 0)
     return { success: false, message: "物品不存在" };
 
-  const row = itemResult.rows[0] as {
+  const row = applyPendingInventoryItemWritebackRow(characterId, itemResult.rows[0] as {
     id: number;
     qty: number;
     location: InventoryLocation | string;
+    location_slot: number | null;
+    equipped_slot: string | null;
     locked: boolean;
     strengthen_level: number;
+    refine_level: number;
+    affixes: unknown;
+    affix_gen_version: number | null;
     item_def_id: string;
-  };
+  });
+  if (!row)
+    return { success: false, message: "物品不存在" };
 
   const itemDef = getStaticItemDef(row.item_def_id);
   if (!itemDef || itemDef.category !== "equipment")
@@ -98,12 +117,18 @@ export const getEnhanceItemState = async (
       id: Number(row.id),
       qty: Number(row.qty) || 1,
       location: row.location,
+      locationSlot: row.location_slot,
+      equippedSlot: row.equipped_slot,
       locked: Boolean(row.locked),
       strengthenLevel: normalizeEnhanceLevel(Number(row.strengthen_level) || 0),
+      refineLevel: clampInt(Number(row.refine_level) || 0, 0, REFINE_MAX_LEVEL),
+      affixes: row.affixes,
+      affixGenVersion: row.affix_gen_version,
       equipReqRealm:
         typeof itemDef.equip_req_realm === "string"
           ? itemDef.equip_req_realm
           : null,
+      itemDefId: row.item_def_id,
     },
   };
 };
@@ -122,9 +147,15 @@ export const getRefineItemState = async (
     id: number;
     qty: number;
     location: InventoryLocation | string;
+    locationSlot: number | null;
+    equippedSlot: string | null;
     locked: boolean;
+    strengthenLevel: number;
     refineLevel: number;
+    affixes: unknown;
+    affixGenVersion: number | null;
     equipReqRealm: string | null;
+    itemDefId: string;
   };
 }> => {
   const itemResult = await query(
@@ -133,8 +164,13 @@ export const getRefineItemState = async (
         ii.id,
         ii.qty,
         ii.location,
+        ii.location_slot,
+        ii.equipped_slot,
         ii.locked,
+        ii.strengthen_level,
         ii.refine_level,
+        ii.affixes,
+        ii.affix_gen_version,
         ii.item_def_id
       FROM item_instance ii
       WHERE ii.id = $1 AND ii.owner_character_id = $2
@@ -147,14 +183,21 @@ export const getRefineItemState = async (
   if (itemResult.rows.length === 0)
     return { success: false, message: "物品不存在" };
 
-  const row = itemResult.rows[0] as {
+  const row = applyPendingInventoryItemWritebackRow(characterId, itemResult.rows[0] as {
     id: number;
     qty: number;
     location: InventoryLocation | string;
+    location_slot: number | null;
+    equipped_slot: string | null;
     locked: boolean;
+    strengthen_level: number;
     refine_level: number;
+    affixes: unknown;
+    affix_gen_version: number | null;
     item_def_id: string;
-  };
+  });
+  if (!row)
+    return { success: false, message: "物品不存在" };
 
   const itemDef = getStaticItemDef(row.item_def_id);
   if (!itemDef || itemDef.category !== "equipment")
@@ -175,12 +218,18 @@ export const getRefineItemState = async (
       id: Number(row.id),
       qty: Number(row.qty) || 1,
       location: row.location,
+      locationSlot: row.location_slot,
+      equippedSlot: row.equipped_slot,
       locked: Boolean(row.locked),
+      strengthenLevel: normalizeEnhanceLevel(Number(row.strengthen_level) || 0),
       refineLevel: clampInt(Number(row.refine_level) || 0, 0, REFINE_MAX_LEVEL),
+      affixes: row.affixes,
+      affixGenVersion: row.affix_gen_version,
       equipReqRealm:
         typeof itemDef.equip_req_realm === "string"
           ? itemDef.equip_req_realm
           : null,
+      itemDefId: row.item_def_id,
     },
   };
 };
@@ -199,7 +248,12 @@ export const getRerollItemState = async (
     id: number;
     qty: number;
     location: InventoryLocation | string;
+    locationSlot: number | null;
+    equippedSlot: string | null;
     locked: boolean;
+    strengthenLevel: number;
+    refineLevel: number;
+    affixGenVersion: number | null;
     affixPoolId: string;
     equipSlot: string | null;
     affixes: GeneratedAffix[];
@@ -208,6 +262,7 @@ export const getRerollItemState = async (
     defQuality: string | null;
     defQualityRank: number;
     equipReqRealm: string | null;
+    itemDefId: string;
   };
 }> => {
   const itemResult = await query(
@@ -216,8 +271,13 @@ export const getRerollItemState = async (
         ii.id,
         ii.qty,
         ii.location,
+        ii.location_slot,
+        ii.equipped_slot,
         ii.locked,
         ii.affixes,
+        ii.strengthen_level,
+        ii.refine_level,
+        ii.affix_gen_version,
         ii.item_def_id,
         ii.quality,
         ii.quality_rank
@@ -232,16 +292,23 @@ export const getRerollItemState = async (
   if (itemResult.rows.length === 0)
     return { success: false, message: "物品不存在" };
 
-  const row = itemResult.rows[0] as {
+  const row = applyPendingInventoryItemWritebackRow(characterId, itemResult.rows[0] as {
     id: number;
     qty: number;
     location: InventoryLocation | string;
+    location_slot: number | null;
+    equipped_slot: string | null;
     locked: boolean;
     affixes: unknown;
+    strengthen_level: number;
+    refine_level: number;
+    affix_gen_version: number | null;
     item_def_id: string;
     quality: string | null;
     quality_rank: number | null;
-  };
+  });
+  if (!row)
+    return { success: false, message: "物品不存在" };
 
   const itemDef = getStaticItemDef(row.item_def_id);
   if (!itemDef || itemDef.category !== "equipment")
@@ -269,7 +336,12 @@ export const getRerollItemState = async (
       id: Number(row.id),
       qty: Number(row.qty) || 1,
       location: row.location,
+      locationSlot: row.location_slot,
+      equippedSlot: row.equipped_slot,
       locked: Boolean(row.locked),
+      strengthenLevel: normalizeEnhanceLevel(Number(row.strengthen_level) || 0),
+      refineLevel: clampInt(Number(row.refine_level) || 0, 0, REFINE_MAX_LEVEL),
+      affixGenVersion: row.affix_gen_version,
       affixPoolId,
       equipSlot:
         typeof itemDef.equip_slot === "string"
@@ -295,6 +367,7 @@ export const getRerollItemState = async (
         typeof itemDef.equip_req_realm === "string"
           ? itemDef.equip_req_realm
           : null,
+      itemDefId: row.item_def_id,
     },
   };
 };
