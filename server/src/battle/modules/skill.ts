@@ -583,6 +583,14 @@ function executeDamageEffect(
       });
       appendBattleLogs(state, onCritLogs);
     }
+    const onAllyHitOwners = resolveAliveAllies(state, caster);
+    for (const ally of onAllyHitOwners) {
+      const onAllyHitLogs = triggerSetBonusEffects(state, 'on_ally_hit', ally, {
+        target,
+        damage: actualDamage,
+      });
+      appendBattleLogs(state, onAllyHitLogs);
+    }
 
     const reflectLogs = buildReflectDamageLogs(state, target, caster, actualDamage);
     if (reflectLogs.length > 0) {
@@ -591,6 +599,12 @@ function executeDamageEffect(
   }
 
   return { attempted, landed };
+}
+
+function resolveAliveAllies(state: BattleState, caster: BattleUnit): BattleUnit[] {
+  const isAttacker = state.teams.attacker.units.some((entry) => entry.id === caster.id);
+  const team = isAttacker ? state.teams.attacker : state.teams.defender;
+  return team.units.filter((entry) => entry.isAlive);
 }
 
 function buildReflectDamageLogs(

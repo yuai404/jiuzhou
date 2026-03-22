@@ -5,7 +5,7 @@ import { loadNormalizedAffixPools } from './seedTestUtils.js';
 
 const UNIFIED_POOL_IDS = ['ap-equipment'] as const;
 
-const EXPECTED_TOTAL_TIER_ROWS = 759;
+const EXPECTED_TOTAL_TIER_ROWS = 760;
 
 type SpecialDescriptionRule = {
   requiredTiers: number[];
@@ -21,6 +21,7 @@ const specialDescriptionRules: Record<string, SpecialDescriptionRule> = {
   proc_duanxing: { requiredTiers: [8] },
   proc_huixiang: { requiredTiers: [8] },
   proc_xuangang: { requiredTiers: [8] },
+  proc_tongqi: { requiredTiers: [10] },
 };
 
 test('词缀池应全量扩展到T10且tier门槛一致', () => {

@@ -81,7 +81,8 @@ export type SpecialAffixDescriptionTemplateKey =
   | 'proc_lingchao'
   | 'proc_duanxing'
   | 'proc_huixiang'
-  | 'proc_xuangang';
+  | 'proc_xuangang'
+  | 'proc_tongqi';
 
 type AffixSharedFields = {
   key: string;
@@ -93,9 +94,9 @@ type AffixSharedFields = {
   start_tier: number;
   allowed_slots?: AffixAllowedSlot[];
   is_legendary?: boolean;
-  trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
+  trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_ally_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
   target?: 'self' | 'enemy';
-  effect_type?: 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark';
+  effect_type?: 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark' | 'pursuit';
   duration_round?: number;
   params?: Record<string, string | number | boolean>;
   primary_value_source?: string;
@@ -165,6 +166,7 @@ const SPECIAL_AFFIX_DESCRIPTION_BUILDERS: Record<
   proc_duanxing: (min, max) => `命中时20%概率引爆断星芒，造成${trimNumber(min)}~${trimNumber(max)}点真伤并附加42%最大灵气加成`,
   proc_huixiang: (min, max) => `命中时22%概率引动太虚回锋，追加本次命中伤害${trimNumber(min * 100)}%~${trimNumber(max * 100)}%的真伤`,
   proc_xuangang: (min, max) => `受击时27%概率凝成玄罡回璧，获得相当于本次受击伤害${trimNumber(min * 100)}%~${trimNumber(max * 100)}%的护盾，持续2回合`,
+  proc_tongqi: (min, max) => `友方命中时20%概率触发同契追击，由你立刻追击目标，造成相当于你较高攻击属性${trimNumber(min * 100)}%~${trimNumber(max * 100)}%的真伤，每回合同名词缀最多触发1次`,
 };
 
 export const buildSpecialAffixDescription = (

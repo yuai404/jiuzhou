@@ -171,7 +171,7 @@ test('洗炼生成flat词条时应支持复合modifiers', () => {
   assert.equal(rerollResult.affixes?.[0]?.modifiers?.[1]?.value, 10);
 });
 
-test('special比例词条应保留小数精度（echo 与 damage_echo）', () => {
+test('special比例词条应保留小数精度（echo / damage_echo / pursuit）', () => {
   const parsed = parseGeneratedAffixesForReroll([
     {
       key: 'proc_huixiang',
@@ -201,9 +201,26 @@ test('special比例词条应保留小数精度（echo 与 damage_echo）', () =>
         chance: 0.27,
       },
     },
+    {
+      key: 'proc_tongqi',
+      name: '同契追击',
+      apply_type: 'special',
+      tier: 10,
+      value: 0.4187654,
+      trigger: 'on_ally_hit',
+      target: 'enemy',
+      effect_type: 'pursuit',
+      params: {
+        scale_key: 'main_attack',
+        damage_type: 'true',
+        chance: 0.2,
+        round_limit: 1,
+      },
+    },
   ]);
 
-  assert.equal(parsed.length, 2);
+  assert.equal(parsed.length, 3);
   assert.equal(parsed[0]?.value, 0.245679);
   assert.equal(parsed[1]?.value, 0.423457);
+  assert.equal(parsed[2]?.value, 0.418765);
 });

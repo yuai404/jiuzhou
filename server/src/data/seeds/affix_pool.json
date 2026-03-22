@@ -2501,6 +2501,42 @@
           "description_template": "proc_xuangang"
         },
         {
+          "key": "proc_tongqi",
+          "name": "同契追击",
+          "apply_type": "special",
+          "group": "trigger",
+          "weight": 16,
+          "start_tier": 10,
+          "allowed_slots": [
+            "weapon",
+            "accessory",
+            "artifact"
+          ],
+          "values": {
+            "main": {
+              "base": {
+                "min": 0.38,
+                "max": 0.52
+              },
+              "growth": {
+                "mode": "flat",
+                "min_delta": 0,
+                "max_delta": 0
+              }
+            }
+          },
+          "trigger": "on_ally_hit",
+          "target": "enemy",
+          "effect_type": "pursuit",
+          "params": {
+            "damage_type": "true",
+            "scale_key": "main_attack",
+            "chance": 0.2,
+            "round_limit": 1
+          },
+          "description_template": "proc_tongqi"
+        },
+        {
           "key": "proc_zhuihun",
           "name": "追魂斩",
           "apply_type": "special",

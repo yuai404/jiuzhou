@@ -74,6 +74,8 @@ export interface BattleUnit {
 
   // 套装战斗效果（仅战斗期触发型效果）
   setBonusEffects: BattleSetBonusEffect[];
+  // 词缀/套装按回合限次触发状态（如“同回合同词缀最多触发1次”）
+  setBonusTriggerState?: BattleSetBonusTriggerState;
 
   // 怪物AI配置（怪物/召唤物可选）
   aiProfile?: MonsterAIProfile;
@@ -368,10 +370,16 @@ interface SkillConditions {
   requireDebuff?: string;
 }
 
+export interface BattleSetBonusTriggerState {
+  round: number;
+  counts: Record<string, number>;
+}
+
 export type BattleSetBonusTrigger =
   | 'on_turn_start'
   | 'on_skill'
   | 'on_hit'
+  | 'on_ally_hit'
   | 'on_crit'
   | 'on_be_hit'
   | 'on_heal';
@@ -382,7 +390,7 @@ export interface BattleSetBonusEffect {
   pieceCount: number;
   trigger: BattleSetBonusTrigger;
   target: 'self' | 'enemy';
-  effectType: 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark';
+  effectType: 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark' | 'pursuit';
   durationRound?: number;
   element?: string;
   params: Record<string, unknown>;

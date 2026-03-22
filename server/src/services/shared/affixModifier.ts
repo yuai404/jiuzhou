@@ -10,7 +10,7 @@ import { CHARACTER_RATIO_ATTR_KEY_SET } from './characterAttrRegistry.js';
 import { roundAffixResultValue } from './affixPrecision.js';
 
 export type AffixApplyType = 'flat' | 'percent' | 'special';
-export type AffixEffectType = 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark';
+export type AffixEffectType = 'buff' | 'debuff' | 'damage' | 'heal' | 'resource' | 'shield' | 'mark' | 'pursuit';
 export type AffixParamValue = string | number | boolean;
 export type AffixParams = Record<string, AffixParamValue>;
 
@@ -63,11 +63,13 @@ const isRatioSpecialAffixValue = (
    * special 比例型数值判定：
    * - reflect/echo：按伤害比例结算；
    * - damage_echo：按受击伤害比例生成护盾；
-   * - bleed：按比例读取持续伤害系数。
+   * - bleed：按比例读取持续伤害系数；
+   * - pursuit：按佩戴者主攻属性比例结算追击伤害。
    */
   if (effectType === 'damage' && (damageType === 'reflect' || damageType === 'echo')) return true;
   if (effectType === 'shield' && shieldMode === 'damage_echo') return true;
   if (effectType === 'debuff' && debuffType === 'bleed') return true;
+  if (effectType === 'pursuit') return true;
   return false;
 };
 

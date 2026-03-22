@@ -96,6 +96,30 @@ const createState = (attacker: BattleUnit, defender: BattleUnit): BattleState =>
   randomIndex: 0,
 });
 
+const createTeamState = (attackers: BattleUnit[], defenders: BattleUnit[]): BattleState => ({
+  battleId: 'battle-test-proc-team',
+  battleType: 'pve',
+  teams: {
+    attacker: {
+      odwnerId: 1,
+      units: attackers,
+      totalSpeed: attackers.reduce((sum, unit) => sum + unit.currentAttrs.sudu, 0),
+    },
+    defender: {
+      odwnerId: 2,
+      units: defenders,
+      totalSpeed: defenders.reduce((sum, unit) => sum + unit.currentAttrs.sudu, 0),
+    },
+  },
+  roundCount: 1,
+  currentTeam: 'attacker',
+  currentUnitId: null,
+  phase: 'action',
+  firstMover: 'attacker',
+  randomSeed: 1,
+  randomIndex: 0,
+});
+
 const assertActionLog = (
   log: BattleLogEntry | undefined
 ): Extract<BattleLogEntry, { type: 'action' }> => {
@@ -437,4 +461,123 @@ test('on_be_hit印记转护盾词条应写入 marksConsumed 并为自身加盾',
   assert.equal(owner.shields.length, 1);
   assert.ok((owner.shields[0]?.value ?? 0) > 0);
   assert.equal(attacker.marks?.length, 0);
+});
+
+test('队友命中后应由词缀佩戴者触发同契追击', () => {
+  const effect: BattleSetBonusEffect = {
+    setId: 'affix-801-proc_tongqi',
+    setName: '同契追击',
+    pieceCount: 1,
+    trigger: 'on_ally_hit',
+    target: 'enemy',
+    effectType: 'pursuit',
+    params: {
+      affix_key: 'proc_tongqi',
+      chance: 1,
+      value: 0.4,
+      scale_key: 'main_attack',
+      damage_type: 'true',
+      round_limit: 1,
+    },
+  };
+  const owner = createUnit('player-20', '连携者', [effect]);
+  owner.currentAttrs.wugong = 500;
+  owner.baseAttrs.wugong = 500;
+  owner.currentAttrs.fagong = 180;
+  owner.baseAttrs.fagong = 180;
+  const ally = createUnit('player-21', '先手队友', []);
+  const target = createUnit('monster-20', '木桩妖', []);
+  const state = createTeamState([owner, ally], [target]);
+  const skill: BattleSkill = {
+    id: 'skill-team-hit',
+    name: '协同起手',
+    source: 'innate',
+    cost: {},
+    cooldown: 0,
+    targetType: 'single_enemy',
+    targetCount: 1,
+    damageType: 'physical',
+    element: 'none',
+    effects: [
+      {
+        type: 'damage',
+        value: 80,
+        valueType: 'flat',
+      },
+    ],
+    triggerType: 'active',
+    aiPriority: 50,
+  };
+
+  const result = executeSkill(state, ally, skill, [target.id]);
+  assert.equal(result.success, true);
+
+  const logs = consumeBattleLogDelta(state.battleId).logs;
+  assert.equal(logs.length >= 2, true);
+  const pursuitLog = assertActionLog(logs[1]);
+  assert.equal(pursuitLog.actorName, '连携者');
+  assert.equal(pursuitLog.skillName, '同契追击');
+  assert.equal(pursuitLog.targets[0]?.targetName, '木桩妖');
+  assert.equal(pursuitLog.targets[0]?.hits[0]?.damage, 200);
+});
+
+test('同契追击同回合同词缀只应触发一次', () => {
+  const effect: BattleSetBonusEffect = {
+    setId: 'affix-802-proc_tongqi',
+    setName: '同契追击',
+    pieceCount: 1,
+    trigger: 'on_ally_hit',
+    target: 'enemy',
+    effectType: 'pursuit',
+    params: {
+      affix_key: 'proc_tongqi',
+      chance: 1,
+      value: 0.4,
+      scale_key: 'main_attack',
+      damage_type: 'true',
+      round_limit: 1,
+    },
+  };
+  const owner = createUnit('player-22', '连携者', [effect]);
+  owner.currentAttrs.wugong = 500;
+  owner.baseAttrs.wugong = 500;
+  const target = createUnit('monster-22', '木桩妖', []);
+  const state = createState(owner, target);
+
+  const firstLogs = triggerSetBonusEffects(state, 'on_ally_hit', owner, { target });
+  const secondLogs = triggerSetBonusEffects(state, 'on_ally_hit', owner, { target });
+
+  assert.equal(firstLogs.length, 1);
+  assert.equal(secondLogs.length, 0);
+});
+
+test('同契追击跨回合后应重置触发次数', () => {
+  const effect: BattleSetBonusEffect = {
+    setId: 'affix-803-proc_tongqi',
+    setName: '同契追击',
+    pieceCount: 1,
+    trigger: 'on_ally_hit',
+    target: 'enemy',
+    effectType: 'pursuit',
+    params: {
+      affix_key: 'proc_tongqi',
+      chance: 1,
+      value: 0.4,
+      scale_key: 'main_attack',
+      damage_type: 'true',
+      round_limit: 1,
+    },
+  };
+  const owner = createUnit('player-23', '连携者', [effect]);
+  owner.currentAttrs.wugong = 500;
+  owner.baseAttrs.wugong = 500;
+  const target = createUnit('monster-23', '木桩妖', []);
+  const state = createState(owner, target);
+
+  const roundOneLogs = triggerSetBonusEffects(state, 'on_ally_hit', owner, { target });
+  state.roundCount = 2;
+  const roundTwoLogs = triggerSetBonusEffects(state, 'on_ally_hit', owner, { target });
+
+  assert.equal(roundOneLogs.length, 1);
+  assert.equal(roundTwoLogs.length, 1);
 });

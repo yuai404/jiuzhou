@@ -171,7 +171,7 @@ export interface AffixDef {
   group: string;
   weight: number;
   is_legendary?: boolean;
-  trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
+  trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_ally_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
   target?: 'self' | 'enemy';
   effect_type?: AffixEffectType;
   duration_round?: number;
@@ -208,7 +208,7 @@ export interface GeneratedAffix {
   roll_percent?: number;
   is_legendary?: boolean;
   description?: string;
-  trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
+  trigger?: 'on_turn_start' | 'on_skill' | 'on_hit' | 'on_ally_hit' | 'on_crit' | 'on_be_hit' | 'on_heal';
   target?: 'self' | 'enemy';
   effect_type?: AffixEffectType;
   duration_round?: number;

@@ -92,10 +92,12 @@ export function triggerSetBonusEffects(
   const preparedEffects = buildPreparedTriggerEffects(effects, trigger);
   for (const prepared of preparedEffects) {
     const { effect, params, chance } = prepared;
-    if (!passChance(state, chance)) continue;
-
     const target = effect.target === 'enemy' ? context.target : owner;
     if (!target || !target.isAlive) continue;
+    const roundLimit = normalizeRoundLimit(params.round_limit);
+    const quotaKey = buildTriggerQuotaKey(effect, params);
+    if (isRoundLimitReached(owner, state.roundCount, quotaKey, roundLimit)) continue;
+    if (!passChance(state, chance)) continue;
 
     let applyResult: SetBonusApplyResult | null = null;
     switch (effect.effectType) {
@@ -118,11 +120,15 @@ export function triggerSetBonusEffects(
       case 'mark':
         applyResult = applySetMark(state, effect, owner, target, params);
         break;
+      case 'pursuit':
+        applyResult = applySetPursuit(state, owner, target, params);
+        break;
       default:
         break;
     }
 
     if (!applyResult) continue;
+    consumeRoundLimit(owner, state.roundCount, quotaKey, roundLimit);
     logs.push(buildSetBonusActionLog(state, owner, effect, applyResult.targetResult));
     if (Array.isArray(applyResult.extraLogs) && applyResult.extraLogs.length > 0) {
       logs.push(...applyResult.extraLogs);
@@ -342,6 +348,34 @@ function applySetHeal(
   }
 
   return null;
+}
+
+function applySetPursuit(
+  state: BattleState,
+  owner: BattleUnit,
+  target: BattleUnit,
+  params: Record<string, unknown>
+): SetBonusApplyResult | null {
+  const rawRate = asFiniteNumber(params.value);
+  if (rawRate === null || rawRate <= 0) return null;
+
+  const scaleKey = asNonEmptyString(params.scale_key) ?? 'main_attack';
+  const scaleValue = resolvePursuitScaleValue(owner, scaleKey);
+  if (scaleValue <= 0) return null;
+
+  const damage = Math.max(1, Math.floor(scaleValue * normalizeRate(rawRate)));
+  const damageType = normalizeDamageType(asNonEmptyString(params.damage_type) ?? 'true');
+  const finalDamageResult = applyDirectSetDamage(state, owner, target, damage, damageType);
+
+  return {
+    targetResult: {
+      ...buildTargetResultBase(target),
+      hits: [finalDamageResult.hit],
+      damage: finalDamageResult.actualDamage,
+      shieldAbsorbed: finalDamageResult.shieldAbsorbed,
+    },
+    extraLogs: finalDamageResult.extraLogs,
+  };
 }
 
 function applySetResource(
@@ -685,6 +719,51 @@ function buildAffixGroupKey(
   return `affix:${fallbackKey}`;
 }
 
+function buildTriggerQuotaKey(
+  effect: BattleSetBonusEffect,
+  params: Record<string, unknown>
+): string {
+  return buildAffixGroupKey(effect, params) ?? `set:${effect.setId}`;
+}
+
+function normalizeRoundLimit(value: unknown): number | null {
+  const limit = asFiniteNumber(value);
+  if (limit === null) return null;
+  return Math.max(1, Math.floor(limit));
+}
+
+function getOrCreateTriggerState(owner: BattleUnit, round: number) {
+  if (!owner.setBonusTriggerState || owner.setBonusTriggerState.round !== round) {
+    owner.setBonusTriggerState = {
+      round,
+      counts: {},
+    };
+  }
+  return owner.setBonusTriggerState;
+}
+
+function isRoundLimitReached(
+  owner: BattleUnit,
+  round: number,
+  quotaKey: string,
+  roundLimit: number | null
+): boolean {
+  if (roundLimit === null) return false;
+  const triggerState = getOrCreateTriggerState(owner, round);
+  return (triggerState.counts[quotaKey] ?? 0) >= roundLimit;
+}
+
+function consumeRoundLimit(
+  owner: BattleUnit,
+  round: number,
+  quotaKey: string,
+  roundLimit: number | null
+): void {
+  if (roundLimit === null) return;
+  const triggerState = getOrCreateTriggerState(owner, round);
+  triggerState.counts[quotaKey] = (triggerState.counts[quotaKey] ?? 0) + 1;
+}
+
 function normalizeChance(value: unknown): number {
   const chanceRaw = asFiniteNumber(value);
   if (chanceRaw === null) return 1;
@@ -713,6 +792,13 @@ function normalizeDamageType(value: string): 'physical' | 'magic' | 'true' {
   if (value === 'physical') return 'physical';
   if (value === 'magic') return 'magic';
   return 'true';
+}
+
+function resolvePursuitScaleValue(owner: BattleUnit, scaleKey: string): number {
+  if (scaleKey === 'main_attack') {
+    return Math.max(owner.currentAttrs.wugong, owner.currentAttrs.fagong);
+  }
+  return asFiniteNumber(readAttrValue(owner, scaleKey)) ?? 0;
 }
 
 function normalizeDuration(value: unknown): number {

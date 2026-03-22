@@ -9,6 +9,7 @@ const BATTLE_AFFIX_TRIGGER_SET: ReadonlySet<BattleAffixTrigger> = new Set([
   'on_turn_start',
   'on_skill',
   'on_hit',
+  'on_ally_hit',
   'on_crit',
   'on_be_hit',
   'on_heal',
@@ -22,6 +23,7 @@ const BATTLE_AFFIX_EFFECT_TYPE_SET: ReadonlySet<BattleAffixEffectType> = new Set
   'resource',
   'shield',
   'mark',
+  'pursuit',
 ]);
 
 type RawGeneratedAffix = {

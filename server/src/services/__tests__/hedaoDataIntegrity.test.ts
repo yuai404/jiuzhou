@@ -43,6 +43,8 @@ const HEDAO_SET_IDS = ['set-zhaogu', 'set-xuanlv', 'set-suijing'] as const;
 const HEDAO_SET_DROP_IDS = {
   bossPoolId: 'dp-hedao-boss-xuanjian-zhenjun',
   nightmarePoolId: 'dp-dungeon-jingxu-nm',
+  commonPoolId: 'dp-common-monster-hedao',
+  gemBag: 'box-012',
   weapon: 'set-suijing-weapon',
   head: 'set-suijing-head',
   artifact: 'set-suijing-artifact',
@@ -221,7 +223,7 @@ test('合道一期怪物掉落池与套装引用应完整闭环', () => {
     if (id) validItemIds.add(id);
   }
 
-  assert.ok(commonPoolById.get('dp-common-monster-hedao'), '缺少公共掉落池 dp-common-monster-hedao');
+  assert.ok(commonPoolById.get(HEDAO_SET_DROP_IDS.commonPoolId), '缺少公共掉落池 dp-common-monster-hedao');
 
   for (const monsterId of HEDAO_MONSTER_IDS) {
     const monster = monsterById.get(monsterId);
@@ -292,6 +294,37 @@ test('合道一期怪物掉落池与套装引用应完整闭环', () => {
     true,
     '噩梦首通奖励缺少物理套装法宝',
   );
+});
+
+test('合道期公共掉落池应掉落合道宝石袋，且产出 1 个 4~5 级宝石', () => {
+  const itemSeed = loadSeed('item_def.json');
+  const commonPoolSeed = loadSeed('drop_pool_common.json');
+  const itemById = buildObjectMap(asArray(itemSeed.items), 'id');
+  const commonPoolById = buildObjectMap(asArray(commonPoolSeed.pools), 'id');
+
+  const gemBag = itemById.get(HEDAO_SET_DROP_IDS.gemBag);
+  const commonPool = commonPoolById.get(HEDAO_SET_DROP_IDS.commonPoolId);
+  const effect = asObject(asArray(gemBag?.effect_defs)[0]);
+  const params = asObject(effect?.params);
+  const gemBagEntry = asArray(commonPool?.entries)
+    .map((entry) => asObject(entry))
+    .find((entry) => asText(entry?.item_def_id) === HEDAO_SET_DROP_IDS.gemBag);
+
+  assert.ok(gemBag, '缺少合道宝石袋定义');
+  assert.equal(asText(gemBag?.name), '合道宝石袋');
+  assert.equal(asText(gemBag?.category), 'consumable');
+  assert.equal(asText(gemBag?.sub_category), 'box');
+  assert.equal(asText(effect?.effect_type), 'loot');
+  assert.equal(asText(params?.loot_type), 'random_gem');
+  assert.equal(Number(params?.gems_per_use), 1, '合道宝石袋应固定产出 1 个宝石');
+  assert.equal(Number(params?.min_level), 4, '合道宝石袋最低应产出 4 级宝石');
+  assert.equal(Number(params?.max_level), 5, '合道宝石袋最高应产出 5 级宝石');
+
+  assert.ok(commonPool, '缺少合道期公共掉落池');
+  assert.ok(gemBagEntry, '合道期公共掉落池缺少合道宝石袋');
+  assert.equal(Number(gemBagEntry?.chance), 0.04, '合道宝石袋掉率应保持 0.04');
+  assert.equal(Number(gemBagEntry?.qty_min), 1, '合道宝石袋单次掉落数量最小值应为 1');
+  assert.equal(Number(gemBagEntry?.qty_max), 1, '合道宝石袋单次掉落数量最大值应为 1');
 });
 
 test('合道期普通怪、精英怪与 Boss 应携带防暴向基础属性', () => {
