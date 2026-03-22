@@ -43,5 +43,7 @@ export const formatAffixPoolPreviewTierRange = (
   applyType: string,
 ): string => {
   const suffix = applyType === 'percent' ? '%' : '';
-  return `${formatFixedPreviewValue(tier.min)}${suffix} ~ ${formatFixedPreviewValue(tier.max)}${suffix}`;
+  const min = applyType === 'percent' ? tier.min * 100 : tier.min;
+  const max = applyType === 'percent' ? tier.max * 100 : tier.max;
+  return `${formatFixedPreviewValue(min)}${suffix} ~ ${formatFixedPreviewValue(max)}${suffix}`;
 };

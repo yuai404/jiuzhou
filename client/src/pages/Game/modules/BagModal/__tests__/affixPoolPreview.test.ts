@@ -48,6 +48,6 @@ describe('affixPoolPreview', () => {
     expect(formatAffixPoolPreviewTierRange(
       { tier: 1, min: 0.1, max: 0.235 },
       'percent',
-    )).toBe('0.10% ~ 0.23%');
+    )).toBe('10.00% ~ 23.50%');
   });
 });
