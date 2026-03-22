@@ -25,62 +25,62 @@ import test from 'node:test';
 import { BattleEngine } from '../../battle/battleEngine.js';
 import * as settlementModule from '../battle/settlement.js';
 import {
-  activeBattles,
-  battleParticipants,
-  battleTickers,
-  BATTLE_TICK_MS,
+    activeBattles,
+    battleParticipants,
+    battleTickers,
+    BATTLE_TICK_MS,
 } from '../battle/runtime/state.js';
 import { startBattleTicker, stopBattleTicker } from '../battle/runtime/ticker.js';
 import { createState, createUnit } from './battleTestUtils.js';
 
 const wait = async (ms: number): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+    await new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 test('startBattleTicker: 终态结算临时失败时应保留 ticker 并在后续 tick 重试', async (t) => {
-  const battleId = 'battle-finished-settlement-retry';
-  const settleCalls: string[] = [];
-  const state = {
-    ...createState({
-      attacker: [createUnit({ id: 'player-1', name: '主角' })],
-      defender: [createUnit({ id: 'monster-1', name: '妖兽', type: 'monster' })],
-    }),
-    battleId,
-    phase: 'finished' as const,
-    result: 'attacker_win' as const,
-  };
-  const engine = new BattleEngine(state);
-
-  activeBattles.set(battleId, engine);
-  battleParticipants.set(battleId, [1]);
-
-  t.after(() => {
-    stopBattleTicker(battleId);
-    activeBattles.delete(battleId);
-    battleParticipants.delete(battleId);
-  });
-
-  t.mock.method(settlementModule, 'getBattleMonsters', async () => []);
-  t.mock.method(settlementModule, 'finishBattle', async (nextBattleId: string) => {
-    settleCalls.push(nextBattleId);
-    if (settleCalls.length === 1) {
-      throw new Error('transient settlement failure');
-    }
-    stopBattleTicker(nextBattleId);
-    return {
-      success: true,
-      message: '战斗胜利',
+    const battleId = 'battle-finished-settlement-retry';
+    const settleCalls: string[] = [];
+    const state = {
+        ...createState({
+            attacker: [createUnit({ id: 'player-1', name: '主角' })],
+            defender: [createUnit({ id: 'monster-1', name: '妖兽', type: 'monster' })],
+        }),
+        battleId,
+        phase: 'finished' as const,
+        result: 'attacker_win' as const,
     };
-  });
+    const engine = new BattleEngine(state);
 
-  startBattleTicker(battleId);
-  await wait(50);
+    activeBattles.set(battleId, engine);
+    battleParticipants.set(battleId, [1]);
 
-  assert.deepEqual(settleCalls, [battleId]);
-  assert.equal(battleTickers.has(battleId), true);
+    t.after(() => {
+        stopBattleTicker(battleId);
+        activeBattles.delete(battleId);
+        battleParticipants.delete(battleId);
+    });
 
-  await wait(BATTLE_TICK_MS + 150);
+    t.mock.method(settlementModule, 'getBattleMonsters', async () => []);
+    t.mock.method(settlementModule, 'finishBattle', async (nextBattleId: string) => {
+        settleCalls.push(nextBattleId);
+        if (settleCalls.length === 1) {
+            throw new Error('transient settlement failure');
+        }
+        stopBattleTicker(nextBattleId);
+        return {
+            success: true,
+            message: '战斗胜利',
+        };
+    });
 
-  assert.deepEqual(settleCalls, [battleId, battleId]);
-  assert.equal(battleTickers.has(battleId), false);
+    startBattleTicker(battleId);
+    await wait(50);
+
+    assert.deepEqual(settleCalls, [battleId]);
+    assert.equal(battleTickers.has(battleId), true);
+
+    await wait(BATTLE_TICK_MS + 150);
+
+    assert.deepEqual(settleCalls, [battleId, battleId]);
+    assert.equal(battleTickers.has(battleId), false);
 });
