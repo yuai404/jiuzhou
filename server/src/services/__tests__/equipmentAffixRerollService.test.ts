@@ -203,7 +203,7 @@ test('special比例词条应保留小数精度（echo / damage_echo / pursuit）
     },
     {
       key: 'proc_tongqi',
-      name: '同契追击',
+      name: '协锋追击',
       apply_type: 'special',
       tier: 10,
       value: 0.4187654,
@@ -212,7 +212,7 @@ test('special比例词条应保留小数精度（echo / damage_echo / pursuit）
       effect_type: 'pursuit',
       params: {
         scale_key: 'main_attack',
-        damage_type: 'true',
+        damage_type: 'main_attack',
         chance: 0.2,
         round_limit: 1,
       },

@@ -463,10 +463,10 @@ test('on_be_hit印记转护盾词条应写入 marksConsumed 并为自身加盾',
   assert.equal(attacker.marks?.length, 0);
 });
 
-test('队友命中后应由词缀佩戴者触发同契追击', () => {
+test('队友命中后应由词缀佩戴者触发协锋追击', () => {
   const effect: BattleSetBonusEffect = {
     setId: 'affix-801-proc_tongqi',
-    setName: '同契追击',
+    setName: '协锋追击',
     pieceCount: 1,
     trigger: 'on_ally_hit',
     target: 'enemy',
@@ -476,7 +476,7 @@ test('队友命中后应由词缀佩戴者触发同契追击', () => {
       chance: 1,
       value: 0.4,
       scale_key: 'main_attack',
-      damage_type: 'true',
+      damage_type: 'main_attack',
       round_limit: 1,
     },
   };
@@ -485,8 +485,14 @@ test('队友命中后应由词缀佩戴者触发同契追击', () => {
   owner.baseAttrs.wugong = 500;
   owner.currentAttrs.fagong = 180;
   owner.baseAttrs.fagong = 180;
+  owner.currentAttrs.mingzhong = 1;
+  owner.baseAttrs.mingzhong = 1;
   const ally = createUnit('player-21', '先手队友', []);
   const target = createUnit('monster-20', '木桩妖', []);
+  target.currentAttrs.wufang = 0;
+  target.baseAttrs.wufang = 0;
+  target.currentAttrs.fafang = 0;
+  target.baseAttrs.fafang = 0;
   const state = createTeamState([owner, ally], [target]);
   const skill: BattleSkill = {
     id: 'skill-team-hit',
@@ -516,15 +522,15 @@ test('队友命中后应由词缀佩戴者触发同契追击', () => {
   assert.equal(logs.length >= 2, true);
   const pursuitLog = assertActionLog(logs[1]);
   assert.equal(pursuitLog.actorName, '连携者');
-  assert.equal(pursuitLog.skillName, '同契追击');
+  assert.equal(pursuitLog.skillName, '协锋追击');
   assert.equal(pursuitLog.targets[0]?.targetName, '木桩妖');
   assert.equal(pursuitLog.targets[0]?.hits[0]?.damage, 200);
 });
 
-test('同契追击同回合同词缀只应触发一次', () => {
+test('协锋追击同回合同词缀只应触发一次', () => {
   const effect: BattleSetBonusEffect = {
     setId: 'affix-802-proc_tongqi',
-    setName: '同契追击',
+    setName: '协锋追击',
     pieceCount: 1,
     trigger: 'on_ally_hit',
     target: 'enemy',
@@ -534,7 +540,7 @@ test('同契追击同回合同词缀只应触发一次', () => {
       chance: 1,
       value: 0.4,
       scale_key: 'main_attack',
-      damage_type: 'true',
+      damage_type: 'main_attack',
       round_limit: 1,
     },
   };
@@ -551,10 +557,10 @@ test('同契追击同回合同词缀只应触发一次', () => {
   assert.equal(secondLogs.length, 0);
 });
 
-test('同契追击跨回合后应重置触发次数', () => {
+test('协锋追击跨回合后应重置触发次数', () => {
   const effect: BattleSetBonusEffect = {
     setId: 'affix-803-proc_tongqi',
-    setName: '同契追击',
+    setName: '协锋追击',
     pieceCount: 1,
     trigger: 'on_ally_hit',
     target: 'enemy',
@@ -564,7 +570,7 @@ test('同契追击跨回合后应重置触发次数', () => {
       chance: 1,
       value: 0.4,
       scale_key: 'main_attack',
-      damage_type: 'true',
+      damage_type: 'main_attack',
       round_limit: 1,
     },
   };

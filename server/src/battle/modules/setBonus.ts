@@ -14,7 +14,7 @@ import type {
 } from '../types.js';
 import { rollChance } from '../utils/random.js';
 import { addBuff, addShield } from './buff.js';
-import { applyDamage } from './damage.js';
+import { applyDamage, calculateDamage } from './damage.js';
 import { applyHealing } from './healing.js';
 import {
   applyMarkStacks,
@@ -364,8 +364,8 @@ function applySetPursuit(
   if (scaleValue <= 0) return null;
 
   const damage = Math.max(1, Math.floor(scaleValue * normalizeRate(rawRate)));
-  const damageType = normalizeDamageType(asNonEmptyString(params.damage_type) ?? 'true');
-  const finalDamageResult = applyDirectSetDamage(state, owner, target, damage, damageType);
+  const damageType = resolvePursuitDamageType(owner, scaleKey, asNonEmptyString(params.damage_type));
+  const finalDamageResult = applyCalculatedSetDamage(state, owner, target, damage, damageType);
 
   return {
     targetResult: {
@@ -375,6 +375,70 @@ function applySetPursuit(
       shieldAbsorbed: finalDamageResult.shieldAbsorbed,
     },
     extraLogs: finalDamageResult.extraLogs,
+  };
+}
+
+function applyCalculatedSetDamage(
+  state: BattleState,
+  owner: BattleUnit,
+  target: BattleUnit,
+  damage: number,
+  damageType: 'physical' | 'magic' | 'true'
+) {
+  const damageResult = calculateDamage(state, owner, target, {
+    baseDamage: Math.max(1, damage),
+    damageType,
+  });
+
+  if (damageResult.isMiss) {
+    return {
+      actualDamage: 0,
+      shieldAbsorbed: 0,
+      hit: {
+        index: 1,
+        damage: 0,
+        isMiss: true,
+        isCrit: false,
+        isParry: false,
+        isElementBonus: false,
+        shieldAbsorbed: 0,
+      },
+      extraLogs: [] as BattleLogEntry[],
+    };
+  }
+
+  const wasAlive = target.isAlive;
+  const { actualDamage, shieldAbsorbed } = applyDamage(state, target, damageResult.damage, damageType);
+  const safeDamage = Math.max(0, actualDamage);
+  const safeShieldAbsorbed = Math.max(0, shieldAbsorbed);
+  owner.stats.damageDealt += safeDamage;
+
+  const extraLogs: BattleLogEntry[] = [];
+  if (wasAlive && !target.isAlive) {
+    owner.stats.killCount += 1;
+    extraLogs.push({
+      type: 'death',
+      round: state.roundCount,
+      unitId: target.id,
+      unitName: target.name,
+      killerId: owner.id,
+      killerName: owner.name,
+    });
+  }
+
+  return {
+    actualDamage: safeDamage,
+    shieldAbsorbed: safeShieldAbsorbed,
+    hit: {
+      index: 1,
+      damage: safeDamage,
+      isMiss: false,
+      isCrit: damageResult.isCrit,
+      isParry: damageResult.isParry,
+      isElementBonus: damageResult.isElementBonus,
+      shieldAbsorbed: safeShieldAbsorbed,
+    },
+    extraLogs,
   };
 }
 
@@ -799,6 +863,19 @@ function resolvePursuitScaleValue(owner: BattleUnit, scaleKey: string): number {
     return Math.max(owner.currentAttrs.wugong, owner.currentAttrs.fagong);
   }
   return asFiniteNumber(readAttrValue(owner, scaleKey)) ?? 0;
+}
+
+function resolvePursuitDamageType(
+  owner: BattleUnit,
+  scaleKey: string,
+  damageTypeRaw: string | null
+): 'physical' | 'magic' | 'true' {
+  if (damageTypeRaw === 'physical' || damageTypeRaw === 'magic' || damageTypeRaw === 'true') {
+    return damageTypeRaw;
+  }
+  if (scaleKey === 'wugong') return 'physical';
+  if (scaleKey === 'fagong') return 'magic';
+  return owner.currentAttrs.wugong >= owner.currentAttrs.fagong ? 'physical' : 'magic';
 }
 
 function normalizeDuration(value: unknown): number {

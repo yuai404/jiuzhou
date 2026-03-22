@@ -1916,7 +1916,7 @@
           "target": "enemy",
           "effect_type": "damage",
           "params": {
-            "damage_type": "true",
+            "damage_type": "main_attack",
             "scale_key": "max_lingqi",
             "scale_rate": 0.42,
             "chance": 0.2
@@ -2502,7 +2502,7 @@
         },
         {
           "key": "proc_tongqi",
-          "name": "同契追击",
+          "name": "协锋追击",
           "apply_type": "special",
           "group": "trigger",
           "weight": 16,
