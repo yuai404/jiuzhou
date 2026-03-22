@@ -133,4 +133,37 @@ describe('mark 文案格式化', () => {
       '触发：受击，消耗虚蚀印记（固定2层，每层系数95%），转化为自身护盾，概率 45%，持续 2 回合',
     );
   });
+
+  it('套装入口应将 damage_echo 护盾展示为受击伤害比例文案', () => {
+    const line = formatSetEffectLine({
+      trigger: 'on_be_hit',
+      effect_type: 'shield',
+      duration_round: 2,
+      params: {
+        shield_mode: 'damage_echo',
+        value: 0.42,
+        chance: 0.35,
+      },
+    });
+
+    expect(line).toBe(
+      '触发：受击，获得相当于本次受击伤害42%的护盾，概率 35%，持续 2 回合',
+    );
+  });
+
+  it('套装入口应将 echo 伤害展示为命中伤害比例文案', () => {
+    const line = formatSetEffectLine({
+      trigger: 'on_skill',
+      effect_type: 'damage',
+      params: {
+        damage_type: 'echo',
+        value: 0.26,
+        chance: 0.32,
+      },
+    });
+
+    expect(line).toBe(
+      '触发：施法，追加本次命中伤害26%的真伤，概率 32%',
+    );
+  });
 });

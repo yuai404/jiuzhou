@@ -867,6 +867,27 @@ export const formatSetEffectLine = (raw: unknown): string | null => {
     if (scalePart) return `${prefix} ${scalePart}`;
     return `${prefix} ${Math.floor(baseValue)}`;
   };
+  const formatShieldMain = (): string => {
+    const value = toFiniteNumber(params.value) ?? 0;
+    const shieldMode =
+      typeof params.shield_mode === "string" ? params.shield_mode : "";
+    const absorbTypeRaw =
+      typeof params.absorb_type === "string" ? params.absorb_type : "";
+    const absorbLabel: Record<string, string> = {
+      magic: "法术",
+      physical: "物理",
+      all: "全部",
+    };
+    const absorbText = absorbLabel[absorbTypeRaw]
+      ? `（${absorbLabel[absorbTypeRaw]}吸收）`
+      : "";
+
+    if (shieldMode === "damage_echo") {
+      return `获得相当于本次受击伤害${formatPercent(value)}的护盾${absorbText}`;
+    }
+
+    return `${formatValueWithScale(value, "护盾")}${absorbText}`;
+  };
 
   let main = "";
   if (effectType === "buff" || effectType === "debuff") {
@@ -893,6 +914,8 @@ export const formatSetEffectLine = (raw: unknown): string | null => {
     if (damageType === "reflect") {
       // 反弹伤害：value 是比例（如 0.22 = 22%）
       main = `反弹 ${formatPercent(value)}伤害`;
+    } else if (damageType === "echo") {
+      main = `追加本次命中伤害${formatPercent(value)}的真伤`;
     } else {
       main = formatValueWithScale(value, "额外伤害");
     }
@@ -900,18 +923,7 @@ export const formatSetEffectLine = (raw: unknown): string | null => {
     const value = toFiniteNumber(params.value) ?? 0;
     main = formatValueWithScale(value, "恢复气血");
   } else if (effectType === "shield") {
-    const value = toFiniteNumber(params.value) ?? 0;
-    const absorbTypeRaw =
-      typeof params.absorb_type === "string" ? params.absorb_type : "";
-    const absorbLabel: Record<string, string> = {
-      magic: "法术",
-      physical: "物理",
-      all: "全部",
-    };
-    const absorbText = absorbLabel[absorbTypeRaw]
-      ? `（${absorbLabel[absorbTypeRaw]}吸收）`
-      : "";
-    main = `${formatValueWithScale(value, "护盾")}${absorbText}`;
+    main = formatShieldMain();
   } else if (effectType === "resource") {
     const resource =
       typeof params.resource_type === "string"
