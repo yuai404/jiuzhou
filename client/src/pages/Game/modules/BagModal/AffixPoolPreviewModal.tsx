@@ -9,6 +9,10 @@ import { useMemo, useState } from 'react';
 import { Modal, Input } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import type { AffixPoolPreviewAffixEntry, AffixPoolPreviewTierEntry } from '../../../../services/api/inventory';
+import {
+  filterAvailableAffixPoolAffixes,
+  formatAffixPoolPreviewTierRange,
+} from './affixPoolPreview';
 import './AffixPoolPreviewModal.scss';
 
 export interface AffixPoolPreviewModalProps {
@@ -35,11 +39,6 @@ const GROUP_ORDER: string[] = ['output', 'survival', 'utility', 'trigger', 'reso
 
 const DEFAULT_GROUP_LABEL = '其他';
 
-const formatTierRange = (tier: AffixPoolPreviewTierEntry, applyType: string): string => {
-  const suffix = applyType === 'percent' ? '%' : '';
-  return `${tier.min}${suffix} ~ ${tier.max}${suffix}`;
-};
-
 export const AffixPoolPreviewModal: React.FC<AffixPoolPreviewModalProps> = ({
   open,
   onClose,
@@ -49,11 +48,16 @@ export const AffixPoolPreviewModal: React.FC<AffixPoolPreviewModalProps> = ({
 }) => {
   const [search, setSearch] = useState('');
 
+  const visibleAffixes = useMemo(
+    () => filterAvailableAffixPoolAffixes(affixes),
+    [affixes],
+  );
+
   const grouped = useMemo(() => {
     const kw = search.trim().toLowerCase();
     const filtered = kw
-      ? affixes.filter((a) => a.name.toLowerCase().includes(kw))
-      : affixes;
+      ? visibleAffixes.filter((a) => a.name.toLowerCase().includes(kw))
+      : visibleAffixes;
 
     if (filtered.length === 0) return [];
 
@@ -70,15 +74,15 @@ export const AffixPoolPreviewModal: React.FC<AffixPoolPreviewModalProps> = ({
       const bOrder = bi >= 0 ? bi : GROUP_ORDER.length;
       return aOrder - bOrder || a.localeCompare(b);
     });
-  }, [affixes, search]);
+  }, [search, visibleAffixes]);
 
   const handleClose = () => {
     setSearch('');
     onClose();
   };
 
-  const totalCount = affixes.length;
-  const ownedCount = affixes.filter((a) => a.owned).length;
+  const totalCount = visibleAffixes.length;
+  const ownedCount = visibleAffixes.filter((a) => a.owned).length;
 
   return (
     <Modal
@@ -115,7 +119,7 @@ export const AffixPoolPreviewModal: React.FC<AffixPoolPreviewModalProps> = ({
 
         {loading ? (
           <div className="affix-pool-preview-loading">加载中...</div>
-        ) : affixes.length === 0 ? (
+        ) : visibleAffixes.length === 0 ? (
           <div className="affix-pool-preview-empty">暂无可用词条数据</div>
         ) : (
           <div className="affix-pool-preview-body">
@@ -146,20 +150,16 @@ export const AffixPoolPreviewModal: React.FC<AffixPoolPreviewModalProps> = ({
                         </div>
 
                         <div className="affix-card-body">
-                          {affix.tiers.length > 0 ? (
-                            <div className="tier-list">
-                              {affix.tiers.map((tier: AffixPoolPreviewTierEntry) => (
-                                <div key={tier.tier} className="tier-item">
-                                  <span className="tier-label">T{tier.tier}</span>
-                                  <span className="tier-value">
-                                    {formatTierRange(tier, affix.apply_type)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="tier-empty">当前境界无可用阶级</div>
-                          )}
+                          <div className="tier-list">
+                            {affix.tiers.map((tier: AffixPoolPreviewTierEntry) => (
+                              <div key={tier.tier} className="tier-item">
+                                <span className="tier-label">T{tier.tier}</span>
+                                <span className="tier-value">
+                                  {formatAffixPoolPreviewTierRange(tier, affix.apply_type)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     ))}
