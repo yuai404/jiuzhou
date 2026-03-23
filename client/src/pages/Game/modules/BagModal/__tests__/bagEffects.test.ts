@@ -304,4 +304,65 @@ describe('bagEffects', () => {
     expect(bagItem?.actions.includes('disassemble')).toBe(false);
     expect(bagItem && isDisassemblableBagItem(bagItem)).toBe(false);
   });
+
+  it('buildBagItem: 套装 echo 伤害应展示为命中伤害比例文案', () => {
+    const bagItem = buildBagItem({
+      id: 6,
+      item_def_id: 'set-zhaogu-artifact',
+      qty: 1,
+      location: 'bag',
+      location_slot: 6,
+      equipped_slot: null,
+      strengthen_level: 0,
+      refine_level: 0,
+      affixes: [],
+      identified: false,
+      locked: false,
+      bind_type: 'equip',
+      created_at: '2026-03-23T00:00:00.000Z',
+      def: {
+        id: 'set-zhaogu-artifact',
+        name: '照骨玄鉴',
+        icon: '/assets/set-zhaogu/08-artifact-set-zhaogu-artifact.webp',
+        quality: '天',
+        category: 'equipment',
+        sub_category: 'token',
+        can_disassemble: true,
+        stack_max: 1,
+        description: '照骨套装法宝',
+        long_desc: '照骨套装法宝。',
+        tags: ['法宝', '照骨套装'],
+        effect_defs: [],
+        base_attrs: {},
+        equip_slot: 'artifact',
+        use_type: null,
+        set_id: 'set-zhaogu',
+        set_name: '照骨套装',
+        set_equipped_count: 8,
+        set_bonuses: [
+          {
+            piece_count: 8,
+            effect_defs: [
+              {
+                trigger: 'on_skill',
+                target: 'enemy',
+                effect_type: 'damage',
+                damage_type: 'echo',
+                value: 0.26,
+                chance: 0.32,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(bagItem?.setInfo?.bonuses).toEqual([
+      {
+        pieceCount: 8,
+        lines: ['触发：施法，追加本次命中伤害26%的真伤，概率 32%'],
+        active: true,
+      },
+    ]);
+  });
 });

@@ -363,6 +363,81 @@ const toRecord = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
+const EFFECT_DISPLAY_RESERVED_KEYS = new Set<string>([
+  "trigger",
+  "target",
+  "effect_type",
+  "duration_round",
+  "durationRound",
+  "element",
+  "params",
+]);
+
+/**
+ * 作用：
+ * - 做什么：把效果配置归一化成展示层统一结构，兼容“字段平铺”和“字段在 params 内”两种当前项目内实际输入。
+ * - 不做什么：不改写业务语义，不推导战斗逻辑，只为静态中文文案提供单一读取入口。
+ *
+ * 输入/输出：
+ * - 输入：原始效果对象，以及默认触发时机/是否需要把 mana 归一到 resource。
+ * - 输出：保证 `params` 聚合了展示所需字段的标准化效果对象。
+ *
+ * 数据流/状态流：
+ * - 物品 / 套装原始 effect -> 本函数归一化 -> formatSetEffectLine / formatBagItemEffectLine 共用。
+ *
+ * 关键边界条件与坑点：
+ * 1. 当前项目里同类效果字段存在“平铺在顶层”和“嵌套在 params”两种形态，若不先合并，展示层会把 echo 误读成 `额外伤害 0`。
+ * 2. 归一化只在 params 缺字段时补齐，不能覆盖原始 params，否则会把配置层显式值错误替换掉。
+ */
+const buildEffectDisplayRecord = (
+  raw: Record<string, unknown>,
+  options?: {
+    defaultTrigger?: string;
+    normalizeManaAsResource?: boolean;
+  },
+): Record<string, unknown> => {
+  const params = toRecord(raw.params);
+  const nextParams: Record<string, unknown> = { ...params };
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (EFFECT_DISPLAY_RESERVED_KEYS.has(key)) continue;
+    if (nextParams[key] === undefined) {
+      nextParams[key] = value;
+    }
+  }
+
+  const effectType =
+    typeof raw.effect_type === "string" ? raw.effect_type.trim() : "";
+  const normalizedEffectType =
+    options?.normalizeManaAsResource &&
+    (effectType === "mana" || effectType === "restore_mana")
+      ? "resource"
+      : effectType;
+
+  if (
+    normalizedEffectType === "resource" &&
+    nextParams.resource === undefined &&
+    nextParams.resource_type === undefined &&
+    (effectType === "mana" || effectType === "restore_mana")
+  ) {
+    nextParams.resource = "lingqi";
+  }
+
+  const durationRound =
+    raw.duration_round !== undefined ? raw.duration_round : raw.durationRound;
+
+  return {
+    ...raw,
+    effect_type: normalizedEffectType,
+    trigger:
+      typeof raw.trigger === "string"
+        ? raw.trigger
+        : options?.defaultTrigger ?? "equip",
+    duration_round: durationRound,
+    params: nextParams,
+  };
+};
+
 const normalizeCategoryToken = (value: unknown): string => {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 };
@@ -833,7 +908,9 @@ const normalizeDisplayTags = (
 };
 
 export const formatSetEffectLine = (raw: unknown): string | null => {
-  const row = toRecord(raw);
+  const row = buildEffectDisplayRecord(toRecord(raw), {
+    defaultTrigger: "equip",
+  });
   const effectType = typeof row.effect_type === "string" ? row.effect_type : "";
   if (!effectType) return null;
 
@@ -987,32 +1064,10 @@ const CURRENCY_LABELS: Record<string, string> = {
 const buildItemEffectDisplayRecord = (
   raw: Record<string, unknown>,
 ): Record<string, unknown> => {
-  const params = toRecord(raw.params);
-  const nextParams: Record<string, unknown> = { ...params };
-
-  if (nextParams.value === undefined && raw.value !== undefined) {
-    nextParams.value = raw.value;
-  }
-
-  const effectType =
-    typeof raw.effect_type === "string" ? raw.effect_type.trim() : "";
-  if (
-    (effectType === "mana" || effectType === "restore_mana") &&
-    nextParams.resource === undefined &&
-    nextParams.resource_type === undefined
-  ) {
-    nextParams.resource = "lingqi";
-  }
-
-  return {
-    ...raw,
-    effect_type:
-      effectType === "mana" || effectType === "restore_mana"
-        ? "resource"
-        : effectType,
-    trigger: "equip",
-    params: nextParams,
-  };
+  return buildEffectDisplayRecord(raw, {
+    defaultTrigger: "equip",
+    normalizeManaAsResource: true,
+  });
 };
 
 const formatLootEffectLine = (params: Record<string, unknown>): string => {
