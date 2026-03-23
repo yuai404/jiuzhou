@@ -42,7 +42,6 @@ import {
   resolveTechniqueResearchPublishErrorMessage,
 } from './researchNaming';
 import {
-  getTechniqueResearchBurningWordInputLength,
   normalizeTechniqueResearchBurningWordInput,
   resolveTechniqueResearchBurningWordRequestValue,
 } from './researchPromptShared';
@@ -411,10 +410,6 @@ const TechniqueModal: React.FC<TechniqueModalProps> = ({ open, onClose, onResear
     [researchStatus],
   );
   const researchBurningWordMaxLength = researchStatus?.burningWordPromptMaxLength ?? 1;
-  const researchBurningWordInputLength = useMemo(
-    () => getTechniqueResearchBurningWordInputLength(researchBurningWordInput),
-    [researchBurningWordInput],
-  );
 
   useEffect(() => {
     gameSocket.connect();

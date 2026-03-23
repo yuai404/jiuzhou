@@ -42,11 +42,10 @@ const HEDAO_BOSS_ID = 'monster-boss-hedao-xuanjian-zhenjun';
 const HEDAO_SET_IDS = ['set-zhaogu', 'set-xuanlv', 'set-suijing'] as const;
 const HEDAO_SET_DROP_IDS = {
   bossPoolId: 'dp-hedao-boss-xuanjian-zhenjun',
-  nightmarePoolId: 'dp-dungeon-jingxu-nm',
   commonPoolId: 'dp-common-monster-hedao',
   gemBag: 'box-012',
   weapon: 'set-suijing-weapon',
-  head: 'set-suijing-head',
+  heads: ['set-zhaogu-head', 'set-xuanlv-head', 'set-suijing-head'] as const,
   artifact: 'set-suijing-artifact',
   hardDifficultyId: 'dd-jingxu-sitian-h',
   nightmareDifficultyId: 'dd-jingxu-sitian-nm',
@@ -287,12 +286,10 @@ test('合道一期怪物掉落池与套装引用应完整闭环', () => {
   assert.ok(bossPool, '缺少玄鉴真君掉落池');
   const bossPoolItemIds = collectMergedPoolItemIds(HEDAO_SET_DROP_IDS.bossPoolId, dropPoolById, commonPoolById);
   assert.equal(bossPoolItemIds.has(HEDAO_SET_DROP_IDS.weapon), true, 'Boss 掉落池缺少物理套装武器');
+  for (const headItemId of HEDAO_SET_DROP_IDS.heads) {
+    assert.equal(bossPoolItemIds.has(headItemId), true, `Boss 掉落池缺少套装头部: ${headItemId}`);
+  }
   assert.equal(bossPoolItemIds.has(HEDAO_SET_DROP_IDS.artifact), true, 'Boss 掉落池缺少物理套装法宝');
-
-  const nightmarePool = dropPoolById.get(HEDAO_SET_DROP_IDS.nightmarePoolId);
-  assert.ok(nightmarePool, '缺少玄鉴司天宫噩梦掉落池');
-  const nightmarePoolItemIds = collectMergedPoolItemIds(HEDAO_SET_DROP_IDS.nightmarePoolId, dropPoolById, commonPoolById);
-  assert.equal(nightmarePoolItemIds.has(HEDAO_SET_DROP_IDS.head), true, '噩梦掉落池缺少物理套装头部');
 
   const dungeonByDifficultyId = new Map<string, ReturnType<typeof asObject>>();
   for (const dungeonEntry of asArray(dungeonSeed.dungeons)) {

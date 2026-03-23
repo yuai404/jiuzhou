@@ -2229,6 +2229,27 @@
           "show_in_ui": true
         },
         {
+          "item_def_id": "set-zhaogu-head",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-xuanlv-head",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
+          "item_def_id": "set-suijing-head",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1,
+          "show_in_ui": true
+        },
+        {
           "item_def_id": "cons-monthcard-001",
           "chance": 0.004,
           "qty_min": 1,
@@ -2265,27 +2286,6 @@
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-zhaogu-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-xuanlv-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-suijing-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
         }
       ],
       "common_pool_ids": []
@@ -2315,27 +2315,6 @@
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-zhaogu-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-xuanlv-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-suijing-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
         }
       ],
       "common_pool_ids": []
@@ -2355,27 +2334,6 @@
         {
           "item_def_id": "mat-hedao-qiyin",
           "chance": 0.28,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-zhaogu-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-xuanlv-head",
-          "chance": 0.03,
-          "qty_min": 1,
-          "qty_max": 1,
-          "show_in_ui": true
-        },
-        {
-          "item_def_id": "set-suijing-head",
-          "chance": 0.03,
           "qty_min": 1,
           "qty_max": 1,
           "show_in_ui": true
