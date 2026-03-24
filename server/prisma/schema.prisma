@@ -990,6 +990,19 @@ model mail {
   @@index([recipient_user_id, recipient_character_id, deleted_at, claimed_at, created_at(sort: Asc), id(sort: Asc)], map: "idx_mail_user_claim_queue")
 }
 
+/// 邮件计数聚合快照，统一承接角色级/账号级邮件红点统计。
+model mail_counter {
+  scope_type      String   @db.VarChar(16)
+  scope_id        BigInt
+  total_count     BigInt   @default(0)
+  unread_count    BigInt   @default(0)
+  unclaimed_count BigInt   @default(0)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([scope_type, scope_id])
+  @@index([updated_at], map: "idx_mail_counter_updated_at")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model market_listing {
   id                                                        BigInt                @id @default(autoincrement())

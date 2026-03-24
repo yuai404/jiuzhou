@@ -38,6 +38,30 @@ export interface CacheLayerOptions<K extends CacheKey, T> {
   memoryTtlMs: number;
   /** 缓存未命中时的数据加载函数，返回 null 表示数据不存在 */
   loader: (key: K) => Promise<T | null>;
+  /**
+   * 按缓存值动态调整 TTL。
+   *
+   * 作用：
+   * - 让调用方基于“数据什么时候自然失效”来缩短缓存寿命；
+   * - 避免所有缓存都只能使用固定 TTL，导致热点数据被周期性整批击穿。
+   *
+   * 输入/输出：
+   * - 输入：当前 key、缓存值，以及默认的 Redis/内存 TTL。
+   * - 输出：本条缓存真正写入两层缓存时使用的 TTL。
+   *
+   * 关键边界条件：
+   * 1. 返回值必须是正数，工厂函数会统一做下限归一化，避免 Redis `EX 0` 之类非法写入。
+   * 2. 这里只决定缓存寿命，不参与缓存值本身的序列化与业务判定。
+   */
+  ttlResolver?: (input: {
+    key: K;
+    value: T;
+    defaultRedisTtlSec: number;
+    defaultMemoryTtlMs: number;
+  }) => {
+    redisTtlSec: number;
+    memoryTtlMs: number;
+  };
   /** 自定义序列化（默认 JSON.stringify） */
   serialize?: (value: T) => string;
   /** 自定义反序列化（默认 JSON.parse） */
@@ -82,6 +106,7 @@ export function createCacheLayer<K extends CacheKey, T>(
     redisTtlSec,
     memoryTtlMs,
     loader,
+    ttlResolver,
     serialize = JSON.stringify,
     deserialize = JSON.parse as (raw: string) => T,
   } = options;
@@ -91,6 +116,43 @@ export function createCacheLayer<K extends CacheKey, T>(
 
   function redisKey(key: K): string {
     return `${keyPrefix}${String(key)}`;
+  }
+
+  /**
+   * 解析单条缓存真正使用的 TTL。
+   *
+   * 作用（做什么 / 不做什么）：
+   * 1) 做什么：把固定 TTL 与调用方的动态 TTL 规则统一收口到一个入口，避免 `get/set` 各自复制归一化逻辑。
+   * 2) 不做什么：不关心缓存值语义，只负责把 TTL 变成 Redis 与内存都能接受的正整数。
+   *
+   * 输入/输出：
+   * - 输入：缓存 key、缓存值。
+   * - 输出：归一化后的 Redis TTL（秒）与内存 TTL（毫秒）。
+   *
+   * 数据流/状态流：
+   * cacheLayer `get/set` -> resolveEntryTtl -> 两层缓存写入
+   *
+   * 关键边界条件与坑点：
+   * 1) Redis `EX` 不接受 0 或负数，因此这里必须统一抬到至少 1 秒。
+   * 2) 内存 TTL 同样不能是 0，否则刚写入就会立即过期，等同于白写。
+   */
+  function resolveEntryTtl(key: K, value: T): { redisTtlSec: number; memoryTtlMs: number } {
+    const resolvedTtl = ttlResolver
+      ? ttlResolver({
+          key,
+          value,
+          defaultRedisTtlSec: redisTtlSec,
+          defaultMemoryTtlMs: memoryTtlMs,
+        })
+      : {
+          redisTtlSec,
+          memoryTtlMs,
+        };
+
+    return {
+      redisTtlSec: Math.max(1, Math.floor(resolvedTtl.redisTtlSec)),
+      memoryTtlMs: Math.max(1, Math.floor(resolvedTtl.memoryTtlMs)),
+    };
   }
 
   async function get(key: K): Promise<T | null> {
@@ -107,7 +169,8 @@ export function createCacheLayer<K extends CacheKey, T>(
       const raw = await redis.get(redisKey(key));
       if (raw !== null) {
         const value = deserialize(raw);
-        memoryCache.set(key, { payload: value, expiresAt: Date.now() + memoryTtlMs });
+        const entryTtl = resolveEntryTtl(key, value);
+        memoryCache.set(key, { payload: value, expiresAt: Date.now() + entryTtl.memoryTtlMs });
         return value;
       }
     } catch {
@@ -124,11 +187,12 @@ export function createCacheLayer<K extends CacheKey, T>(
     const loadPromise = (async (): Promise<T | null> => {
       const loaded = await loader(key);
       if (loaded === null) return null;
+      const entryTtl = resolveEntryTtl(key, loaded);
 
       // 回填两层
-      memoryCache.set(key, { payload: loaded, expiresAt: Date.now() + memoryTtlMs });
+      memoryCache.set(key, { payload: loaded, expiresAt: Date.now() + entryTtl.memoryTtlMs });
       try {
-        await redis.set(redisKey(key), serialize(loaded), 'EX', redisTtlSec);
+        await redis.set(redisKey(key), serialize(loaded), 'EX', entryTtl.redisTtlSec);
       } catch {
         // Redis 不可用时仅保留内存缓存
       }
@@ -147,10 +211,11 @@ export function createCacheLayer<K extends CacheKey, T>(
   }
 
   async function set(key: K, value: T): Promise<void> {
-    memoryCache.set(key, { payload: value, expiresAt: Date.now() + memoryTtlMs });
+    const entryTtl = resolveEntryTtl(key, value);
+    memoryCache.set(key, { payload: value, expiresAt: Date.now() + entryTtl.memoryTtlMs });
     inFlightLoads.delete(key);
     try {
-      await redis.set(redisKey(key), serialize(value), 'EX', redisTtlSec);
+      await redis.set(redisKey(key), serialize(value), 'EX', entryTtl.redisTtlSec);
     } catch {
       // Redis 不可用时仅保留内存缓存
     }

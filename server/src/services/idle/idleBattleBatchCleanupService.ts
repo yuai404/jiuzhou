@@ -1,4 +1,8 @@
 import { query } from '../../config/database.js';
+import {
+  parseScheduledCleanupBooleanEnv,
+  parseScheduledCleanupIntegerEnv,
+} from '../shared/scheduledCleanupConfig.js';
 
 /**
  * idle_battle_batches 清理服务（仅负责清理逻辑，不负责定时调度）
@@ -42,50 +46,35 @@ const DEFAULT_INTERVAL_SECONDS = 600;
 const DEFAULT_DELETE_BATCH_SIZE = 5_000;
 const DEFAULT_MAX_DELETE_BATCHES_PER_RUN = 20;
 
-function parseEnvBoolean(name: string, fallback: boolean): boolean {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-
-  const normalized = raw.trim().toLowerCase();
-  if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on') return true;
-  if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'off') return false;
-
-  console.warn(`[IdleBatchCleanup] 环境变量 ${name}=${raw} 非法，回退默认值 ${String(fallback)}`);
-  return fallback;
-}
-
-function parseEnvInteger(name: string, fallback: number, min: number, max: number): number {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed)) {
-    console.warn(`[IdleBatchCleanup] 环境变量 ${name}=${raw} 非法，回退默认值 ${fallback}`);
-    return fallback;
-  }
-
-  if (parsed < min) {
-    console.warn(`[IdleBatchCleanup] 环境变量 ${name}=${raw} 过小，提升到最小值 ${min}`);
-    return min;
-  }
-  if (parsed > max) {
-    console.warn(`[IdleBatchCleanup] 环境变量 ${name}=${raw} 过大，降低到最大值 ${max}`);
-    return max;
-  }
-
-  return Math.floor(parsed);
-}
-
 function loadIdleCleanupConfig(): IdleCleanupConfig {
-  const enabled = parseEnvBoolean('IDLE_BATCH_CLEANUP_ENABLED', true);
-  const retentionDays = parseEnvInteger('IDLE_BATCH_RETENTION_DAYS', DEFAULT_RETENTION_DAYS, 1, 365);
-  const intervalSeconds = parseEnvInteger('IDLE_BATCH_CLEANUP_INTERVAL_SECONDS', DEFAULT_INTERVAL_SECONDS, 60, 86_400);
-  const deleteBatchSize = parseEnvInteger('IDLE_BATCH_CLEANUP_DELETE_BATCH_SIZE', DEFAULT_DELETE_BATCH_SIZE, 100, 50_000);
-  const maxDeleteBatchesPerRun = parseEnvInteger(
+  const enabled = parseScheduledCleanupBooleanEnv('IDLE_BATCH_CLEANUP_ENABLED', true, 'IdleBatchCleanup');
+  const retentionDays = parseScheduledCleanupIntegerEnv(
+    'IDLE_BATCH_RETENTION_DAYS',
+    DEFAULT_RETENTION_DAYS,
+    1,
+    365,
+    'IdleBatchCleanup',
+  );
+  const intervalSeconds = parseScheduledCleanupIntegerEnv(
+    'IDLE_BATCH_CLEANUP_INTERVAL_SECONDS',
+    DEFAULT_INTERVAL_SECONDS,
+    60,
+    86_400,
+    'IdleBatchCleanup',
+  );
+  const deleteBatchSize = parseScheduledCleanupIntegerEnv(
+    'IDLE_BATCH_CLEANUP_DELETE_BATCH_SIZE',
+    DEFAULT_DELETE_BATCH_SIZE,
+    100,
+    50_000,
+    'IdleBatchCleanup',
+  );
+  const maxDeleteBatchesPerRun = parseScheduledCleanupIntegerEnv(
     'IDLE_BATCH_CLEANUP_MAX_BATCHES_PER_RUN',
     DEFAULT_MAX_DELETE_BATCHES_PER_RUN,
     1,
     200,
+    'IdleBatchCleanup',
   );
 
   return {

@@ -3,6 +3,7 @@ import {
   BATTLE_EXPIRED_CLEANUP_INTERVAL_MS,
 } from '../services/battle/index.js';
 import { idleBattleBatchCleanupService } from '../services/idle/idleBattleBatchCleanupService.js';
+import { mailHistoryCleanupService } from '../services/mailHistoryCleanupService.js';
 
 /**
  * 清理 Worker（单进程内的统一清理调度器）
@@ -45,6 +46,7 @@ class CleanupWorker {
 
   private buildJobs(): CleanupJob[] {
     const idleBatchSchedule = idleBattleBatchCleanupService.getScheduleConfig();
+    const mailHistoryCleanupSchedule = mailHistoryCleanupService.getScheduleConfig();
 
     return [
       {
@@ -63,6 +65,15 @@ class CleanupWorker {
         intervalMs: idleBatchSchedule.intervalMs,
         run: async () => {
           await idleBattleBatchCleanupService.runCleanupOnce();
+        },
+      },
+      {
+        id: 'mail-history-cleanup',
+        label: '邮件热表生命周期清理',
+        enabled: mailHistoryCleanupSchedule.enabled,
+        intervalMs: mailHistoryCleanupSchedule.intervalMs,
+        run: async () => {
+          await mailHistoryCleanupService.runCleanupOnce();
         },
       },
     ];
@@ -101,6 +112,8 @@ class CleanupWorker {
     for (const runtime of this.jobs) {
       if (runtime.job.id === 'idle-batch-history-cleanup') {
         console.log(`[CleanupWorker] ${runtime.job.label}：${idleBattleBatchCleanupService.getConfigSummaryText()}`);
+      } else if (runtime.job.id === 'mail-history-cleanup') {
+        console.log(`[CleanupWorker] ${runtime.job.label}：${mailHistoryCleanupService.getConfigSummaryText()}`);
       } else {
         console.log(
           `[CleanupWorker] ${runtime.job.label}：间隔 ${Math.floor(runtime.job.intervalMs / 1000)} 秒`,

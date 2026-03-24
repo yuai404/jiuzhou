@@ -41,6 +41,17 @@ import {
 } from './autoDisassembleRewardService.js';
 import { normalizeAutoDisassembleSetting } from './autoDisassembleRules.js';
 import { resolveQualityRankFromName } from './shared/itemQuality.js';
+import {
+  applyMailCounterDeltas,
+  buildMailCounterClaimDelta,
+  buildMailCounterDeleteDelta,
+  buildMailCounterInsertDelta,
+  buildMailCounterReadDelta,
+  buildMailCounterStateFromRow,
+  loadMailCounterSnapshot,
+  type MailCounterDeltaInput,
+  type MailCounterStateRow,
+} from './shared/mailCounterStore.js';
 
 // ============================================
 // 类型定义
@@ -99,11 +110,14 @@ export interface MailDto {
 
 type ClaimMailRow = {
   id: number;
+  recipient_user_id: number;
+  recipient_character_id: number | null;
   attach_silver: number;
   attach_spirit_stones: number;
-  attach_items: MailAttachItem[] | null;
-  attach_rewards: unknown;
-  attach_instance_ids: unknown;
+  attach_items: MailCounterStateRow['attach_items'];
+  attach_rewards: MailCounterStateRow['attach_rewards'];
+  attach_instance_ids: MailCounterStateRow['attach_instance_ids'];
+  read_at: Date | string | null;
   claimed_at: Date | string | null;
   expire_at: Date | string | null;
 };
@@ -117,8 +131,10 @@ type ClaimInstanceRow = {
 
 const MAIL_HAS_ATTACHMENTS_SQL = '(attach_silver > 0 OR attach_spirit_stones > 0 OR attach_items IS NOT NULL OR attach_rewards IS NOT NULL OR attach_instance_ids IS NOT NULL)';
 const MAIL_ACTIVE_SCOPE_SQL = `COALESCE(expire_at, 'infinity'::timestamptz) > NOW()`;
-const MAIL_UNREAD_CACHE_REDIS_TTL_SEC = 30;
+const MAIL_UNREAD_CACHE_REDIS_TTL_SEC = 300;
 const MAIL_UNREAD_CACHE_MEMORY_TTL_MS = 5_000;
+const MAIL_UNREAD_CACHE_MIN_REDIS_TTL_SEC = 1;
+const MAIL_UNREAD_CACHE_MIN_MEMORY_TTL_MS = 250;
 const MAIL_EXPIRE_CLEANUP_THROTTLE_MS = 60_000;
 const MAIL_UNREAD_PUSH_COALESCE_MS = 500;
 
@@ -137,6 +153,10 @@ type MailUnreadCounter = {
   totalCount: number;
   unreadCount: number;
   unclaimedCount: number;
+};
+
+type MailUnreadCounterCacheEntry = MailUnreadCounter & {
+  nextActiveExpireAtMs: number | null;
 };
 
 type LoadMailCounterOptions = {
@@ -268,49 +288,84 @@ const buildRecipientScopedMailUnionSql = ({
   ].join('\n          UNION ALL\n');
 };
 
+const resolveMailUnreadCounterCacheTtl = (
+  counter: MailUnreadCounterCacheEntry,
+): {
+  redisTtlSec: number;
+  memoryTtlMs: number;
+} => {
+  if (counter.nextActiveExpireAtMs === null) {
+    return {
+      redisTtlSec: MAIL_UNREAD_CACHE_REDIS_TTL_SEC,
+      memoryTtlMs: MAIL_UNREAD_CACHE_MEMORY_TTL_MS,
+    };
+  }
+
+  const remainingMs = counter.nextActiveExpireAtMs - Date.now();
+  if (remainingMs <= 0) {
+    return {
+      redisTtlSec: MAIL_UNREAD_CACHE_MIN_REDIS_TTL_SEC,
+      memoryTtlMs: MAIL_UNREAD_CACHE_MIN_MEMORY_TTL_MS,
+    };
+  }
+
+  return {
+    redisTtlSec: Math.max(
+      MAIL_UNREAD_CACHE_MIN_REDIS_TTL_SEC,
+      Math.min(MAIL_UNREAD_CACHE_REDIS_TTL_SEC, Math.floor(remainingMs / 1000)),
+    ),
+    memoryTtlMs: Math.max(
+      MAIL_UNREAD_CACHE_MIN_MEMORY_TTL_MS,
+      Math.min(MAIL_UNREAD_CACHE_MEMORY_TTL_MS, remainingMs),
+    ),
+  };
+};
+
 const loadMailCounter = async ({
   characterId,
   userId,
   commonWhereSql = [],
-}: LoadMailCounterOptions): Promise<MailUnreadCounter> => {
-  const scopedMailUnionSql = buildRecipientScopedMailUnionSql({
-    selectSql: `
-              COUNT(*)::bigint AS total_count,
-              (COUNT(*) FILTER (WHERE read_at IS NULL))::bigint AS unread_count,
-              (COUNT(*) FILTER (WHERE claimed_at IS NULL AND ${MAIL_HAS_ATTACHMENTS_SQL}))::bigint AS unclaimed_count`,
+}: LoadMailCounterOptions): Promise<MailUnreadCounterCacheEntry> => {
+  const nextExpireUnionSql = buildRecipientScopedMailUnionSql({
+    selectSql: 'expire_at, id',
     characterIdParamIndex: 1,
     userIdParamIndex: 2,
-    commonWhereSql,
+    commonWhereSql: [
+      ...commonWhereSql,
+      'expire_at IS NOT NULL',
+    ],
+    orderBySql: 'ORDER BY expire_at ASC, id ASC',
+    limitParamIndex: 3,
   });
 
-  const result = await query(
-    `
-      WITH scoped_mail_counter AS (
-        ${scopedMailUnionSql}
-      )
-      SELECT
-        COALESCE(SUM(total_count), 0)::bigint AS total_count,
-        COALESCE(SUM(unread_count), 0)::bigint AS unread_count,
-        COALESCE(SUM(unclaimed_count), 0)::bigint AS unclaimed_count
-      FROM scoped_mail_counter
-    `,
-    [characterId, userId],
-  );
+  const [counterSnapshot, nextExpireResult] = await Promise.all([
+    loadMailCounterSnapshot(userId, characterId),
+    query<{ next_active_expire_at?: Date | string | null }>(
+      `
+        WITH next_active_mail AS (
+          ${nextExpireUnionSql}
+        )
+        SELECT MIN(expire_at) AS next_active_expire_at
+        FROM next_active_mail
+      `,
+      [characterId, userId, 1],
+    ),
+  ]);
 
-  const row = (result.rows[0] ?? {}) as {
-    total_count?: string | number;
-    unread_count?: string | number;
-    unclaimed_count?: string | number;
-  };
+  const nextActiveExpireAtRaw = nextExpireResult.rows[0]?.next_active_expire_at;
+  const nextActiveExpireAtMs = nextActiveExpireAtRaw
+    ? new Date(String(nextActiveExpireAtRaw)).getTime()
+    : null;
 
   return {
-    totalCount: Math.max(0, Math.floor(Number(row.total_count) || 0)),
-    unreadCount: Math.max(0, Math.floor(Number(row.unread_count) || 0)),
-    unclaimedCount: Math.max(0, Math.floor(Number(row.unclaimed_count) || 0)),
+    totalCount: counterSnapshot.totalCount,
+    unreadCount: counterSnapshot.unreadCount,
+    unclaimedCount: counterSnapshot.unclaimedCount,
+    nextActiveExpireAtMs: Number.isFinite(nextActiveExpireAtMs) ? nextActiveExpireAtMs : null,
   };
 };
 
-const loadMailUnreadCounter = async (cacheKey: string): Promise<MailUnreadCounter | null> => {
+const loadMailUnreadCounter = async (cacheKey: string): Promise<MailUnreadCounterCacheEntry | null> => {
   const parsedKey = parseMailUnreadCacheKey(cacheKey);
   if (!parsedKey) return null;
 
@@ -324,11 +379,12 @@ const loadMailUnreadCounter = async (cacheKey: string): Promise<MailUnreadCounte
   });
 };
 
-const mailUnreadCounterCache = createCacheLayer<string, MailUnreadCounter>({
+const mailUnreadCounterCache = createCacheLayer<string, MailUnreadCounterCacheEntry>({
   keyPrefix: 'mail:unread:',
   redisTtlSec: MAIL_UNREAD_CACHE_REDIS_TTL_SEC,
   memoryTtlMs: MAIL_UNREAD_CACHE_MEMORY_TTL_MS,
   loader: loadMailUnreadCounter,
+  ttlResolver: ({ value }) => resolveMailUnreadCounterCacheTtl(value),
 });
 
 // ============================================
@@ -336,12 +392,13 @@ const mailUnreadCounterCache = createCacheLayer<string, MailUnreadCounter>({
 // ============================================
 
 class MailService {
+  @Transactional
   private async cleanupExpiredMailForRecipient(
     userId: number,
     characterId: number,
   ): Promise<void> {
-    await Promise.all([
-      query(
+    const [characterExpiredResult, userExpiredResult] = await Promise.all([
+      query<MailCounterStateRow>(
         `
           UPDATE mail
           SET deleted_at = NOW(), updated_at = NOW()
@@ -349,10 +406,20 @@ class MailService {
             AND deleted_at IS NULL
             AND expire_at IS NOT NULL
             AND expire_at < NOW()
+          RETURNING
+            recipient_user_id,
+            recipient_character_id,
+            read_at,
+            claimed_at,
+            attach_silver,
+            attach_spirit_stones,
+            attach_items,
+            attach_rewards,
+            attach_instance_ids
         `,
         [characterId],
       ),
-      query(
+      query<MailCounterStateRow>(
         `
           UPDATE mail
           SET deleted_at = NOW(), updated_at = NOW()
@@ -361,10 +428,35 @@ class MailService {
             AND deleted_at IS NULL
             AND expire_at IS NOT NULL
             AND expire_at < NOW()
+          RETURNING
+            recipient_user_id,
+            recipient_character_id,
+            read_at,
+            claimed_at,
+            attach_silver,
+            attach_spirit_stones,
+            attach_items,
+            attach_rewards,
+            attach_instance_ids
         `,
         [userId],
       ),
     ]);
+
+    await this.applyMailCounterDeltaInputs([
+      ...characterExpiredResult.rows.map((row) => {
+        const state = buildMailCounterStateFromRow(row);
+        return state ? buildMailCounterDeleteDelta(state) : null;
+      }),
+      ...userExpiredResult.rows.map((row) => {
+        const state = buildMailCounterStateFromRow(row);
+        return state ? buildMailCounterDeleteDelta(state) : null;
+      }),
+    ]);
+
+    if (characterExpiredResult.rows.length > 0 || userExpiredResult.rows.length > 0) {
+      await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
+    }
   }
 
   /**
@@ -920,10 +1012,38 @@ class MailService {
     return Array.from(ids);
   }
 
+  /**
+   * 把多行邮件旧状态归并成计数增量。
+   *
+   * 作用：
+   * - 把发信/已读/领取/删除/过期清理等写路径统一收敛到 `mail_counter` 增量协议；
+   * - 避免每条写路径各自手写“账号级/角色级邮件该怎么扣减”的重复逻辑。
+   *
+   * 输入/输出：
+   * - 输入：已解析好的计数增量列表。
+   * - 输出：无；内部统一调用共享 `mail_counter` upsert 入口。
+   *
+   * 边界条件：
+   * 1) 这里不做缓存失效，缓存与 socket 推送仍由 `invalidateUnreadCounterAndNotifyRecipient` 统一处理。
+   * 2) 空增量列表会被直接跳过，避免无意义写库。
+   */
+  private async applyMailCounterDeltaInputs(
+    deltas: readonly (MailCounterDeltaInput | null)[],
+  ): Promise<void> {
+    const effectiveDeltas = deltas.filter(
+      (delta): delta is MailCounterDeltaInput => delta !== null,
+    );
+    if (effectiveDeltas.length <= 0) {
+      return;
+    }
+    await applyMailCounterDeltas(effectiveDeltas);
+  }
+
   // ============================================
   // 发送邮件
   // ============================================
 
+  @Transactional
   async sendMail(options: SendMailOptions): Promise<{ success: boolean; mailId?: number; message: string }> {
     const normalizedAttachRewards = normalizeGrantedRewardPayload(options.attachRewards);
     const hasNormalizedAttachRewards = hasGrantedRewardPayload(normalizedAttachRewards);
@@ -968,6 +1088,18 @@ class MailService {
       return { success: false, message: '附件实例ID无效' };
     }
 
+    const insertCounterDelta = buildMailCounterInsertDelta({
+      recipientUserId: options.recipientUserId,
+      recipientCharacterId: options.recipientCharacterId ?? null,
+      isUnread: true,
+      isUnclaimed:
+        hasNormalizedAttachRewards
+        || (options.attachSilver ?? 0) > 0
+        || (options.attachSpiritStones ?? 0) > 0
+        || (options.attachItems?.length ?? 0) > 0
+        || attachInstanceIds.length > 0,
+    });
+
     // 计算过期时间
     let expireAt: Date | null = null;
     if (options.expireDays && options.expireDays > 0) {
@@ -1005,6 +1137,8 @@ class MailService {
         options.sourceRefId || null,
         options.metadata ? JSON.stringify(options.metadata) : null
       ]);
+
+      await this.applyMailCounterDeltaInputs([insertCounterDelta]);
 
       await this.invalidateUnreadCounterAndNotifyRecipient(
         options.recipientUserId,
@@ -1135,23 +1269,55 @@ class MailService {
   // 阅读邮件
   // ============================================
 
+  @Transactional
   async readMail(
     userId: number,
     characterId: number,
     mailId: number
   ): Promise<{ success: boolean; message: string }> {
-    const result = await query(`
-      UPDATE mail SET read_at = COALESCE(read_at, NOW()), updated_at = NOW()
-      WHERE id = $1
-        AND ${this.buildRecipientScopeSql(2, 3)}
-        AND deleted_at IS NULL
-      RETURNING id
+    const result = await query<MailCounterStateRow>(`
+      WITH target_mail AS (
+        SELECT
+          recipient_user_id,
+          recipient_character_id,
+          read_at,
+          claimed_at,
+          attach_silver,
+          attach_spirit_stones,
+          attach_items,
+          attach_rewards,
+          attach_instance_ids
+        FROM mail
+        WHERE id = $1
+          AND ${this.buildRecipientScopeSql(2, 3)}
+          AND deleted_at IS NULL
+        FOR UPDATE
+      )
+      UPDATE mail
+      SET read_at = COALESCE(mail.read_at, NOW()),
+          updated_at = NOW()
+      FROM target_mail
+      WHERE mail.id = $1
+      RETURNING
+        target_mail.recipient_user_id,
+        target_mail.recipient_character_id,
+        target_mail.read_at,
+        target_mail.claimed_at,
+        target_mail.attach_silver,
+        target_mail.attach_spirit_stones,
+        target_mail.attach_items,
+        target_mail.attach_rewards,
+        target_mail.attach_instance_ids
     `, [mailId, characterId, userId]);
 
     if (result.rows.length === 0) {
       return { success: false, message: '邮件不存在' };
     }
 
+    const readState = buildMailCounterStateFromRow(result.rows[0]);
+    await this.applyMailCounterDeltaInputs([
+      readState ? buildMailCounterReadDelta(readState) : null,
+    ]);
     await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     return { success: true, message: '已读' };
   }
@@ -1177,7 +1343,18 @@ class MailService {
     let mailResult: { rows: ClaimMailRow[] };
     try {
       const lockedMailResult = await query<ClaimMailRow>(`
-        SELECT id, attach_silver, attach_spirit_stones, attach_items, attach_rewards, attach_instance_ids, claimed_at, expire_at
+        SELECT
+          id,
+          recipient_user_id,
+          recipient_character_id,
+          attach_silver,
+          attach_spirit_stones,
+          attach_items,
+          attach_rewards,
+          attach_instance_ids,
+          read_at,
+          claimed_at,
+          expire_at
         FROM mail
         WHERE id = $1
           AND ${this.buildRecipientScopeSql(2, 3)}
@@ -1487,6 +1664,11 @@ class MailService {
       await recordCollectItemEvent(characterId, itemDefId, qty);
     }
 
+    const claimState = buildMailCounterStateFromRow(mail);
+    await this.applyMailCounterDeltaInputs([
+      claimState ? buildMailCounterClaimDelta(claimState) : null,
+    ]);
+
     if (shouldInvalidateUnreadCounter) {
       await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     }
@@ -1627,27 +1809,43 @@ class MailService {
   // 删除邮件
   // ============================================
 
+  @Transactional
   async deleteMail(
     userId: number,
     characterId: number,
     mailId: number
   ): Promise<{ success: boolean; message: string }> {
-    const result = await query(`
+    const result = await query<MailCounterStateRow>(`
       UPDATE mail SET deleted_at = NOW(), updated_at = NOW()
       WHERE id = $1
         AND ${this.buildRecipientScopeSql(2, 3)}
         AND deleted_at IS NULL
-      RETURNING id, claimed_at, attach_silver, attach_spirit_stones, attach_items, attach_rewards, attach_instance_ids
+      RETURNING
+        recipient_user_id,
+        recipient_character_id,
+        read_at,
+        claimed_at,
+        attach_silver,
+        attach_spirit_stones,
+        attach_items,
+        attach_rewards,
+        attach_instance_ids
     `, [mailId, characterId, userId]);
 
     if (result.rows.length === 0) {
       return { success: false, message: '邮件不存在' };
     }
 
+    const deleteState = buildMailCounterStateFromRow(result.rows[0]);
+    await this.applyMailCounterDeltaInputs([
+      deleteState ? buildMailCounterDeleteDelta(deleteState) : null,
+    ]);
     await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
 
     const mail = result.rows[0];
-    const hasAttachments = mail.attach_silver > 0 || mail.attach_spirit_stones > 0 ||
+    const attachSilver = Math.max(0, Math.floor(Number(mail.attach_silver) || 0));
+    const attachSpiritStones = Math.max(0, Math.floor(Number(mail.attach_spirit_stones) || 0));
+    const hasAttachments = attachSilver > 0 || attachSpiritStones > 0 ||
                           this.normalizeAttachItems(mail.attach_items).length > 0 ||
                           hasGrantedRewardPayload(normalizeGrantedRewardPayload(mail.attach_rewards)) ||
                           this.normalizeAttachInstanceIds(mail.attach_instance_ids).length > 0;
@@ -1680,9 +1878,29 @@ class MailService {
       sql += ` AND read_at IS NOT NULL`;
     }
 
-    const result = await query(sql + ' RETURNING id', [characterId, userId]);
+    const result = await query<MailCounterStateRow>(
+      sql + `
+        RETURNING
+          recipient_user_id,
+          recipient_character_id,
+          read_at,
+          claimed_at,
+          attach_silver,
+          attach_spirit_stones,
+          attach_items,
+          attach_rewards,
+          attach_instance_ids
+      `,
+      [characterId, userId],
+    );
 
     if (result.rows.length > 0) {
+      await this.applyMailCounterDeltaInputs(
+        result.rows.map((row) => {
+          const deleteState = buildMailCounterStateFromRow(row);
+          return deleteState ? buildMailCounterDeleteDelta(deleteState) : null;
+        }),
+      );
       await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     }
 
@@ -1702,15 +1920,30 @@ class MailService {
     userId: number,
     characterId: number
   ): Promise<{ success: boolean; message: string; readCount: number }> {
-    const result = await query(`
+    const result = await query<{
+      recipient_user_id: number | string;
+      recipient_character_id: number | string | null;
+    }>(`
       UPDATE mail SET read_at = NOW(), updated_at = NOW()
       WHERE ${this.buildRecipientScopeSql(1, 2)}
         AND deleted_at IS NULL
         AND read_at IS NULL
-      RETURNING id
+      RETURNING recipient_user_id, recipient_character_id
     `, [characterId, userId]);
 
     if (result.rows.length > 0) {
+      await this.applyMailCounterDeltaInputs(
+        result.rows.map((row) =>
+          ({
+            recipientUserId: Number(row.recipient_user_id),
+            recipientCharacterId:
+              row.recipient_character_id === null
+                ? null
+                : Number(row.recipient_character_id),
+            unreadCountDelta: -1,
+          }),
+        ),
+      );
       await this.invalidateUnreadCounterAndNotifyRecipient(userId, characterId);
     }
 
@@ -1730,6 +1963,7 @@ class MailService {
     characterId: number
   ): Promise<{ unreadCount: number; unclaimedCount: number }> {
     try {
+      this.scheduleExpiredMailCleanupForRecipient(userId, characterId);
       const cachedCounter = await mailUnreadCounterCache.get(
         this.buildUnreadCounterCacheKey(userId, characterId),
       );

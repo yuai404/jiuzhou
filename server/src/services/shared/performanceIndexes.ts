@@ -27,6 +27,8 @@ export const MAIL_CHARACTER_ACTIVE_COUNTER_INDEX_NAME = 'idx_mail_character_acti
 export const MAIL_USER_ACTIVE_COUNTER_INDEX_NAME = 'idx_mail_user_active_counter';
 export const MAIL_CHARACTER_EXPIRE_CLEANUP_INDEX_NAME = 'idx_mail_character_expire_cleanup';
 export const MAIL_USER_EXPIRE_CLEANUP_INDEX_NAME = 'idx_mail_user_expire_cleanup';
+export const MAIL_DELETED_HISTORY_CLEANUP_INDEX_NAME = 'idx_mail_deleted_history_cleanup';
+export const MAIL_EXPIRED_HISTORY_CLEANUP_INDEX_NAME = 'idx_mail_expired_history_cleanup';
 export const ITEM_INSTANCE_STACKABLE_LOOKUP_INDEX_NAME = 'idx_item_instance_stackable_lookup';
 export const MARKET_LISTING_ITEM_INSTANCE_ID_INDEX_NAME = 'idx_market_listing_item_instance_id';
 
@@ -161,6 +163,34 @@ const PERFORMANCE_INDEX_DEFINITIONS: PerformanceIndexDefinition[] = [
       'recipient_user_id',
       'expire_at',
       'recipient_character_id IS NULL',
+      'deleted_at IS NULL',
+      'expire_at IS NOT NULL',
+    ],
+  },
+  {
+    name: MAIL_DELETED_HISTORY_CLEANUP_INDEX_NAME,
+    createSql: `
+      CREATE INDEX IF NOT EXISTS ${MAIL_DELETED_HISTORY_CLEANUP_INDEX_NAME}
+      ON mail (deleted_at, id)
+      WHERE deleted_at IS NOT NULL
+    `,
+    matchFragments: [
+      'deleted_at',
+      'id',
+      'deleted_at IS NOT NULL',
+    ],
+  },
+  {
+    name: MAIL_EXPIRED_HISTORY_CLEANUP_INDEX_NAME,
+    createSql: `
+      CREATE INDEX IF NOT EXISTS ${MAIL_EXPIRED_HISTORY_CLEANUP_INDEX_NAME}
+      ON mail (expire_at, id)
+      WHERE deleted_at IS NULL
+        AND expire_at IS NOT NULL
+    `,
+    matchFragments: [
+      'expire_at',
+      'id',
       'deleted_at IS NULL',
       'expire_at IS NOT NULL',
     ],

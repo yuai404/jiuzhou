@@ -1,4 +1,5 @@
 import { backfillCharacterRankSnapshots } from "../services/characterComputedService.js";
+import { backfillMailCounterSnapshotsIfEmpty } from "../services/shared/mailCounterStore.js";
 import { backfillMarketListingOriginalQty } from "../services/marketListingDataBackfillService.js";
 import { loadAllSeeds } from "../services/seedService.js";
 
@@ -28,6 +29,7 @@ export const initTables = async (): Promise<void> => {
   await loadAllSeeds();
   await backfillCharacterRankSnapshots();
   await backfillMarketListingOriginalQty();
+  await backfillMailCounterSnapshotsIfEmpty();
 
   console.log("========== 数据准备完成 ==========\n");
 };
