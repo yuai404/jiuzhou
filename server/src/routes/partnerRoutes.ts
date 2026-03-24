@@ -21,7 +21,6 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireCharacter } from '../middleware/auth.js';
 import { sendResult } from '../middleware/response.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
-import { itemService } from '../services/itemService.js';
 import { enqueuePartnerFusionJob } from '../services/partnerFusionJobRunner.js';
 import { notifyPartnerFusionStatus } from '../services/partnerFusionPush.js';
 import { partnerFusionService } from '../services/partnerFusionService.js';
@@ -29,10 +28,8 @@ import { enqueuePartnerRecruitJob } from '../services/partnerRecruitJobRunner.js
 import { notifyPartnerRecruitStatus } from '../services/partnerRecruitPush.js';
 import { partnerRecruitService } from '../services/partnerRecruitService.js';
 import { partnerService } from '../services/partnerService.js';
-import { getItemDefinitionById } from '../services/staticConfigLoader.js';
 import { normalizePartnerNameInput } from '../services/shared/partnerNameRules.js';
 import { getSingleParam, getSingleQueryValue, parseNonEmptyText, parsePositiveInt } from '../services/shared/httpParam.js';
-import { resolveTechniqueBookLearning } from '../services/shared/techniqueBookRules.js';
 import { normalizeManagedAvatarValue } from '../services/uploadService.js';
 
 const router = Router();
@@ -331,10 +328,9 @@ router.post('/inject-exp', asyncHandler(async (req, res) => {
 }));
 
 router.post('/learn-technique', asyncHandler(async (req, res) => {
-  const userId = req.userId!;
   const characterId = req.characterId!;
   const partnerId = parsePositiveInt(req.body?.partnerId);
-  const itemInstanceId = parsePositiveInt(req.body?.itemInstanceId ?? req.body?.itemId);
+  const itemInstanceId = parsePositiveInt(req.body?.itemInstanceId);
   if (!partnerId) {
     sendResult(res, { success: false, message: 'partnerId 参数无效' });
     return;
@@ -344,33 +340,54 @@ router.post('/learn-technique', asyncHandler(async (req, res) => {
     return;
   }
 
-  const itemInstance = await itemService.getItemInstance(itemInstanceId);
-  if (!itemInstance) {
-    sendResult(res, { success: false, message: '物品不存在' });
-    return;
-  }
-  const itemDef = getItemDefinitionById(String(itemInstance.itemDefId || ''));
-  const learnableTechniqueBook = resolveTechniqueBookLearning({
-    itemDef,
-    metadata: itemInstance.metadata,
-  });
-  if (!learnableTechniqueBook) {
-    sendResult(res, { success: false, message: '该道具不是可供伙伴学习的功法书' });
-    return;
-  }
-
-  const result = await itemService.useItem(userId, characterId, itemInstanceId, 1, {
+  const result = await partnerService.startTechniqueLearnByBook({
+    characterId,
     partnerId,
+    itemInstanceId,
   });
-  if (!result.success) {
-    return sendResult(res, result);
+  return sendResult(res, result);
+}));
+
+router.post('/learn-technique/confirm', asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const partnerId = parsePositiveInt(req.body?.partnerId);
+  const itemInstanceId = parsePositiveInt(req.body?.itemInstanceId);
+  const replacedTechniqueId = parseNonEmptyText(req.body?.replacedTechniqueId);
+  if (!partnerId) {
+    sendResult(res, { success: false, message: 'partnerId 参数无效' });
+    return;
+  }
+  if (!itemInstanceId) {
+    sendResult(res, { success: false, message: 'itemInstanceId 参数无效' });
+    return;
+  }
+  if (!replacedTechniqueId) {
+    sendResult(res, { success: false, message: 'replacedTechniqueId 参数无效' });
+    return;
   }
 
-  return sendResult(res, {
-    success: true,
-    message: result.message,
-    data: result.partnerTechniqueResult,
+  const result = await partnerService.confirmTechniqueLearnPreview({
+    characterId,
+    partnerId,
+    itemInstanceId,
+    replacedTechniqueId,
   });
+  return sendResult(res, result);
+}));
+
+router.post('/learn-technique/discard', asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const itemInstanceId = parsePositiveInt(req.body?.itemInstanceId);
+  if (!itemInstanceId) {
+    sendResult(res, { success: false, message: 'itemInstanceId 参数无效' });
+    return;
+  }
+
+  const result = await partnerService.discardTechniqueLearnPreview({
+    characterId,
+    itemInstanceId,
+  });
+  return sendResult(res, result);
 }));
 
 router.get('/technique-upgrade-cost', asyncHandler(async (req, res) => {

@@ -49,6 +49,7 @@ import {
   buildPartnerDisplay,
   buildPartnerDetails,
   buildPartnerTechniqueDto,
+  type EffectivePartnerTechniqueEntry,
   findEffectivePartnerTechniqueEntry,
   getPartnerInnateTechniqueIds,
   getPartnerTechniqueStaticMeta,
@@ -98,6 +99,7 @@ import {
   isValidManagedAvatarUrl,
   normalizeManagedAvatarValue,
 } from './uploadService.js';
+import { consumeSpecificItemInstance } from './inventory/shared/consume.js';
 
 export type {
   PartnerComputedAttrsDto,
@@ -174,6 +176,27 @@ export interface PartnerLearnTechniqueResultDto {
   remainingBooks: PartnerBookDto[];
 }
 
+export interface PartnerTechniqueLearnPreviewDto {
+  partnerId: number;
+  itemInstanceId: number;
+  learnedTechnique: PartnerTechniqueDto;
+  replacedTechnique: PartnerTechniqueDto;
+}
+
+export type PartnerTechniqueLearnActionResultDto =
+  | {
+      mode: 'learned';
+      result: PartnerLearnTechniqueResultDto;
+    }
+  | {
+      mode: 'preview_replace';
+      preview: PartnerTechniqueLearnPreviewDto;
+    };
+
+export interface PartnerDiscardTechniqueBookResultDto {
+  remainingBooks: PartnerBookDto[];
+}
+
 export interface PartnerRenameResultDto {
   partner: PartnerDetailDto;
 }
@@ -202,6 +225,308 @@ const randomIntInclusive = (min: number, max: number): number => {
   return Math.floor(Math.random() * (upper - lower + 1)) + lower;
 };
 
+const buildPartnerTechniqueLearnedEntry = (params: {
+  techniqueId: string;
+  itemDefId: string;
+}): EffectivePartnerTechniqueEntry => ({
+  row: null,
+  techniqueId: params.techniqueId,
+  currentLayer: 1,
+  isInnate: false,
+  learnedFromItemDefId: params.itemDefId,
+});
+
+const loadPartnerTechniqueBookContext = async (params: {
+  characterId: number;
+  itemInstanceId: number;
+  forUpdate: boolean;
+}): Promise<PartnerResult<PartnerTechniqueBookContext>> => {
+  const lockSql = params.forUpdate ? 'FOR UPDATE' : '';
+  const result = await query(
+    `
+      SELECT id, item_def_id, metadata
+      FROM item_instance
+      WHERE id = $1 AND owner_character_id = $2
+      LIMIT 1
+      ${lockSql}
+    `,
+    [params.itemInstanceId, params.characterId],
+  );
+  if (result.rows.length <= 0) {
+    return { success: false, message: '功法书不存在' };
+  }
+
+  const row = result.rows[0] as {
+    id: number | string | bigint | null;
+    item_def_id: string | null;
+    metadata: object | null;
+  };
+  const itemDefId = normalizeText(row.item_def_id);
+  if (!itemDefId) {
+    return { success: false, message: '功法书数据异常' };
+  }
+
+  const itemDef = getItemDefinitionById(itemDefId);
+  const learning = resolveTechniqueBookLearning({
+    itemDef,
+    metadata: row.metadata,
+  });
+  if (!learning) {
+    return { success: false, message: '该道具不是可供伙伴学习的功法书' };
+  }
+
+  return {
+    success: true,
+    message: 'ok',
+    data: {
+      itemInstanceId: normalizeInteger(row.id, 1),
+      itemDefId,
+      techniqueId: learning.techniqueId,
+    },
+  };
+};
+
+const loadPartnerTechniqueLearnContext = async (params: {
+  characterId: number;
+  partnerId: number;
+  itemDefId: string;
+  techniqueId: string;
+  forUpdate: boolean;
+}): Promise<PartnerResult<PartnerTechniqueLearnContext>> => {
+  const unlockState = await assertPartnerSystemUnlocked(params.characterId);
+  if (!unlockState.success) {
+    return { success: false, message: unlockState.message };
+  }
+
+  const character = await loadCharacterPartnerContext(params.characterId, params.forUpdate);
+  if (!character) {
+    return { success: false, message: '角色不存在' };
+  }
+
+  const partnerRow = await loadSinglePartnerRow(params.characterId, params.partnerId, params.forUpdate);
+  if (!partnerRow) {
+    return { success: false, message: '伙伴不存在' };
+  }
+  if (await loadActivePartnerMarketListing(params.partnerId, params.forUpdate)) {
+    return { success: false, message: '已在坊市挂单的伙伴不可学习功法' };
+  }
+  const fusionBlockedMessage = await getPartnerFusionBlockedMessage(params.partnerId, params.forUpdate, '学习功法');
+  if (fusionBlockedMessage) {
+    return { success: false, message: fusionBlockedMessage };
+  }
+
+  const partnerDef = await loadPartnerDefinitionOrThrow(partnerRow.partner_def_id);
+  const techniqueMeta = getPartnerTechniqueStaticMeta(params.techniqueId, 1);
+  if (!techniqueMeta) {
+    return { success: false, message: '伙伴功法不存在或未开放' };
+  }
+
+  const techniqueMap = await loadPartnerTechniqueRows([params.partnerId], params.forUpdate);
+  const currentTechniqueRows = techniqueMap.get(params.partnerId) ?? [];
+  if (currentTechniqueRows.some((row) => row.technique_id === params.techniqueId)) {
+    return { success: false, message: '该伙伴已学习此功法' };
+  }
+
+  const maxTechniqueSlots = normalizeInteger(partnerDef.max_technique_slots);
+  const replaceableTechniqueIds = listReplaceablePartnerTechniqueIds(
+    buildTechniqueStateList(partnerDef, currentTechniqueRows),
+    maxTechniqueSlots,
+  );
+  const learnedTechnique = buildPartnerTechniqueDto(
+    buildPartnerTechniqueLearnedEntry({
+      techniqueId: params.techniqueId,
+      itemDefId: params.itemDefId,
+    }),
+    techniqueMeta,
+  );
+
+  return {
+    success: true,
+    message: 'ok',
+    data: {
+      character,
+      partnerRow,
+      partnerDef,
+      currentTechniqueRows,
+      learnedTechnique,
+      maxTechniqueSlots,
+      replaceableTechniqueIds,
+    },
+  };
+};
+
+const resolveRandomReplaceableTechniqueId = (
+  replaceableTechniqueIds: string[],
+): string | null => {
+  if (replaceableTechniqueIds.length <= 0) {
+    return null;
+  }
+  return replaceableTechniqueIds[
+    randomIntInclusive(0, replaceableTechniqueIds.length - 1)
+  ] ?? null;
+};
+
+const buildReplacePreviewTechnique = (
+  currentTechniqueRows: PartnerTechniqueRow[],
+  replacedTechniqueId: string,
+): PartnerTechniqueDto | null => {
+  const replacedRow =
+    currentTechniqueRows.find((row) => row.technique_id === replacedTechniqueId) ?? null;
+  if (!replacedRow) {
+    return null;
+  }
+  const replacedTechniqueMeta = getPartnerTechniqueStaticMeta(
+    replacedRow.technique_id,
+    replacedRow.current_layer,
+  );
+  if (!replacedTechniqueMeta) {
+    return null;
+  }
+  return buildPartnerTechniqueDto({
+    row: replacedRow,
+    techniqueId: replacedRow.technique_id,
+    currentLayer: normalizeInteger(replacedRow.current_layer, 1),
+    isInnate: false,
+    learnedFromItemDefId: replacedRow.learned_from_item_def_id ?? null,
+  }, replacedTechniqueMeta);
+};
+
+const buildPartnerTechniqueLearnSuccessResult = async (params: {
+  characterId: number;
+  partnerRow: PartnerRow;
+  partnerDef: PartnerDefConfig;
+  character: CharacterPartnerContextRow;
+  partnerId: number;
+  techniqueId: string;
+  replacedTechnique: PartnerTechniqueDto | null;
+  successMessage: string;
+}): Promise<PartnerResult<PartnerLearnTechniqueResultDto>> => {
+  const refreshedTechniqueMap = await loadPartnerTechniqueRows([params.partnerId], false);
+  const partner = await buildPartnerDetailWithTradeState({
+    row: params.partnerRow,
+    definition: params.partnerDef,
+    techniqueRows: refreshedTechniqueMap.get(params.partnerId) ?? [],
+    ownerRealm: {
+      realm: params.character.realm,
+      subRealm: params.character.subRealm,
+    },
+  });
+  const learnedTechnique = partner.techniques.find(
+    (entry) => entry.techniqueId === params.techniqueId,
+  );
+  if (!learnedTechnique) {
+    return { success: false, message: '伙伴功法刷新失败' };
+  }
+
+  await scheduleActivePartnerBattleCacheRefreshByCharacterId(params.characterId);
+
+  return {
+    success: true,
+    message: params.successMessage,
+    data: {
+      partner,
+      learnedTechnique,
+      replacedTechnique: params.replacedTechnique,
+      remainingBooks: await loadPartnerBooks(params.characterId),
+    },
+  };
+};
+
+const applyPartnerTechniqueLearn = async (params: {
+  characterId: number;
+  partnerId: number;
+  itemDefId: string;
+  techniqueId: string;
+  allowRandomReplacement: boolean;
+  replacedTechniqueId?: string | null;
+}): Promise<PartnerResult<PartnerLearnTechniqueResultDto>> => {
+  const contextResult = await loadPartnerTechniqueLearnContext({
+    characterId: params.characterId,
+    partnerId: params.partnerId,
+    itemDefId: params.itemDefId,
+    techniqueId: params.techniqueId,
+    forUpdate: true,
+  });
+  if (!contextResult.success || !contextResult.data) {
+    return { success: false, message: contextResult.message };
+  }
+
+  const context = contextResult.data;
+  if (context.currentTechniqueRows.length < context.maxTechniqueSlots) {
+    await query(
+      `
+        INSERT INTO character_partner_technique (
+          partner_id,
+          technique_id,
+          current_layer,
+          is_innate,
+          learned_from_item_def_id,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, 1, FALSE, $3, NOW(), NOW())
+      `,
+      [params.partnerId, params.techniqueId, params.itemDefId],
+    );
+    return buildPartnerTechniqueLearnSuccessResult({
+      characterId: params.characterId,
+      partnerRow: context.partnerRow,
+      partnerDef: context.partnerDef,
+      character: context.character,
+      partnerId: params.partnerId,
+      techniqueId: params.techniqueId,
+      replacedTechnique: null,
+      successMessage: '伙伴学习功法成功',
+    });
+  }
+
+  if (context.replaceableTechniqueIds.length <= 0) {
+    return { success: false, message: '当前只有天生功法，无法继续打书' };
+  }
+
+  const replacedTechniqueId =
+    normalizeText(params.replacedTechniqueId) ||
+    (params.allowRandomReplacement ? resolveRandomReplaceableTechniqueId(context.replaceableTechniqueIds) : null);
+  if (!replacedTechniqueId) {
+    return { success: false, message: '请先确认要覆盖的功法' };
+  }
+  if (!context.replaceableTechniqueIds.includes(replacedTechniqueId)) {
+    return { success: false, message: '预览已失效，请重新选择功法书' };
+  }
+
+  const replacedTechnique = buildReplacePreviewTechnique(
+    context.currentTechniqueRows,
+    replacedTechniqueId,
+  );
+  if (!replacedTechnique) {
+    return { success: false, message: '被覆盖功法不存在或已失效' };
+  }
+
+  await query(
+    `
+      UPDATE character_partner_technique
+      SET technique_id = $2,
+          current_layer = 1,
+          is_innate = FALSE,
+          learned_from_item_def_id = $3,
+          updated_at = NOW()
+      WHERE partner_id = $1 AND technique_id = $4
+    `,
+    [params.partnerId, params.techniqueId, params.itemDefId, replacedTechniqueId],
+  );
+
+  return buildPartnerTechniqueLearnSuccessResult({
+    characterId: params.characterId,
+    partnerRow: context.partnerRow,
+    partnerDef: context.partnerDef,
+    character: context.character,
+    partnerId: params.partnerId,
+    techniqueId: params.techniqueId,
+    replacedTechnique,
+    successMessage: '伙伴打书成功，原功法已被覆盖',
+  });
+};
+
 type PartnerItemInstanceRow = {
   id: number;
   item_def_id: string;
@@ -209,6 +534,22 @@ type PartnerItemInstanceRow = {
   location: string;
   location_slot: number | null;
   metadata: object | null;
+};
+
+type PartnerTechniqueBookContext = {
+  itemInstanceId: number;
+  itemDefId: string;
+  techniqueId: string;
+};
+
+type PartnerTechniqueLearnContext = {
+  character: CharacterPartnerContextRow;
+  partnerRow: PartnerRow;
+  partnerDef: PartnerDefConfig;
+  currentTechniqueRows: PartnerTechniqueRow[];
+  learnedTechnique: PartnerTechniqueDto;
+  maxTechniqueSlots: number;
+  replaceableTechniqueIds: string[];
 };
 
 const loadCharacterPartnerContext = async (
@@ -1221,6 +1562,198 @@ class PartnerService {
   }
 
   @Transactional
+  async startTechniqueLearnByBook(params: {
+    characterId: number;
+    partnerId: number;
+    itemInstanceId: number;
+  }): Promise<PartnerResult<PartnerTechniqueLearnActionResultDto>> {
+    try {
+      const bookResult = await loadPartnerTechniqueBookContext({
+        characterId: params.characterId,
+        itemInstanceId: params.itemInstanceId,
+        forUpdate: false,
+      });
+      if (!bookResult.success || !bookResult.data) {
+        return { success: false, message: bookResult.message };
+      }
+
+      const contextResult = await loadPartnerTechniqueLearnContext({
+        characterId: params.characterId,
+        partnerId: params.partnerId,
+        itemDefId: bookResult.data.itemDefId,
+        techniqueId: bookResult.data.techniqueId,
+        forUpdate: true,
+      });
+      if (!contextResult.success || !contextResult.data) {
+        return { success: false, message: contextResult.message };
+      }
+
+      const context = contextResult.data;
+      if (context.currentTechniqueRows.length < context.maxTechniqueSlots) {
+        const consumeResult = await consumeSpecificItemInstance(
+          params.characterId,
+          params.itemInstanceId,
+          1,
+        );
+        if (!consumeResult.success) {
+          return { success: false, message: consumeResult.message };
+        }
+        if (normalizeText(consumeResult.itemDefId) !== bookResult.data.itemDefId) {
+          return { success: false, message: '功法书已变化，请刷新后重试' };
+        }
+
+        const learnResult = await applyPartnerTechniqueLearn({
+          characterId: params.characterId,
+          partnerId: params.partnerId,
+          itemDefId: bookResult.data.itemDefId,
+          techniqueId: bookResult.data.techniqueId,
+          allowRandomReplacement: false,
+        });
+        if (!learnResult.success || !learnResult.data) {
+          return { success: false, message: learnResult.message };
+        }
+        return {
+          success: true,
+          message: learnResult.message,
+          data: {
+            mode: 'learned',
+            result: learnResult.data,
+          },
+        };
+      }
+
+      const replacedTechniqueId = resolveRandomReplaceableTechniqueId(context.replaceableTechniqueIds);
+      if (!replacedTechniqueId) {
+        return { success: false, message: '当前只有天生功法，无法继续打书' };
+      }
+      const replacedTechnique = buildReplacePreviewTechnique(
+        context.currentTechniqueRows,
+        replacedTechniqueId,
+      );
+      if (!replacedTechnique) {
+        return { success: false, message: '预览目标功法不存在或已失效' };
+      }
+
+      return {
+        success: true,
+        message: '请确认本次功法替换预览',
+        data: {
+          mode: 'preview_replace',
+          preview: {
+            partnerId: params.partnerId,
+            itemInstanceId: params.itemInstanceId,
+            learnedTechnique: context.learnedTechnique,
+            replacedTechnique,
+          },
+        },
+      };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '未知错误';
+      return { success: false, message: `伙伴打书预览失败：${reason}` };
+    }
+  }
+
+  @Transactional
+  async confirmTechniqueLearnPreview(params: {
+    characterId: number;
+    partnerId: number;
+    itemInstanceId: number;
+    replacedTechniqueId: string;
+  }): Promise<PartnerResult<PartnerLearnTechniqueResultDto>> {
+    try {
+      const bookResult = await loadPartnerTechniqueBookContext({
+        characterId: params.characterId,
+        itemInstanceId: params.itemInstanceId,
+        forUpdate: true,
+      });
+      if (!bookResult.success || !bookResult.data) {
+        return { success: false, message: bookResult.message };
+      }
+
+      const contextResult = await loadPartnerTechniqueLearnContext({
+        characterId: params.characterId,
+        partnerId: params.partnerId,
+        itemDefId: bookResult.data.itemDefId,
+        techniqueId: bookResult.data.techniqueId,
+        forUpdate: true,
+      });
+      if (!contextResult.success || !contextResult.data) {
+        return { success: false, message: contextResult.message };
+      }
+      if (contextResult.data.currentTechniqueRows.length < contextResult.data.maxTechniqueSlots) {
+        return { success: false, message: '当前无需替换预览，请重新学习功法书' };
+      }
+      if (!contextResult.data.replaceableTechniqueIds.includes(params.replacedTechniqueId)) {
+        return { success: false, message: '预览已失效，请重新选择功法书' };
+      }
+
+      const consumeResult = await consumeSpecificItemInstance(
+        params.characterId,
+        params.itemInstanceId,
+        1,
+      );
+      if (!consumeResult.success) {
+        return { success: false, message: consumeResult.message };
+      }
+      if (normalizeText(consumeResult.itemDefId) !== bookResult.data.itemDefId) {
+        return { success: false, message: '功法书已变化，请重新打开预览' };
+      }
+
+      return applyPartnerTechniqueLearn({
+        characterId: params.characterId,
+        partnerId: params.partnerId,
+        itemDefId: bookResult.data.itemDefId,
+        techniqueId: bookResult.data.techniqueId,
+        replacedTechniqueId: params.replacedTechniqueId,
+        allowRandomReplacement: false,
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '未知错误';
+      return { success: false, message: `确认伙伴打书失败：${reason}` };
+    }
+  }
+
+  @Transactional
+  async discardTechniqueLearnPreview(params: {
+    characterId: number;
+    itemInstanceId: number;
+  }): Promise<PartnerResult<PartnerDiscardTechniqueBookResultDto>> {
+    try {
+      const bookResult = await loadPartnerTechniqueBookContext({
+        characterId: params.characterId,
+        itemInstanceId: params.itemInstanceId,
+        forUpdate: true,
+      });
+      if (!bookResult.success || !bookResult.data) {
+        return { success: false, message: bookResult.message };
+      }
+
+      const consumeResult = await consumeSpecificItemInstance(
+        params.characterId,
+        params.itemInstanceId,
+        1,
+      );
+      if (!consumeResult.success) {
+        return { success: false, message: consumeResult.message };
+      }
+      if (normalizeText(consumeResult.itemDefId) !== bookResult.data.itemDefId) {
+        return { success: false, message: '功法书已变化，请重新打开预览' };
+      }
+
+      return {
+        success: true,
+        message: '已放弃学习，本次功法书已消耗',
+        data: {
+          remainingBooks: await loadPartnerBooks(params.characterId),
+        },
+      };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : '未知错误';
+      return { success: false, message: `放弃伙伴打书失败：${reason}` };
+    }
+  }
+
+  @Transactional
   async learnTechniqueByItem(params: {
     characterId: number;
     partnerId: number;
@@ -1228,160 +1761,13 @@ class PartnerService {
     techniqueId: string;
   }): Promise<PartnerResult<PartnerLearnTechniqueResultDto>> {
     try {
-      const unlockState = await assertPartnerSystemUnlocked(params.characterId);
-      if (!unlockState.success) {
-        return { success: false, message: unlockState.message };
-      }
-
-      const character = await loadCharacterPartnerContext(params.characterId, true);
-      if (!character) return { success: false, message: '角色不存在' };
-
-      const partnerRow = await loadSinglePartnerRow(params.characterId, params.partnerId, true);
-      if (!partnerRow) return { success: false, message: '伙伴不存在' };
-      if (await loadActivePartnerMarketListing(params.partnerId, true)) {
-        return { success: false, message: '已在坊市挂单的伙伴不可学习功法' };
-      }
-      const fusionBlockedMessage = await getPartnerFusionBlockedMessage(params.partnerId, true, '学习功法');
-      if (fusionBlockedMessage) {
-        return { success: false, message: fusionBlockedMessage };
-      }
-
-      const partnerDef = await loadPartnerDefinitionOrThrow(partnerRow.partner_def_id);
-
-      const techniqueMeta = getPartnerTechniqueStaticMeta(params.techniqueId, 1);
-      if (!techniqueMeta) {
-        return { success: false, message: '伙伴功法不存在或未开放' };
-      }
-
-      const techniqueMap = await loadPartnerTechniqueRows([params.partnerId], true);
-      const currentTechniqueRows = techniqueMap.get(params.partnerId) ?? [];
-      if (currentTechniqueRows.some((row) => row.technique_id === params.techniqueId)) {
-        return { success: false, message: '该伙伴已学习此功法' };
-      }
-
-      const maxTechniqueSlots = normalizeInteger(partnerDef.max_technique_slots);
-      const replaceableTechniqueIds = listReplaceablePartnerTechniqueIds(
-        buildTechniqueStateList(partnerDef, currentTechniqueRows),
-        maxTechniqueSlots,
-      );
-
-      let replacedTechniqueId: string | null = null;
-      if (currentTechniqueRows.length < maxTechniqueSlots) {
-        await query(
-          `
-            INSERT INTO character_partner_technique (
-              partner_id,
-              technique_id,
-              current_layer,
-              is_innate,
-              learned_from_item_def_id,
-              created_at,
-              updated_at
-            )
-            VALUES ($1, $2, 1, FALSE, $3, NOW(), NOW())
-          `,
-          [params.partnerId, params.techniqueId, params.itemDefId],
-        );
-      } else {
-        if (replaceableTechniqueIds.length <= 0) {
-          return { success: false, message: '当前只有天生功法，无法继续打书' };
-        }
-        replacedTechniqueId =
-          replaceableTechniqueIds[
-            randomIntInclusive(0, replaceableTechniqueIds.length - 1)
-          ] ?? null;
-        if (!replacedTechniqueId) {
-          return { success: false, message: '可覆盖功法选择失败' };
-        }
-        const replacedRow =
-          currentTechniqueRows.find((row) => row.technique_id === replacedTechniqueId) ?? null;
-        await query(
-          `
-            UPDATE character_partner_technique
-            SET technique_id = $2,
-                current_layer = 1,
-                is_innate = FALSE,
-                learned_from_item_def_id = $3,
-                updated_at = NOW()
-            WHERE partner_id = $1 AND technique_id = $4
-          `,
-          [params.partnerId, params.techniqueId, params.itemDefId, replacedTechniqueId],
-        );
-        const replacedTechniqueMeta = replacedRow
-          ? getPartnerTechniqueStaticMeta(
-              replacedRow.technique_id,
-              replacedRow.current_layer,
-            )
-          : null;
-        const replacedTechnique =
-          replacedRow && replacedTechniqueMeta
-            ? buildPartnerTechniqueDto({
-                row: replacedRow,
-                techniqueId: replacedRow.technique_id,
-                currentLayer: normalizeInteger(replacedRow.current_layer, 1),
-                isInnate: false,
-                learnedFromItemDefId: replacedRow.learned_from_item_def_id ?? null,
-              }, replacedTechniqueMeta)
-            : null;
-
-        const refreshedTechniqueMap = await loadPartnerTechniqueRows([params.partnerId], false);
-        const partner = await buildPartnerDetailWithTradeState({
-          row: partnerRow,
-          definition: partnerDef,
-          techniqueRows: refreshedTechniqueMap.get(params.partnerId) ?? [],
-          ownerRealm: {
-            realm: character.realm,
-            subRealm: character.subRealm,
-          },
-        });
-        const learnedTechnique = partner.techniques.find(
-          (entry) => entry.techniqueId === params.techniqueId,
-        );
-        if (!learnedTechnique) {
-          return { success: false, message: '伙伴功法刷新失败' };
-        }
-        await scheduleActivePartnerBattleCacheRefreshByCharacterId(params.characterId);
-
-        return {
-          success: true,
-          message: '伙伴打书成功，原功法已被覆盖',
-          data: {
-            partner,
-            learnedTechnique,
-            replacedTechnique,
-            remainingBooks: await loadPartnerBooks(params.characterId),
-          },
-        };
-      }
-
-      const refreshedTechniqueMap = await loadPartnerTechniqueRows([params.partnerId], false);
-      const partner = await buildPartnerDetailWithTradeState({
-        row: partnerRow,
-        definition: partnerDef,
-        techniqueRows: refreshedTechniqueMap.get(params.partnerId) ?? [],
-        ownerRealm: {
-          realm: character.realm,
-          subRealm: character.subRealm,
-        },
+      return applyPartnerTechniqueLearn({
+        characterId: params.characterId,
+        partnerId: params.partnerId,
+        itemDefId: params.itemDefId,
+        techniqueId: params.techniqueId,
+        allowRandomReplacement: true,
       });
-      const learnedTechnique = partner.techniques.find(
-        (entry) => entry.techniqueId === params.techniqueId,
-      );
-      if (!learnedTechnique) {
-        return { success: false, message: '伙伴功法刷新失败' };
-      }
-      await scheduleActivePartnerBattleCacheRefreshByCharacterId(params.characterId);
-
-      return {
-        success: true,
-        message: '伙伴学习功法成功',
-        data: {
-          partner,
-          learnedTechnique,
-          replacedTechnique: null,
-          remainingBooks: await loadPartnerBooks(params.characterId),
-        },
-      };
     } catch (error) {
       const reason = error instanceof Error ? error.message : '未知错误';
       return { success: false, message: `伙伴打书失败：${reason}` };

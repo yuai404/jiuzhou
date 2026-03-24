@@ -699,7 +699,7 @@
 .partner-technique-grid,
 .partner-book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   align-content: start;
 }
@@ -1109,6 +1109,126 @@
   font-size: 12px;
 }
 
+.partner-technique-preview-modal {
+  .ant-modal-content {
+    background: var(--panel-bg);
+  }
+}
+
+.partner-technique-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.partner-technique-preview-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text-color);
+}
+
+.partner-technique-preview-book {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.partner-technique-preview-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--panel-bg) 82%, var(--panel-bg-soft) 18%);
+}
+
+.partner-technique-preview-line {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.partner-technique-preview-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.partner-technique-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--panel-bg) 92%, var(--panel-bg-soft) 8%);
+}
+
+.partner-technique-preview-card.is-learn {
+  border-color: color-mix(in srgb, var(--success-color, #52c41a) 36%, var(--border-color) 64%);
+  background: color-mix(in srgb, var(--success-color, #52c41a) 10%, var(--panel-bg) 90%);
+}
+
+.partner-technique-preview-card.is-replace {
+  border-color: color-mix(in srgb, var(--warning-color, #faad14) 38%, var(--border-color) 62%);
+  background: color-mix(in srgb, var(--warning-color, #faad14) 11%, var(--panel-bg) 89%);
+}
+
+.partner-technique-preview-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.partner-technique-preview-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.partner-technique-preview-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg-soft);
+  flex-shrink: 0;
+}
+
+.partner-technique-preview-card-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.partner-technique-preview-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text-color);
+  word-break: break-word;
+}
+
+.partner-technique-preview-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.partner-technique-preview-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
 .partner-empty {
   padding: 28px 16px;
   text-align: center;
@@ -1350,6 +1470,15 @@
     grid-template-columns: 1fr;
   }
 
+  .partner-technique-preview-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .partner-technique-preview-arrow {
+    min-height: 28px;
+    transform: rotate(90deg);
+  }
+
   .partner-recruit-meta-grid {
     grid-template-columns: 1fr;
   }
@@ -1478,5 +1607,9 @@
   .partner-technique-head,
   .partner-book-head {
     gap: 8px;
+  }
+
+  .partner-technique-preview-card {
+    padding: 10px;
   }
 }

@@ -134,6 +134,24 @@ export const formatPartnerLearnResult = (
   return `学习成功：已领悟「${learnedTechnique.name}」`;
 };
 
+export const formatPartnerLearnPreviewTitle = (
+  learnedTechnique: PartnerTechniqueDto,
+  replacedTechnique: PartnerTechniqueDto,
+): string => {
+  return `学习「${learnedTechnique.name}」将替换「${replacedTechnique.name}」`;
+};
+
+export const buildPartnerLearnPreviewLines = (
+  learnedTechnique: PartnerTechniqueDto,
+  replacedTechnique: PartnerTechniqueDto,
+): string[] => {
+  return [
+    '伙伴功法槽已满，本次学习会直接覆盖一门已有的后天功法。',
+    `本次预览命中：学习后新增「${learnedTechnique.name}」，被替换的是「${replacedTechnique.name}」。`,
+    '选择“放弃学习”后，本次功法书仍会被消耗，但不会习得新功法。',
+  ];
+};
+
 export const resolvePartnerBookLabel = (book: PartnerBookDto): string => {
   return book.name;
 };

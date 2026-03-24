@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import {
   activatePartner,
   confirmPartnerFusionPreview,
+  confirmPartnerTechniqueLearnPreview,
   confirmPartnerRecruitDraft,
   dismissPartner,
+  discardPartnerTechniqueLearnPreview,
   discardPartnerRecruitDraft,
   generatePartnerRecruitDraft,
   getBagInventorySnapshot,
@@ -27,6 +29,7 @@ import {
   type PartnerRecruitStatusDto,
   type PartnerSkillPolicyDto,
   type PartnerSkillPolicyEntryDto,
+  type PartnerTechniqueLearnPreviewDto,
   type PartnerTechniqueDto,
   type PartnerTechniqueUpgradeCostDto,
   SILENT_API_REQUEST_CONFIG,
@@ -44,8 +47,10 @@ import {
   buildPartnerCombatAttrRows,
   buildPartnerUpgradeRuleLines,
   buildPartnerSkillPolicySlots,
+  buildPartnerLearnPreviewLines,
   formatPartnerElementLabel,
   formatPartnerAttrValue,
+  formatPartnerLearnPreviewTitle,
   formatPartnerTechniqueLayerLabel,
   formatPartnerTechniqueSkillToggleLabel,
   formatPartnerTechniqueUpgradeCostLines,
@@ -99,6 +104,14 @@ interface PartnerModalProps {
 }
 
 type RecruitStatusRefreshMode = 'initial' | 'background';
+type TechniqueLearnOutcome = {
+  learnedTechnique: PartnerTechniqueDto;
+  replacedTechnique: PartnerTechniqueDto | null;
+};
+type PendingTechniqueLearnPreview = {
+  book: PartnerBookDto;
+  preview: PartnerTechniqueLearnPreviewDto;
+};
 
 const PARTNER_SKILL_TOOLTIP_CLASS_NAMES = {
   root: 'skill-tooltip-overlay game-tooltip-surface-root',
@@ -146,6 +159,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
   const [selectedFusionMaterialIds, setSelectedFusionMaterialIds] = useState<number[]>([]);
   const [techniqueUpgradeCosts, setTechniqueUpgradeCosts] = useState<Record<string, PartnerTechniqueUpgradeCostDto | null>>({});
   const [expandedTechniqueSkills, setExpandedTechniqueSkills] = useState<Record<string, boolean>>({});
+  const [pendingTechniqueLearnPreview, setPendingTechniqueLearnPreview] = useState<PendingTechniqueLearnPreview | null>(null);
   const markingRecruitViewedRef = useRef(false);
   const markingFusionViewedRef = useRef(false);
 
@@ -240,6 +254,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
       setSelectedFusionMaterialIds([]);
       setTechniqueUpgradeCosts({});
       setExpandedTechniqueSkills({});
+      setPendingTechniqueLearnPreview(null);
       setActionKey('');
       return;
     }
@@ -585,23 +600,88 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     }
   }, [injectExpValue, message, refreshOverview, selectedPartner]);
 
-  const handleLearnTechnique = useCallback(async (book: PartnerBookDto) => {
+  const applyTechniqueLearnOutcome = useCallback(async (
+    outcome: TechniqueLearnOutcome,
+    successMessage: string,
+  ) => {
+    message.success(successMessage);
+    setPendingTechniqueLearnPreview(null);
+    setTechniqueResultText(formatPartnerLearnResult(outcome.learnedTechnique, outcome.replacedTechnique));
+    await refreshOverview();
+    dispatchPartnerChangedEvent();
+    window.dispatchEvent(new Event('inventory:changed'));
+  }, [message, refreshOverview]);
+
+  const executeLearnTechnique = useCallback(async (book: PartnerBookDto) => {
     if (!selectedPartner) return;
     setActionKey(`learn-${book.itemInstanceId}`);
     try {
       const res = await learnPartnerTechnique(selectedPartner.id, book.itemInstanceId);
       if (!res.success || !res.data) throw new Error(getUnifiedApiErrorMessage(res, '学习失败'));
-      message.success(res.message || '学习成功');
-      setTechniqueResultText(formatPartnerLearnResult(res.data.learnedTechnique, res.data.replacedTechnique));
+      if (res.data.mode === 'preview_replace') {
+        setPendingTechniqueLearnPreview({
+          book,
+          preview: res.data.preview,
+        });
+        return;
+      }
+      await applyTechniqueLearnOutcome(res.data.result, res.message || '学习成功');
+    } catch {
+      void 0;
+    } finally {
+      setActionKey('');
+    }
+  }, [applyTechniqueLearnOutcome, selectedPartner]);
+
+  const handleLearnTechnique = useCallback((book: PartnerBookDto) => {
+    modal.confirm({
+      title: `确认让伙伴学习${resolvePartnerBookLabel(book)}？`,
+      content: '确认后会先消耗 1 本功法书；如果伙伴功法槽已满，下一步会继续展示替换预览。',
+      okText: '继续学习',
+      cancelText: '暂不学习',
+      onOk: async () => {
+        await executeLearnTechnique(book);
+      },
+    });
+  }, [executeLearnTechnique, modal]);
+
+  const handleConfirmTechniqueLearnPreview = useCallback(async () => {
+    if (!pendingTechniqueLearnPreview) return;
+    const { preview } = pendingTechniqueLearnPreview;
+    setActionKey(`learn-confirm-${preview.itemInstanceId}`);
+    try {
+      const res = await confirmPartnerTechniqueLearnPreview(
+        preview.partnerId,
+        preview.itemInstanceId,
+        preview.replacedTechnique.techniqueId,
+      );
+      if (!res.success || !res.data) throw new Error(getUnifiedApiErrorMessage(res, '确认学习失败'));
+      await applyTechniqueLearnOutcome(res.data, res.message || '学习成功');
+    } catch {
+      void 0;
+    } finally {
+      setActionKey('');
+    }
+  }, [applyTechniqueLearnOutcome, pendingTechniqueLearnPreview]);
+
+  const handleDiscardTechniqueLearnPreview = useCallback(async () => {
+    if (!pendingTechniqueLearnPreview) return;
+    const { book, preview } = pendingTechniqueLearnPreview;
+    setActionKey(`learn-discard-${preview.itemInstanceId}`);
+    try {
+      const res = await discardPartnerTechniqueLearnPreview(preview.itemInstanceId);
+      if (!res.success) throw new Error(getUnifiedApiErrorMessage(res, '放弃学习失败'));
+      message.success(res.message || '已放弃学习');
+      setPendingTechniqueLearnPreview(null);
+      setTechniqueResultText(`已放弃学习：${resolvePartnerBookLabel(book)} 已被消耗`);
       await refreshOverview();
-      dispatchPartnerChangedEvent();
       window.dispatchEvent(new Event('inventory:changed'));
     } catch {
       void 0;
     } finally {
       setActionKey('');
     }
-  }, [message, refreshOverview, selectedPartner]);
+  }, [message, pendingTechniqueLearnPreview, refreshOverview]);
 
   const handleUpgradeTechnique = useCallback(async (technique: PartnerTechniqueDto) => {
     if (!selectedPartner) return;
@@ -1294,6 +1374,103 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
     );
   };
 
+  const renderTechniqueLearnPreviewModal = () => {
+    if (!pendingTechniqueLearnPreview) return null;
+
+    const { book, preview } = pendingTechniqueLearnPreview;
+    const previewLines = buildPartnerLearnPreviewLines(
+      preview.learnedTechnique,
+      preview.replacedTechnique,
+    );
+
+    return (
+      <Modal
+        open
+        centered
+        closable={false}
+        maskClosable={false}
+        keyboard={false}
+        title="功法替换预览"
+        width="min(680px, calc(100vw - 24px))"
+        className="partner-technique-preview-modal"
+        okText="确认学习"
+        cancelText="放弃学习"
+        onOk={() => {
+          void handleConfirmTechniqueLearnPreview();
+        }}
+        onCancel={() => {
+          void handleDiscardTechniqueLearnPreview();
+        }}
+        okButtonProps={{ loading: actionKey === `learn-confirm-${preview.itemInstanceId}` }}
+        cancelButtonProps={{
+          danger: true,
+          loading: actionKey === `learn-discard-${preview.itemInstanceId}`,
+        }}
+      >
+        <div className="partner-technique-preview">
+          <div className="partner-technique-preview-title">
+            {formatPartnerLearnPreviewTitle(preview.learnedTechnique, preview.replacedTechnique)}
+          </div>
+          <div className="partner-technique-preview-book">
+            当前使用功法书：{resolvePartnerBookLabel(book)}
+          </div>
+          <div className="partner-technique-preview-lines">
+            {previewLines.map((line) => (
+              <div key={line} className="partner-technique-preview-line">{line}</div>
+            ))}
+          </div>
+          <div className="partner-technique-preview-compare">
+            <div className="partner-technique-preview-card is-learn">
+              <div className="partner-technique-preview-card-label">将学习</div>
+              <div className="partner-technique-preview-card-main">
+                <img
+                  className="partner-technique-preview-card-icon"
+                  src={resolvePartnerAvatar(preview.learnedTechnique.icon)}
+                  alt={preview.learnedTechnique.name}
+                />
+                <div className="partner-technique-preview-card-copy">
+                  <div className="partner-technique-preview-card-name">
+                    {preview.learnedTechnique.name}
+                  </div>
+                  <div className="partner-technique-preview-card-meta">
+                    <Tag className={getItemQualityTagClassName(preview.learnedTechnique.quality)}>
+                      {preview.learnedTechnique.quality}
+                    </Tag>
+                    <Tag color="blue">{formatPartnerTechniqueLayerLabel(preview.learnedTechnique)}</Tag>
+                    <Tag color="cyan">后天功法</Tag>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="partner-technique-preview-arrow">→</div>
+            <div className="partner-technique-preview-card is-replace">
+              <div className="partner-technique-preview-card-label">将被替换</div>
+              <div className="partner-technique-preview-card-main">
+                <img
+                  className="partner-technique-preview-card-icon"
+                  src={resolvePartnerAvatar(preview.replacedTechnique.icon)}
+                  alt={preview.replacedTechnique.name}
+                />
+                <div className="partner-technique-preview-card-copy">
+                  <div className="partner-technique-preview-card-name">
+                    {preview.replacedTechnique.name}
+                  </div>
+                  <div className="partner-technique-preview-card-meta">
+                    <Tag className={getItemQualityTagClassName(preview.replacedTechnique.quality)}>
+                      {preview.replacedTechnique.quality}
+                    </Tag>
+                    <Tag color="orange">{formatPartnerTechniqueLayerLabel(preview.replacedTechnique)}</Tag>
+                    <Tag color="red">覆盖后消失</Tag>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  };
+
   const renderRecruitRequestedBaseModel = (requestedBaseModel: string | null) => {
     if (!requestedBaseModel) return null;
     return (
@@ -1914,6 +2091,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
           {renderBody()}
         </Drawer>
         {renameModalNode}
+        {renderTechniqueLearnPreviewModal()}
       </>
     );
   }
@@ -1935,6 +2113,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ open, onClose }) => {
         {renderBody()}
       </Modal>
       {renameModalNode}
+      {renderTechniqueLearnPreviewModal()}
     </>
   );
 };

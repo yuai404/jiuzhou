@@ -107,6 +107,13 @@ export type PartnerBookDto = {
   qty: number;
 };
 
+export type PartnerTechniqueLearnPreviewDto = {
+  partnerId: number;
+  itemInstanceId: number;
+  learnedTechnique: PartnerTechniqueDto;
+  replacedTechnique: PartnerTechniqueDto;
+};
+
 export type PartnerDisplayDto = {
   id: number;
   partnerDefId: string;
@@ -331,10 +338,37 @@ export interface PartnerInjectExpResponse {
 export interface PartnerLearnTechniqueResponse {
   success: boolean;
   message: string;
+  data?:
+    | {
+        mode: 'learned';
+        result: {
+          partner: PartnerDetailDto;
+          learnedTechnique: PartnerTechniqueDto;
+          replacedTechnique: PartnerTechniqueDto | null;
+          remainingBooks: PartnerBookDto[];
+        };
+      }
+    | {
+        mode: 'preview_replace';
+        preview: PartnerTechniqueLearnPreviewDto;
+      };
+}
+
+export interface PartnerConfirmLearnTechniqueResponse {
+  success: boolean;
+  message: string;
   data?: {
     partner: PartnerDetailDto;
     learnedTechnique: PartnerTechniqueDto;
     replacedTechnique: PartnerTechniqueDto | null;
+    remainingBooks: PartnerBookDto[];
+  };
+}
+
+export interface PartnerDiscardLearnTechniqueResponse {
+  success: boolean;
+  message: string;
+  data?: {
     remainingBooks: PartnerBookDto[];
   };
 }
@@ -483,6 +517,24 @@ export const learnPartnerTechnique = (
   itemInstanceId: number,
 ): Promise<PartnerLearnTechniqueResponse> => {
   return api.post('/partner/learn-technique', { partnerId, itemInstanceId });
+};
+
+export const confirmPartnerTechniqueLearnPreview = (
+  partnerId: number,
+  itemInstanceId: number,
+  replacedTechniqueId: string,
+): Promise<PartnerConfirmLearnTechniqueResponse> => {
+  return api.post('/partner/learn-technique/confirm', {
+    partnerId,
+    itemInstanceId,
+    replacedTechniqueId,
+  });
+};
+
+export const discardPartnerTechniqueLearnPreview = (
+  itemInstanceId: number,
+): Promise<PartnerDiscardLearnTechniqueResponse> => {
+  return api.post('/partner/learn-technique/discard', { itemInstanceId });
 };
 
 export const getPartnerTechniqueUpgradeCost = (
