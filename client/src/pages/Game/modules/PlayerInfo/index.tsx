@@ -191,9 +191,7 @@ const PlayerInfo: React.FC<PlayerInfoProps> = ({
     setProcessingPoint(`add-${attribute}`);
     try {
       const result = await addAttributePoint(attribute, attributePointStep);
-      if (result.success) {
-        gameSocket.refreshCharacter();
-      } else {
+      if (!result.success) {
         void 0;
       }
     } catch {
@@ -220,9 +218,7 @@ const PlayerInfo: React.FC<PlayerInfoProps> = ({
     setProcessingPoint(`remove-${attribute}`);
     try {
       const result = await removeAttributePoint(attribute, attributePointStep);
-      if (result.success) {
-        gameSocket.refreshCharacter();
-      } else {
+      if (!result.success) {
         void 0;
       }
     } catch {

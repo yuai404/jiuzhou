@@ -200,9 +200,13 @@ const RESOURCE_CACHE_KEY_PREFIX = 'character:runtime:resource:v1:';
 const STATIC_ATTR_CACHE_TTL_SECONDS = 60;
 const STATIC_ATTR_MEMORY_TTL_MS = 20_000;
 const RESOURCE_MEMORY_TTL_MS = 5 * 60_000;
+const CHARACTER_COMPUTED_REFRESH_DEBOUNCE_MS = 80;
 
 const staticAttrsMemoryCache = new Map<number, { payload: StaticAttrsCachePayload; expiresAt: number }>();
 const resourceMemoryCache = new Map<number, { payload: CharacterResourceState; expiresAt: number }>();
+const characterComputedRefreshTimers = new Map<number, ReturnType<typeof setTimeout>>();
+const characterComputedRefreshInFlight = new Set<number>();
+const characterComputedRefreshQueued = new Set<number>();
 
 const DEFAULT_ATTRS: CharacterComputedStats = Object.freeze({
   max_qixue: 100,
@@ -1124,6 +1128,69 @@ export const invalidateCharacterComputedCacheByUserId = async (userId: number): 
   const row = await selectBaseCharacterByUserId(userId);
   if (!row) return;
   await invalidateCharacterComputedCache(row.id);
+};
+
+const clearCharacterComputedRefreshTimer = (characterId: number): void => {
+  const timer = characterComputedRefreshTimers.get(characterId);
+  if (!timer) return;
+  clearTimeout(timer);
+  characterComputedRefreshTimers.delete(characterId);
+};
+
+const flushCharacterComputedRefresh = async (characterId: number): Promise<void> => {
+  if (characterComputedRefreshInFlight.has(characterId)) {
+    characterComputedRefreshQueued.add(characterId);
+    return;
+  }
+
+  characterComputedRefreshInFlight.add(characterId);
+  try {
+    await invalidateCharacterComputedCache(characterId);
+  } finally {
+    characterComputedRefreshInFlight.delete(characterId);
+    if (characterComputedRefreshQueued.delete(characterId)) {
+      scheduleCharacterComputedRefreshByCharacterId(characterId);
+    }
+  }
+};
+
+/**
+ * 角色计算后台刷新调度
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把角色静态属性缓存失效、排行榜快照更新、战斗面板缓存刷新收敛为单一后台入口，避免业务请求同步等待整条重算链。
+ * 2. 做什么：对同一角色的连续刷新请求做轻量合并，减少快速连点或连续属性变动造成的重复重算。
+ * 3. 不做什么：不替代实时角色推送，也不改变 `getCharacterComputed*` 在读路径上的即时重算能力。
+ *
+ * 输入/输出：
+ * - 输入：`characterId` 或 `userId`。
+ * - 输出：无返回值；副作用是后台完成角色静态属性缓存、排行榜快照和战斗档案刷新。
+ *
+ * 数据流/状态流：
+ * 业务写入成功 -> 调度入口按角色去重排队 -> 后台执行 `invalidateCharacterComputedCache` -> 读链路继续按签名获取最新快照。
+ *
+ * 关键边界条件与坑点：
+ * 1. 调度层只能按角色串行，不能并发重算同一角色，否则排行榜快照与战斗档案刷新会重复压库。
+ * 2. 这里故意不 `await` 给调用方；请求时延应由核心写库决定，而不是被后续衍生快照更新放大。
+ */
+export const scheduleCharacterComputedRefreshByCharacterId = (characterId: number): void => {
+  const cid = Number(characterId);
+  if (!Number.isFinite(cid) || cid <= 0) return;
+
+  clearCharacterComputedRefreshTimer(cid);
+  const timer = setTimeout(() => {
+    characterComputedRefreshTimers.delete(cid);
+    void flushCharacterComputedRefresh(cid).catch((error) => {
+      console.error(`[character:computed] 后台刷新失败: characterId=${cid}`, error);
+    });
+  }, CHARACTER_COMPUTED_REFRESH_DEBOUNCE_MS);
+  characterComputedRefreshTimers.set(cid, timer);
+};
+
+export const scheduleCharacterComputedRefreshByUserId = async (userId: number): Promise<void> => {
+  const row = await selectBaseCharacterByUserId(userId);
+  if (!row) return;
+  scheduleCharacterComputedRefreshByCharacterId(row.id);
 };
 
 export const setCharacterResourcesByCharacterId = async (

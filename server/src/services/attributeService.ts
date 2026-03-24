@@ -11,19 +11,20 @@
  * - 输出：统一的成功/失败结果对象，包含最新属性值与剩余属性点。
  *
  * 数据流/状态流：
- * route / socket -> attributeService -> 单条条件 UPDATE characters -> 失效角色计算缓存。
+ * route / socket -> attributeService -> 单条条件 UPDATE characters -> 后台调度角色计算刷新。
  *
  * 关键边界条件与坑点：
  * 1. 属性点校验必须和写库放在同一条 SQL 里，否则并发请求会把“可用点数”判断与真实更新拆开。
  * 2. Socket 与 HTTP 入口必须复用这里的单一数据源，不能在其他文件再手写一套 `UPDATE characters`。
  */
 import { query } from '../config/database.js';
-import { invalidateCharacterComputedCacheByUserId } from './characterComputedService.js';
+import { scheduleCharacterComputedRefreshByCharacterId } from './characterComputedService.js';
 
 type AttributeKey = 'jing' | 'qi' | 'shen';
 const ATTRIBUTE_KEYS: readonly AttributeKey[] = ['jing', 'qi', 'shen'];
 
 type SingleAttributeMutationRow = {
+  character_id: string | number;
   character_exists: boolean;
   updated: boolean;
   new_value: string | number;
@@ -31,6 +32,7 @@ type SingleAttributeMutationRow = {
 };
 
 type BatchAttributeMutationRow = {
+  character_id: string | number;
   character_exists: boolean;
   updated: boolean;
   jing: string | number;
@@ -40,6 +42,7 @@ type BatchAttributeMutationRow = {
 };
 
 type ResetAttributeMutationRow = {
+  character_id: string | number;
   character_exists: boolean;
   updated: boolean;
   refunded_points: string | number;
@@ -100,6 +103,7 @@ const buildSingleAttributeMutationSql = (
         characters.attribute_points AS remaining_points
     )
     SELECT
+      COALESCE((SELECT id FROM target_character), 0) AS character_id,
       EXISTS(SELECT 1 FROM target_character) AS character_exists,
       EXISTS(SELECT 1 FROM updated_character) AS updated,
       COALESCE((SELECT new_value FROM updated_character), 0) AS new_value,
@@ -129,7 +133,7 @@ const runSingleAttributeMutation = async (
     };
   }
 
-  await invalidateCharacterComputedCacheByUserId(userId);
+  scheduleCharacterComputedRefreshByCharacterId(normalizeInteger(row.character_id));
 
   return {
     success: true,
@@ -216,6 +220,7 @@ export const batchAddPoints = async (
           characters.attribute_points AS remaining_points
       )
       SELECT
+        COALESCE((SELECT id FROM target_character), 0) AS character_id,
         EXISTS(SELECT 1 FROM target_character) AS character_exists,
         EXISTS(SELECT 1 FROM updated_character) AS updated,
         COALESCE((SELECT jing FROM updated_character), 0) AS jing,
@@ -234,7 +239,7 @@ export const batchAddPoints = async (
     return { success: false, message: '属性点不足' };
   }
 
-  await invalidateCharacterComputedCacheByUserId(userId);
+  scheduleCharacterComputedRefreshByCharacterId(normalizeInteger(row.character_id));
 
   return {
     success: true,
@@ -271,6 +276,7 @@ export const resetAttributePoints = async (
         RETURNING target_character.jing + target_character.qi + target_character.shen AS refunded_points
       )
       SELECT
+        COALESCE((SELECT id FROM target_character), 0) AS character_id,
         EXISTS(SELECT 1 FROM target_character) AS character_exists,
         EXISTS(SELECT 1 FROM updated_character) AS updated,
         COALESCE((SELECT refunded_points FROM updated_character), 0) AS refunded_points
@@ -286,7 +292,7 @@ export const resetAttributePoints = async (
     return { success: false, message: '重置失败' };
   }
 
-  await invalidateCharacterComputedCacheByUserId(userId);
+  scheduleCharacterComputedRefreshByCharacterId(normalizeInteger(row.character_id));
 
   return {
     success: true,
