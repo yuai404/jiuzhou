@@ -34,6 +34,7 @@ import {
   nextDungeonInstance,
   startDungeonInstance,
 } from '../dungeon/combat.js';
+import type { DungeonInstanceStatus } from '../dungeon/types.js';
 import {
   advanceTowerRun,
   endTowerRunBySession,
@@ -91,6 +92,14 @@ type BattleSessionResponse =
   };
 
 type AdvanceBattleSessionEndNotificationScope = 'peers_only' | 'all_participants';
+
+type DungeonCombatSuccessData = {
+  instanceId: string;
+  status: DungeonInstanceStatus;
+  battleId?: string;
+  state?: unknown;
+  finished?: boolean;
+};
 
 const DUNGEON_SESSION_SERVER_AUTO_ADVANCE_DELAY_MS = 200;
 const dungeonSessionAutoAdvanceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -306,6 +315,81 @@ const startPveBattleAndBindSession = async (params: {
     success: true,
     battleId: String(battleRes.data.battleId),
     state,
+    session: boundSession,
+  };
+};
+
+/**
+ * 秘境开战与 BattleSession 绑定共享入口。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：统一处理“秘境 battle 注册成功后立刻绑定/换绑 BattleSession，并在后续流程失败时按调用方策略回滚”的时序，避免开始秘境与推进下一波各写一套竞态修复。
+ * 2. 做什么：保证秘境新 battle 的 `currentBattleId` 在 `startDungeonInstance/nextDungeonInstance` 返回前就已可见，从而让首回合秒杀仍能拿到正确 session。
+ * 3. 不做什么：不决定秘境投影如何提交，也不替调用方完成最终 completed/failed 收尾。
+ *
+ * 输入/输出：
+ * - 输入：秘境开战函数、同步绑定回调，以及可选回滚回调。
+ * - 输出：成功时返回原始秘境响应与已绑定 session；失败时返回精确错误。
+ *
+ * 数据流/状态流：
+ * - dungeon start/next -> onBattleRegistered 立刻 bindSession -> 若后续流程失败则 rollbackSession -> 成功则把 response + session 交回调用方。
+ *
+ * 关键边界条件与坑点：
+ * 1. 只有响应里真的带了 `battleId` 时才要求 `session` 已绑定；秘境最终结算 `finished=true` 不会生成新 battle，因此允许返回空 session。
+ * 2. 回滚必须由调用方显式提供，保持“创建新 session”和“恢复旧 waiting_transition session”两种场景职责分离，不在这里写隐式兜底。
+ */
+const startDungeonBattleAndBindSession = async (params: {
+  startBattle: (options?: {
+    onBattleRegistered?: (payload: {
+      battleId: string;
+      participantUserIds: number[];
+    }) => void;
+  }) => Promise<
+    | { success: true; data: DungeonCombatSuccessData }
+    | { success: false; message: string }
+  >;
+  bindSession: (payload: {
+    battleId: string;
+    participantUserIds: number[];
+  }) => BattleSessionRecord | null;
+  rollbackSession?: () => void;
+}): Promise<
+  | {
+    success: true;
+    response: { success: true; data: DungeonCombatSuccessData };
+    session: BattleSessionRecord | null;
+  }
+  | {
+    success: false;
+    message: string;
+  }
+> => {
+  let boundSession: BattleSessionRecord | null = null;
+  let didBindSession = false;
+  const response = await params.startBattle({
+    onBattleRegistered: (payload) => {
+      didBindSession = true;
+      boundSession = params.bindSession(payload);
+    },
+  });
+  if (!response.success) {
+    if (didBindSession) {
+      params.rollbackSession?.();
+    }
+    return { success: false, message: response.message || '推进秘境失败' };
+  }
+
+  const nextBattleId = typeof response.data.battleId === 'string'
+    ? response.data.battleId
+    : '';
+  if (nextBattleId && !boundSession) {
+    params.rollbackSession?.();
+    return { success: false, message: '战斗会话绑定失败' };
+  }
+
+  return {
+    success: true,
+    response,
     session: boundSession,
   };
 };
@@ -615,23 +699,36 @@ export const startDungeonBattleSession = async (
   userId: number,
   instanceId: string,
 ): Promise<BattleSessionResponse> => {
-  const dungeonRes = await startDungeonInstance(userId, instanceId);
-  if (!dungeonRes.success || !dungeonRes.data?.battleId) {
+  let createdSessionId = '';
+  const dungeonStartResult = await startDungeonBattleAndBindSession({
+    startBattle: (options) => startDungeonInstance(userId, instanceId, options),
+    bindSession: ({ battleId, participantUserIds }) => {
+      const session = createRunningSession({
+        type: 'dungeon',
+        ownerUserId: userId,
+        participantUserIds,
+        currentBattleId: battleId,
+        context: { instanceId },
+      });
+      createdSessionId = session.sessionId;
+      return session;
+    },
+    rollbackSession: () => {
+      if (!createdSessionId) return;
+      deleteBattleSessionRecord(createdSessionId);
+      createdSessionId = '';
+    },
+  });
+  if (!dungeonStartResult.success) {
     return {
       success: false,
-      message: dungeonRes.success ? '开启秘境战斗失败' : (dungeonRes.message || '开启秘境战斗失败'),
+      message: dungeonStartResult.message || '开启秘境战斗失败',
     };
   }
-  const session = createRunningSession({
-    type: 'dungeon',
-    ownerUserId: userId,
-    participantUserIds: getParticipantUserIdsForBattle(
-      String(dungeonRes.data.battleId),
-      userId,
-    ),
-    currentBattleId: String(dungeonRes.data.battleId),
-    context: { instanceId },
-  });
+  const { response: dungeonRes, session } = dungeonStartResult;
+  if (!session || !dungeonRes.data.battleId) {
+    return { success: false, message: '开启秘境战斗失败' };
+  }
   return buildSessionSuccess(session, dungeonRes.data.state);
 };
 
@@ -865,19 +962,47 @@ export const advanceBattleSession = async (
 
   if (session.type === 'dungeon') {
     const context = session.context as { instanceId: string };
-    const dungeonRes = await nextDungeonInstance(userId, context.instanceId);
-    slowLogger.mark('nextDungeonInstance', {
-      dungeonAdvanceSuccess: dungeonRes.success,
-      dungeonFinished: Boolean(dungeonRes.success && dungeonRes.data?.finished),
+    const rollbackSession = () => {
+      updateBattleSessionRecord(session.sessionId, {
+        currentBattleId: session.currentBattleId,
+        participantUserIds: normalizeParticipantUserIds(
+          session.participantUserIds,
+          session.ownerUserId,
+        ),
+        status: session.status,
+        nextAction: session.nextAction,
+        canAdvance: session.canAdvance,
+        lastResult: session.lastResult,
+      });
+    };
+    const dungeonStartResult = await startDungeonBattleAndBindSession({
+      startBattle: (options) => nextDungeonInstance(userId, context.instanceId, options),
+      bindSession: ({ battleId, participantUserIds }) => updateBattleSessionRecord(session.sessionId, {
+        currentBattleId: battleId,
+        participantUserIds: normalizeParticipantUserIds(
+          participantUserIds,
+          session.ownerUserId,
+        ),
+        status: 'running',
+        nextAction: 'none',
+        canAdvance: false,
+        lastResult: null,
+      }),
+      rollbackSession,
     });
-    if (!dungeonRes.success || !dungeonRes.data) {
+    if (!dungeonStartResult.success) {
       return flushAndReturn({
         success: false,
-        message: dungeonRes.success ? '推进秘境失败' : (dungeonRes.message || '推进秘境失败'),
+        message: dungeonStartResult.message || '推进秘境失败',
       }, {
         reason: 'dungeon_advance_failed',
       });
     }
+    const { response: dungeonRes, session: updatedSession } = dungeonStartResult;
+    slowLogger.mark('nextDungeonInstance', {
+      dungeonAdvanceSuccess: dungeonRes.success,
+      dungeonFinished: Boolean(dungeonRes.success && dungeonRes.data?.finished),
+    });
     if (dungeonRes.data.finished || !dungeonRes.data.battleId) {
       const settledBattleId = session.currentBattleId;
       const nextStatus: BattleSessionStatus =
@@ -919,17 +1044,7 @@ export const advanceBattleSession = async (
         },
       );
     }
-    const updated = updateBattleSessionRecord(session.sessionId, {
-      currentBattleId: String(dungeonRes.data.battleId),
-      participantUserIds: getParticipantUserIdsForBattle(
-        String(dungeonRes.data.battleId),
-        session.ownerUserId,
-      ),
-      status: 'running',
-      nextAction: 'none',
-      canAdvance: false,
-      lastResult: null,
-    });
+    const updated = updatedSession;
     slowLogger.mark('updateBattleSessionRecord', {
       sessionUpdated: Boolean(updated),
     });

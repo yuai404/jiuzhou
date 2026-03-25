@@ -23,17 +23,142 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as database from '../../config/database.js';
 import * as gameServerModule from '../../game/gameServer.js';
+import * as dungeonCombatModule from '../dungeon/combat.js';
 import { dungeonService } from '../dungeon/service.js';
 import {
   advanceBattleSession,
   getCurrentBattleSessionDetail,
   markBattleSessionFinished,
+  startDungeonBattleSession,
 } from '../battleSession/service.js';
 import {
   battleSessionById,
   battleSessionIdByBattleId,
   createBattleSessionRecord,
+  getBattleSessionSnapshotByBattleId,
 } from '../battleSession/runtime.js';
+
+test('startDungeonBattleSession: 秘境首战应在底层开战返回前先绑定 session 到新 battleId', async (t) => {
+  const battleId = 'dungeon-battle-start-bind';
+  const instanceId = 'dungeon-instance-start-bind';
+
+  t.after(() => {
+    battleSessionById.clear();
+    battleSessionIdByBattleId.clear();
+  });
+
+  t.mock.method(dungeonCombatModule, 'startDungeonInstance', async (
+    userId: number,
+    requestInstanceId: string,
+    options?: {
+      onBattleRegistered?: (payload: { battleId: string; participantUserIds: number[] }) => void;
+    },
+  ) => {
+    assert.equal(userId, 1);
+    assert.equal(requestInstanceId, instanceId);
+    options?.onBattleRegistered?.({
+      battleId,
+      participantUserIds: [1, 2],
+    });
+
+    const snapshot = getBattleSessionSnapshotByBattleId(battleId);
+    assert.ok(snapshot);
+    assert.equal(snapshot?.status, 'running');
+    assert.equal(snapshot?.currentBattleId, battleId);
+
+    return {
+      success: true as const,
+      data: {
+        instanceId,
+        status: 'running' as const,
+        battleId,
+        state: {
+          battleId,
+          phase: 'action',
+          roundCount: 1,
+        },
+      },
+    };
+  });
+
+  const result = await startDungeonBattleSession(1, instanceId);
+
+  assert.equal(result.success, true);
+  if (!result.success) {
+    assert.fail('秘境首战应成功');
+  }
+  assert.equal(result.data.session.currentBattleId, battleId);
+  assert.equal(result.data.session.status, 'running');
+});
+
+test('advanceBattleSession: 秘境下一波应在底层开战返回前先把 session 切到新 battleId', async (t) => {
+  const battleId = 'dungeon-battle-bind-prev';
+  const nextBattleId = 'dungeon-battle-bind-next';
+  const sessionId = 'dungeon-battle-bind-session';
+  const instanceId = 'dungeon-instance-bind-next';
+
+  createBattleSessionRecord({
+    sessionId,
+    type: 'dungeon',
+    ownerUserId: 1,
+    participantUserIds: [1, 2],
+    currentBattleId: battleId,
+    status: 'waiting_transition',
+    nextAction: 'advance',
+    canAdvance: true,
+    lastResult: 'attacker_win',
+    context: { instanceId },
+  });
+
+  t.after(() => {
+    battleSessionById.clear();
+    battleSessionIdByBattleId.clear();
+  });
+
+  t.mock.method(dungeonCombatModule, 'nextDungeonInstance', async (
+    userId: number,
+    requestInstanceId: string,
+    options?: {
+      onBattleRegistered?: (payload: { battleId: string; participantUserIds: number[] }) => void;
+    },
+  ) => {
+    assert.equal(userId, 1);
+    assert.equal(requestInstanceId, instanceId);
+    options?.onBattleRegistered?.({
+      battleId: nextBattleId,
+      participantUserIds: [1, 2],
+    });
+
+    const snapshot = getBattleSessionSnapshotByBattleId(nextBattleId);
+    assert.ok(snapshot);
+    assert.equal(snapshot?.sessionId, sessionId);
+    assert.equal(snapshot?.status, 'running');
+    assert.equal(snapshot?.canAdvance, false);
+
+    return {
+      success: true as const,
+      data: {
+        instanceId,
+        status: 'running' as const,
+        battleId: nextBattleId,
+        state: {
+          battleId: nextBattleId,
+          phase: 'action',
+          roundCount: 1,
+        },
+      },
+    };
+  });
+
+  const result = await advanceBattleSession(1, sessionId);
+
+  assert.equal(result.success, true);
+  if (!result.success) {
+    assert.fail('秘境下一波推进应成功');
+  }
+  assert.equal(result.data.session.currentBattleId, nextBattleId);
+  assert.equal(result.data.session.status, 'running');
+});
 
 test('advanceBattleSession: 秘境最终结算后应通知其余队员退出旧战斗页', async (t) => {
   const battleId = 'dungeon-battle-advance-finish-test';

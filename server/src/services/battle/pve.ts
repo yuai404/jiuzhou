@@ -360,6 +360,7 @@ export const startResolvedPVEBattleByPolicy = async (params: {
   syncResourceContext: string;
   startSuccessMessage: string;
   errorMessage: string;
+  onBattleRegistered?: (payload: PveBattleRegisteredPayload) => void;
 }): Promise<BattleResult> => {
   try {
     const baseCharacterSnapshot = await getOnlineBattleCharacterSnapshotByUserId(params.userId);
@@ -447,6 +448,10 @@ export const startResolvedPVEBattleByPolicy = async (params: {
 
     const engine = new BattleEngine(battleState);
     registerStartedBattle(params.battleId, engine, participantUserIds);
+    params.onBattleRegistered?.({
+      battleId: params.battleId,
+      participantUserIds: participantUserIds.slice(),
+    });
 
     return {
       success: true,
@@ -474,6 +479,7 @@ const startDungeonPVEBattleByPolicy = async (
   userId: number,
   monsterDefIds: string[],
   startPolicy: PveBattleStartPolicy,
+  options?: StartPVEBattleOptions,
 ): Promise<BattleResult> => {
   try {
     const requestedMonsterIds = monsterDefIds.filter(
@@ -499,6 +505,7 @@ const startDungeonPVEBattleByPolicy = async (
       syncResourceContext: '同步战前资源（秘境战斗）',
       startSuccessMessage: '战斗开始',
       errorMessage: '发起秘境战斗失败',
+      onBattleRegistered: options?.onBattleRegistered,
     });
   } catch (error) {
     battlePveLogger.error({
@@ -513,21 +520,25 @@ const startDungeonPVEBattleByPolicy = async (
 export async function startDungeonPVEBattle(
   userId: number,
   monsterDefIds: string[],
+  options?: StartPVEBattleOptions,
 ): Promise<BattleResult> {
   return startDungeonPVEBattleByPolicy(
     userId,
     monsterDefIds,
     PLAYER_DRIVEN_PVE_BATTLE_START_POLICY,
+    options,
   );
 }
 
 export async function startDungeonPVEBattleForDungeonFlow(
   userId: number,
   monsterDefIds: string[],
+  options?: StartPVEBattleOptions,
 ): Promise<BattleResult> {
   return startDungeonPVEBattleByPolicy(
     userId,
     monsterDefIds,
     DUNGEON_FLOW_PVE_BATTLE_START_POLICY,
+    options,
   );
 }

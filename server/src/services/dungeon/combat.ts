@@ -59,6 +59,15 @@ import { createSlowOperationLogger } from '../../utils/slowOperationLogger.js';
 
 const dungeonCombatLogger = createScopedLogger('dungeon.combat');
 
+type DungeonBattleRegisteredPayload = {
+  battleId: string;
+  participantUserIds: number[];
+};
+
+type DungeonBattleStartOptions = {
+  onBattleRegistered?: (payload: DungeonBattleRegisteredPayload) => void;
+};
+
 type DungeonCombatResponse =
   | {
       success: true;
@@ -100,6 +109,7 @@ const buildDeferredSettlementParticipants = async (
 export const startDungeonInstance = async (
   userId: number,
   instanceId: string,
+  options?: DungeonBattleStartOptions,
 ): Promise<
   | {
       success: true;
@@ -203,7 +213,9 @@ export const startDungeonInstance = async (
   }
 
   return runDungeonStartFlow({
-    startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds),
+    startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds, {
+      onBattleRegistered: options?.onBattleRegistered,
+    }),
     commitOnBattleStarted: async ({ battleId, state }) => {
       const startTime = new Date().toISOString();
       const entryCountSnapshots: DungeonEntryCountProjectionRecord[] = [];
@@ -298,6 +310,7 @@ export const startDungeonInstance = async (
 export const nextDungeonInstance = async (
   userId: number,
   instanceId: string,
+  options?: DungeonBattleStartOptions,
 ): Promise<DungeonCombatResponse> => {
   const slowLogger = createSlowOperationLogger({
     label: 'dungeon.nextDungeonInstance',
@@ -485,7 +498,9 @@ export const nextDungeonInstance = async (
   }
 
   const response = await runDungeonStartFlow({
-    startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds),
+    startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds, {
+      onBattleRegistered: options?.onBattleRegistered,
+    }),
     commitOnBattleStarted: async ({ battleId, state }) => {
       await upsertDungeonProjection({
         ...projection,
