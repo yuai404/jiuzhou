@@ -14,9 +14,9 @@
 
 import { getGameServer } from "../../game/gameServer.js";
 import {
-  applyCharacterResourceDeltaByCharacterId,
-  getCharacterComputedByUserId,
-} from "../characterComputedService.js";
+  applyOnlineBattleCharacterResourceDelta,
+  getOnlineBattleCharacterSnapshotByUserId,
+} from "../onlineBattleProjectionService.js";
 import { getArenaStatus } from "../arenaService.js";
 import { cancelBattleCooldown } from "./cooldownManager.js";
 import type { BattleResult } from "./battleTypes.js";
@@ -48,6 +48,43 @@ import { createScopedLogger } from "../../utils/logger.js";
 import { createSlowOperationLogger } from "../../utils/slowOperationLogger.js";
 
 const battleActionLogger = createScopedLogger("battle.action");
+
+/**
+ * 终局行动后的异步派发。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把“终局后一整套 finishBattle/推送/清理”移出 action 首包临界区，避免最后一击把 HTTP 响应拖到 1 秒级。
+ * 2. 做什么：继续复用 `emitBattleProgressUpdateSafely` 这一条权威结算路径，不额外复制终局处理逻辑。
+ * 3. 不做什么：不改变战斗结果，也不跳过结算；只是从“同步等待完成”改成“后台继续执行”。
+ *
+ * 输入/输出：
+ * - 输入：battleId、当前 BattleEngine。
+ * - 输出：无同步返回；副作用在后台异步完成。
+ *
+ * 数据流/状态流：
+ * playerAction 命中终局 -> 本函数排队微任务 -> emitBattleProgressUpdateSafely
+ * -> finishBattle -> battle_finished realtime / 清理 runtime。
+ *
+ * 关键边界条件与坑点：
+ * 1. 这里只能用于 `phase === finished` 的场景；进行中状态若异步化，会让 battle_state 推送顺序失控。
+ * 2. 异步执行期间若 ticker 恰好也命中同一终局，最终会由 finishBattle 的 inflight 去重兜住，不能再额外实现第二套锁。
+ */
+const scheduleFinishedBattleProgressUpdate = (
+  battleId: string,
+  engine: Parameters<typeof emitBattleProgressUpdateSafely>[1],
+): void => {
+  void Promise.resolve().then(async () => {
+    try {
+      await emitBattleProgressUpdateSafely(battleId, engine);
+    } catch (error) {
+      battleActionLogger.error({
+        battleId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      }, "终局行动异步派发失败");
+    }
+  });
+};
 
 export async function playerAction(
   userId: number,
@@ -119,13 +156,30 @@ export async function playerAction(
       });
       return { success: false, message: result.error || "行动失败" };
     }
+    const phaseAfterAction = engine.getState().phase;
+    if (phaseAfterAction === "finished") {
+      scheduleFinishedBattleProgressUpdate(battleId, engine);
+      slowLogger.mark("scheduleFinishedBattleProgressUpdate", {
+        finalPhase: phaseAfterAction,
+      });
+      slowLogger.flush({
+        success: true,
+        battleFinished: true,
+      });
+
+      return {
+        success: true,
+        message: "行动已提交",
+      };
+    }
+
     await emitBattleProgressUpdateSafely(battleId, engine);
     slowLogger.mark("emitBattleProgressUpdateSafely", {
       finalPhase: engine.getState().phase,
     });
     slowLogger.flush({
       success: true,
-      battleFinished: engine.getState().phase === "finished",
+      battleFinished: false,
     });
 
     return {
@@ -227,12 +281,12 @@ export async function abandonBattle(
   }
 
   for (const participantUserId of participants) {
-    const computed = await getCharacterComputedByUserId(participantUserId);
-    if (!computed) continue;
-    participantCharacterIds.push(Math.floor(Number(computed.id)));
-    const loss = Math.floor(computed.max_qixue * 0.1);
-    await applyCharacterResourceDeltaByCharacterId(
-      computed.id,
+    const snapshot = await getOnlineBattleCharacterSnapshotByUserId(participantUserId);
+    if (!snapshot) continue;
+    participantCharacterIds.push(Math.floor(Number(snapshot.characterId)));
+    const loss = Math.floor(snapshot.computed.max_qixue * 0.1);
+    await applyOnlineBattleCharacterResourceDelta(
+      snapshot.characterId,
       { qixue: -loss },
       { minQixue: 1 },
     );
@@ -282,8 +336,8 @@ export async function abandonBattle(
       );
       void gameServer.pushCharacterUpdate(participantUserId);
       if (state.battleType === "pvp") {
-        const computed = await getCharacterComputedByUserId(participantUserId);
-        const characterId = Number(computed?.id);
+        const snapshot = await getOnlineBattleCharacterSnapshotByUserId(participantUserId);
+        const characterId = Number(snapshot?.characterId);
         if (Number.isFinite(characterId) && characterId > 0) {
           const statusRes = await getArenaStatus(characterId);
           if (statusRes.success && statusRes.data) {

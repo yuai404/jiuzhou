@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { BusinessError } from '../middleware/BusinessError.js';
+import { runWithDatabaseAccessForbidden } from '../config/database.js';
 import { sendResult } from '../middleware/response.js';
 import { getSingleParam } from '../services/shared/httpParam.js';
 import {
@@ -65,7 +66,13 @@ router.post('/:sessionId/advance', requireAuth, asyncHandler(async (req, res) =>
   if (!sessionId) {
     throw new BusinessError('缺少战斗会话ID');
   }
-  return sendResult(res, await advanceBattleSession(userId, sessionId));
+  return sendResult(
+    res,
+    await runWithDatabaseAccessForbidden(
+      'api/battle-session/advance',
+      async () => await advanceBattleSession(userId, sessionId),
+    ),
+  );
 }));
 
 router.get('/by-battle/:battleId', requireAuth, asyncHandler(async (req, res) => {

@@ -21,6 +21,7 @@
 import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../../config/database.js';
 import { getLiveTowerMonsterPools } from './algorithm.js';
+import { replaceFrozenTowerPoolCache } from './frozenPool.js';
 import type {
   TowerFloorKind,
   TowerFrozenMonsterSnapshot,
@@ -155,16 +156,17 @@ export const freezeTowerFrontier = async (nextFrozenFloorMax: number): Promise<{
   frozenFloorMax: number;
   snapshotCount: number;
 }> => {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const currentFrozenFloorMax = await loadCurrentFrozenFloorMax(client);
     assertTowerFrozenFrontierAdvanceable({
       currentFrozenFloorMax,
       nextFrozenFloorMax,
     });
 
+    const pools = getLiveTowerMonsterPools();
     const snapshots = buildTowerFrozenMonsterSnapshots({
       frozenFloorMax: nextFrozenFloorMax,
-      pools: getLiveTowerMonsterPools(),
+      pools,
     });
 
     await replaceTowerFrozenMonsterSnapshots({
@@ -180,6 +182,18 @@ export const freezeTowerFrontier = async (nextFrozenFloorMax: number): Promise<{
     return {
       frozenFloorMax: Math.max(0, Math.floor(nextFrozenFloorMax)),
       snapshotCount: snapshots.length,
+      pools,
     };
   });
+  replaceFrozenTowerPoolCache({
+    frontier: {
+      frozenFloorMax: result.frozenFloorMax,
+      updatedAt: new Date().toISOString(),
+    },
+    pools: result.pools,
+  });
+  return {
+    frozenFloorMax: result.frozenFloorMax,
+    snapshotCount: result.snapshotCount,
+  };
 };

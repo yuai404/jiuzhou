@@ -15,20 +15,22 @@
  */
 
 import crypto from 'crypto';
-import { query } from '../../config/database.js';
 import { getDungeonDifficultyById } from '../staticConfigLoader.js';
+import {
+  getDungeonProjection,
+  getDungeonProjectionByBattleId,
+  upsertDungeonProjection,
+} from '../onlineBattleProjectionService.js';
 import { getDungeonAndDifficulty } from './shared/stageData.js';
 import {
-  parseParticipants,
   getUserAndCharacter,
   getTeamParticipants,
 } from './shared/participants.js';
 import { validateDungeonParticipantRealmAccess } from './shared/realmAccess.js';
-import { asObject, asNumber } from './shared/typeUtils.js';
+import { asNumber } from './shared/typeUtils.js';
 import type {
   DungeonInstanceStatus,
   DungeonInstanceParticipant,
-  DungeonInstanceRow,
 } from './types.js';
 
 type DungeonInstanceSnapshot = {
@@ -54,30 +56,39 @@ type DungeonInstanceQuerySuccess = {
 
 type DungeonInstanceQueryFailure = { success: false; message: string };
 
-const buildDungeonInstanceSnapshot = (
-  inst: DungeonInstanceRow,
-  participants: DungeonInstanceParticipant[],
-): DungeonInstanceSnapshot => {
-  const dataObj = asObject(inst.instance_data) ?? {};
-  const currentBattleId = typeof dataObj.currentBattleId === 'string' ? dataObj.currentBattleId : null;
-  const difficultyDef = getDungeonDifficultyById(inst.difficulty_id);
+const buildDungeonInstanceSnapshot = (projection: {
+  instanceId: string;
+  dungeonId: string;
+  difficultyId: string;
+  difficultyRank: number;
+  status: DungeonInstanceStatus;
+  currentStage: number;
+  currentWave: number;
+  participants: DungeonInstanceParticipant[];
+  currentBattleId: string | null;
+  startTime: string | null;
+  endTime: string | null;
+}): DungeonInstanceSnapshot => {
+  const difficultyDef = getDungeonDifficultyById(projection.difficultyId);
   const difficultyRank =
-    difficultyDef && Number.isFinite(difficultyDef.difficulty_rank)
+    Number.isFinite(projection.difficultyRank)
+      ? Math.floor(projection.difficultyRank)
+      : difficultyDef && Number.isFinite(difficultyDef.difficulty_rank)
       ? Math.floor(difficultyDef.difficulty_rank)
       : 1;
 
   return {
-    id: inst.id,
-    dungeonId: inst.dungeon_id,
-    difficultyId: inst.difficulty_id,
+    id: projection.instanceId,
+    dungeonId: projection.dungeonId,
+    difficultyId: projection.difficultyId,
     difficultyRank,
-    status: inst.status,
-    currentStage: asNumber(inst.current_stage, 1),
-    currentWave: asNumber(inst.current_wave, 1),
-    participants,
-    currentBattleId,
-    startTime: inst.start_time ?? null,
-    endTime: inst.end_time ?? null,
+    status: projection.status,
+    currentStage: asNumber(projection.currentStage, 1),
+    currentWave: asNumber(projection.currentWave, 1),
+    participants: projection.participants,
+    currentBattleId: projection.currentBattleId,
+    startTime: projection.startTime ?? null,
+    endTime: projection.endTime ?? null,
   };
 };
 
@@ -89,13 +100,22 @@ const ensureDungeonParticipantAccess = (
   return { success: false, message: '无权访问该秘境' };
 };
 
-const buildDungeonInstanceQuerySuccess = (
-  inst: DungeonInstanceRow,
-  participants: DungeonInstanceParticipant[],
-): DungeonInstanceQuerySuccess => ({
+const buildDungeonInstanceQuerySuccess = (projection: {
+  instanceId: string;
+  dungeonId: string;
+  difficultyId: string;
+  difficultyRank: number;
+  status: DungeonInstanceStatus;
+  currentStage: number;
+  currentWave: number;
+  participants: DungeonInstanceParticipant[];
+  currentBattleId: string | null;
+  startTime: string | null;
+  endTime: string | null;
+}): DungeonInstanceQuerySuccess => ({
   success: true,
   data: {
-    instance: buildDungeonInstanceSnapshot(inst, participants),
+    instance: buildDungeonInstanceSnapshot(projection),
   },
 });
 
@@ -120,7 +140,7 @@ export const createDungeonInstance = async (
     }
 
     const participants: DungeonInstanceParticipant[] = user.teamId
-      ? await getTeamParticipants(user.teamId)
+      ? await getTeamParticipants(userId)
       : [{ userId, characterId: user.characterId, role: 'leader' as const }];
 
     if (participants.length < dd.dungeon.min_players) {
@@ -140,13 +160,22 @@ export const createDungeonInstance = async (
     }
 
     const instanceId = crypto.randomUUID();
-    await query(
-      `
-        INSERT INTO dungeon_instance (id, dungeon_id, difficulty_id, creator_id, team_id, status, current_stage, current_wave, participants, instance_data)
-        VALUES ($1, $2, $3, $4, $5, 'preparing', 1, 1, $6::jsonb, '{}'::jsonb)
-      `,
-      [instanceId, dungeonId, dd.difficulty.id, user.characterId, user.teamId, JSON.stringify(participants)]
-    );
+    await upsertDungeonProjection({
+      instanceId,
+      dungeonId,
+      difficultyId: dd.difficulty.id,
+      difficultyRank,
+      creatorCharacterId: user.characterId,
+      teamId: user.teamId,
+      status: 'preparing',
+      currentStage: 1,
+      currentWave: 1,
+      participants,
+      currentBattleId: null,
+      rewardEligibleCharacterIds: [],
+      startTime: null,
+      endTime: null,
+    });
 
     return { success: true, data: { instanceId, status: 'preparing', participants } };
   } catch (error) {
@@ -168,24 +197,17 @@ export const joinDungeonInstance = async (
     if (!user.ok) return { success: false, message: user.message };
     if (!user.teamId) return { success: false, message: '未加入队伍，无法加入秘境' };
 
-    const instRes = await query(`SELECT * FROM dungeon_instance WHERE id = $1 LIMIT 1 FOR UPDATE`, [instanceId]);
-    if (instRes.rows.length === 0) return { success: false, message: '秘境实例不存在' };
-    const inst = instRes.rows[0] as DungeonInstanceRow;
-    if (inst.status !== 'preparing') return { success: false, message: '该秘境已开始或已结束' };
-    if (!inst.team_id || inst.team_id !== user.teamId) return { success: false, message: '不是同一队伍，无法加入' };
+    const projection = await getDungeonProjection(instanceId);
+    if (!projection) return { success: false, message: '秘境实例不存在' };
+    if (projection.status !== 'preparing') return { success: false, message: '该秘境已开始或已结束' };
+    if (!projection.teamId || projection.teamId !== user.teamId) return { success: false, message: '不是同一队伍，无法加入' };
 
-    const curParticipants = parseParticipants(inst.participants);
+    const curParticipants = projection.participants.slice();
     if (curParticipants.some((p) => p.userId === userId)) {
-      return { success: true, data: { instanceId, status: inst.status, participants: curParticipants } };
+      return { success: true, data: { instanceId, status: projection.status, participants: curParticipants } };
     }
 
-    const difficultyDef = getDungeonDifficultyById(inst.difficulty_id);
-    const difficultyRank = Number(difficultyDef?.difficulty_rank);
-    if (!Number.isFinite(difficultyRank)) {
-      return { success: false, message: '秘境难度不存在' };
-    }
-
-    const dd = await getDungeonAndDifficulty(inst.dungeon_id, Math.floor(difficultyRank));
+    const dd = await getDungeonAndDifficulty(projection.dungeonId, projection.difficultyRank);
     if (!dd.ok) return { success: false, message: dd.message };
 
     const nextParticipants = [...curParticipants, { userId, characterId: user.characterId, role: 'member' as const }];
@@ -202,14 +224,11 @@ export const joinDungeonInstance = async (
       return realmAccess;
     }
 
-    const updateRes = await query(
-      `UPDATE dungeon_instance SET participants = $1::jsonb WHERE id = $2 AND status = 'preparing'`,
-      [JSON.stringify(nextParticipants), instanceId],
-    );
-    if ((updateRes.rowCount ?? 0) === 0) {
-      return { success: false, message: '该秘境已开始或已结束' };
-    }
-    return { success: true, data: { instanceId, status: inst.status, participants: nextParticipants } };
+    await upsertDungeonProjection({
+      ...projection,
+      participants: nextParticipants,
+    });
+    return { success: true, data: { instanceId, status: projection.status, participants: nextParticipants } };
   } catch (error) {
     console.error('加入秘境实例失败:', error);
     return { success: false, message: '加入秘境实例失败' };
@@ -224,14 +243,11 @@ export const getDungeonInstance = async (
   DungeonInstanceQuerySuccess | DungeonInstanceQueryFailure
 > => {
   try {
-    const instRes = await query(`SELECT * FROM dungeon_instance WHERE id = $1 LIMIT 1`, [instanceId]);
-    if (instRes.rows.length === 0) return { success: false, message: '秘境实例不存在' };
-    const inst = instRes.rows[0] as DungeonInstanceRow;
-    const participants = parseParticipants(inst.participants);
-    const accessError = ensureDungeonParticipantAccess(userId, participants);
+    const projection = await getDungeonProjection(instanceId);
+    if (!projection) return { success: false, message: '秘境实例不存在' };
+    const accessError = ensureDungeonParticipantAccess(userId, projection.participants);
     if (accessError) return accessError;
-
-    return buildDungeonInstanceQuerySuccess(inst, participants);
+    return buildDungeonInstanceQuerySuccess(projection);
   } catch (error) {
     console.error('获取秘境实例失败:', error);
     return { success: false, message: '获取秘境实例失败' };
@@ -244,25 +260,11 @@ export const getDungeonInstanceByBattleId = async (
   battleId: string,
 ): Promise<DungeonInstanceQuerySuccess | DungeonInstanceQueryFailure> => {
   try {
-    const instRes = await query(
-      `
-        SELECT *
-        FROM dungeon_instance
-        WHERE status = 'running'
-          AND instance_data ->> 'currentBattleId' = $1
-        ORDER BY created_at DESC
-        LIMIT 1
-      `,
-      [battleId],
-    );
-    if (instRes.rows.length === 0) return { success: false, message: '运行中的秘境实例不存在' };
-
-    const inst = instRes.rows[0] as DungeonInstanceRow;
-    const participants = parseParticipants(inst.participants);
-    const accessError = ensureDungeonParticipantAccess(userId, participants);
+    const projection = await getDungeonProjectionByBattleId(battleId);
+    if (!projection) return { success: false, message: '运行中的秘境实例不存在' };
+    const accessError = ensureDungeonParticipantAccess(userId, projection.participants);
     if (accessError) return accessError;
-
-    return buildDungeonInstanceQuerySuccess(inst, participants);
+    return buildDungeonInstanceQuerySuccess(projection);
   } catch (error) {
     console.error('按 battleId 获取秘境实例失败:', error);
     return { success: false, message: '按 battleId 获取秘境实例失败' };

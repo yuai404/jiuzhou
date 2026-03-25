@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireCharacter } from '../middleware/auth.js';
-import { query } from '../config/database.js';
 import { canChallengeToday, getArenaOpponents, getArenaRecords, getArenaStatus } from '../services/arenaService.js';
 import { startPVPBattleSession } from '../services/battleSession/index.js';
 import { sendSuccess, sendResult } from '../middleware/response.js';
 import { BusinessError } from '../middleware/BusinessError.js';
 import { getSingleQueryValue, parsePositiveInt } from '../services/shared/httpParam.js';
+import { getOnlineBattleCharacterSnapshotByCharacterId } from '../services/onlineBattleProjectionService.js';
 
 const router = Router();
 
@@ -50,8 +50,8 @@ router.post('/challenge', asyncHandler(async (req, res) => {
     throw new BusinessError('今日挑战次数已用完');
   }
 
-  const existsRes = await query('SELECT id FROM characters WHERE id = $1 LIMIT 1', [opponentCharacterId]);
-  if (existsRes.rows.length === 0) {
+  const opponentSnapshot = await getOnlineBattleCharacterSnapshotByCharacterId(opponentCharacterId);
+  if (!opponentSnapshot) {
     throw new BusinessError('对手不存在', 404);
   }
 
@@ -63,15 +63,6 @@ router.post('/challenge', asyncHandler(async (req, res) => {
     mode: 'arena',
   });
   if (!startRes.success || !startRes.data?.session.currentBattleId) return sendResult(res, startRes);
-
-  await query(
-    `
-      INSERT INTO arena_battle(battle_id, challenger_character_id, opponent_character_id, status)
-      VALUES ($1, $2, $3, 'running')
-      ON CONFLICT (battle_id) DO NOTHING
-    `,
-    [battleId, characterId, opponentCharacterId]
-  );
 
   return sendSuccess(res, { battleId, session: startRes.data.session });
 }));
@@ -104,15 +95,6 @@ router.post('/match', asyncHandler(async (req, res) => {
     mode: 'arena',
   });
   if (!startRes.success || !startRes.data?.session.currentBattleId) return sendResult(res, startRes);
-
-  await query(
-    `
-      INSERT INTO arena_battle(battle_id, challenger_character_id, opponent_character_id, status)
-      VALUES ($1, $2, $3, 'running')
-      ON CONFLICT (battle_id) DO NOTHING
-    `,
-    [battleId, characterId, opponentCharacterId]
-  );
 
   return sendSuccess(res, {
     battleId,

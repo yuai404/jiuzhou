@@ -7,6 +7,10 @@ import { idleSessionService } from './idle/idleSessionService.js';
 import { createCacheLayer } from './shared/cacheLayer.js';
 import { getMonthCardActiveMapByCharacterIds } from './shared/monthCardBenefits.js';
 import { REALM_ORDER } from './shared/realmRules.js';
+import {
+  syncOnlineBattleTeamProjectionRecords,
+  type TeamProjectionSyncRecord,
+} from './onlineBattleProjectionService.js';
 
 /**
  * 九州修仙录 - 组队系统服务
@@ -122,6 +126,17 @@ interface TeamInvitationQueryRow {
   team_name: string;
   goal: string;
   inviter_name: string;
+}
+
+interface CharacterUserIdRow {
+  id: number | string | null;
+  user_id: number | string | null;
+}
+
+interface TeamProjectionSyncQueryRow {
+  character_id: number | string | null;
+  user_id: number | string | null;
+  role: string | null;
 }
 
 type TeamUpdatePayload = {
@@ -342,18 +357,122 @@ const emitTeamUpdateToUserIds = (userIds: number[], payload: TeamUpdatePayload) 
   }
 };
 
-const getUserIdsByCharacterIds = async (characterIds: number[]): Promise<number[]> => {
+const getCharacterUserIdMap = async (characterIds: number[]): Promise<Map<number, number>> => {
   const ids = Array.from(new Set(characterIds.filter((id) => Number.isFinite(id))));
-  if (ids.length === 0) return [];
-  const res = await query<TeamUserIdRow>(`SELECT DISTINCT user_id FROM characters WHERE id = ANY($1::int[])`, [ids]);
-  return res.rows.map((row) => Number(row.user_id)).filter((n: number) => Number.isFinite(n));
+  const userIdByCharacterId = new Map<number, number>();
+  if (ids.length === 0) return userIdByCharacterId;
+  const res = await query<CharacterUserIdRow>(
+    `SELECT id, user_id FROM characters WHERE id = ANY($1::int[])`,
+    [ids],
+  );
+  for (const row of res.rows) {
+    const characterId = toPositiveInt(row.id);
+    const userId = toPositiveInt(row.user_id);
+    if (!characterId || !userId) {
+      continue;
+    }
+    userIdByCharacterId.set(characterId, userId);
+  }
+  return userIdByCharacterId;
 };
 
-const notifyTeamMembersChanged = async (teamId: string, extraCharacterIds: number[] = [], kind: string = 'team_changed') => {
-  const memberRes = await query<TeamCharacterIdRow>(`SELECT character_id FROM team_members WHERE team_id = $1`, [teamId]);
-  const memberIds = memberRes.rows.map((row) => Number(row.character_id)).filter((n: number) => Number.isFinite(n));
-  const allCharacterIds = Array.from(new Set([...memberIds, ...extraCharacterIds]));
-  const userIds = await getUserIdsByCharacterIds(allCharacterIds);
+const getUserIdsByCharacterIds = async (characterIds: number[]): Promise<number[]> => {
+  return [...new Set((await getCharacterUserIdMap(characterIds)).values())];
+};
+
+/**
+ * 同步组队变更后的在线战斗队伍投影。
+ *
+ * 作用：
+ * 1. 把“查询当前队伍成员 + 清理已移出成员缓存 + 对齐角色快照”集中到一个入口，避免创建/退队/踢人/转让队长各自拼一套同步逻辑。
+ * 2. 显式为 `extraCharacterIds` 中已不在当前队伍里的角色写入空投影，解决旧队伍缓存残留问题。
+ *
+ * 输入/输出：
+ * - 输入：teamId、额外受影响角色列表（退队者、被踢者、解散前成员等）。
+ * - 输出：需要接收 team:update 的 userId 列表。
+ *
+ * 数据流：
+ * - teamService 写入 `teams/team_members` 后调用本函数；
+ * - 本函数读取当前 team_members 真相，组装统一的投影记录；
+ * - onlineBattleProjectionService 覆盖 Redis/内存投影，随后再由调用方发 team:update。
+ *
+ * 关键边界条件与坑点：
+ * 1. 解散队伍时当前成员查询会为空，这里必须依赖 `extraCharacterIds` 去清理旧成员缓存。
+ * 2. 同步后的 `memberCharacterIds` 必须对所有现成员保持一致，否则不同成员读到的队伍视图会分裂。
+ */
+const syncOnlineBattleTeamProjectionForChange = async (
+  teamId: string,
+  extraCharacterIds: number[] = [],
+): Promise<number[]> => {
+  const memberRes = await query<TeamProjectionSyncQueryRow>(
+    `SELECT tm.character_id, c.user_id, tm.role
+     FROM team_members tm
+     JOIN characters c ON c.id = tm.character_id
+     WHERE tm.team_id = $1
+     ORDER BY tm.role DESC, tm.joined_at ASC`,
+    [teamId],
+  );
+  const currentMembers = memberRes.rows
+    .map((row) => {
+      const characterId = toPositiveInt(row.character_id);
+      const userId = toPositiveInt(row.user_id);
+      if (!characterId || !userId) {
+        return null;
+      }
+      return {
+        characterId,
+        userId,
+        role: normalizeTeamMemberRole(row.role),
+      };
+    })
+    .filter((member): member is { characterId: number; userId: number; role: TeamMember['role'] } => member !== null);
+  const memberCharacterIds = currentMembers.map((member) => member.characterId);
+  const affectedCharacterIds = Array.from(new Set([
+    ...memberCharacterIds,
+    ...extraCharacterIds
+      .map((characterId) => toPositiveInt(characterId))
+      .filter((characterId): characterId is number => characterId !== null),
+  ]));
+  const characterUserIdMap = await getCharacterUserIdMap(affectedCharacterIds);
+  const currentMemberByCharacterId = new Map(
+    currentMembers.map((member) => [member.characterId, member] as const),
+  );
+  const syncRecords: TeamProjectionSyncRecord[] = affectedCharacterIds
+    .map((characterId): TeamProjectionSyncRecord | null => {
+      const userId = characterUserIdMap.get(characterId);
+      if (!userId) {
+        return null;
+      }
+      const currentMember = currentMemberByCharacterId.get(characterId);
+      if (!currentMember) {
+        return {
+          userId,
+          characterId,
+          teamId: null,
+          role: null,
+          memberCharacterIds: [],
+        };
+      }
+      return {
+        userId,
+        characterId,
+        teamId,
+        role: currentMember.role,
+        memberCharacterIds,
+      };
+    })
+    .filter((record): record is TeamProjectionSyncRecord => record !== null);
+
+  await syncOnlineBattleTeamProjectionRecords(syncRecords);
+  return [...new Set(syncRecords.map((record) => record.userId))];
+};
+
+const notifyTeamMembersChanged = async (
+  teamId: string,
+  extraCharacterIds: number[] = [],
+  kind: string = 'team_changed',
+) => {
+  const userIds = await syncOnlineBattleTeamProjectionForChange(teamId, extraCharacterIds);
   emitTeamUpdateToUserIds(userIds, { kind, teamId, time: Date.now() });
 };
 
@@ -531,11 +650,11 @@ export const disbandTeam = async (characterId: number, teamId: string) => {
     if (!Number.isFinite(userId) || userId <= 0) continue;
     await onUserLeaveTeam(userId);
   }
-  emitTeamUpdateToUserIds(memberUserIds, { kind: 'disband_team', teamId, time: Date.now() });
 
   // 删除队伍（级联删除成员、申请、邀请）
   await query(`DELETE FROM teams WHERE id = $1`, [teamId]);
   await invalidateTeamReadCaches(teamId);
+  await notifyTeamMembersChanged(teamId, memberCharacterIds, 'disband_team');
 
   return { success: true, message: '队伍已解散' };
 };
@@ -583,10 +702,9 @@ export const leaveTeam = async (characterId: number) => {
       // 没有其他成员，解散队伍
       const memberRes = await query<TeamCharacterIdRow>(`SELECT character_id FROM team_members WHERE team_id = $1`, [teamId]);
       const memberCharacterIds = memberRes.rows.map((row) => Number(row.character_id)).filter((n: number) => Number.isFinite(n));
-      const memberUserIds = await getUserIdsByCharacterIds(memberCharacterIds);
-      emitTeamUpdateToUserIds(memberUserIds, { kind: 'disband_team', teamId, time: Date.now() });
       await query(`DELETE FROM teams WHERE id = $1`, [teamId]);
       await invalidateTeamReadCaches(teamId);
+      await notifyTeamMembersChanged(teamId, memberCharacterIds, 'disband_team');
       return { success: true, message: '队伍已解散（无其他成员）' };
     }
   }

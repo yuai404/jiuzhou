@@ -22,6 +22,10 @@
  */
 
 import type { BattleSessionRecord, BattleSessionSnapshot } from './types.js';
+import {
+  deleteOnlineBattleSessionProjection,
+  upsertOnlineBattleSessionProjection,
+} from '../onlineBattleProjectionService.js';
 
 export const battleSessionById = new Map<string, BattleSessionRecord>();
 export const battleSessionIdByBattleId = new Map<string, string>();
@@ -76,6 +80,7 @@ export const createBattleSessionRecord = (
   if (created.currentBattleId) {
     battleSessionIdByBattleId.set(created.currentBattleId, created.sessionId);
   }
+  upsertOnlineBattleSessionProjection(created);
   return created;
 };
 
@@ -104,6 +109,7 @@ export const updateBattleSessionRecord = (
     battleSessionIdByBattleId.set(next.currentBattleId, sessionId);
   }
 
+  upsertOnlineBattleSessionProjection(next);
   return next;
 };
 
@@ -128,6 +134,7 @@ export const deleteBattleSessionRecord = (
   if (current.currentBattleId) {
     battleSessionIdByBattleId.delete(current.currentBattleId);
   }
+  deleteOnlineBattleSessionProjection(sessionId);
   return battleSessionById.delete(sessionId);
 };
 

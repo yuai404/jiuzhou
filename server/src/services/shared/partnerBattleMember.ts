@@ -39,9 +39,12 @@ import type { PartnerOwnerRealmContext } from './partnerLevelLimit.js';
 import {
   buildPartnerBattleSkillPolicy,
   loadPartnerSkillPolicyRows,
+  loadPartnerSkillPolicyRowsMap,
   type PartnerSkillPolicySlotDto,
 } from './partnerSkillPolicy.js';
-import { getPartnerDefinitionById } from '../staticConfigLoader.js';
+import {
+  getPartnerDefinitionsByIds,
+} from '../staticConfigLoader.js';
 
 export interface PartnerBattleMember {
   data: CharacterData;
@@ -53,6 +56,10 @@ type ActivePartnerBattleRow = PartnerRow & {
   user_id: number;
   realm: string;
   sub_realm: string | null;
+};
+
+type ActivePartnerBattleRowWithCharacterId = ActivePartnerBattleRow & {
+  character_id: number;
 };
 
 type PartnerBattleSkillPolicyState = {
@@ -131,9 +138,39 @@ export const loadPartnerBattleSkillPolicyState = async (params: {
 export const loadActivePartnerBattleMember = async (
   characterId: number,
 ): Promise<PartnerBattleMember | null> => {
-  const normalizedCharacterId = normalizeInteger(characterId);
-  if (normalizedCharacterId <= 0) {
-    return null;
+  const memberMap = await loadActivePartnerBattleMemberMap([characterId]);
+  return memberMap.get(normalizeInteger(characterId)) ?? null;
+};
+
+/**
+ * 批量读取角色当前出战伙伴战斗成员。
+ *
+ * 作用：
+ * 1. 供在线战斗启动预热按批拉取出战伙伴，避免 1 个角色触发 1 次伙伴行 / 功法 / 策略查询。
+ * 2. 仍复用伙伴展示与技能策略的同一套纯组装逻辑，保证 warmup / 运行时的伙伴战斗快照口径一致。
+ *
+ * 输入/输出：
+ * - 输入：角色 ID 列表。
+ * - 输出：按角色 ID 组织的 `PartnerBattleMember | null` 映射；无出战伙伴的角色不会写入结果。
+ *
+ * 数据流/状态流：
+ * warmupCharacterSnapshots -> 本函数批量查 active partner / technique / skill policy -> 组装伙伴战斗成员。
+ *
+ * 关键边界条件与坑点：
+ * 1. 这里只认 `is_active = TRUE` 的唯一当前伙伴；缺失时必须直接返回空，不能隐式挑其他伙伴补位。
+ * 2. 伙伴定义、功法层数和技能策略都必须从同一批查询结果里组装，不能部分走单查导致字段口径漂移。
+ */
+export const loadActivePartnerBattleMemberMap = async (
+  characterIds: number[],
+): Promise<Map<number, PartnerBattleMember>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => normalizeInteger(characterId))
+      .filter((characterId) => characterId > 0),
+  )];
+  const result = new Map<number, PartnerBattleMember>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
   }
 
   const rows = await query(
@@ -143,59 +180,72 @@ export const loadActivePartnerBattleMember = async (
            , c.sub_realm
       FROM character_partner cp
       JOIN characters c ON c.id = cp.character_id
-      WHERE cp.character_id = $1
+      WHERE cp.character_id = ANY($1)
         AND cp.is_active = TRUE
-      LIMIT 1
+      ORDER BY cp.character_id ASC, cp.id ASC
     `,
-    [normalizedCharacterId],
+    [normalizedCharacterIds],
   );
   if (rows.rows.length <= 0) {
-    return null;
+    return result;
   }
 
-  const partnerRow = rows.rows[0] as ActivePartnerBattleRow;
-  const partnerDef = await getPartnerDefinitionById(partnerRow.partner_def_id);
-  if (!partnerDef) {
-    throw new Error(`伙伴模板不存在: ${partnerRow.partner_def_id}`);
+  const activePartnerRows = new Map<number, ActivePartnerBattleRowWithCharacterId>();
+  for (const row of rows.rows as ActivePartnerBattleRowWithCharacterId[]) {
+    const normalizedCharacterId = normalizeInteger(row.character_id);
+    if (normalizedCharacterId <= 0 || activePartnerRows.has(normalizedCharacterId)) {
+      continue;
+    }
+    activePartnerRows.set(normalizedCharacterId, row);
   }
 
-  const techniqueMap = await loadPartnerTechniqueRows([partnerRow.id], false);
-  const techniqueRows = techniqueMap.get(partnerRow.id) ?? [];
-  const ownerRealm: PartnerOwnerRealmContext = {
-    realm: normalizeText(partnerRow.realm) || '凡人',
-    subRealm: normalizeText(partnerRow.sub_realm) || null,
-  };
-  const partnerDisplay = buildPartnerDisplay({
-    row: partnerRow,
-    definition: partnerDef,
-    techniqueRows,
-    ownerRealm,
-  });
-  const skillPolicyState = await loadPartnerBattleSkillPolicyState({
-    partnerId: partnerRow.id,
-    definition: partnerDef,
-    techniqueRows,
-    forUpdate: false,
-  });
+  const partnerRows = Array.from(activePartnerRows.values());
+  const [partnerDefMap, techniqueMap, skillPolicyMap] = await Promise.all([
+    getPartnerDefinitionsByIds(partnerRows.map((partnerRow) => partnerRow.partner_def_id)),
+    loadPartnerTechniqueRows(partnerRows.map((partnerRow) => partnerRow.id), false),
+    loadPartnerSkillPolicyRowsMap(partnerRows.map((partnerRow) => partnerRow.id), false),
+  ]);
 
-  const skills = buildPartnerBattleSkillData(skillPolicyState.availableSkills);
+  for (const partnerRow of partnerRows) {
+    const partnerDef = partnerDefMap.get(partnerRow.partner_def_id);
+    if (!partnerDef) {
+      throw new Error(`伙伴模板不存在: ${partnerRow.partner_def_id}`);
+    }
 
-  const userId = normalizeInteger(partnerRow.user_id);
-  const attributeElement = normalizeText(partnerDef.attribute_element) || 'none';
+    const techniqueRows = techniqueMap.get(partnerRow.id) ?? [];
+    const ownerRealm: PartnerOwnerRealmContext = {
+      realm: normalizeText(partnerRow.realm) || '凡人',
+      subRealm: normalizeText(partnerRow.sub_realm) || null,
+    };
+    const partnerDisplay = buildPartnerDisplay({
+      row: partnerRow,
+      definition: partnerDef,
+      techniqueRows,
+      ownerRealm,
+    });
+    const availableSkills = buildPartnerEffectiveSkillEntries(
+      partnerDef,
+      techniqueRows,
+    );
+    const persistedRows = skillPolicyMap.get(partnerRow.id) ?? [];
+    const skills = buildPartnerBattleSkillData(availableSkills);
 
-  return {
-    data: toPartnerBattleCharacterData(
-      userId,
-      partnerRow.id,
-      partnerDisplay.nickname,
-      partnerDisplay.avatar,
-      attributeElement,
-      partnerDisplay.computedAttrs,
-    ),
-    skills,
-    skillPolicy: buildPartnerBattleSkillPolicy({
-      availableSkills: skillPolicyState.availableSkills,
-      persistedRows: skillPolicyState.persistedRows,
-    }),
-  };
+    result.set(normalizeInteger(partnerRow.character_id), {
+      data: toPartnerBattleCharacterData(
+        normalizeInteger(partnerRow.user_id),
+        partnerRow.id,
+        partnerDisplay.nickname,
+        partnerDisplay.avatar,
+        normalizeText(partnerDef.attribute_element) || 'none',
+        partnerDisplay.computedAttrs,
+      ),
+      skills,
+      skillPolicy: buildPartnerBattleSkillPolicy({
+        availableSkills,
+        persistedRows,
+      }),
+    });
+  }
+
+  return result;
 };

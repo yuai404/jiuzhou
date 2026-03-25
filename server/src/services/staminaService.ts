@@ -22,6 +22,10 @@ import { query } from '../config/database.js';
 import { getCachedStamina, setCachedStamina, toRecoveryState } from './staminaCacheService.js';
 import { getCharacterIdByUserId } from './shared/characterId.js';
 import {
+  isOnlineBattleProjectionReady,
+  setOnlineBattleCharacterStamina,
+} from './onlineBattleProjectionService.js';
+import {
   DEFAULT_MONTH_CARD_ID,
   getMonthCardStaminaRecoveryRate,
   normalizeMonthCardBenefitWindow,
@@ -73,6 +77,14 @@ export type StaminaRecoveryState = {
 
 type QueryRunner = (text: string, params?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }>;
 const staminaRecoveryInFlight = new Map<number, Promise<StaminaRecoveryState | null>>();
+
+const syncOnlineBattleCharacterStaminaIfReady = async (
+  characterId: number,
+  stamina: number,
+): Promise<void> => {
+  if (!isOnlineBattleProjectionReady()) return;
+  await setOnlineBattleCharacterStamina(characterId, stamina);
+};
 
 const runStaminaRecoverySingleFlight = async (
   characterId: number,
@@ -151,6 +163,7 @@ const applyRecoveryFromRow = async (
 
   // 回填缓存（DB 写入后同步）
   await setCachedStamina(characterId, nextStamina, new Date(nextRecoverAtMs), staminaMax, recoverySpeedWindow);
+  await syncOnlineBattleCharacterStaminaIfReady(characterId, nextStamina);
 
   return state;
 };
@@ -228,6 +241,33 @@ export const applyStaminaRecoveryByCharacterId = async (characterId: number): Pr
   });
 };
 
+export const applyStaminaRecoveryByCharacterIds = async (
+  characterIds: number[],
+): Promise<Map<number, StaminaRecoveryState>> => {
+  const normalizedCharacterIds = Array.from(
+    new Set(
+      characterIds
+        .map((characterId) => Math.floor(Number(characterId)))
+        .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+    ),
+  );
+  const result = new Map<number, StaminaRecoveryState>();
+  if (normalizedCharacterIds.length <= 0) return result;
+
+  const states = await Promise.all(
+    normalizedCharacterIds.map(async (characterId) => ({
+      characterId,
+      state: await applyStaminaRecoveryByCharacterId(characterId),
+    })),
+  );
+
+  for (const entry of states) {
+    if (!entry.state) continue;
+    result.set(entry.characterId, entry.state);
+  }
+  return result;
+};
+
 /**
  * 按用户 ID 获取体力状态（含恢复计算）
  *
@@ -264,14 +304,47 @@ export const recoverStaminaByCharacterId = async (
 ): Promise<StaminaRecoveryState | null> => {
   if (!Number.isFinite(characterId) || characterId <= 0) return null;
 
-  const delta = toNonNegativeInt(amount, 0);
+  return applyStaminaDeltaByCharacterId(characterId, toNonNegativeInt(amount, 0));
+};
+
+/**
+ * 按角色 ID 应用体力增减（支持正负值）。
+ *
+ * 作用：
+ * 1. 统一处理“先按当前时间结算自然恢复，再应用本次体力变更，再同步 DB + 缓存”的流程，避免不同业务各自拼体力 SQL。
+ * 2. 同时覆盖恢复与扣减场景；正数用于补体力，负数用于消耗体力。
+ *
+ * 输入/输出：
+ * - 输入：characterId、delta（可正可负）。
+ * - 输出：变更后的体力状态；若角色不存在则返回 null。
+ *
+ * 数据流：
+ * - 调用方 -> applyStaminaRecoveryTx 获取事务内最新体力
+ * - 计算 nextStamina / nextRecoverAt
+ * - UPDATE characters -> setCachedStamina
+ *
+ * 关键边界条件与坑点：
+ * 1. 负值扣减后若体力从满值进入未满状态，必须重置 `stamina_recover_at` 为当前时间，避免恢复计时停滞。
+ * 2. 这里只负责体力状态持久化，不负责“是否允许扣减”的业务校验；调用方必须先保证不会越权扣体力。
+ */
+export const applyStaminaDeltaByCharacterId = async (
+  characterId: number,
+  delta: number,
+): Promise<StaminaRecoveryState | null> => {
+  if (!Number.isFinite(characterId) || characterId <= 0) return null;
+
+  const normalizedDelta = Math.floor(Number(delta));
   const current = await applyStaminaRecoveryTx(characterId);
   if (!current) return null;
-  if (delta <= 0) return current;
+  if (!Number.isFinite(normalizedDelta) || normalizedDelta === 0) return current;
 
-  const nextStamina = Math.min(current.maxStamina, current.stamina + delta);
+  const nextStamina = Math.max(0, Math.min(current.maxStamina, current.stamina + normalizedDelta));
   const nextRecoverAt =
-    nextStamina >= current.maxStamina ? new Date() : current.staminaRecoverAt;
+    nextStamina >= current.maxStamina
+      ? new Date()
+      : normalizedDelta < 0 && current.stamina >= current.maxStamina
+        ? new Date()
+        : current.staminaRecoverAt;
   const changed =
     nextStamina !== current.stamina ||
     nextRecoverAt.getTime() !== current.staminaRecoverAt.getTime();
@@ -289,6 +362,7 @@ export const recoverStaminaByCharacterId = async (
     current.maxStamina,
     current.recoverySpeedWindow,
   );
+  await syncOnlineBattleCharacterStaminaIfReady(characterId, nextStamina);
 
   return {
     ...current,

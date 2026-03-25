@@ -36,7 +36,7 @@ export const REDIS_BATTLE_PARTICIPANTS_PREFIX = "battle:participants:";
 export const REDIS_BATTLE_TTL_SECONDS = 30 * 60; // 30 分钟
 
 export const shouldPersistBattleToRedis = (battleId: string): boolean => {
-  return battleId.startsWith("dungeon-battle-");
+  return typeof battleId === "string" && battleId.length > 0;
 };
 
 type PendingBattleRedisSave = {

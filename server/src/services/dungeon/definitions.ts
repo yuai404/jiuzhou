@@ -28,7 +28,7 @@ import {
   type DropEntrySourceType,
 } from '../shared/dropRateMultiplier.js';
 import { getAdjustedDropQuantityRange } from '../shared/dropQuantityMultiplier.js';
-import { getCharacterIdByUserId } from '../shared/characterId.js';
+import { getOnlineBattleCharacterSnapshotByUserId } from '../onlineBattleProjectionService.js';
 import {
   getEnabledDungeonDefs,
   getDungeonDefById,
@@ -155,7 +155,8 @@ export const getDungeonPreview = async (
   const entry =
     typeof userId === 'number' && Number.isFinite(userId)
       ? await (async () => {
-        const characterId = await getCharacterIdByUserId(userId);
+        const snapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
+        const characterId = snapshot?.characterId ?? null;
         if (!characterId) return null;
         return getDungeonEntryRemaining(characterId, dungeonId, dungeon.daily_limit, dungeon.weekly_limit);
       })()

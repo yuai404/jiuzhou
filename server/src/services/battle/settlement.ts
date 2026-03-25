@@ -20,23 +20,27 @@ import {
 } from "../../battle/logStream.js";
 import type { MonsterData } from "../../battle/battleFactory.js";
 import type { BattleState } from "../../battle/types.js";
-import { query } from "../../config/database.js";
 import {
   battleDropService,
   type BattleParticipant,
+  type BattleRewardSettlementPlan,
   type DistributeResult,
 } from "../battleDropService.js";
 import {
-  applyCharacterResourceDeltaByCharacterId,
-  getCharacterComputedBatchByCharacterIds,
-  getCharacterComputedByCharacterId,
-} from "../characterComputedService.js";
+  applyOnlineBattleCharacterResourceDelta,
+  buildBattleRewardsPreviewFromDistributeResult,
+  buildImmediateBattleResultWithProjectionPreview,
+  createDeferredSettlementTask,
+  getArenaProjection,
+  getDungeonProjectionByBattleId,
+  getOnlineBattleCharacterSnapshotsByCharacterIds,
+  getTowerProjection,
+  upsertTowerProjection,
+} from "../onlineBattleProjectionService.js";
 import { getArenaStatus } from "../arenaService.js";
-import { recordKillMonsterEvent } from "../taskService.js";
 import { getGameServer } from "../../game/gameServer.js";
 import { normalizeRealmKeepingUnknown } from "../shared/realmRules.js";
 import { getMonsterDefinitions } from "../staticConfigLoader.js";
-import { parseDungeonRewardEligibleCharacterIdSet } from "../dungeon/shared/rewardEligibility.js";
 import type { BattleResult } from "./battleTypes.js";
 import {
   activeBattles,
@@ -66,10 +70,6 @@ import {
   TOWER_PVE_BATTLE_START_POLICY,
 } from "./shared/startPolicy.js";
 import { restoreCharacterResourcesAfterVictoryByCharacterIds } from "./shared/resourceRecovery.js";
-import {
-  applyTowerPostBattleResourceChange,
-  settleTowerBattle,
-} from "../tower/service.js";
 import { getTowerBattleRuntime } from "../tower/runtime.js";
 import { createScopedLogger } from "../../utils/logger.js";
 import { createSlowOperationLogger } from "../../utils/slowOperationLogger.js";
@@ -93,18 +93,45 @@ type ResolvedSettlementParticipants = {
  * 2) 仅匹配 status='running' 的实例，避免读取历史完成实例的脏数据。
  */
 const loadDungeonBattleRewardEligibleCharacterIdSet = async (battleId: string): Promise<Set<number>> => {
-  const res = await query(
-    `
-      SELECT instance_data
-      FROM dungeon_instance
-      WHERE status = 'running'
-        AND instance_data ->> 'currentBattleId' = $1
-      LIMIT 1
-    `,
-    [battleId],
-  );
-  if (res.rows.length === 0) return new Set<number>();
-  return parseDungeonRewardEligibleCharacterIdSet(res.rows[0]?.instance_data);
+  const projection = await getDungeonProjectionByBattleId(battleId);
+  if (!projection) return new Set<number>();
+  return new Set<number>(projection.rewardEligibleCharacterIds);
+};
+
+const applyImmediateTowerProjectionResult = async (
+  battleId: string,
+  result: "attacker_win" | "defender_win" | "draw",
+): Promise<void> => {
+  const runtime = getTowerBattleRuntime(battleId);
+  if (!runtime) return;
+  const projection = await getTowerProjection(runtime.characterId);
+  if (!projection) return;
+
+  if (result === "attacker_win") {
+    await upsertTowerProjection({
+      ...projection,
+      bestFloor: Math.max(projection.bestFloor, runtime.floor),
+      nextFloor: Math.max(projection.nextFloor, runtime.floor + 1),
+      currentRunId: projection.currentRunId ?? runtime.runId,
+      currentFloor: runtime.floor,
+      currentBattleId: null,
+      lastSettledFloor: runtime.floor,
+      updatedAt: new Date().toISOString(),
+      reachedAt:
+        runtime.floor > projection.bestFloor
+          ? new Date().toISOString()
+          : projection.reachedAt,
+    });
+    return;
+  }
+
+  await upsertTowerProjection({
+    ...projection,
+    currentRunId: null,
+    currentFloor: null,
+    currentBattleId: null,
+    updatedAt: new Date().toISOString(),
+  });
 };
 
 export async function getBattleMonsters(engine: BattleEngine): Promise<MonsterData[]> {
@@ -145,7 +172,7 @@ const resolveSettlementParticipants = async (
         .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
     ),
   ];
-  const computedMap = await getCharacterComputedBatchByCharacterIds(attackerCharacterIds);
+  const computedMap = await getOnlineBattleCharacterSnapshotsByCharacterIds(attackerCharacterIds);
   const participants: BattleParticipant[] = [];
   const notificationUserIdSet = new Set<number>();
 
@@ -156,16 +183,16 @@ const resolveSettlementParticipants = async (
   }
 
   for (const characterId of attackerCharacterIds) {
-    const computed = computedMap.get(characterId);
-    if (!computed) continue;
+    const snapshot = computedMap.get(characterId);
+    if (!snapshot) continue;
     participants.push({
-      userId: computed.user_id,
-      characterId: computed.id,
-      nickname: computed.nickname,
-      realm: normalizeRealmKeepingUnknown(computed.realm, computed.sub_realm),
-      fuyuan: Number(computed.fuyuan ?? 1),
+      userId: snapshot.userId,
+      characterId: snapshot.characterId,
+      nickname: snapshot.computed.nickname,
+      realm: normalizeRealmKeepingUnknown(snapshot.computed.realm, snapshot.computed.sub_realm),
+      fuyuan: Number(snapshot.computed.fuyuan ?? 1),
     });
-    const normalizedUserId = Math.floor(Number(computed.user_id));
+    const normalizedUserId = Math.floor(Number(snapshot.userId));
     if (!Number.isFinite(normalizedUserId) || normalizedUserId <= 0) continue;
     notificationUserIdSet.add(normalizedUserId);
   }
@@ -206,6 +233,9 @@ async function finishBattleCore(
   const isVictory = result.result === "attacker_win";
   const isDungeonBattle = battleId.startsWith("dungeon-battle-");
   const isTowerBattle = getTowerBattleRuntime(battleId) !== null;
+  const dungeonProjection = isDungeonBattle
+    ? await getDungeonProjectionByBattleId(battleId)
+    : null;
   const rewardEligibleCharacterIdSet = isDungeonBattle
     ? await loadDungeonBattleRewardEligibleCharacterIdSet(battleId)
     : null;
@@ -217,7 +247,8 @@ async function finishBattleCore(
       );
 
   let dropResult: DistributeResult | null = null;
-  let towerRewardsData: {
+  let battleRewardPlan: BattleRewardSettlementPlan | null = null;
+  let rewardsPreviewData: {
     exp: number;
     silver: number;
     totalExp: number;
@@ -242,122 +273,65 @@ async function finishBattleCore(
       }>;
     }>;
   } | null = null;
+  let arenaDeltaForTask: {
+    challengerCharacterId: number;
+    opponentCharacterId: number;
+    challengerScoreAfter: number;
+    challengerScoreDelta: number;
+    challengerOutcome: 'win' | 'lose' | 'draw';
+  } | null = null;
 
   if (state.battleType === "pve") {
     if (isVictory) {
       if (isTowerBattle) {
-        await applyTowerPostBattleResourceChange({
+        await applyImmediateTowerProjectionResult(
           battleId,
-          result: result.result as "attacker_win" | "defender_win" | "draw",
-        });
-        slowLogger.mark("applyTowerPostBattleResourceChange");
-        towerRewardsData = await settleTowerBattle({
-          battleId,
-          result: result.result as "attacker_win" | "defender_win" | "draw",
-          participants: rewardParticipants,
-        });
-        slowLogger.mark("settleTowerBattle", {
-          rewardParticipantCount: rewardParticipants.length,
-        });
-      } else {
-        dropResult = await battleDropService.distributeBattleRewards(
+          result.result as "attacker_win" | "defender_win" | "draw",
+        );
+      }
+      if (!isTowerBattle) {
+        battleRewardPlan = await battleDropService.planBattleRewards(
           monsters,
           rewardParticipants,
           true,
           { isDungeonBattle },
         );
+        dropResult = battleDropService.previewBattleRewardPlan(battleRewardPlan);
         slowLogger.mark("distributeBattleRewards", {
           rewardParticipantCount: rewardParticipants.length,
         });
 
+        rewardsPreviewData = buildBattleRewardsPreviewFromDistributeResult(dropResult);
         await restoreCharacterResourcesAfterVictoryByCharacterIds(
           participants.map((participant) => participant.characterId),
         );
         slowLogger.mark("restoreCharacterResourcesAfterVictory");
       }
-
-      try {
-        const killCounts = new Map<string, number>();
-        for (const m of monsters) {
-          const id = String((m as unknown as Record<string, unknown>)?.id ?? "").trim();
-          if (!id) continue;
-          killCounts.set(id, (killCounts.get(id) ?? 0) + 1);
-        }
-        if (killCounts.size > 0) {
-          for (const p of rewardParticipants) {
-            const characterId = Number(p.characterId);
-            if (!Number.isFinite(characterId) || characterId <= 0) continue;
-            for (const [monsterId, count] of killCounts.entries()) {
-              await recordKillMonsterEvent(characterId, monsterId, count);
-            }
-          }
-        }
-      } catch (error) {
-        battleSettlementLogger.warn({
-          battleId,
-          errorMessage: error instanceof Error ? error.message : String(error),
-          errorStack: error instanceof Error ? error.stack : undefined,
-        }, "记录击杀怪物事件失败");
-      }
-      slowLogger.mark("recordKillMonsterEvent");
     } else if (result.result === "defender_win") {
       if (isTowerBattle) {
-        await applyTowerPostBattleResourceChange({
+        await applyImmediateTowerProjectionResult(
           battleId,
-          result: result.result as "attacker_win" | "defender_win" | "draw",
-        });
-        slowLogger.mark("applyTowerPostBattleResourceChange");
-        await settleTowerBattle({
-          battleId,
-          result: result.result as "attacker_win" | "defender_win" | "draw",
-          participants: rewardParticipants,
-        });
-        slowLogger.mark("settleTowerBattle", {
-          rewardParticipantCount: rewardParticipants.length,
-        });
-      } else {
+          result.result as "attacker_win" | "defender_win" | "draw",
+        );
+      }
+      if (!isTowerBattle) {
         for (const participant of participants) {
-          const computed = await getCharacterComputedByCharacterId(participant.characterId);
-          if (!computed) continue;
-          const loss = Math.floor(computed.max_qixue * 0.1);
-          await applyCharacterResourceDeltaByCharacterId(
+          const snapshotMap = await getOnlineBattleCharacterSnapshotsByCharacterIds([participant.characterId]);
+          const snapshot = snapshotMap.get(participant.characterId);
+          if (!snapshot) continue;
+          const battleLoss = Math.floor(snapshot.computed.max_qixue * 0.1);
+          await applyOnlineBattleCharacterResourceDelta(
             participant.characterId,
-            { qixue: -loss },
+            { qixue: -battleLoss },
             { minQixue: 1 },
           );
         }
         slowLogger.mark("applyFailureResourceLoss");
       }
-    } else if (isTowerBattle && result.result === "draw") {
-      await settleTowerBattle({
-        battleId,
-        result: result.result as "attacker_win" | "defender_win" | "draw",
-        participants: rewardParticipants,
-      });
-      slowLogger.mark("settleTowerBattle", {
-        rewardParticipantCount: rewardParticipants.length,
-      });
     }
   }
 
-  const rewardsData = towerRewardsData ?? (
-    dropResult
-      ? {
-          exp: dropResult.rewards.exp,
-          silver: dropResult.rewards.silver,
-          totalExp: dropResult.rewards.exp,
-          totalSilver: dropResult.rewards.silver,
-          participantCount: rewardParticipants.length,
-          items: dropResult.rewards.items.map((item) => ({
-            itemDefId: item.itemDefId,
-            name: item.itemName,
-            quantity: item.quantity,
-            receiverId: item.receiverId,
-          })),
-          perPlayerRewards: dropResult.perPlayerRewards,
-        }
-      : null
-  );
+  const rewardsData = rewardsPreviewData ?? null;
 
   // 秘境/千层塔跳过冷却：后续推进不依赖 3 秒战斗冷却，结算包也不再向客户端下发冷却元数据。
   let cooldownUntilMs: number | null = null;
@@ -419,10 +393,28 @@ async function finishBattleCore(
 
   try {
     if (state.battleType === "pvp") {
+      const challengerCharacterId = Math.floor(Number(state.teams.attacker.units[0]?.sourceId ?? 0));
+      const opponentCharacterId = Math.floor(Number(state.teams.defender.units[0]?.sourceId ?? 0));
+      const beforeProjection = await getArenaProjection(challengerCharacterId);
       await settleArenaBattleIfNeeded(
         battleId,
         result.result as "attacker_win" | "defender_win" | "draw",
       );
+      const afterProjection = await getArenaProjection(challengerCharacterId);
+      if (beforeProjection && afterProjection) {
+        arenaDeltaForTask = {
+          challengerCharacterId,
+          opponentCharacterId,
+          challengerScoreAfter: afterProjection.score,
+          challengerScoreDelta: afterProjection.score - beforeProjection.score,
+          challengerOutcome:
+            result.result === 'attacker_win'
+              ? 'win'
+              : result.result === 'defender_win'
+                ? 'lose'
+                : 'draw',
+        };
+      }
       slowLogger.mark("settleArenaBattleIfNeeded");
     }
   } catch (error) {
@@ -432,6 +424,50 @@ async function finishBattleCore(
       errorStack: error instanceof Error ? error.stack : undefined,
     }, "竞技场战斗结算失败");
   }
+
+  await createDeferredSettlementTask({
+    battleId,
+    battleType: state.battleType,
+    result: result.result as "attacker_win" | "defender_win" | "draw",
+    participants,
+    rewardParticipants,
+    isDungeonBattle,
+    isTowerBattle,
+    rewardsPreview: rewardsData,
+    battleRewardPlan,
+    monsters: monsters.map((monster) => ({
+      id: monster.id,
+      name: monster.name,
+      realm: monster.realm ?? null,
+      expReward: monster.exp_reward,
+      silverRewardMin: monster.silver_reward_min,
+      silverRewardMax: monster.silver_reward_max,
+      dropPoolId: monster.drop_pool_id ?? null,
+      kind: monster.kind ?? null,
+    })),
+    arenaDelta: arenaDeltaForTask,
+    dungeonContext: dungeonProjection
+      ? {
+          instanceId: dungeonProjection.instanceId,
+          dungeonId: dungeonProjection.dungeonId,
+          difficultyId: dungeonProjection.difficultyId,
+        }
+      : null,
+    dungeonStartConsumption: null,
+    dungeonSettlement: null,
+    session: sessionSnapshot
+      ? {
+          ...sessionSnapshot,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }
+      : null,
+  });
+  const immediateBattleResult = buildImmediateBattleResultWithProjectionPreview(
+    battleResult,
+    rewardsData,
+  );
+  battleResult.data = immediateBattleResult.data;
 
   activeBattles.delete(state.battleId);
   battleParticipants.delete(state.battleId);

@@ -1279,6 +1279,47 @@ const normalizePositiveInt = (value: unknown, fallback = 1): number => {
   return floor > 0 ? floor : fallback;
 };
 
+type KillMonsterEventInput = {
+  monsterId: string;
+  count: number;
+};
+
+/**
+ * 统一规整怪物击杀事件，供战斗结算和单次击杀都走同一入口。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：过滤非法 monsterId、合并重复怪物、累计正整数击杀次数。
+ * 2. 不做什么：不触发任务更新、不写数据库，只负责把输入整理成单一数据源。
+ *
+ * 输入/输出：
+ * - 输入：`events`，允许包含重复 monsterId 和非规范 count。
+ * - 输出：按 monsterId 聚合后的击杀事件数组。
+ *
+ * 数据流/状态流：
+ * - 战斗结算/单次调用 -> 归一化怪物击杀事件 -> 统一进入任务/主线/成就更新。
+ *
+ * 关键边界条件与坑点：
+ * 1. 空 monsterId 会被直接丢弃，避免把脏数据写进任务进度。
+ * 2. 同一场战斗可能出现重复怪物定义，必须先聚合，避免重复通知和重复主线写入。
+ */
+const normalizeKillMonsterEvents = (
+  events: KillMonsterEventInput[],
+): KillMonsterEventInput[] => {
+  const countByMonsterId = new Map<string, number>();
+
+  for (const event of events) {
+    const monsterId = asNonEmptyString(event.monsterId);
+    if (!monsterId) continue;
+    const count = normalizePositiveInt(event.count, 1);
+    countByMonsterId.set(monsterId, (countByMonsterId.get(monsterId) ?? 0) + count);
+  }
+
+  return [...countByMonsterId.entries()].map(([monsterId, count]) => ({
+    monsterId,
+    count,
+  }));
+};
+
 const recordTalkNpcEvent = async (characterId: number, npcId: string): Promise<void> => {
   const nid = asNonEmptyString(npcId);
   if (!nid) return;
@@ -1294,15 +1335,57 @@ const recordTalkNpcEvent = async (characterId: number, npcId: string): Promise<v
 };
 
 export const recordKillMonsterEvent = async (characterId: number, monsterId: string, count: number): Promise<void> => {
-  const mid = asNonEmptyString(monsterId);
-  if (!mid) return;
-  const c = normalizePositiveInt(count, 1);
+  await recordKillMonsterEvents(characterId, [{ monsterId, count }]);
+};
 
-  const taskOverviewChanged = await applyTaskEvent(characterId, { type: 'kill_monster', monsterId: mid, count: c });
+/**
+ * 批量记录怪物击杀事件，供战斗结算统一复用。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把一场战斗内的多只怪击杀统一推进到任务、主线和成就系统。
+ * 2. 不做什么：不推断战斗来源，也不负责战斗奖励结算。
+ *
+ * 输入/输出：
+ * - 输入：`characterId` 与一组怪物击杀事件。
+ * - 输出：无；副作用是更新任务/主线/成就并按需推送任务总览。
+ *
+ * 数据流/状态流：
+ * - 战斗结算拿到怪物列表 -> 本函数聚合 -> applyTaskEvent/updateSectionProgressBatch/updateAchievementProgress。
+ *
+ * 关键边界条件与坑点：
+ * 1. 必须先聚合同怪多次击杀，否则同一场战斗会产生多次任务总览刷新。
+ * 2. 主线目标支持批量推进，因此这里必须走 batch 入口，避免对同一角色重复锁进度行。
+ */
+export const recordKillMonsterEvents = async (
+  characterId: number,
+  events: KillMonsterEventInput[],
+): Promise<void> => {
+  const normalizedEvents = normalizeKillMonsterEvents(events);
+  if (normalizedEvents.length <= 0) return;
 
-  await updateSectionProgress(characterId, { type: 'kill_monster', monsterId: mid, count: c });
+  let taskOverviewChanged = false;
+  for (const event of normalizedEvents) {
+    const changed = await applyTaskEvent(characterId, {
+      type: 'kill_monster',
+      monsterId: event.monsterId,
+      count: event.count,
+    });
+    taskOverviewChanged = taskOverviewChanged || changed;
+  }
 
-  await updateAchievementProgress(characterId, `kill:monster:${mid}`, c);
+  await updateSectionProgressBatch(
+    characterId,
+    normalizedEvents.map((event) => ({
+      type: 'kill_monster' as const,
+      monsterId: event.monsterId,
+      count: event.count,
+    })),
+  );
+
+  for (const event of normalizedEvents) {
+    await updateAchievementProgress(characterId, `kill:monster:${event.monsterId}`, event.count);
+  }
+
   if (taskOverviewChanged) {
     await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
   }

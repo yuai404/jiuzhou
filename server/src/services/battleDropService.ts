@@ -136,6 +136,31 @@ export interface DistributeResult {
   }>;
 }
 
+export interface PlannedBattleRewardDrop {
+  receiverCharacterId: number;
+  receiverUserId: number;
+  receiverFuyuan: number;
+  itemDefId: string;
+  quantity: number;
+  bindType: string;
+  qualityWeights?: Record<string, number>;
+}
+
+export interface PlannedBattlePlayerReward {
+  characterId: number;
+  userId: number;
+  exp: number;
+  silver: number;
+  drops: PlannedBattleRewardDrop[];
+}
+
+export interface BattleRewardSettlementPlan {
+  totalExp: number;
+  totalSilver: number;
+  drops: PlannedBattleRewardDrop[];
+  perPlayerRewards: PlannedBattlePlayerReward[];
+}
+
 // 参与者信息
 export interface BattleParticipant {
   userId: number;
@@ -162,6 +187,7 @@ export interface SinglePlayerRewardSettlementResult {
  *   - getDropPool: 根据掉落池 ID 返回掉落池配置
  *   - rollDrops: 根据掉落池、福缘、战斗选项计算掉落结果
  *   - calculateAllDrops: 从多个怪物计算所有掉落并合并
+ *   - planBattleRewards: 生成一次性奖励计划，供即时预览与异步真实发奖复用
  *   - distributeBattleRewards: 分发战斗奖励（经验、银两、物品），使用事务
  *   - quickDistributeRewards: 快速分发奖励（用于自动战斗等场景）
  *   - getItemDefInfo: 获取物品定义信息
@@ -858,35 +884,25 @@ class BattleDropService {
     isVictory: boolean,
     options: DistributeBattleRewardsOptions = {}
   ): Promise<DistributeResult> {
-    return withTransactionAuto(() =>
-      this.distributeBattleRewardsInTransaction(monsters, participants, isVictory, options),
-    );
+    const plan = await this.planBattleRewards(monsters, participants, isVictory, options);
+    return this.settleBattleRewardPlan(plan);
   }
 
-  private async distributeBattleRewardsInTransaction(
+  async planBattleRewards(
     monsters: MonsterData[],
     participants: BattleParticipant[],
     isVictory: boolean,
-    options: DistributeBattleRewardsOptions = {}
-  ): Promise<DistributeResult> {
+    options: DistributeBattleRewardsOptions = {},
+  ): Promise<BattleRewardSettlementPlan> {
     if (!isVictory || participants.length === 0) {
       return {
-        success: true,
-        message: '战斗失败，无奖励',
-        rewards: { exp: 0, silver: 0, items: [] },
+        totalExp: 0,
+        totalSilver: 0,
+        drops: [],
+        perPlayerRewards: [],
       };
     }
 
-    const pendingMailByReceiver = new Map<number, { userId: number; items: MailAttachItem[] }>();
-    const collectCounts = new Map<string, { characterId: number; itemDefId: string; qty: number }>();
-    const pendingCharacterRewardDeltas = new Map<number, CharacterRewardDelta>();
-
-    const participantCharacterIds = [...new Set(
-      participants
-        .map((p) => Number(p.characterId))
-        .filter((id) => Number.isInteger(id) && id > 0)
-    )].sort((a, b) => a - b);
-    
     const stableQualityWeightsKey = (weights?: Record<string, number>): string => {
       if (!weights) return '';
       return JSON.stringify(
@@ -904,6 +920,7 @@ class BattleDropService {
       const winnerIndex = participantCount > 1 ? Math.floor(Math.random() * participantCount) : 0;
       return participants[winnerIndex]!;
     };
+
     const resolveParticipantFuyuan = (participant: BattleParticipant): number => {
       const parsed = Number(participant.fuyuan ?? 1);
       return Number.isFinite(parsed) ? parsed : 1;
@@ -937,33 +954,7 @@ class BattleDropService {
       }
     }
 
-    const mergedDropsByReceiver = new Map<
-      string,
-      { receiver: BattleParticipant; drop: DropResult; receiverFuyuan: number }
-    >();
-    const appendMergedDropByReceiver = (
-      receiver: BattleParticipant,
-      drop: DropResult,
-      quantity: number,
-      receiverFuyuan: number,
-    ): void => {
-      const normalizedQty = Math.max(0, Math.floor(quantity));
-      if (normalizedQty <= 0) return;
-      const key = `${receiver.characterId}|${drop.itemDefId}|${drop.bindType}|${stableQualityWeightsKey(drop.qualityWeights)}`;
-      const existing = mergedDropsByReceiver.get(key);
-      if (existing) {
-        existing.drop.quantity += normalizedQty;
-      } else {
-        mergedDropsByReceiver.set(key, {
-          receiver,
-          receiverFuyuan,
-          drop: {
-            ...drop,
-            quantity: normalizedQty,
-          },
-        });
-      }
-    };
+    const mergedDropsByReceiver = new Map<string, PlannedBattleRewardDrop>();
 
     for (const monster of monsters) {
       if (!monster.drop_pool_id) continue;
@@ -991,12 +982,21 @@ class BattleDropService {
 
         if (participantCount <= 1) {
           const singleReceiver = participants[0]!;
-          appendMergedDropByReceiver(
-            singleReceiver,
-            drop,
-            dropQty,
-            resolveParticipantFuyuan(singleReceiver),
-          );
+          const key = `${singleReceiver.characterId}|${drop.itemDefId}|${drop.bindType}|${stableQualityWeightsKey(drop.qualityWeights)}`;
+          const existing = mergedDropsByReceiver.get(key);
+          if (existing) {
+            existing.quantity += dropQty;
+          } else {
+            mergedDropsByReceiver.set(key, {
+              receiverCharacterId: Number(singleReceiver.characterId),
+              receiverUserId: Number(singleReceiver.userId),
+              receiverFuyuan: resolveParticipantFuyuan(singleReceiver),
+              itemDefId: drop.itemDefId,
+              quantity: dropQty,
+              bindType: drop.bindType,
+              ...(drop.qualityWeights ? { qualityWeights: drop.qualityWeights } : {}),
+            });
+          }
           continue;
         }
 
@@ -1018,55 +1018,140 @@ class BattleDropService {
         }
 
         for (const allocation of qtyByReceiver.values()) {
-          appendMergedDropByReceiver(
-            allocation.receiver,
-            drop,
-            allocation.qty,
-            allocation.receiverFuyuan,
-          );
+          const key = `${allocation.receiver.characterId}|${drop.itemDefId}|${drop.bindType}|${stableQualityWeightsKey(drop.qualityWeights)}`;
+          const existing = mergedDropsByReceiver.get(key);
+          if (existing) {
+            existing.quantity += allocation.qty;
+          } else {
+            mergedDropsByReceiver.set(key, {
+              receiverCharacterId: Number(allocation.receiver.characterId),
+              receiverUserId: Number(allocation.receiver.userId),
+              receiverFuyuan: allocation.receiverFuyuan,
+              itemDefId: drop.itemDefId,
+              quantity: allocation.qty,
+              bindType: drop.bindType,
+              ...(drop.qualityWeights ? { qualityWeights: drop.qualityWeights } : {}),
+            });
+          }
         }
       }
     }
 
-    const requiresInventoryMutation = mergedDropsByReceiver.size > 0;
-
-    if (requiresInventoryMutation && participantCharacterIds.length > 0) {
-      // 奖励结算统一固定为“先背包互斥锁，再按升序锁 characters 行”。
-      // 这样可以避免同角色并发发奖时，在入包阶段与最终资源落库阶段出现反向等待。
-      await lockCharacterRewardSettlementTargets(participantCharacterIds);
-    }
-    
-    // 3. 先汇总经验和银两，等入包/补发/事件记录流程结束后再统一写回，
-    //    避免把角色资源更新散落在多个奖励分支里。
     let totalExp = 0;
     let totalSilver = 0;
-    
-    const perPlayerRewards: DistributeResult['perPlayerRewards'] = [];
-    
+    const perPlayerRewards: PlannedBattlePlayerReward[] = [];
+
     for (const participant of participants) {
       const expGain = Math.max(0, Math.floor(baseExpAcc.get(participant.characterId) ?? 0));
       const silverGain = Math.max(0, Math.floor(baseSilverAcc.get(participant.characterId) ?? 0));
-
-      addCharacterRewardDelta(pendingCharacterRewardDeltas, participant.characterId, {
-        exp: expGain,
-        silver: silverGain,
-      });
-      
       perPlayerRewards.push({
         characterId: participant.characterId,
         userId: participant.userId,
         exp: expGain,
         silver: silverGain,
-        items: [],
+        drops: [],
       });
       totalExp += expGain;
       totalSilver += silverGain;
     }
-    
-    // 4. 分发物品（组队按“每个战利品条目独立ROLL点”分配，单人全部获得）
-    const allItems: DistributeResult['rewards']['items'] = [];
-    const autoDisassembleSettings = new Map<number, AutoDisassembleSetting>();
+    for (const drop of mergedDropsByReceiver.values()) {
+      const playerReward = perPlayerRewards.find((reward) => reward.characterId === drop.receiverCharacterId);
+      if (!playerReward) continue;
+      playerReward.drops.push({ ...drop });
+    }
+    return {
+      totalExp,
+      totalSilver,
+      drops: [...mergedDropsByReceiver.values()].map((drop) => ({ ...drop })),
+      perPlayerRewards,
+    };
+  }
 
+  buildDistributeResultFromBattleRewardPlan(
+    plan: BattleRewardSettlementPlan,
+  ): DistributeResult {
+    const perPlayerRewards: NonNullable<DistributeResult['perPlayerRewards']> = plan.perPlayerRewards.map((reward) => ({
+      characterId: reward.characterId,
+      userId: reward.userId,
+      exp: reward.exp,
+      silver: reward.silver,
+      items: [],
+    }));
+    const allItems: DistributeResult['rewards']['items'] = [];
+
+    for (const drop of plan.drops) {
+      const meta = this.getRewardItemMeta(drop.itemDefId);
+      allItems.push({
+        itemDefId: drop.itemDefId,
+        itemName: meta.name,
+        quantity: drop.quantity,
+        instanceIds: [],
+        receiverId: drop.receiverCharacterId,
+      });
+      const playerReward = perPlayerRewards.find((reward) => reward.characterId === drop.receiverCharacterId);
+      if (!playerReward) continue;
+      playerReward.items.push({
+        itemDefId: drop.itemDefId,
+        itemName: meta.name,
+        quantity: drop.quantity,
+        instanceIds: [],
+      });
+    }
+
+    return {
+      success: true,
+      message: '奖励预览生成成功',
+      rewards: {
+        exp: plan.totalExp,
+        silver: plan.totalSilver,
+        items: allItems,
+      },
+      perPlayerRewards,
+    };
+  }
+
+  async settleBattleRewardPlan(
+    plan: BattleRewardSettlementPlan,
+  ): Promise<DistributeResult> {
+    return withTransactionAuto(() =>
+      this.settleBattleRewardPlanInTransaction(plan),
+    );
+  }
+
+  private async settleBattleRewardPlanInTransaction(
+    plan: BattleRewardSettlementPlan,
+  ): Promise<DistributeResult> {
+    if (plan.perPlayerRewards.length === 0) {
+      return {
+        success: true,
+        message: '战斗失败，无奖励',
+        rewards: { exp: 0, silver: 0, items: [] },
+        perPlayerRewards: [],
+      };
+    }
+
+    const pendingMailByReceiver = new Map<number, { userId: number; items: MailAttachItem[] }>();
+    const collectCounts = new Map<string, { characterId: number; itemDefId: string; qty: number }>();
+    const pendingCharacterRewardDeltas = new Map<number, CharacterRewardDelta>();
+    const participantCharacterIds = [...new Set(
+      plan.perPlayerRewards
+        .map((reward) => Number(reward.characterId))
+        .filter((characterId) => Number.isInteger(characterId) && characterId > 0),
+    )].sort((left, right) => left - right);
+    const requiresInventoryMutation = plan.drops.length > 0;
+
+    for (const reward of plan.perPlayerRewards) {
+      addCharacterRewardDelta(pendingCharacterRewardDeltas, reward.characterId, {
+        exp: reward.exp,
+        silver: reward.silver,
+      });
+    }
+
+    if (requiresInventoryMutation && participantCharacterIds.length > 0) {
+      await lockCharacterRewardSettlementTargets(participantCharacterIds);
+    }
+
+    const autoDisassembleSettings = new Map<number, AutoDisassembleSetting>();
     if (requiresInventoryMutation && participantCharacterIds.length > 0) {
       const settingResult = await query(
         `
@@ -1074,7 +1159,7 @@ class BattleDropService {
           FROM characters
           WHERE id = ANY($1)
         `,
-        [participantCharacterIds]
+        [participantCharacterIds],
       );
       for (const row of settingResult.rows as Array<{
         id: number;
@@ -1086,12 +1171,15 @@ class BattleDropService {
           normalizeAutoDisassembleSetting({
             enabled: row.auto_disassemble_enabled,
             rules: row.auto_disassemble_rules,
-          })
+          }),
         );
       }
     }
 
-    const appendCollectCount = (characterId: number, itemDefId: string, qty: number) => {
+    const result = this.buildDistributeResultFromBattleRewardPlan(plan);
+    let totalSilver = plan.totalSilver;
+
+    const appendCollectCount = (characterId: number, itemDefId: string, qty: number): void => {
       const key = `${characterId}|${itemDefId}`;
       const existing = collectCounts.get(key);
       if (existing) {
@@ -1106,32 +1194,30 @@ class BattleDropService {
       itemDefId: string,
       itemName: string,
       quantity: number,
-      instanceIds: number[]
-    ) => {
-      allItems.push({ itemDefId, itemName, quantity, instanceIds, receiverId: characterId });
-      const playerReward = perPlayerRewards.find((p) => p.characterId === characterId);
+      instanceIds: number[],
+    ): void => {
+      result.rewards.items.push({ itemDefId, itemName, quantity, instanceIds, receiverId: characterId });
+      const playerReward = result.perPlayerRewards?.find((reward) => reward.characterId === characterId);
       if (playerReward) {
         playerReward.items.push({ itemDefId, itemName, quantity, instanceIds });
       }
     };
 
     const queuePendingMailItem = (
-      receiver: BattleParticipant,
+      receiverUserId: number,
       receiverCharacterId: number,
-      attachItem: MailAttachItem
-    ) => {
-      const existing = pendingMailByReceiver.get(receiverCharacterId) || {
-        userId: receiver.userId,
+      attachItem: MailAttachItem,
+    ): void => {
+      const existing = pendingMailByReceiver.get(receiverCharacterId) ?? {
+        userId: receiverUserId,
         items: [],
       };
       const keyA = JSON.stringify(attachItem.options?.equipOptions || null);
-      const found = existing.items.find((x) => {
-        const keyB = JSON.stringify(x.options?.equipOptions || null);
-        return (
-          x.item_def_id === attachItem.item_def_id &&
-          (x.options?.bindType || 'none') === (attachItem.options?.bindType || 'none') &&
-          keyB === keyA
-        );
+      const found = existing.items.find((entry) => {
+        const keyB = JSON.stringify(entry.options?.equipOptions || null);
+        return entry.item_def_id === attachItem.item_def_id
+          && (entry.options?.bindType || 'none') === (attachItem.options?.bindType || 'none')
+          && keyB === keyA;
       });
       if (found) {
         found.qty += attachItem.qty;
@@ -1141,12 +1227,17 @@ class BattleDropService {
       pendingMailByReceiver.set(receiverCharacterId, existing);
     };
 
-    for (const entry of mergedDropsByReceiver.values()) {
-      const drop = entry.drop;
-      const receiver = entry.receiver;
-      const receiverCharacterId = Number(receiver.characterId);
+    result.rewards.items = [];
+    if (result.perPlayerRewards) {
+      for (const playerReward of result.perPlayerRewards) {
+        playerReward.items = [];
+      }
+    }
+
+    for (const drop of plan.drops) {
+      const receiverCharacterId = Number(drop.receiverCharacterId);
       if (!Number.isInteger(receiverCharacterId) || receiverCharacterId <= 0) {
-        console.warn(`奖励分发跳过：非法角色ID ${String(receiver.characterId)}`);
+        console.warn(`奖励分发跳过：非法角色ID ${String(drop.receiverCharacterId)}`);
         continue;
       }
 
@@ -1158,14 +1249,14 @@ class BattleDropService {
       };
       if (sourceMeta.category === 'equipment') {
         createOptions.equipOptions = {
-          fuyuan: entry.receiverFuyuan,
-          ...(drop.qualityWeights ? { qualityWeights: drop.qualityWeights as Record<string, number> } : {}),
+          fuyuan: drop.receiverFuyuan,
+          ...(drop.qualityWeights ? { qualityWeights: drop.qualityWeights } : {}),
         };
       }
 
       const receiverAutoDisassemble =
-        autoDisassembleSettings.get(receiverCharacterId) ||
-        normalizeAutoDisassembleSetting({ enabled: false, rules: undefined });
+        autoDisassembleSettings.get(receiverCharacterId)
+        ?? normalizeAutoDisassembleSetting({ enabled: false, rules: undefined });
 
       const grantResult = await grantRewardItemWithAutoDisassemble({
         characterId: receiverCharacterId,
@@ -1184,7 +1275,7 @@ class BattleDropService {
         sourceObtainedFrom: 'battle_drop',
         sourceEquipOptions: createOptions.equipOptions,
         createItem: async ({ itemDefId, qty, bindType, obtainedFrom, equipOptions }) => {
-          return itemService.createItem(receiver.userId, receiverCharacterId, itemDefId, qty, {
+          return itemService.createItem(drop.receiverUserId, receiverCharacterId, itemDefId, qty, {
             location: 'bag',
             obtainedFrom,
             ...(bindType ? { bindType } : {}),
@@ -1206,12 +1297,13 @@ class BattleDropService {
       }
 
       for (const mailItem of grantResult.pendingMailItems) {
-        queuePendingMailItem(receiver, receiverCharacterId, mailItem);
+        queuePendingMailItem(drop.receiverUserId, receiverCharacterId, mailItem);
       }
 
       if (grantResult.gainedSilver > 0) {
         totalSilver += grantResult.gainedSilver;
-        const playerReward = perPlayerRewards.find((p) => p.characterId === receiverCharacterId);
+        result.rewards.silver += grantResult.gainedSilver;
+        const playerReward = result.perPlayerRewards?.find((reward) => reward.characterId === receiverCharacterId);
         if (playerReward) {
           playerReward.silver += grantResult.gainedSilver;
         }
@@ -1226,23 +1318,22 @@ class BattleDropService {
         appendRewardRecord(receiverCharacterId, granted.itemDefId, grantedMeta.name, granted.qty, granted.itemIds);
       }
     }
-    
+
     for (const entry of collectCounts.values()) {
       await recordCollectItemEvent(entry.characterId, entry.itemDefId, entry.qty);
     }
 
     for (const [receiverCharacterId, entry] of pendingMailByReceiver.entries()) {
-      const items = entry.items;
       const chunkSize = 10;
-      for (let i = 0; i < items.length; i += chunkSize) {
-        const chunk = items.slice(i, i + chunkSize);
+      for (let index = 0; index < entry.items.length; index += chunkSize) {
+        const chunk = entry.items.slice(index, index + chunkSize);
         const mailResult = await sendSystemMail(
           entry.userId,
           receiverCharacterId,
           '战斗掉落补发',
           '由于背包已满，部分战斗掉落已通过邮件补发，请前往邮箱领取。',
           { items: chunk },
-          30
+          30,
         );
         if (!mailResult.success) {
           console.warn(`战斗掉落补发邮件发送失败: ${mailResult.message}`);
@@ -1251,17 +1342,25 @@ class BattleDropService {
     }
 
     await applyCharacterRewardDeltas(pendingCharacterRewardDeltas);
-    
-    return {
-      success: true,
-      message: '奖励分发成功',
-      rewards: {
-        exp: totalExp,
-        silver: totalSilver,
-        items: allItems,
-      },
-      perPlayerRewards,
-    };
+    result.message = '奖励分发成功';
+    result.rewards.silver = totalSilver;
+    return result;
+  }
+
+  async previewBattleRewards(
+    monsters: MonsterData[],
+    participants: BattleParticipant[],
+    isVictory: boolean,
+    options: DistributeBattleRewardsOptions = {},
+  ): Promise<DistributeResult> {
+    const plan = await this.planBattleRewards(monsters, participants, isVictory, options);
+    return this.buildDistributeResultFromBattleRewardPlan(plan);
+  }
+
+  previewBattleRewardPlan(
+    plan: BattleRewardSettlementPlan,
+  ): DistributeResult {
+    return this.buildDistributeResultFromBattleRewardPlan(plan);
   }
 
   /**

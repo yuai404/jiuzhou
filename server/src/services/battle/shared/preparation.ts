@@ -18,16 +18,17 @@
  * 2) prepareTeamBattleParticipants 发现“队伍成员挂机中”时直接拒绝整场战斗，不允许以“跳过该成员”方式继续开战
  */
 
-import { query } from "../../../config/database.js";
 import type { CharacterData, SkillData } from "../../../battle/battleFactory.js";
 import type { PoolClient } from "pg";
 import { getGameServer } from "../../../game/gameServer.js";
-import { getCharacterComputedBatchByCharacterIds } from "../../characterComputedService.js";
 import { idleSessionService } from "../../idle/idleSessionService.js";
+import {
+  getOnlineBattleCharacterSnapshotsByCharacterIds,
+  getTeamProjectionByUserId,
+} from "../../onlineBattleProjectionService.js";
 import type { BattleResult } from "../battleTypes.js";
 import { getBattleStartCooldownRemainingMs, isCharacterInBattle } from "../runtime/state.js";
 import { recoverBattleStartResourcesByUserIds } from "./resourceRecovery.js";
-import { getCharacterBattleLoadoutByCharacterId } from "./profileCache.js";
 import {
   shouldValidateTeamMemberCooldown,
   type PveBattleStartPolicy,
@@ -143,6 +144,34 @@ export async function syncBattleStartResourcesForUsers(
   }
 }
 
+/**
+ * 异步调度战前资源回写。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把“开战后把角色资源快照回写到在线投影并推送前端”移出 HTTP 响应临界区，避免 advance/start 被这类补偿性副作用拖慢。
+ * 2. 做什么：统一复用 `syncBattleStartResourcesForUsers`，避免各战斗入口各自写一套 fire-and-forget 包装。
+ * 3. 不做什么：不改变 battle engine 使用的开战资源；引擎仍直接使用 `withBattleStartResources` 的同步结果。
+ *
+ * 输入/输出：
+ * - 输入：参与用户 ID 列表、日志上下文。
+ * - 输出：无同步返回；副作用在后台异步执行。
+ *
+ * 数据流/状态流：
+ * start/advance -> 本函数排队微任务 -> syncBattleStartResourcesForUsers -> 在线投影回写 + 角色推送。
+ *
+ * 关键边界条件与坑点：
+ * 1. 这里故意不 `await`；即使后台同步失败，也不能阻塞战斗创建成功响应。
+ * 2. 同步失败只记日志，不做回退重试；权威战斗状态仍以当前 battle/session 为准。
+ */
+export const scheduleBattleStartResourcesSyncForUsers = (
+  userIds: number[],
+  options: SyncBattleStartResourcesOptions,
+): void => {
+  void Promise.resolve().then(async () => {
+    await syncBattleStartResourcesForUsers(userIds, options);
+  });
+};
+
 // ------ 队伍成员数据 ------
 
 export async function getTeamMembersData(
@@ -154,45 +183,31 @@ export async function getTeamMembersData(
   teamId: string | null;
   members: TeamBattleMember[];
 }> {
-  const memberResult = await query(
-    `SELECT tm.team_id, tm.role FROM team_members tm
-     JOIN characters c ON tm.character_id = c.id
-     WHERE c.user_id = $1`,
-    [userId],
-  );
-
-  if (memberResult.rows.length === 0) {
+  const teamProjection = await getTeamProjectionByUserId(userId);
+  if (!teamProjection?.teamId || !teamProjection.role) {
     return { isInTeam: false, isLeader: false, teamId: null, members: [] };
   }
 
-  const { team_id: teamId, role } = memberResult.rows[0];
-  const isLeader = role === "leader";
-
-  const teamMembersResult = await query(
-    `SELECT tm.character_id FROM team_members tm
-     WHERE tm.team_id = $1 AND tm.character_id != $2
-     ORDER BY tm.role DESC, tm.joined_at ASC`,
-    [teamId, characterId],
-  );
-
-  const orderedMemberCharacterIds = teamMembersResult.rows
-    .map((row) => normalizeCharacterId((row as Record<string, number>).character_id))
+  const teamId = teamProjection.teamId;
+  const isLeader = teamProjection.role === "leader";
+  const orderedMemberCharacterIds = teamProjection.memberCharacterIds
+    .map((memberCharacterId) => normalizeCharacterId(memberCharacterId))
+    .filter((memberCharacterId) => memberCharacterId > 0)
+    .filter((memberCharacterId) => memberCharacterId !== characterId)
     .filter((memberCharacterId) => memberCharacterId > 0);
 
-  const computedMemberMap = await getCharacterComputedBatchByCharacterIds(
+  const computedMemberMap = await getOnlineBattleCharacterSnapshotsByCharacterIds(
     orderedMemberCharacterIds,
   );
   const members: Array<TeamBattleMember | null> = await Promise.all(
     orderedMemberCharacterIds.map(async (memberCharacterId) => {
-      const base = computedMemberMap.get(memberCharacterId);
-      if (!base) return null;
-      const battleLoadout = await getCharacterBattleLoadoutByCharacterId(memberCharacterId);
-      if (!battleLoadout) return null;
+      const snapshot = computedMemberMap.get(memberCharacterId);
+      if (!snapshot) return null;
       const data: CharacterData = {
-        ...base,
-        setBonusEffects: battleLoadout.setBonusEffects,
+        ...snapshot.computed,
+        setBonusEffects: snapshot.loadout.setBonusEffects,
       };
-      const skills = battleLoadout.skills;
+      const skills = snapshot.loadout.skills;
       const teamMember: TeamBattleMember = { data, skills };
       return teamMember;
     }),

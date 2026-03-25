@@ -408,19 +408,19 @@ class IdleSessionService {
    *
    * 作用：
    *   统一封装“角色是否在挂机中（active/stopping）”的批量判定逻辑，
-   *   避免战斗/组队模块重复实现相同 SQL 与 ID 归一化流程。
+   *   并改为只读取 Redis 挂机锁投影，避免在线战斗请求链回落 DB。
    *
    * 输入/输出：
    *   - 输入：characterIds（可能包含重复值、非整数、无效值）
    *   - 输出：Set<number>（仅包含正整数角色ID，自动去重）
    *
    * 数据流：
-   *   调用方角色ID数组 → normalizeCharacterIds → SQL 批量查询 idle_sessions
+   *   调用方角色ID数组 → normalizeCharacterIds → Redis mget 挂机锁
    *   → 结果二次过滤 → 返回活跃挂机角色ID集合。
    *
    * 关键边界条件：
    *   1. 输入数组为空或全为非法值时，直接返回空集合，不触发 SQL 查询。
-   *   2. 仅认定 status IN ('active', 'stopping') 为“挂机中”，其他状态一律视为非活跃。
+   *   2. 仅认定存在有效挂机锁的角色为“挂机中”；请求链不再回退 DB 校验。
    */
   async getActiveIdleCharacterIdSet(characterIds: number[]): Promise<Set<number>> {
     const normalizedCharacterIds = normalizeCharacterIds(characterIds);
@@ -428,20 +428,14 @@ class IdleSessionService {
       return new Set<number>();
     }
 
-    await settleOrphanStoppingSessions(normalizedCharacterIds);
-
-    const res = await query(
-      `SELECT DISTINCT character_id
-       FROM idle_sessions
-       WHERE character_id = ANY($1::int[])
-         AND status IN ('active', 'stopping')`,
-      [normalizedCharacterIds]
-    );
-
     const activeIdleCharacterIdSet = new Set<number>();
-    for (const row of res.rows as Array<{ character_id: unknown }>) {
-      const characterId = Math.floor(Number(row.character_id));
-      if (!Number.isFinite(characterId) || characterId <= 0) continue;
+    const lockValues = await redis.mget(
+      ...normalizedCharacterIds.map(idleLockKey),
+    );
+    for (let index = 0; index < normalizedCharacterIds.length; index += 1) {
+      const characterId = normalizedCharacterIds[index]!;
+      const lockValue = lockValues[index];
+      if (typeof lockValue !== 'string' || lockValue.length <= 0) continue;
       activeIdleCharacterIdSet.add(characterId);
     }
 

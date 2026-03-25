@@ -66,6 +66,11 @@ type QueryCallable = (...queryArgs: unknown[]) => unknown;
 type TransactionAfterCommitCallback = () => Promise<void> | void;
 
 const transactionContextStorage = new AsyncLocalStorage<TransactionContext | null>();
+type DatabaseAccessRule = {
+  label: string;
+};
+
+const databaseAccessRuleStorage = new AsyncLocalStorage<DatabaseAccessRule | null>();
 
 type ClientTransactionState = {
   depth: number;
@@ -106,6 +111,29 @@ let decoratedClientIdCounter = 0;
 
 const getActiveTransactionContext = (): TransactionContext | null => {
   return transactionContextStorage.getStore() ?? null;
+};
+
+const getActiveDatabaseAccessRule = (): DatabaseAccessRule | null => {
+  return databaseAccessRuleStorage.getStore() ?? null;
+};
+
+const buildDatabaseAccessForbiddenMessage = (
+  rule: DatabaseAccessRule,
+  operation: 'query' | 'transaction',
+  sql?: string,
+): string => {
+  const normalizedSql = stripLeadingSqlComments(sql ?? '').replace(/\s+/g, ' ').trim();
+  const sqlPreview = normalizedSql ? `，SQL=${normalizedSql.slice(0, 120)}` : '';
+  return `当前调用链禁止直接访问数据库: ${rule.label}（operation=${operation}${sqlPreview}）`;
+};
+
+const assertDatabaseAccessAllowed = (
+  operation: 'query' | 'transaction',
+  sql?: string,
+): void => {
+  const rule = getActiveDatabaseAccessRule();
+  if (!rule) return;
+  throw new Error(buildDatabaseAccessForbiddenMessage(rule, operation, sql));
 };
 
 const isUsableTransactionState = (
@@ -560,6 +588,7 @@ export const isInTransaction = (): boolean => {
  */
 export const query = ((...queryArgs: unknown[]) => {
   const sql = extractSqlTextFromQueryArgs(queryArgs);
+  assertDatabaseAccessAllowed('query', sql);
   const context = getUsableTransactionContext();
 
   if (!context && STRICT_WRITE_TRANSACTION && sql && isWriteSql(sql)) {
@@ -629,6 +658,7 @@ export const afterTransactionCommit = async (
 export const withTransaction = async <T>(
   callback: (client: PoolClient) => Promise<T>,
 ): Promise<T> => {
+  assertDatabaseAccessAllowed('transaction');
   const parentContext = getUsableTransactionContext();
 
   if (parentContext) {
@@ -702,6 +732,7 @@ export const withTransaction = async <T>(
 export const withTransactionAuto = async <T>(
   callback: (client: PoolClient) => Promise<T>,
 ): Promise<T> => {
+  assertDatabaseAccessAllowed('transaction');
   const existingClient = getTransactionClient();
 
   // 如果已在事务中，直接使用现有连接
@@ -711,6 +742,20 @@ export const withTransactionAuto = async <T>(
 
   // 否则创建新事务
   return await withTransaction(callback);
+};
+
+export const runWithDatabaseAccessForbidden = async <T>(
+  label: string,
+  callback: () => T | Promise<T>,
+): Promise<T> => {
+  return await databaseAccessRuleStorage.run(
+    { label },
+    async () => await callback(),
+  );
+};
+
+export const isDatabaseAccessForbidden = (): boolean => {
+  return getActiveDatabaseAccessRule() !== null;
 };
 
 // 延迟函数

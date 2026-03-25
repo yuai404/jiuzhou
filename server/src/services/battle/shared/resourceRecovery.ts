@@ -22,7 +22,11 @@
  */
 
 import type { CharacterComputedRow } from '../../characterComputedService.js';
-import * as characterComputedService from '../../characterComputedService.js';
+import {
+  getOnlineBattleCharacterSnapshotsByCharacterIds,
+  getOnlineBattleCharacterSnapshotsByUserIds,
+  setOnlineBattleCharacterResources,
+} from '../../onlineBattleProjectionService.js';
 
 type CharacterResourceState = {
   qixue: number;
@@ -52,13 +56,11 @@ export const buildVictoryRecoveredResourceState = (
 export const recoverBattleStartResourcesByUserIds = async (
   userIds: number[],
 ): Promise<void> => {
-  const computedMap = await characterComputedService.getCharacterComputedBatchByUserIds(userIds);
+  const computedMap = await getOnlineBattleCharacterSnapshotsByUserIds(userIds);
   await Promise.all(
-    [...computedMap.values()].map(async (computed) => {
-      await characterComputedService.setCharacterResourcesByComputedRow(
-        computed,
-        buildBattleStartRecoveredResourceState(computed),
-      );
+    [...computedMap.values()].map(async (snapshot) => {
+      const next = buildBattleStartRecoveredResourceState(snapshot.computed);
+      await setOnlineBattleCharacterResources(snapshot.characterId, next);
     }),
   );
 };
@@ -66,13 +68,11 @@ export const recoverBattleStartResourcesByUserIds = async (
 export const restoreCharacterResourcesAfterVictoryByCharacterIds = async (
   characterIds: number[],
 ): Promise<void> => {
-  const computedMap = await characterComputedService.getCharacterComputedBatchByCharacterIds(characterIds);
+  const computedMap = await getOnlineBattleCharacterSnapshotsByCharacterIds(characterIds);
   await Promise.all(
-    [...computedMap.values()].map(async (computed) => {
-      await characterComputedService.setCharacterResourcesByComputedRow(
-        computed,
-        buildVictoryRecoveredResourceState(computed),
-      );
+    [...computedMap.values()].map(async (snapshot) => {
+      const next = buildVictoryRecoveredResourceState(snapshot.computed);
+      await setOnlineBattleCharacterResources(snapshot.characterId, next);
     }),
   );
 };

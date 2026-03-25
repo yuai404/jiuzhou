@@ -18,7 +18,7 @@
  * 2. 冻结成员必须与前沿值一致；如果混入别的前沿数据，说明写入或清理流程出了问题。
  */
 
-import { query } from '../../config/database.js';
+import { isDatabaseAccessForbidden, query } from '../../config/database.js';
 import { isRealmName } from '../shared/realmRules.js';
 import { getMonsterDefinitions, type MonsterDefConfig } from '../staticConfigLoader.js';
 import type {
@@ -49,6 +49,7 @@ export interface FrozenTowerPoolLoadResult {
 
 const TOWER_SCOPED_FRONTIER_KEY = 'tower';
 const EMPTY_TOWER_FROZEN_FRONTIER_UPDATED_AT = new Date(0).toISOString();
+let frozenTowerPoolCache: FrozenTowerPoolLoadResult | null = null;
 
 const isTowerFloorKind = (value: string): value is TowerFloorKind => {
   return value === 'normal' || value === 'elite' || value === 'boss';
@@ -139,6 +140,61 @@ const getFrozenTowerMonsterPoolBucket = (
   if (kind === 'boss') return pools.boss;
   if (kind === 'elite') return pools.elite;
   return pools.normal;
+};
+
+const cloneTowerMonsterPools = (
+  pools: TowerMonsterPoolState,
+): TowerMonsterPoolState => {
+  const cloneBucket = (
+    bucket: Map<string, MonsterDefConfig[]>,
+  ): Map<string, MonsterDefConfig[]> => {
+    const next = new Map<string, MonsterDefConfig[]>();
+    for (const [realm, monsters] of bucket.entries()) {
+      next.set(realm, monsters.map((monster) => ({ ...monster })));
+    }
+    return next;
+  };
+
+  return {
+    normal: cloneBucket(pools.normal),
+    elite: cloneBucket(pools.elite),
+    boss: cloneBucket(pools.boss),
+  };
+};
+
+const cloneFrozenTowerPoolLoadResult = (
+  result: FrozenTowerPoolLoadResult,
+): FrozenTowerPoolLoadResult => {
+  return {
+    frontier: {
+      ...result.frontier,
+    },
+    pools: cloneTowerMonsterPools(result.pools),
+  };
+};
+
+/**
+ * 同步千层塔冻结池运行时缓存。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把启动预热或冻结写入后的最新前沿与怪物池收口到单一内存缓存，避免读取方各自保留副本。
+ * 2. 不做什么：不写数据库，也不决定缓存装载时机；调用方仍负责在合适阶段调用。
+ *
+ * 输入/输出：
+ * - 输入：已校验完成的冻结前沿与怪物池。
+ * - 输出：无；副作用是覆盖模块内缓存。
+ *
+ * 数据流/状态流：
+ * startup / freezeService -> 本函数 -> resolveTowerFloorByFrozenFrontier -> 统一复用缓存结果。
+ *
+ * 关键边界条件与坑点：
+ * 1. 这里会做深拷贝，避免调用方后续修改 Map/数组把缓存污染掉。
+ * 2. 该缓存只服务当前进程；跨进程一致性仍依赖启动预热与冻结写入口。
+ */
+export const replaceFrozenTowerPoolCache = (
+  result: FrozenTowerPoolLoadResult,
+): void => {
+  frozenTowerPoolCache = cloneFrozenTowerPoolLoadResult(result);
 };
 
 const buildCurrentMonsterDefinitionIndex = (
@@ -248,10 +304,47 @@ export const loadFrozenTowerMonsterPools = async (
 };
 
 export const loadFrozenTowerPool = async (): Promise<FrozenTowerPoolLoadResult> => {
+  if (frozenTowerPoolCache) {
+    return cloneFrozenTowerPoolLoadResult(frozenTowerPoolCache);
+  }
+  if (isDatabaseAccessForbidden()) {
+    throw new Error('千层塔冻结前沿未预热完成');
+  }
   const frontier = await loadFrozenTowerFrontier();
   const pools = await loadFrozenTowerMonsterPools(frontier.frozenFloorMax);
-  return {
+  const result = {
     frontier,
     pools,
   };
+  replaceFrozenTowerPoolCache(result);
+  return cloneFrozenTowerPoolLoadResult(result);
+};
+
+/**
+ * 启动阶段预热千层塔冻结池缓存。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：在允许访问数据库的启动阶段一次性装载冻结前沿与怪物池，供运行期禁 DB 链路复用。
+ * 2. 不做什么：不改变运行期读取接口；业务仍统一调用 `loadFrozenTowerPool`。
+ *
+ * 输入/输出：
+ * - 输入：无。
+ * - 输出：当前已缓存的冻结前沿与怪物池。
+ *
+ * 数据流/状态流：
+ * startupPipeline -> 本函数查 DB -> replaceFrozenTowerPoolCache -> tower overview/start/advance 读取缓存。
+ *
+ * 关键边界条件与坑点：
+ * 1. 缺省前沿会被规范化为 `frozenFloorMax=0`，不能因为空表而跳过缓存写入。
+ * 2. 预热失败必须直接暴露给启动流程，不能静默跳过，否则运行期仍会回到禁 DB 报错。
+ */
+export const warmupFrozenTowerPoolCache = async (): Promise<FrozenTowerPoolLoadResult> => {
+  const frontier = await loadFrozenTowerFrontier();
+  const pools = await loadFrozenTowerMonsterPools(frontier.frozenFloorMax);
+  const result = {
+    frontier,
+    pools,
+  };
+  replaceFrozenTowerPoolCache(result);
+  return cloneFrozenTowerPoolLoadResult(result);
 };

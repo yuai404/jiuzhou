@@ -109,6 +109,43 @@ export const loadPartnerSkillPolicyRows = async (
   return result.rows as PartnerSkillPolicyRow[];
 };
 
+export const loadPartnerSkillPolicyRowsMap = async (
+  partnerIds: number[],
+  forUpdate: boolean,
+): Promise<Map<number, PartnerSkillPolicyRow[]>> => {
+  const normalizedPartnerIds = [...new Set(
+    partnerIds
+      .map((partnerId) => normalizeInteger(partnerId))
+      .filter((partnerId) => partnerId > 0),
+  )];
+  const resultMap = new Map<number, PartnerSkillPolicyRow[]>();
+  if (normalizedPartnerIds.length <= 0) {
+    return resultMap;
+  }
+
+  const lockSql = forUpdate ? 'FOR UPDATE' : '';
+  const result = await query(
+    `
+      SELECT *
+      FROM character_partner_skill_policy
+      WHERE partner_id = ANY($1)
+      ORDER BY partner_id ASC, enabled DESC, priority ASC, id ASC
+      ${lockSql}
+    `,
+    [normalizedPartnerIds],
+  );
+
+  for (const row of result.rows as PartnerSkillPolicyRow[]) {
+    const partnerId = normalizeInteger(row.partner_id);
+    if (partnerId <= 0) continue;
+    const currentRows = resultMap.get(partnerId) ?? [];
+    currentRows.push(row);
+    resultMap.set(partnerId, currentRows);
+  }
+
+  return resultMap;
+};
+
 const buildMergedEntries = (params: {
   availableSkills: PartnerEffectiveSkillEntry[];
   persistedRows: PartnerSkillPolicyRow[];

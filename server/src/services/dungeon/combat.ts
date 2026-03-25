@@ -1,44 +1,41 @@
 /**
  * 秘境战斗（开启/推进/结算）
  *
- * 作用：管理秘境实例的战斗流程，包括开启战斗、推进波次、通关结算。
- * 不做什么：不管理实例的创建/加入/查询。
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：管理秘境实例的开战、推进下一波与通关排队结算，整个请求期只读写在线战斗投影。
+ * 2. 做什么：把人数/境界/体力/次数/可领奖资格统一收口到投影链路，避免秘境热路径再直接触库。
+ * 3. 不做什么：不在这里执行真实 DB 发奖、写 dungeon_record 或写 dungeon_instance 表，这些都交给延迟结算任务。
  *
- * 输入：userId / instanceId。
- * 输出：战斗开启结果 / 推进/结算结果。
+ * 输入/输出：
+ * - 输入：userId、instanceId。
+ * - 输出：秘境当前战斗开启结果、推进结果或通关结束结果。
  *
- * 复用点：通过 service.ts 的 @Transactional 装饰器在事务中执行。
+ * 数据流/状态流：
+ * - start -> 校验投影 -> 开启 battle -> 写回 dungeon projection；
+ * - next -> 读取 battle result -> 更新 dungeon projection -> 必要时排队 deferred settlement task；
+ * - 最终清算 -> onlineBattleSettlementRunner 异步执行真实落库。
  *
- * 边界条件：
- * 1) startDungeonInstance 由调用方 @Transactional 保证事务上下文。
- * 2) nextDungeonInstance 的结算部分在通关时执行锁行+奖励发放+记录写入，需在事务中。
+ * 关键边界条件与坑点：
+ * 1. 秘境实例缺失、投影未预热、角色快照缺失时直接失败，不允许回退 DB。
+ * 2. 通关后必须先更新投影状态再排队结算任务，确保前端立刻读取到 cleared/failed 的最新状态。
  */
 
-import { query } from '../../config/database.js';
+import type { BattleParticipant } from '../battleDropService.js';
 import { getBattleState, startDungeonPVEBattleForDungeonFlow } from '../battle/index.js';
+import { getGameServer } from '../../game/gameServer.js';
+import {
+  applyOnlineBattleCharacterStaminaDelta,
+  createDeferredSettlementTask,
+  type DungeonEntryCountProjectionRecord,
+  getDungeonProjection,
+  getOnlineBattleCharacterSnapshotsByCharacterIds,
+  upsertDungeonProjection,
+} from '../onlineBattleProjectionService.js';
+import { applyStaminaRecoveryByCharacterIds } from '../staminaService.js';
 import { runDungeonStartFlow } from './shared/startFlow.js';
-import { itemService } from '../itemService.js';
-import { sendSystemMail, type MailAttachItem } from '../mailService.js';
-import { recordDungeonClearEvent } from '../taskService.js';
-import { applyStaminaRecoveryTx } from '../staminaService.js';
-import { normalizeAutoDisassembleSetting } from '../autoDisassembleRules.js';
-import {
-  grantRewardItemWithAutoDisassemble,
-  type AutoDisassembleSetting,
-  type PendingMailItem,
-} from '../autoDisassembleRewardService.js';
-import {
-  addCharacterRewardDelta,
-  applyCharacterRewardDeltas,
-  type CharacterRewardDelta,
-} from '../shared/characterRewardSettlement.js';
-import { resolveQualityRankFromName } from '../shared/itemQuality.js';
-import { lockCharacterRewardSettlementTargets } from '../shared/characterRewardTargetLock.js';
-import { getDungeonDifficultyById, getItemDefinitionById } from '../staticConfigLoader.js';
-import { getDungeonDefById } from './shared/configLoader.js';
+import { getDungeonDifficultyById } from '../staticConfigLoader.js';
 import { touchEntryCount, incEntryCount } from './shared/entryCount.js';
 import {
-  parseParticipants,
   buildParticipantLabel,
   getParticipantNicknameMap,
   getUserAndCharacter,
@@ -46,216 +43,262 @@ import {
 import {
   DUNGEON_REWARD_ELIGIBLE_CHARACTER_IDS_FIELD,
   buildDungeonRewardEligibleCharacterIds,
-  hasDungeonRewardEligibleCharacterIdsField,
   selectDungeonRewardEligibleParticipants,
 } from './shared/rewardEligibility.js';
 import { loadDungeonBenefitPolicyMap } from './shared/benefitPolicy.js';
 import { validateDungeonParticipantRealmAccess } from './shared/realmAccess.js';
 import { buildMonsterDefIdsFromWave, getStageAndWave } from './shared/stageData.js';
-import { rollDungeonRewardBundle, mergeDungeonRewardBundle } from './shared/rewards.js';
 import { asObject, asNumber, asString, countPlayerDeaths } from './shared/typeUtils.js';
 import type {
   DungeonInstanceParticipant,
   DungeonInstanceStatus,
-  DungeonInstanceRow,
-  DungeonRewardBundle,
 } from './types.js';
+import { getDungeonDefById } from './shared/configLoader.js';
 import { createScopedLogger } from '../../utils/logger.js';
 import { createSlowOperationLogger } from '../../utils/slowOperationLogger.js';
 
 const dungeonCombatLogger = createScopedLogger('dungeon.combat');
 
-/** 开启秘境战斗（需要事务上下文） */
+type DungeonCombatResponse =
+  | {
+      success: true;
+      data: {
+        instanceId: string;
+        status: DungeonInstanceStatus;
+        battleId?: string;
+        state?: unknown;
+        finished?: boolean;
+      };
+    }
+  | { success: false; message: string };
+
+const buildDeferredSettlementParticipants = async (
+  participants: DungeonInstanceParticipant[],
+): Promise<BattleParticipant[]> => {
+  const snapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(
+    participants.map((participant) => participant.characterId),
+  );
+
+  const out: BattleParticipant[] = [];
+  for (const participant of participants) {
+    const snapshot = snapshots.get(participant.characterId);
+    if (!snapshot) continue;
+    out.push({
+      userId: snapshot.userId,
+      characterId: snapshot.characterId,
+      nickname: snapshot.computed.nickname,
+      realm: snapshot.computed.sub_realm
+        ? `${snapshot.computed.realm}·${snapshot.computed.sub_realm}`
+        : snapshot.computed.realm,
+      fuyuan: Math.max(0, Number(snapshot.computed.fuyuan ?? 1)),
+    });
+  }
+  return out;
+};
+
+/** 开启秘境战斗。 */
 export const startDungeonInstance = async (
   userId: number,
-  instanceId: string
+  instanceId: string,
 ): Promise<
   | {
-    success: true;
-    data: {
-      instanceId: string;
-      status: DungeonInstanceStatus;
-      battleId: string;
-      state: unknown;
-    };
-  }
+      success: true;
+      data: {
+        instanceId: string;
+        status: DungeonInstanceStatus;
+        battleId: string;
+        state: unknown;
+      };
+    }
   | { success: false; message: string }
 > => {
   const user = await getUserAndCharacter(userId);
   if (!user.ok) return { success: false, message: user.message };
 
-  const instRes = await query(`SELECT * FROM dungeon_instance WHERE id = $1 LIMIT 1 FOR UPDATE`, [instanceId]);
-  if (instRes.rows.length === 0) {
+  const projection = await getDungeonProjection(instanceId);
+  if (!projection) {
     return { success: false, message: '秘境实例不存在' };
   }
-  const inst = instRes.rows[0] as DungeonInstanceRow;
+  if (projection.status !== 'preparing') {
+    return { success: false, message: '秘境已开始或已结束' };
+  }
+  if (projection.creatorCharacterId !== user.characterId) {
+    return { success: false, message: '只有创建者可以开始秘境' };
+  }
 
-    if (inst.status !== 'preparing') {
-      return { success: false, message: '秘境已开始或已结束' };
-    }
-    if (inst.creator_id !== user.characterId) {
-      return { success: false, message: '只有创建者可以开始秘境' };
-    }
+  const dungeonDef = getDungeonDefById(projection.dungeonId);
+  if (!dungeonDef) {
+    return { success: false, message: '秘境不存在' };
+  }
+  const difficultyDef = getDungeonDifficultyById(projection.difficultyId);
+  if (!difficultyDef) {
+    return { success: false, message: '秘境难度不存在' };
+  }
 
-    const dungeonDef = getDungeonDefById(inst.dungeon_id);
-    if (!dungeonDef) {
-      return { success: false, message: '秘境不存在' };
-    }
-    const dailyLimit = dungeonDef.daily_limit;
-    const weeklyLimit = dungeonDef.weekly_limit;
-    const minPlayers = dungeonDef.min_players;
-    const maxPlayers = dungeonDef.max_players;
-    const staminaCost = dungeonDef.stamina_cost;
+  const participants = projection.participants.slice();
+  const participantNicknameMap = await getParticipantNicknameMap(participants);
+  if (participants.length < dungeonDef.min_players) {
+    return { success: false, message: `人数不足，需要至少${dungeonDef.min_players}人` };
+  }
+  if (participants.length > dungeonDef.max_players) {
+    return { success: false, message: `人数超限，最多${dungeonDef.max_players}人` };
+  }
 
-    const participants = parseParticipants(inst.participants);
-    const participantNicknameMap = await getParticipantNicknameMap(participants);
-    if (participants.length < minPlayers) {
-      return { success: false, message: `人数不足，需要至少${minPlayers}人` };
-    }
-    if (participants.length > maxPlayers) {
-      return { success: false, message: `人数超限，最多${maxPlayers}人` };
-    }
+  const realmAccess = await validateDungeonParticipantRealmAccess({
+    participants,
+    dungeonMinRealm: dungeonDef.min_realm,
+    difficultyMinRealm: difficultyDef.min_realm ?? null,
+  });
+  if (!realmAccess.success) {
+    return realmAccess;
+  }
 
-    const difficultyDef = getDungeonDifficultyById(inst.difficulty_id);
-    if (!difficultyDef) {
-      return { success: false, message: '秘境难度不存在' };
-    }
+  const participantCharacterIds = participants.map((participant) => participant.characterId);
+  const participantBenefitPolicyMap = await loadDungeonBenefitPolicyMap(participantCharacterIds);
+  await applyStaminaRecoveryByCharacterIds(participantCharacterIds);
+  const participantSnapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(participantCharacterIds);
 
-    const realmAccess = await validateDungeonParticipantRealmAccess({
-      participants,
-      dungeonMinRealm: dungeonDef.min_realm,
-      difficultyMinRealm: difficultyDef.min_realm ?? null,
-    });
-    if (!realmAccess.success) {
-      return realmAccess;
-    }
+  const staminaConsumingParticipants: DungeonInstanceParticipant[] = [];
+  const rewardEligibleParticipantsAtStart: DungeonInstanceParticipant[] = [];
 
-    const participantCharacterIds = [...new Set(
-      participants
-        .map((participant) => Math.floor(Number(participant.characterId)))
-        .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
-    )];
-    const participantBenefitPolicyMap = await loadDungeonBenefitPolicyMap(participantCharacterIds);
-    const staminaConsumingParticipants: DungeonInstanceParticipant[] = [];
-    const rewardEligibleParticipantsAtStart: DungeonInstanceParticipant[] = [];
-    for (const participant of participants) {
-      const benefitPolicy = participantBenefitPolicyMap.get(participant.characterId);
-      const participantLabel = buildParticipantLabel(participant, participantNicknameMap);
-      if (!benefitPolicy) {
-        return { success: false, message: `${participantLabel}秘境设置缺失` };
-      }
-      if (!benefitPolicy.skipStaminaCost) {
-        staminaConsumingParticipants.push(participant);
-      }
-      if (benefitPolicy.rewardEligible) {
-        rewardEligibleParticipantsAtStart.push(participant);
+  for (const participant of participants) {
+    const benefitPolicy = participantBenefitPolicyMap.get(participant.characterId);
+    const snapshot = participantSnapshots.get(participant.characterId);
+    const participantLabel = buildParticipantLabel(participant, participantNicknameMap);
+    if (!benefitPolicy || !snapshot) {
+      return { success: false, message: `${participantLabel}在线战斗快照缺失` };
+    }
+    if (!benefitPolicy.skipStaminaCost) {
+      staminaConsumingParticipants.push(participant);
+      if (snapshot.computed.stamina < dungeonDef.stamina_cost) {
+        return {
+          success: false,
+          message: `${participantLabel}体力不足，需要${dungeonDef.stamina_cost}，当前${snapshot.computed.stamina}`,
+        };
       }
     }
-    const rewardEligibleCharacterIds = buildDungeonRewardEligibleCharacterIds(rewardEligibleParticipantsAtStart);
-
-    for (const p of participants) {
-      const touch = await touchEntryCount(p.characterId, inst.dungeon_id, dailyLimit, weeklyLimit);
-      if (!touch.ok) {
-        return { success: false, message: touch.message };
-      }
+    if (benefitPolicy.rewardEligible) {
+      rewardEligibleParticipantsAtStart.push(participant);
     }
+  }
 
-    const participantStaminaMaxMap = new Map<number, number>();
-    if (staminaCost > 0) {
-      for (const p of staminaConsumingParticipants) {
-        const participantLabel = buildParticipantLabel(p, participantNicknameMap);
-        const staminaState = await applyStaminaRecoveryTx(p.characterId);
-        if (!staminaState) {
-          return { success: false, message: `${participantLabel}不存在` };
-        }
-        const stamina = asNumber(staminaState.stamina, 0);
-        const staminaMax = asNumber(staminaState.maxStamina, 0);
-        participantStaminaMaxMap.set(p.characterId, staminaMax);
-        if (stamina < staminaCost) {
-          return { success: false, message: `${participantLabel}体力不足，需要${staminaCost}，当前${stamina}` };
-        }
-      }
-    }
+  const rewardEligibleCharacterIds = buildDungeonRewardEligibleCharacterIds(rewardEligibleParticipantsAtStart);
+  for (const participant of participants) {
+    const touch = await touchEntryCount(
+      participant.characterId,
+      projection.dungeonId,
+      dungeonDef.daily_limit,
+      dungeonDef.weekly_limit,
+    );
+    if (!touch.ok) return { success: false, message: touch.message };
+  }
 
-    const stageWave = await getStageAndWave(inst.difficulty_id, 1, 1);
-    if (!stageWave.ok) {
-      return { success: false, message: stageWave.message };
-    }
-
-    const monsterDefIds = buildMonsterDefIdsFromWave(stageWave.wave.monsters, 5);
-    if (monsterDefIds.length === 0) {
-      return { success: false, message: '该波次未配置怪物' };
-    }
+  const stageWave = await getStageAndWave(projection.difficultyId, 1, 1);
+  if (!stageWave.ok) {
+    return { success: false, message: stageWave.message };
+  }
+  const monsterDefIds = buildMonsterDefIdsFromWave(stageWave.wave.monsters, 5);
+  if (monsterDefIds.length <= 0) {
+    return { success: false, message: '该波次未配置怪物' };
+  }
 
   return runDungeonStartFlow({
     startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds),
     commitOnBattleStarted: async ({ battleId, state }) => {
-      for (const p of participants) {
-        await incEntryCount(p.characterId, inst.dungeon_id);
+      const startTime = new Date().toISOString();
+      const entryCountSnapshots: DungeonEntryCountProjectionRecord[] = [];
+      for (const participant of participants) {
+        entryCountSnapshots.push(
+          await incEntryCount(participant.characterId, projection.dungeonId),
+        );
       }
-
-      if (staminaCost > 0) {
-        for (const p of staminaConsumingParticipants) {
-          const participantLabel = buildParticipantLabel(p, participantNicknameMap);
-          const staminaMaxRaw = participantStaminaMaxMap.get(p.characterId);
-          const staminaMax = Math.floor(Number(staminaMaxRaw) || 0);
-          if (staminaMax <= 0) {
-            return { success: false, message: `${participantLabel}体力上限数据缺失` };
-          }
-          const updRes = await query(
-            `UPDATE characters
-                SET stamina = stamina - $1,
-                    stamina_recover_at = CASE WHEN stamina >= $3 THEN NOW() ELSE stamina_recover_at END,
-                    updated_at = CURRENT_TIMESTAMP
-              WHERE id = $2 AND stamina >= $1`,
-            [staminaCost, p.characterId, staminaMax]
-          );
-          if ((updRes.rowCount ?? 0) === 0) {
-            return { success: false, message: `${participantLabel}体力扣除失败` };
-          }
+      for (const participant of staminaConsumingParticipants) {
+        const nextSnapshot = await applyOnlineBattleCharacterStaminaDelta(
+          participant.characterId,
+          -dungeonDef.stamina_cost,
+        );
+        if (!nextSnapshot) {
+          return { success: false, message: '体力扣除失败' };
         }
       }
+      const gameServer = getGameServer();
+      for (const participant of staminaConsumingParticipants) {
+        void gameServer.pushCharacterUpdate(participant.userId);
+      }
 
-      await query(
-        `UPDATE dungeon_instance SET status = 'running', start_time = NOW(), current_stage = 1, current_wave = 1 WHERE id = $1`,
-        [instanceId]
+      await upsertDungeonProjection({
+        ...projection,
+        status: 'running',
+        currentStage: 1,
+        currentWave: 1,
+        currentBattleId: battleId,
+        rewardEligibleCharacterIds,
+        startTime,
+        endTime: null,
+      });
+
+      await createDeferredSettlementTask(
+        {
+          battleId,
+          battleType: 'pve',
+          result: 'draw',
+          participants: [],
+          rewardParticipants: [],
+          isDungeonBattle: true,
+          isTowerBattle: false,
+          rewardsPreview: null,
+          battleRewardPlan: null,
+          monsters: [],
+          arenaDelta: null,
+          dungeonContext: {
+            instanceId: projection.instanceId,
+            dungeonId: projection.dungeonId,
+            difficultyId: projection.difficultyId,
+          },
+          dungeonStartConsumption: {
+            instanceId: projection.instanceId,
+            dungeonId: projection.dungeonId,
+            difficultyId: projection.difficultyId,
+            creatorCharacterId: projection.creatorCharacterId,
+            teamId: projection.teamId,
+            currentStage: 1,
+            currentWave: 1,
+            participants: participants.slice(),
+            currentBattleId: battleId,
+            rewardEligibleCharacterIds,
+            startTime,
+            entryCountSnapshots,
+            staminaConsumptions: staminaConsumingParticipants.map((participant) => ({
+              characterId: participant.characterId,
+              amount: dungeonDef.stamina_cost,
+            })),
+          },
+          dungeonSettlement: null,
+          session: null,
+        },
+        {
+          taskId: `dungeon-start:${projection.instanceId}`,
+        },
       );
 
-      await query(
-        `
-          UPDATE dungeon_instance
-          SET instance_data = jsonb_set(
-            jsonb_set(COALESCE(instance_data, '{}'::jsonb), '{currentBattleId}', to_jsonb($1::text), true),
-            '{${DUNGEON_REWARD_ELIGIBLE_CHARACTER_IDS_FIELD}}',
-            to_jsonb($2::int[]),
-            true
-          )
-          WHERE id = $3
-        `,
-        [battleId, rewardEligibleCharacterIds, instanceId]
-      );
-      return { success: true, data: { instanceId, status: 'running' as DungeonInstanceStatus, battleId, state } };
+      return {
+        success: true,
+        data: {
+          instanceId,
+          status: 'running' as DungeonInstanceStatus,
+          battleId,
+          state,
+        },
+      };
     },
   });
 };
 
-/** 推进秘境实例（下一波次/通关结算，需要事务上下文） */
+/** 推进秘境实例（下一波次/通关结算）。 */
 export const nextDungeonInstance = async (
   userId: number,
-  instanceId: string
-): Promise<
-  | {
-    success: true;
-    data: {
-      instanceId: string;
-      status: DungeonInstanceStatus;
-      battleId?: string;
-      state?: unknown;
-      finished?: boolean;
-    };
-  }
-  | { success: false; message: string }
-> => {
+  instanceId: string,
+): Promise<DungeonCombatResponse> => {
   const slowLogger = createSlowOperationLogger({
     label: 'dungeon.nextDungeonInstance',
     fields: {
@@ -263,504 +306,218 @@ export const nextDungeonInstance = async (
       instanceId,
     },
   });
-  const flushAndReturn = <
-    T extends
-      | {
-        success: true;
-        data: {
-          instanceId: string;
-          status: DungeonInstanceStatus;
-          battleId?: string;
-          state?: unknown;
-          finished?: boolean;
-        };
-      }
-      | { success: false; message: string }
-  >(response: T, fields?: Record<string, boolean | number | string | null | undefined>): T => {
+  const flushAndReturn = <T extends DungeonCombatResponse>(
+    response: T,
+    fields?: Record<string, boolean | number | string | null | undefined>,
+  ): T => {
     slowLogger.flush({
       success: response.success,
       ...(fields ?? {}),
     });
     return response;
   };
+
   const user = await getUserAndCharacter(userId);
-  slowLogger.mark('getUserAndCharacter', {
-    userLoaded: user.ok,
-  });
+  slowLogger.mark('getUserAndCharacter', { userLoaded: user.ok });
   if (!user.ok) {
-    return flushAndReturn({ success: false, message: user.message }, {
-      reason: 'user_missing',
-    });
+    return flushAndReturn({ success: false, message: user.message }, { reason: 'user_missing' });
   }
 
-  const instRes = await query(`SELECT * FROM dungeon_instance WHERE id = $1 LIMIT 1 FOR UPDATE`, [instanceId]);
-  slowLogger.mark('lockDungeonInstance', {
-    instanceFound: instRes.rows.length > 0,
+  const projection = await getDungeonProjection(instanceId);
+  slowLogger.mark('getDungeonProjection', { projectionLoaded: Boolean(projection) });
+  if (!projection) {
+    return flushAndReturn({ success: false, message: '秘境实例不存在' }, { reason: 'instance_missing' });
+  }
+  if (projection.status !== 'running') {
+    return flushAndReturn({ success: false, message: '秘境未在进行中' }, { reason: 'instance_not_running' });
+  }
+  if (projection.creatorCharacterId !== user.characterId) {
+    return flushAndReturn({ success: false, message: '只有创建者可以推进秘境' }, { reason: 'not_creator' });
+  }
+  if (!projection.participants.some((participant) => participant.userId === userId)) {
+    return flushAndReturn({ success: false, message: '无权访问该秘境' }, { reason: 'participant_forbidden' });
+  }
+
+  const rewardEligibleParticipants = selectDungeonRewardEligibleParticipants(
+    projection.participants,
+    {
+      [DUNGEON_REWARD_ELIGIBLE_CHARACTER_IDS_FIELD]: projection.rewardEligibleCharacterIds,
+    },
+  );
+  if (
+    projection.participants.length > 0
+    && projection.rewardEligibleCharacterIds.length > 0
+    && rewardEligibleParticipants.length <= 0
+  ) {
+    dungeonCombatLogger.warn({
+      instanceId,
+      participantCount: projection.participants.length,
+      rewardEligibleCharacterIdCount: projection.rewardEligibleCharacterIds.length,
+    }, '实例可领奖名单为空，结算奖励将跳过');
+  }
+
+  const currentBattleId = projection.currentBattleId;
+  if (!currentBattleId) {
+    return flushAndReturn({ success: false, message: '当前战斗不存在' }, { reason: 'current_battle_missing' });
+  }
+
+  const battleStateRes = await getBattleState(currentBattleId);
+  slowLogger.mark('getBattleState', {
+    battleStateLoaded: battleStateRes.success,
+    currentBattleId,
   });
-  if (instRes.rows.length === 0) {
-    return flushAndReturn({ success: false, message: '秘境实例不存在' }, {
-      reason: 'instance_missing',
-    });
+  if (!battleStateRes.success) {
+    return flushAndReturn(
+      { success: false, message: battleStateRes.message || '获取战斗状态失败' },
+      { reason: 'battle_state_failed', currentBattleId },
+    );
   }
-  const inst = instRes.rows[0] as DungeonInstanceRow;
 
-    if (inst.status !== 'running') {
-      return flushAndReturn({ success: false, message: '秘境未在进行中' }, {
-        reason: 'instance_not_running',
-      });
-    }
-    if (inst.creator_id !== user.characterId) {
-      return flushAndReturn({ success: false, message: '只有创建者可以推进秘境' }, {
-        reason: 'not_creator',
-      });
-    }
+  const battleData = asObject(battleStateRes.data) ?? {};
+  const result = asString(battleData.result, '');
+  if (result !== 'attacker_win' && result !== 'defender_win' && result !== 'draw') {
+    return flushAndReturn({ success: false, message: '战斗未结束' }, { reason: 'battle_not_finished' });
+  }
 
-    const participants = parseParticipants(inst.participants);
-    if (!participants.some((p) => p.userId === userId)) {
-      return flushAndReturn({ success: false, message: '无权访问该秘境' }, {
-        reason: 'participant_forbidden',
-      });
-    }
-
-    const dataObj = asObject(inst.instance_data) ?? {};
-    const rewardEligibleParticipants = selectDungeonRewardEligibleParticipants(participants, dataObj);
-    if (
-      participants.length > 0 &&
-      rewardEligibleParticipants.length === 0 &&
-      !hasDungeonRewardEligibleCharacterIdsField(dataObj)
-    ) {
-      dungeonCombatLogger.warn({
-        instanceId,
-        participantCount: participants.length,
-      }, '实例可领奖名单为空，结算奖励将跳过');
-    }
-    const currentBattleId = typeof dataObj.currentBattleId === 'string' ? dataObj.currentBattleId : '';
-    if (!currentBattleId) {
-      return flushAndReturn({ success: false, message: '当前战斗不存在' }, {
-        reason: 'current_battle_missing',
-      });
-    }
-
-    const battleStateRes = await getBattleState(currentBattleId);
-    slowLogger.mark('getBattleState', {
-      battleStateLoaded: battleStateRes.success,
-      currentBattleId,
+  if (result !== 'attacker_win') {
+    await upsertDungeonProjection({
+      ...projection,
+      status: 'failed',
+      currentBattleId: null,
+      endTime: new Date().toISOString(),
     });
-    if (!battleStateRes.success) {
-      return flushAndReturn(
-        { success: false, message: battleStateRes.message || '获取战斗状态失败' },
-        {
-          reason: 'battle_state_failed',
-          currentBattleId,
-        },
-      );
-    }
-    const battleData = asObject(battleStateRes.data) ?? {};
-    const result = asString(battleData.result, '');
-    if (result !== 'attacker_win' && result !== 'defender_win' && result !== 'draw') {
-      return flushAndReturn({ success: false, message: '战斗未结束' }, {
-        reason: 'battle_not_finished',
-        currentBattleId,
-      });
-    }
+    slowLogger.mark('markDungeonFailed');
+    return flushAndReturn(
+      { success: true, data: { instanceId, status: 'failed', finished: true } },
+      { result, finished: true },
+    );
+  }
 
-    if (result !== 'attacker_win') {
-      await query(`UPDATE dungeon_instance SET status = 'failed', end_time = NOW() WHERE id = $1`, [instanceId]);
-      slowLogger.mark('markDungeonFailed');
-      return flushAndReturn(
-        { success: true, data: { instanceId, status: 'failed', finished: true } },
-        {
-          result,
-          finished: true,
-        },
-      );
-    }
+  const stageWave = await getStageAndWave(projection.difficultyId, projection.currentStage, projection.currentWave);
+  slowLogger.mark('getStageAndWave', {
+    stageLoaded: stageWave.ok,
+    currentStage: projection.currentStage,
+    currentWave: projection.currentWave,
+  });
+  if (!stageWave.ok) {
+    return flushAndReturn({ success: false, message: stageWave.message }, { reason: 'stage_wave_missing' });
+  }
 
-    const currentStage = asNumber(inst.current_stage, 1);
-    const currentWave = asNumber(inst.current_wave, 1);
-    const stageWave = await getStageAndWave(inst.difficulty_id, currentStage, currentWave);
-    slowLogger.mark('getStageAndWave', {
-      stageLoaded: stageWave.ok,
-      currentStage,
-      currentWave,
+  let nextStage = projection.currentStage;
+  let nextWave = projection.currentWave + 1;
+  if (nextWave > stageWave.maxWaveIndexInStage) {
+    nextStage = projection.currentStage + 1;
+    nextWave = 1;
+  }
+
+  if (nextStage > stageWave.stageCount) {
+    const logs = battleData.logs;
+    const deathCount = countPlayerDeaths(logs);
+    const stats = asObject(battleData.stats) ?? {};
+    const attackerStats = asObject(stats.attacker) ?? {};
+    const totalDamage = Math.floor(asNumber(attackerStats.damageDealt, 0));
+    const startAtMs = projection.startTime ? new Date(projection.startTime).getTime() : Date.now();
+    const timeSpentSec = Math.max(0, Math.floor((Date.now() - startAtMs) / 1000));
+
+    await upsertDungeonProjection({
+      ...projection,
+      status: 'cleared',
+      currentBattleId: null,
+      endTime: new Date().toISOString(),
     });
-    if (!stageWave.ok) {
-      return flushAndReturn({ success: false, message: stageWave.message }, {
-        reason: 'stage_wave_missing',
-      });
-    }
 
-    let nextStage = currentStage;
-    let nextWave = currentWave + 1;
-    if (nextWave > stageWave.maxWaveIndexInStage) {
-      nextStage = currentStage + 1;
-      nextWave = 1;
-    }
-
-    if (nextStage > stageWave.stageCount) {
-      const logs = battleData.logs;
-      const deathCount = countPlayerDeaths(logs);
-      const stats = asObject(battleData.stats) ?? {};
-      const attackerStats = asObject(stats.attacker) ?? {};
-      const totalDamage = Math.floor(asNumber(attackerStats.damageDealt, 0));
-      const timeSpentSec = Math.max(0, Math.floor((Date.now() - new Date(inst.start_time || inst.created_at).getTime()) / 1000));
-      const pendingMailByCharacter = new Map<number, { userId: number; items: MailAttachItem[] }>();
-      const instLockRes = await query(`SELECT status FROM dungeon_instance WHERE id = $1 LIMIT 1 FOR UPDATE`, [instanceId]);
-      if (instLockRes.rows.length === 0) {
-        return { success: false, message: '秘境实例不存在' };
-      }
-      const lockedStatus = asString(instLockRes.rows[0]?.status, '');
-      if (lockedStatus !== 'running') {
-        if (lockedStatus === 'cleared' || lockedStatus === 'failed' || lockedStatus === 'abandoned') {
-          return { success: true, data: { instanceId, status: lockedStatus as DungeonInstanceStatus, finished: true } };
-        }
-        return { success: false, message: '秘境状态异常，无法结算' };
-      }
-
-        await query(
-          `UPDATE dungeon_instance SET status = 'cleared', end_time = NOW(), time_spent_sec = $2, total_damage = $3, death_count = $4 WHERE id = $1`,
-          [instanceId, timeSpentSec, totalDamage, deathCount]
-        );
-
-        const difficultyDef = getDungeonDifficultyById(inst.difficulty_id);
-        const firstClearRewardConfig = difficultyDef?.first_clear_rewards ?? {};
-        const participantCharacterIds = [...new Set(
-          rewardEligibleParticipants
-            .map((p) => Number(p.characterId))
-            .filter((id) => Number.isFinite(id) && id > 0)
-        )].sort((a, b) => a - b);
-        const clearCountMap = new Map<number, number>();
-        const autoDisassembleSettings = new Map<number, AutoDisassembleSetting>();
-        const pendingCharacterRewardDeltas = new Map<number, CharacterRewardDelta>();
-        const itemMetaCache = new Map<
-          string,
-          {
-            name: string;
-            category: string;
-            subCategory: string | null;
-            effectDefs: unknown;
-            qualityRank: number;
-            disassemblable: boolean | null;
-          }
-        >();
-
-        await lockCharacterRewardSettlementTargets(participantCharacterIds);
-
-        const appendGrantedItem = (
-          list: Array<{ item_def_id: string; qty: number; item_ids: number[] }>,
-          itemDefId: string,
-          qty: number,
-          itemIds: number[]
-        ) => {
-          const normalizedQty = Math.max(0, Math.floor(qty));
-          if (normalizedQty <= 0) return;
-          const safeItemIds = itemIds.filter((id) => Number.isInteger(id) && id > 0);
-          const existing = list.find((item) => item.item_def_id === itemDefId);
-          if (existing) {
-            existing.qty += normalizedQty;
-            if (safeItemIds.length > 0) {
-              existing.item_ids.push(...safeItemIds);
-            }
-            return;
-          }
-          list.push({
-            item_def_id: itemDefId,
-            qty: normalizedQty,
-            item_ids: safeItemIds,
-          });
-        };
-
-        const appendPendingMailItems = (characterId: number, userId: number, items: PendingMailItem[]) => {
-          if (items.length <= 0) return;
-          const pending = pendingMailByCharacter.get(characterId) || { userId, items: [] as MailAttachItem[] };
-          for (const item of items) {
-            const targetBindType = item.options?.bindType || 'none';
-            const targetEquipOptionsKey = JSON.stringify(item.options?.equipOptions || null);
-            const existing = pending.items.find((x) => {
-              const bindType = x.options?.bindType || 'none';
-              const equipOptionsKey = JSON.stringify(x.options?.equipOptions || null);
-              return x.item_def_id === item.item_def_id && bindType === targetBindType && equipOptionsKey === targetEquipOptionsKey;
-            });
-            if (existing) {
-              existing.qty += item.qty;
-              continue;
-            }
-            pending.items.push({
-              item_def_id: item.item_def_id,
-              qty: item.qty,
-              ...(item.options ? { options: { ...item.options } } : {}),
-            });
-          }
-          pendingMailByCharacter.set(characterId, pending);
-        };
-
-        const getItemMeta = async (itemDefId: string): Promise<{
-          name: string;
-          category: string;
-          subCategory: string | null;
-          effectDefs: unknown;
-          qualityRank: number;
-          disassemblable: boolean | null;
-        }> => {
-          const cached = itemMetaCache.get(itemDefId);
-          if (cached) return cached;
-          const row = getItemDefinitionById(itemDefId);
-          const meta = {
-            name: typeof row?.name === 'string' && row.name.length > 0 ? row.name : itemDefId,
-            category: typeof row?.category === 'string' ? row.category : '',
-            subCategory: typeof row?.sub_category === 'string' && row.sub_category.length > 0 ? row.sub_category : null,
-            effectDefs: row?.effect_defs ?? null,
-            qualityRank: resolveQualityRankFromName(row?.quality, 1),
-            disassemblable:
-              typeof row?.disassemblable === 'boolean' ? row.disassemblable : null,
-          };
-          itemMetaCache.set(itemDefId, meta);
-          return meta;
-        };
-
-        if (participantCharacterIds.length > 0) {
-          const clearCountRes = await query(
-            `
-              SELECT character_id, COUNT(1)::int AS cnt
-              FROM dungeon_record
-              WHERE character_id = ANY($1)
-                AND dungeon_id = $2
-                AND difficulty_id = $3
-                AND result = 'cleared'
-              GROUP BY character_id
-            `,
-            [participantCharacterIds, inst.dungeon_id, inst.difficulty_id]
-          );
-          for (const row of clearCountRes.rows as Array<{ character_id: unknown; cnt: unknown }>) {
-            clearCountMap.set(asNumber(row.character_id, 0), asNumber(row.cnt, 0));
-          }
-
-          const settingRes = await query(
-            `
-              SELECT id, auto_disassemble_enabled, auto_disassemble_rules
-              FROM characters
-              WHERE id = ANY($1)
-            `,
-            [participantCharacterIds]
-          );
-          for (const row of settingRes.rows as Array<{
-            id: unknown;
-            auto_disassemble_enabled: boolean | null;
-            auto_disassemble_rules: unknown;
-          }>) {
-            const id = asNumber(row.id, 0);
-            if (!Number.isFinite(id) || id <= 0) continue;
-            autoDisassembleSettings.set(
-              id,
-              normalizeAutoDisassembleSetting({
-                enabled: row.auto_disassemble_enabled,
-                rules: row.auto_disassemble_rules,
-              })
-            );
-          }
-        }
-
-        for (const p of rewardEligibleParticipants) {
-          const characterId = Number(p.characterId);
-          if (!Number.isFinite(characterId) || characterId <= 0) continue;
-          let rewardBundle: DungeonRewardBundle = { exp: 0, silver: 0, items: [] };
-
-          const isFirstClear = asNumber(clearCountMap.get(characterId), 0) <= 0;
-          if (isFirstClear) {
-            rewardBundle = mergeDungeonRewardBundle(
-              rewardBundle,
-              rollDungeonRewardBundle(firstClearRewardConfig, 1)
-            );
-          }
-
-          addCharacterRewardDelta(pendingCharacterRewardDeltas, characterId, {
-            exp: rewardBundle.exp,
-            silver: rewardBundle.silver,
-          });
-
-          const autoDisassembleSetting =
-            autoDisassembleSettings.get(characterId) ||
-            normalizeAutoDisassembleSetting({ enabled: false, rules: undefined });
-          const grantedItems: Array<{ item_def_id: string; qty: number; item_ids: number[] }> = [];
-          let autoDisassembleSilverGained = 0;
-          for (const rewardItem of rewardBundle.items) {
-            const itemMeta = await getItemMeta(rewardItem.itemDefId);
-            const grantResult = await grantRewardItemWithAutoDisassemble({
-              characterId,
-              itemDefId: rewardItem.itemDefId,
-              qty: rewardItem.qty,
-              ...(rewardItem.bindType ? { bindType: rewardItem.bindType } : {}),
-              itemMeta: {
-                itemName: itemMeta.name,
-                category: itemMeta.category,
-                subCategory: itemMeta.subCategory,
-                effectDefs: itemMeta.effectDefs,
-                qualityRank: itemMeta.qualityRank,
-                disassemblable:
-                  typeof itemMeta.disassemblable === 'boolean'
-                    ? itemMeta.disassemblable
-                    : null,
-              },
-              autoDisassembleSetting,
-              sourceObtainedFrom: 'dungeon_clear_reward',
-              createItem: async ({ itemDefId, qty, bindType, obtainedFrom, equipOptions }) => {
-                return itemService.createItem(p.userId, characterId, itemDefId, qty, {
-                  location: 'bag',
-                  obtainedFrom,
-                  ...(bindType ? { bindType } : {}),
-                  ...(equipOptions ? { equipOptions } : {}),
-                });
-              },
-              addSilver: async (ownerCharacterId, silverGain) => {
-                const safeSilver = Math.max(0, Math.floor(Number(silverGain) || 0));
-                if (safeSilver <= 0) return { success: true, message: '无需增加银两' };
-                addCharacterRewardDelta(pendingCharacterRewardDeltas, ownerCharacterId, {
-                  silver: safeSilver,
-                });
-                return { success: true, message: '银两增加成功' };
-              },
-            });
-
-            for (const warning of grantResult.warnings) {
-              dungeonCombatLogger.warn({
-                instanceId,
-                characterId,
-                warning,
-              }, '秘境结算发奖失败');
-            }
-            for (const granted of grantResult.grantedItems) {
-              appendGrantedItem(grantedItems, granted.itemDefId, granted.qty, granted.itemIds);
-            }
-            appendPendingMailItems(characterId, p.userId, grantResult.pendingMailItems);
-            if (grantResult.gainedSilver > 0) {
-              autoDisassembleSilverGained += grantResult.gainedSilver;
-            }
-          }
-
-          const rewardsPayload = {
-            exp: rewardBundle.exp,
-            silver: rewardBundle.silver + autoDisassembleSilverGained,
-            items: grantedItems,
-            is_first_clear: isFirstClear,
-          };
-
-          await query(
-            `
-              INSERT INTO dungeon_record (character_id, dungeon_id, difficulty_id, instance_id, result, time_spent_sec, damage_dealt, death_count, rewards, is_first_clear)
-              VALUES ($1, $2, $3, $4, 'cleared', $5, $6, $7, $8::jsonb, $9)
-            `,
-            [
-              characterId,
-              inst.dungeon_id,
-              inst.difficulty_id,
-              instanceId,
-              timeSpentSec,
-              totalDamage,
-              deathCount,
-              JSON.stringify(rewardsPayload),
-              isFirstClear,
-            ]
-          );
-        }
-
-        for (const [receiverCharacterId, entry] of pendingMailByCharacter.entries()) {
-          const chunkSize = 10;
-          for (let i = 0; i < entry.items.length; i += chunkSize) {
-            const chunk = entry.items.slice(i, i + chunkSize);
-            const mailRes = await sendSystemMail(
-              entry.userId,
-              receiverCharacterId,
-              '秘境通关奖励补发',
-              '由于背包已满，部分秘境通关奖励已通过邮件补发，请及时领取。',
-              { items: chunk },
-              30
-            );
-            if (!mailRes.success) {
-              dungeonCombatLogger.warn({
-                instanceId,
-                receiverCharacterId,
-                message: mailRes.message,
-              }, '秘境奖励补发邮件发送失败');
-            }
-          }
-        }
-
-      // 任务次数按“可领奖参与者”统计，确保免体力模式不会吃到额外收益。
-      const taskEventCharacterIds = buildDungeonRewardEligibleCharacterIds(rewardEligibleParticipants);
-      for (const characterId of taskEventCharacterIds) {
-        await recordDungeonClearEvent(characterId, inst.dungeon_id, 1, inst.difficulty_id);
-      }
-
-      await applyCharacterRewardDeltas(pendingCharacterRewardDeltas);
-      slowLogger.mark('finalClearSettlement', {
-        rewardParticipantCount: rewardEligibleParticipants.length,
-      });
-
-      return flushAndReturn(
-        { success: true, data: { instanceId, status: 'cleared', finished: true } },
-        {
-          result,
-          finished: true,
-          rewardParticipantCount: rewardEligibleParticipants.length,
+    await createDeferredSettlementTask(
+      {
+        battleId: currentBattleId,
+        battleType: 'pve',
+        result: 'attacker_win',
+        participants: await buildDeferredSettlementParticipants(projection.participants),
+        rewardParticipants: await buildDeferredSettlementParticipants(rewardEligibleParticipants),
+        isDungeonBattle: true,
+        isTowerBattle: false,
+        rewardsPreview: null,
+        battleRewardPlan: null,
+        monsters: [],
+        arenaDelta: null,
+        dungeonContext: {
+          instanceId: projection.instanceId,
+          dungeonId: projection.dungeonId,
+          difficultyId: projection.difficultyId,
         },
-      );
-    }
-
-    const nextStageWave = await getStageAndWave(inst.difficulty_id, nextStage, nextWave);
-    slowLogger.mark('getNextStageAndWave', {
-      stageLoaded: nextStageWave.ok,
-      nextStage,
-      nextWave,
-    });
-    if (!nextStageWave.ok) {
-      return flushAndReturn({ success: false, message: nextStageWave.message }, {
-        reason: 'next_stage_wave_missing',
-      });
-    }
-
-    const monsterDefIds = buildMonsterDefIdsFromWave(nextStageWave.wave.monsters, 5);
-    if (monsterDefIds.length === 0) {
-      return flushAndReturn({ success: false, message: '该波次未配置怪物' }, {
-        reason: 'monster_wave_empty',
-      });
-    }
-
-    const response = await runDungeonStartFlow({
-      startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds),
-      commitOnBattleStarted: async ({ battleId, state }) => {
-        await query(`UPDATE dungeon_instance SET current_stage = $2, current_wave = $3 WHERE id = $1`, [
-          instanceId,
-          nextStage,
-          nextWave,
-        ]);
-
-        await query(
-          `UPDATE dungeon_instance SET instance_data = jsonb_set(COALESCE(instance_data, '{}'::jsonb), '{currentBattleId}', to_jsonb($1::text), true) WHERE id = $2`,
-          [battleId, instanceId]
-        );
-
-        return {
-          success: true,
-          data: {
-            instanceId,
-            status: 'running' as DungeonInstanceStatus,
-            battleId,
-            state,
-          },
-        };
+        dungeonStartConsumption: null,
+        dungeonSettlement: {
+          instanceId: projection.instanceId,
+          dungeonId: projection.dungeonId,
+          difficultyId: projection.difficultyId,
+          timeSpentSec,
+          totalDamage,
+          deathCount,
+        },
+        session: null,
       },
+      {
+        taskId: `dungeon-clear:${projection.instanceId}`,
+      },
+    );
+
+    slowLogger.mark('enqueueDungeonClearSettlement', {
+      rewardParticipantCount: rewardEligibleParticipants.length,
     });
-    slowLogger.mark('runDungeonStartFlow', {
-      battleStarted: Boolean(response.success && response.data?.battleId),
-      nextStage,
-      nextWave,
-    });
-    const dungeonFlowFinished =
-      response.success && 'finished' in response.data
-        ? Boolean(response.data.finished)
-        : false;
-    return flushAndReturn(response, {
-      result,
-      finished: dungeonFlowFinished,
-    });
+    return flushAndReturn(
+      { success: true, data: { instanceId, status: 'cleared', finished: true } },
+      { result, finished: true, rewardParticipantCount: rewardEligibleParticipants.length },
+    );
+  }
+
+  const nextStageWave = await getStageAndWave(projection.difficultyId, nextStage, nextWave);
+  slowLogger.mark('getNextStageAndWave', {
+    stageLoaded: nextStageWave.ok,
+    nextStage,
+    nextWave,
+  });
+  if (!nextStageWave.ok) {
+    return flushAndReturn({ success: false, message: nextStageWave.message }, { reason: 'next_stage_wave_missing' });
+  }
+
+  const monsterDefIds = buildMonsterDefIdsFromWave(nextStageWave.wave.monsters, 5);
+  if (monsterDefIds.length <= 0) {
+    return flushAndReturn({ success: false, message: '该波次未配置怪物' }, { reason: 'monster_wave_empty' });
+  }
+
+  const response = await runDungeonStartFlow({
+    startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds),
+    commitOnBattleStarted: async ({ battleId, state }) => {
+      await upsertDungeonProjection({
+        ...projection,
+        status: 'running',
+        currentStage: nextStage,
+        currentWave: nextWave,
+        currentBattleId: battleId,
+      });
+
+      return {
+        success: true,
+        data: {
+          instanceId,
+          status: 'running' as DungeonInstanceStatus,
+          battleId,
+          state,
+        },
+      };
+    },
+  });
+
+  slowLogger.mark('runDungeonStartFlow', {
+    battleStarted: Boolean(response.success && response.data?.battleId),
+    nextStage,
+    nextWave,
+  });
+  const dungeonFlowFinished =
+    response.success && 'finished' in response.data
+      ? Boolean(response.data.finished)
+      : false;
+  return flushAndReturn(response, {
+    result,
+    finished: dungeonFlowFinished,
+  });
 };

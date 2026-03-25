@@ -90,9 +90,24 @@ const normalizeInteger = (
   return Math.max(minimum, Math.floor(parsed));
 };
 
-export const getTechniqueLayerStaticRows = (): TechniqueLayerStaticRow[] => {
+type TechniqueLayerStaticSnapshot = {
+  byTechniqueId: ReadonlyMap<string, readonly TechniqueLayerStaticRow[]>;
+  rows: readonly TechniqueLayerStaticRow[];
+  source: readonly ReturnType<typeof getTechniqueLayerDefinitions>[number][];
+};
+
+let techniqueLayerStaticSnapshot: TechniqueLayerStaticSnapshot | null = null;
+
+const buildTechniqueLayerStaticSnapshot = (): TechniqueLayerStaticSnapshot => {
+  const source = getTechniqueLayerDefinitions();
+  if (techniqueLayerStaticSnapshot?.source === source) {
+    return techniqueLayerStaticSnapshot;
+  }
+
   const rows: TechniqueLayerStaticRow[] = [];
-  for (const entry of getTechniqueLayerDefinitions()) {
+  const byTechniqueId = new Map<string, TechniqueLayerStaticRow[]>();
+
+  for (const entry of source) {
     if (entry.enabled === false) continue;
     const techniqueId = typeof entry.technique_id === 'string' ? entry.technique_id.trim() : '';
     const layerRaw = Number(entry.layer);
@@ -122,7 +137,7 @@ export const getTechniqueLayerStaticRows = (): TechniqueLayerStaticRow[] => {
           .filter((skillId): skillId is string => skillId.length > 0)
       : [];
 
-    rows.push({
+    const row: TechniqueLayerStaticRow = {
       techniqueId,
       layer: Math.floor(layerRaw),
       costSpiritStones: Math.max(0, Math.floor(Number(entry.cost_spirit_stones ?? 0))),
@@ -135,9 +150,28 @@ export const getTechniqueLayerStaticRows = (): TechniqueLayerStaticRow[] => {
         typeof entry.required_realm === 'string' && entry.required_realm.trim().length > 0
           ? entry.required_realm.trim()
           : null,
-    });
+    };
+
+    rows.push(row);
+    const currentRows = byTechniqueId.get(techniqueId) ?? [];
+    currentRows.push(row);
+    byTechniqueId.set(techniqueId, currentRows);
   }
-  return rows;
+
+  for (const techniqueRows of byTechniqueId.values()) {
+    techniqueRows.sort((left, right) => left.layer - right.layer);
+  }
+
+  techniqueLayerStaticSnapshot = {
+    byTechniqueId,
+    rows,
+    source,
+  };
+  return techniqueLayerStaticSnapshot;
+};
+
+export const getTechniqueLayerStaticRows = (): TechniqueLayerStaticRow[] => {
+  return [...buildTechniqueLayerStaticSnapshot().rows];
 };
 
 export const getTechniqueLayersByTechniqueIdStatic = (
@@ -145,9 +179,7 @@ export const getTechniqueLayersByTechniqueIdStatic = (
 ): TechniqueLayerStaticRow[] => {
   const normalizedTechniqueId = String(techniqueId || '').trim();
   if (!normalizedTechniqueId) return [];
-  return getTechniqueLayerStaticRows()
-    .filter((entry) => entry.techniqueId === normalizedTechniqueId)
-    .sort((left, right) => left.layer - right.layer);
+  return [...(buildTechniqueLayerStaticSnapshot().byTechniqueId.get(normalizedTechniqueId) ?? [])];
 };
 
 export const getTechniqueLayersByTechniqueIdsStatic = (
@@ -161,9 +193,8 @@ export const getTechniqueLayersByTechniqueIdsStatic = (
     ),
   );
   if (normalizedTechniqueIds.length <= 0) return [];
-  return normalizedTechniqueIds.flatMap((techniqueId) =>
-    getTechniqueLayersByTechniqueIdStatic(techniqueId),
-  );
+  const byTechniqueId = buildTechniqueLayerStaticSnapshot().byTechniqueId;
+  return normalizedTechniqueIds.flatMap((techniqueId) => [...(byTechniqueId.get(techniqueId) ?? [])]);
 };
 
 export const buildTechniqueSkillUpgradeCountMap = (

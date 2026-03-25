@@ -19,6 +19,11 @@
  */
 
 import type { TowerBattleRuntimeRecord } from './types.js';
+import {
+  deleteTowerRuntimeProjection,
+  getTowerRuntimeProjection,
+  upsertTowerRuntimeProjection,
+} from '../onlineBattleProjectionService.js';
 
 const towerBattleRuntimeByBattleId = new Map<string, TowerBattleRuntimeRecord>();
 
@@ -26,6 +31,7 @@ export const registerTowerBattleRuntime = (
   runtime: TowerBattleRuntimeRecord,
 ): TowerBattleRuntimeRecord => {
   towerBattleRuntimeByBattleId.set(runtime.battleId, runtime);
+  void upsertTowerRuntimeProjection(runtime);
   return runtime;
 };
 
@@ -35,6 +41,18 @@ export const getTowerBattleRuntime = (
   return towerBattleRuntimeByBattleId.get(battleId) ?? null;
 };
 
+export const loadTowerBattleRuntime = async (
+  battleId: string,
+): Promise<TowerBattleRuntimeRecord | null> => {
+  const cached = getTowerBattleRuntime(battleId);
+  if (cached) return cached;
+  const projection = await getTowerRuntimeProjection(battleId);
+  if (!projection) return null;
+  towerBattleRuntimeByBattleId.set(battleId, projection);
+  return projection;
+};
+
 export const deleteTowerBattleRuntime = (battleId: string): boolean => {
+  void deleteTowerRuntimeProjection(battleId);
   return towerBattleRuntimeByBattleId.delete(battleId);
 };

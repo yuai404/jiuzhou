@@ -6,6 +6,7 @@ import { clearExpiredEquippedPvpWeeklyTitlesTx, grantExpiringTitleTx } from './a
 import { sendSystemMail } from './mailService.js';
 import { getTitleDefinitions } from './staticConfigLoader.js';
 import { withSessionAdvisoryLock } from './shared/sessionAdvisoryLock.js';
+import { flushOnlineBattleSettlementTasks } from './onlineBattleSettlementRunner.js';
 
 /**
  * 竞技场周结算服务（每周一 00:00，Asia/Shanghai）
@@ -217,6 +218,7 @@ class ArenaWeeklySettlementService {
    * - 若从未结算过，首轮仅从"上一个完整周"开始，避免首次上线回溯历史全部周。
    */
   private async collectPendingWeekStarts(): Promise<string[]> {
+    await flushOnlineBattleSettlementTasks({ onlyArena: true });
     const [boundary, lastRes] = await Promise.all([
       this.getWeekBoundary(),
       query(`SELECT MAX(week_start_local_date) AS last_week_start_local_date FROM arena_weekly_settlement`),

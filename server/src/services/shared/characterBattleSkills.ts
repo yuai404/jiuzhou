@@ -23,11 +23,13 @@
 import { query } from '../../config/database.js';
 import {
   loadCharacterUnlockedSkillEntries,
+  loadCharacterUnlockedSkillEntriesMap,
   type CharacterAvailableSkillEntry,
 } from './characterAvailableSkills.js';
 import { isManualSkillTriggerType } from '../../shared/skillTriggerType.js';
 
 type CharacterSkillSlotRow = {
+  character_id: number;
   skill_id: string | null;
 };
 
@@ -40,17 +42,58 @@ const normalizeSkillId = (value: string | null): string => {
   return typeof value === 'string' ? value.trim() : '';
 };
 
+const mapOrderedEquippedSkillIdRows = (
+  rows: CharacterSkillSlotRow[],
+): Map<number, string[]> => {
+  const result = new Map<number, string[]>();
+
+  for (const row of rows) {
+    const characterId = Math.floor(Number(row.character_id) || 0);
+    const skillId = normalizeSkillId(row.skill_id);
+    if (characterId <= 0 || skillId.length <= 0) continue;
+
+    const currentList = result.get(characterId) ?? [];
+    currentList.push(skillId);
+    result.set(characterId, currentList);
+  }
+
+  return result;
+};
+
+const loadOrderedEquippedSkillIdsMap = async (
+  characterIds: number[],
+): Promise<Map<number, string[]>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const resultMap = new Map<number, string[]>();
+  if (normalizedCharacterIds.length <= 0) {
+    return resultMap;
+  }
+
+  const slotResult = await query(
+    `
+      SELECT character_id, skill_id
+      FROM character_skill_slot
+      WHERE character_id = ANY($1)
+      ORDER BY character_id ASC, slot_index ASC, id ASC
+    `,
+    [normalizedCharacterIds],
+  );
+
+  return mapOrderedEquippedSkillIdRows(slotResult.rows as CharacterSkillSlotRow[]);
+};
+
 const loadOrderedEquippedSkillIds = async (characterId: number): Promise<string[]> => {
   const slotResult = await query(
-    'SELECT skill_id FROM character_skill_slot WHERE character_id = $1 ORDER BY slot_index',
+    'SELECT character_id, skill_id FROM character_skill_slot WHERE character_id = $1 ORDER BY slot_index, id ASC',
     [characterId],
   );
   if (slotResult.rows.length <= 0) return [];
 
-  const rawOrderedSkillIds = (slotResult.rows as CharacterSkillSlotRow[])
-    .map((row) => normalizeSkillId(row.skill_id))
-    .filter((skillId): skillId is string => skillId.length > 0);
-  return rawOrderedSkillIds;
+  return mapOrderedEquippedSkillIdRows(slotResult.rows as CharacterSkillSlotRow[]).get(characterId) ?? [];
 };
 
 const toCharacterBattleSkillEntry = (
@@ -99,4 +142,34 @@ export const loadCharacterBattleSkillEntries = async (
     equippedSkillIds,
     unlockedSkillEntries,
   });
+};
+
+export const loadCharacterBattleSkillEntriesMap = async (
+  characterIds: number[],
+): Promise<Map<number, CharacterBattleSkillEntry[]>> => {
+  const [equippedSkillIdsMap, unlockedSkillEntriesMap] = await Promise.all([
+    loadOrderedEquippedSkillIdsMap(characterIds),
+    loadCharacterUnlockedSkillEntriesMap(characterIds),
+  ]);
+
+  const result = new Map<number, CharacterBattleSkillEntry[]>();
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+
+  for (const characterId of normalizedCharacterIds) {
+    const equippedSkillIds = equippedSkillIdsMap.get(characterId) ?? [];
+    const unlockedSkillEntries = unlockedSkillEntriesMap.get(characterId) ?? [];
+    if (equippedSkillIds.length <= 0 && unlockedSkillEntries.length <= 0) {
+      continue;
+    }
+    result.set(characterId, mergeCharacterBattleSkillEntries({
+      equippedSkillIds,
+      unlockedSkillEntries,
+    }));
+  }
+
+  return result;
 };

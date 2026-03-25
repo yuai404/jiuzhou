@@ -25,8 +25,12 @@ import { afterTransactionCommit } from '../../../config/database.js';
 import { getCharacterComputedByCharacterId } from '../../characterComputedService.js';
 import { createCacheLayer } from '../../shared/cacheLayer.js';
 import { loadActivePartnerBattleMember, type PartnerBattleMember } from '../../shared/partnerBattleMember.js';
-import { attachSetBonusEffectsToCharacterData } from './effects.js';
-import { getCharacterBattleSkillData } from './skills.js';
+import {
+  loadCharacterBattleEffectsMap,
+} from './effects.js';
+import {
+  getCharacterBattleSkillDataMap,
+} from './skills.js';
 
 const BATTLE_PROFILE_REDIS_TTL_SEC = 6 * 60 * 60;
 const BATTLE_PROFILE_MEMORY_TTL_MS = 10 * 60_000;
@@ -41,6 +45,10 @@ type ActivePartnerBattleCacheValue = {
   member: PartnerBattleMember | null;
 };
 
+type LoadoutBatchInstrumentation = {
+  onPhase?: (detail: string, durationMs: number) => void;
+};
+
 const hasOwnAvatarField = (
   member: PartnerBattleMember | null,
 ): boolean => {
@@ -48,31 +56,97 @@ const hasOwnAvatarField = (
   return Object.prototype.hasOwnProperty.call(member.data, 'avatar');
 };
 
-const buildCharacterBattleLoadout = async (
+/**
+ * 直接构建角色战斗装配快照。
+ *
+ * 作用：
+ * 1. 供缓存 loader 与启动预热共用同一份装配构建逻辑，避免“走缓存入口”和“走预热入口”各自复制战斗装配拼装。
+ * 2. 允许调用方在已拿到角色计算结果时直接复用，减少启动预热对同一角色的重复属性查询。
+ *
+ * 输入/输出：
+ * - 输入：角色 ID，以及可选的已计算角色战斗数据。
+ * - 输出：角色战斗装配快照；角色不存在时返回 null。
+ *
+ * 数据流/状态流：
+ * 启动预热 / cache loader -> 本函数 -> 套装/词缀效果 + 技能列表 -> CharacterBattleLoadout。
+ *
+ * 关键边界条件与坑点：
+ * 1. `computed` 仅用于复用已算好的角色战斗基础数据，不会绕过技能和套装效果查询。
+ * 2. 这里返回的是“未写缓存的最新快照”；是否写入缓存由上层调用方决定，避免预热时额外产生一层无意义 Redis 写入。
+ */
+export const loadCharacterBattleLoadoutByCharacterId = async (
   characterId: number,
+  computed?: CharacterData,
 ): Promise<CharacterBattleLoadout | null> => {
-  const normalizedCharacterId = Math.floor(Number(characterId));
-  if (!Number.isFinite(normalizedCharacterId) || normalizedCharacterId <= 0) {
-    return null;
+  const loadoutMap = await loadCharacterBattleLoadoutsByCharacterIds(
+    [characterId],
+    computed ? new Map([[characterId, computed]]) : undefined,
+  );
+  return loadoutMap.get(characterId) ?? null;
+};
+
+/**
+ * 批量构建角色战斗装配快照。
+ *
+ * 作用：
+ * 1. 供在线战斗启动预热按批装配角色 loadout，避免技能与装备效果查询按角色 N 次往返。
+ * 2. 仍复用单角色装配的同一份静态规则与返回结构，保证 warmup / 运行时口径一致。
+ *
+ * 输入/输出：
+ * - 输入：角色 ID 列表，以及可选的已计算角色战斗基础数据映射。
+ * - 输出：按角色 ID 组织的 `CharacterBattleLoadout` 映射；不存在的角色不会写入结果。
+ *
+ * 数据流/状态流：
+ * warmupCharacterSnapshots -> 本函数批量查技能/装备效果 -> 组装 loadout -> 在线战斗角色快照。
+ *
+ * 关键边界条件与坑点：
+ * 1. `computedMap` 只用于复用已算好的角色基础数据，缺失角色仍会按单角色路径补齐，不能把半成品写进结果。
+ * 2. 本函数只批量收口“静态战斗装配”；实时血量/灵气等动态字段仍由角色属性服务单独维护。
+ */
+export const loadCharacterBattleLoadoutsByCharacterIds = async (
+  characterIds: number[],
+  computedMap?: ReadonlyMap<number, CharacterData>,
+  instrumentation?: LoadoutBatchInstrumentation,
+): Promise<Map<number, CharacterBattleLoadout>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const result = new Map<number, CharacterBattleLoadout>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
   }
 
-  const computed = await getCharacterComputedByCharacterId(normalizedCharacterId);
-  if (!computed) {
-    return null;
-  }
+  const skillStartAt = Date.now();
+  const skillDataMap = await getCharacterBattleSkillDataMap(normalizedCharacterIds);
+  instrumentation?.onPhase?.('技能装配', Date.now() - skillStartAt);
 
-  const [characterWithEffects, skills] = await Promise.all([
-    attachSetBonusEffectsToCharacterData(
-      normalizedCharacterId,
-      computed as unknown as CharacterData,
-    ),
-    getCharacterBattleSkillData(normalizedCharacterId),
-  ]);
+  const battleEffectsStartAt = Date.now();
+  const battleEffectsMap = await loadCharacterBattleEffectsMap(normalizedCharacterIds);
+  instrumentation?.onPhase?.('装备效果装配', Date.now() - battleEffectsStartAt);
 
-  return {
-    setBonusEffects: characterWithEffects.setBonusEffects ?? [],
-    skills,
-  };
+  const assembleStartAt = Date.now();
+  await Promise.all(
+    normalizedCharacterIds.map(async (normalizedCharacterId) => {
+      const computedCharacter =
+        computedMap?.get(normalizedCharacterId)
+        ?? await getCharacterComputedByCharacterId(normalizedCharacterId);
+      if (!computedCharacter) {
+        return;
+      }
+
+      const setBonusEffects = battleEffectsMap.get(normalizedCharacterId) ?? [];
+
+      result.set(normalizedCharacterId, {
+        setBonusEffects,
+        skills: skillDataMap.get(normalizedCharacterId) ?? [],
+      });
+    }),
+  );
+  instrumentation?.onPhase?.('loadout 汇总', Date.now() - assembleStartAt);
+
+  return result;
 };
 
 const buildActivePartnerBattleCacheValue = async (
@@ -94,7 +168,7 @@ const characterBattleLoadoutCache = createCacheLayer<number, CharacterBattleLoad
   keyPrefix: 'battle:profile:character-loadout:v1:',
   redisTtlSec: BATTLE_PROFILE_REDIS_TTL_SEC,
   memoryTtlMs: BATTLE_PROFILE_MEMORY_TTL_MS,
-  loader: buildCharacterBattleLoadout,
+  loader: (characterId) => loadCharacterBattleLoadoutByCharacterId(characterId),
 });
 
 const activePartnerBattleMemberCache = createCacheLayer<number, ActivePartnerBattleCacheValue>({
@@ -113,7 +187,7 @@ export const getCharacterBattleLoadoutByCharacterId = async (
 export const refreshCharacterBattleLoadoutByCharacterId = async (
   characterId: number,
 ): Promise<CharacterBattleLoadout | null> => {
-  const nextValue = await buildCharacterBattleLoadout(characterId);
+  const nextValue = await loadCharacterBattleLoadoutByCharacterId(characterId);
   if (!nextValue) {
     await characterBattleLoadoutCache.invalidate(characterId);
     return null;

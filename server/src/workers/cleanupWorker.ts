@@ -2,6 +2,7 @@ import {
   cleanupExpiredBattles,
   BATTLE_EXPIRED_CLEANUP_INTERVAL_MS,
 } from '../services/battle/index.js';
+import { dungeonExpiredInstanceCleanupService } from '../services/dungeonExpiredInstanceCleanupService.js';
 import { idleBattleBatchCleanupService } from '../services/idle/idleBattleBatchCleanupService.js';
 import { mailHistoryCleanupService } from '../services/mailHistoryCleanupService.js';
 
@@ -9,7 +10,7 @@ import { mailHistoryCleanupService } from '../services/mailHistoryCleanupService
  * 清理 Worker（单进程内的统一清理调度器）
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：统一承载“清理类”定时任务的调度（战斗过期状态、挂机批次历史）。
+ * 1. 做什么：统一承载“清理类”定时任务的调度（战斗过期状态、过期秘境实例、挂机批次历史、邮件热表历史）。
  * 2. 做什么：统一负责任务首轮执行、周期执行、并发互斥和停机清理。
  * 3. 不做什么：不实现具体业务清理 SQL/算法，具体清理由各 service 提供。
  *
@@ -45,6 +46,7 @@ class CleanupWorker {
   private jobs: CleanupJobRuntime[] = [];
 
   private buildJobs(): CleanupJob[] {
+    const dungeonExpiredInstanceCleanupSchedule = dungeonExpiredInstanceCleanupService.getScheduleConfig();
     const idleBatchSchedule = idleBattleBatchCleanupService.getScheduleConfig();
     const mailHistoryCleanupSchedule = mailHistoryCleanupService.getScheduleConfig();
 
@@ -56,6 +58,15 @@ class CleanupWorker {
         intervalMs: BATTLE_EXPIRED_CLEANUP_INTERVAL_MS,
         run: () => {
           cleanupExpiredBattles();
+        },
+      },
+      {
+        id: 'dungeon-expired-instance-cleanup',
+        label: '过期秘境实例收口',
+        enabled: dungeonExpiredInstanceCleanupSchedule.enabled,
+        intervalMs: dungeonExpiredInstanceCleanupSchedule.intervalMs,
+        run: async () => {
+          await dungeonExpiredInstanceCleanupService.runCleanupOnce();
         },
       },
       {
@@ -112,6 +123,8 @@ class CleanupWorker {
     for (const runtime of this.jobs) {
       if (runtime.job.id === 'idle-batch-history-cleanup') {
         console.log(`[CleanupWorker] ${runtime.job.label}：${idleBattleBatchCleanupService.getConfigSummaryText()}`);
+      } else if (runtime.job.id === 'dungeon-expired-instance-cleanup') {
+        console.log(`[CleanupWorker] ${runtime.job.label}：${dungeonExpiredInstanceCleanupService.getConfigSummaryText()}`);
       } else if (runtime.job.id === 'mail-history-cleanup') {
         console.log(`[CleanupWorker] ${runtime.job.label}：${mailHistoryCleanupService.getConfigSummaryText()}`);
       } else {

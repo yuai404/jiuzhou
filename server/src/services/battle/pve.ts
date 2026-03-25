@@ -23,10 +23,8 @@ import {
 import { BattleEngine } from "../../battle/battleEngine.js";
 import { getRoomInMap } from "../mapService.js";
 import {
-  getCharacterComputedByUserId,
-} from "../characterComputedService.js";
-import { partnerService } from "../partnerService.js";
-import { getMonthCardActiveMapByCharacterIds } from "../shared/monthCardBenefits.js";
+  getOnlineBattleCharacterSnapshotByUserId,
+} from "../onlineBattleProjectionService.js";
 import type { BattleResult } from "./battleTypes.js";
 import {
   BATTLE_START_COOLDOWN_MS,
@@ -36,11 +34,10 @@ import {
   buildBattleStartCooldownResult,
 } from "./runtime/state.js";
 import { resolveOrderedMonsters } from "./shared/monsters.js";
-import { getCharacterBattleLoadoutByCharacterId } from "./shared/profileCache.js";
 import {
   rejectIfIdling,
   withBattleStartResources,
-  syncBattleStartResourcesForUsers,
+  scheduleBattleStartResourcesSyncForUsers,
   prepareTeamBattleParticipants,
 } from "./shared/preparation.js";
 import {
@@ -69,17 +66,18 @@ export async function startPVEBattle(
   });
 
   try {
-    const characterBase = await getCharacterComputedByUserId(userId);
+    const characterSnapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
     slowLogger.mark("getCharacterComputedByUserId", {
-      characterLoaded: Boolean(characterBase),
+      characterLoaded: Boolean(characterSnapshot),
     });
-    if (!characterBase) {
+    if (!characterSnapshot) {
       slowLogger.flush({
         success: false,
         reason: "character_missing",
       });
       return { success: false, message: "角色不存在" };
     }
+    const characterBase = characterSnapshot.computed;
     const characterId = Number(characterBase.id);
 
     const idleReject = await rejectIfIdling(characterId);
@@ -94,7 +92,7 @@ export async function startPVEBattle(
       return idleReject;
     }
 
-    const characterBattleLoadout = await getCharacterBattleLoadoutByCharacterId(characterId);
+    const characterBattleLoadout = characterSnapshot.loadout;
     slowLogger.mark("getCharacterBattleLoadoutByCharacterId", {
       loadoutLoaded: Boolean(characterBattleLoadout),
     });
@@ -105,11 +103,8 @@ export async function startPVEBattle(
       });
       return { success: false, message: "角色战斗资料不存在" };
     }
-    const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds([characterId]);
-    slowLogger.mark("getMonthCardActiveMapByCharacterIds");
     const characterWithSetBonus: CharacterData = {
       ...characterBase,
-      monthCardActive: monthCardActiveMap.get(characterId) ?? false,
       setBonusEffects: characterBattleLoadout.setBonusEffects,
     };
 
@@ -218,12 +213,12 @@ export async function startPVEBattle(
     }
     const { validTeamMembers, participantUserIds } = preparedTeam;
 
-    const partnerMemberPromise =
-      partnerService.buildConfiguredPartnerBattleMember({
-        characterId,
-        enabled: validTeamMembers.length <= 0,
-      });
-    await syncBattleStartResourcesForUsers(participantUserIds, {
+    const partnerMemberPromise = Promise.resolve(
+      validTeamMembers.length <= 0
+        ? (characterSnapshot.activePartner ?? null)
+        : null,
+    );
+    scheduleBattleStartResourcesSyncForUsers(participantUserIds, {
       context: "同步战前资源（普通战斗）",
     });
     slowLogger.mark("syncBattleStartResourcesForUsers", {
@@ -353,23 +348,22 @@ export const startResolvedPVEBattleByPolicy = async (params: {
   errorMessage: string;
 }): Promise<BattleResult> => {
   try {
-    const baseCharacter = await getCharacterComputedByUserId(params.userId);
-    if (!baseCharacter) {
+    const baseCharacterSnapshot = await getOnlineBattleCharacterSnapshotByUserId(params.userId);
+    if (!baseCharacterSnapshot) {
       return { success: false, message: '角色不存在' };
     }
+    const baseCharacter = baseCharacterSnapshot.computed;
 
     const characterId = Number(baseCharacter.id);
     const idleReject = await rejectIfIdling(characterId);
     if (idleReject) return idleReject;
 
-    const characterBattleLoadout = await getCharacterBattleLoadoutByCharacterId(characterId);
+    const characterBattleLoadout = baseCharacterSnapshot.loadout;
     if (!characterBattleLoadout) {
       return { success: false, message: '角色战斗资料不存在' };
     }
-    const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds([characterId]);
     const characterWithSetBonus: CharacterData = {
       ...baseCharacter,
-      monthCardActive: monthCardActiveMap.get(characterId) ?? false,
       setBonusEffects: characterBattleLoadout.setBonusEffects,
     };
     if (characterWithSetBonus.qixue <= 0) {
@@ -413,12 +407,12 @@ export const startResolvedPVEBattleByPolicy = async (params: {
     if (!preparedTeam.success) return preparedTeam.result;
     const { validTeamMembers, participantUserIds } = preparedTeam;
 
-    const partnerMemberPromise =
-      partnerService.buildConfiguredPartnerBattleMember({
-        characterId,
-        enabled: validTeamMembers.length <= 0,
-      });
-    await syncBattleStartResourcesForUsers(participantUserIds, {
+    const partnerMemberPromise = Promise.resolve(
+      validTeamMembers.length <= 0
+        ? (baseCharacterSnapshot.activePartner ?? null)
+        : null,
+    );
+    scheduleBattleStartResourcesSyncForUsers(participantUserIds, {
       context: params.syncResourceContext,
     });
 

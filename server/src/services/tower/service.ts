@@ -26,11 +26,14 @@ import type { BattleState } from '../../battle/types.js';
 import { getBattleState } from '../battle/queries.js';
 import type { BattleParticipant } from '../battleDropService.js';
 import {
-  applyCharacterResourceDeltaByCharacterId,
-  getCharacterComputedByCharacterId,
-  getCharacterComputedByUserId,
-  setCharacterResourcesByCharacterId,
-} from '../characterComputedService.js';
+  applyOnlineBattleCharacterResourceDelta,
+  ensureTowerProjection,
+  getOnlineBattleCharacterSnapshotByUserId,
+  getTeamProjectionByUserId,
+  listTowerRankProjection,
+  setOnlineBattleCharacterResources,
+  upsertTowerProjection,
+} from '../onlineBattleProjectionService.js';
 import {
   createBattleSessionRecord,
   deleteBattleSessionRecord,
@@ -51,6 +54,7 @@ import { canReuseTowerSession, pickLatestActiveTowerSession } from './activeSess
 import {
   deleteTowerBattleRuntime,
   getTowerBattleRuntime,
+  loadTowerBattleRuntime,
   registerTowerBattleRuntime,
 } from './runtime.js';
 import { resolveTowerFloorByFrozenFrontier } from './frozenFrontier.js';
@@ -71,15 +75,6 @@ type TowerProgressRow = {
   current_battle_id: string | null;
   last_settled_floor: number | string;
   updated_at: string | Date;
-  reached_at: string | Date | null;
-};
-
-type TowerRankQueryRow = {
-  rank: number | string;
-  character_id: number | string;
-  name: string;
-  realm: string;
-  best_floor: number | string;
   reached_at: string | Date | null;
 };
 
@@ -109,17 +104,6 @@ const normalizeTowerProgressRow = (row: TowerProgressRow): TowerProgressRecord =
     currentBattleId: row.current_battle_id ? String(row.current_battle_id) : null,
     lastSettledFloor: Math.max(0, Number(row.last_settled_floor) || 0),
     updatedAt: String(row.updated_at),
-    reachedAt: row.reached_at ? String(row.reached_at) : null,
-  };
-};
-
-const normalizeTowerRankRow = (row: TowerRankQueryRow): TowerRankRow => {
-  return {
-    rank: Number(row.rank),
-    characterId: Number(row.character_id),
-    name: String(row.name),
-    realm: String(row.realm),
-    bestFloor: Number(row.best_floor),
     reachedAt: row.reached_at ? String(row.reached_at) : null,
   };
 };
@@ -203,30 +187,7 @@ const ensureTowerProgressRow = async (
 const loadTowerProgressByCharacterId = async (
   characterId: number,
 ): Promise<TowerProgressRecord> => {
-  await ensureTowerProgressRow(characterId);
-  const result = await query<TowerProgressRow>(
-    `
-      SELECT
-        character_id,
-        best_floor,
-        next_floor,
-        current_run_id,
-        current_floor,
-        current_battle_id,
-        last_settled_floor,
-        updated_at,
-        reached_at
-      FROM character_tower_progress
-      WHERE character_id = $1
-      LIMIT 1
-    `,
-    [characterId],
-  );
-  const row = result.rows[0];
-  if (!row) {
-    throw new Error(`千层塔进度不存在: characterId=${characterId}`);
-  }
-  return normalizeTowerProgressRow(row);
+  return ensureTowerProjection(characterId);
 };
 
 const lockTowerProgressByCharacterId = async (
@@ -328,20 +289,17 @@ const assertTowerEntryAllowed = async (
   userId: number;
   characterId: number;
 }> => {
-  const computed = await getCharacterComputedByUserId(userId);
-  if (!computed) {
+  const snapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
+  if (!snapshot) {
     throw new Error('角色不存在');
   }
-  const characterId = Number(computed.id);
+  const characterId = Number(snapshot.characterId);
   if (!Number.isInteger(characterId) || characterId <= 0) {
     throw new Error('角色不存在');
   }
 
-  const teamCheck = await query(
-    `SELECT team_id FROM team_members WHERE character_id = $1 LIMIT 1`,
-    [characterId],
-  );
-  if (teamCheck.rows.length > 0) {
+  const teamProjection = await getTeamProjectionByUserId(userId);
+  if (teamProjection?.teamId) {
     throw new Error('组队状态下无法进入千层塔');
   }
 
@@ -427,8 +385,8 @@ export const getTowerOverview = async (userId: number): Promise<{
   message: string;
 }> => {
   try {
-    const computed = await getCharacterComputedByUserId(userId);
-    const characterId = Number(computed?.id);
+    const snapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
+    const characterId = Number(snapshot?.characterId);
     if (!Number.isInteger(characterId) || characterId <= 0) {
       return {
         success: false,
@@ -523,25 +481,23 @@ export const startTowerChallenge = async (userId: number): Promise<TowerStartRes
       floor,
     });
 
-    const session = await withTransaction(async (client) => {
-      await updateTowerProgressForRunStart({
-        client,
-        characterId: access.characterId,
-        runId,
-        floor,
-        battleId: battle.battleId,
-      });
+    await upsertTowerProjection({
+      ...progress,
+      currentRunId: runId,
+      currentFloor: floor,
+      currentBattleId: battle.battleId,
+      updatedAt: new Date().toISOString(),
+    });
 
-      return createTowerSessionRecord({
-        ownerUserId: userId,
-        runId,
-        floor,
-        status: 'running',
-        currentBattleId: battle.battleId,
-        nextAction: 'none',
-        canAdvance: false,
-        lastResult: null,
-      });
+    const session = createTowerSessionRecord({
+      ownerUserId: userId,
+      runId,
+      floor,
+      status: 'running',
+      currentBattleId: battle.battleId,
+      nextAction: 'none',
+      canAdvance: false,
+      lastResult: null,
     });
 
     return {
@@ -579,32 +535,29 @@ export const advanceTowerRun = async (params: {
       floor: nextFloor,
     });
 
-    const updatedSession = await withTransaction(async (client) => {
-      await updateTowerProgressForRunStart({
-        client,
-        characterId: access.characterId,
+    await upsertTowerProjection({
+      ...progress,
+      currentRunId: context.runId,
+      currentFloor: nextFloor,
+      currentBattleId: battle.battleId,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const updatedSession = updateBattleSessionRecord(params.session.sessionId, {
+      currentBattleId: battle.battleId,
+      participantUserIds: [params.userId],
+      status: 'running',
+      nextAction: 'none',
+      canAdvance: false,
+      lastResult: null,
+      context: {
         runId: context.runId,
         floor: nextFloor,
-        battleId: battle.battleId,
-      });
-
-      const updated = updateBattleSessionRecord(params.session.sessionId, {
-        currentBattleId: battle.battleId,
-        participantUserIds: [params.userId],
-        status: 'running',
-        nextAction: 'none',
-        canAdvance: false,
-        lastResult: null,
-        context: {
-          runId: context.runId,
-          floor: nextFloor,
-        },
-      });
-      if (!updated) {
-        throw new Error('千层塔战斗会话不存在');
-      }
-      return updated;
+      },
     });
+    if (!updatedSession) {
+      throw new Error('千层塔战斗会话不存在');
+    }
 
     return {
       success: true,
@@ -623,21 +576,57 @@ export const advanceTowerRun = async (params: {
 
 export const endTowerRunBySession = async (session: BattleSessionRecord): Promise<void> => {
   const context = session.context as TowerBattleSessionContext;
-  const computed = await getCharacterComputedByUserId(session.ownerUserId);
-  const characterId = Number(computed?.id);
+  const snapshot = await getOnlineBattleCharacterSnapshotByUserId(session.ownerUserId);
+  const characterId = Number(snapshot?.characterId);
   if (!Number.isInteger(characterId) || characterId <= 0) {
     return;
   }
 
-  await withTransaction(async (client) => {
-    const progress = await lockTowerProgressByCharacterId(characterId, client);
-    if (progress.currentRunId !== context.runId) {
-      return;
-    }
-    await clearTowerRunState({
-      client,
-      characterId,
+  const progress = await loadTowerProgressByCharacterId(characterId);
+  if (progress.currentRunId !== context.runId) {
+    return;
+  }
+  await upsertTowerProjection({
+    ...progress,
+    currentRunId: null,
+    currentFloor: null,
+    currentBattleId: null,
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+export const applyTowerBattleProjectionResult = async (params: {
+  battleId: string;
+  result: 'attacker_win' | 'defender_win' | 'draw';
+}): Promise<void> => {
+  const runtime = getTowerBattleRuntime(params.battleId);
+  if (!runtime) return;
+  const progress = await loadTowerProgressByCharacterId(runtime.characterId);
+
+  if (params.result === 'attacker_win') {
+    await upsertTowerProjection({
+      ...progress,
+      bestFloor: Math.max(progress.bestFloor, runtime.floor),
+      nextFloor: Math.max(progress.nextFloor, runtime.floor + 1),
+      currentRunId: progress.currentRunId ?? runtime.runId,
+      currentFloor: runtime.floor,
+      currentBattleId: null,
+      lastSettledFloor: runtime.floor,
+      updatedAt: new Date().toISOString(),
+      reachedAt:
+        runtime.floor > progress.bestFloor
+          ? new Date().toISOString()
+          : progress.reachedAt,
     });
+    return;
+  }
+
+  await upsertTowerProjection({
+    ...progress,
+    currentRunId: null,
+    currentFloor: null,
+    currentBattleId: null,
+    updatedAt: new Date().toISOString(),
   });
 };
 
@@ -646,7 +635,7 @@ export const settleTowerBattle = async (params: {
   result: 'attacker_win' | 'defender_win' | 'draw';
   participants: BattleParticipant[];
 }): Promise<null> => {
-  const runtime = getTowerBattleRuntime(params.battleId);
+  const runtime = await loadTowerBattleRuntime(params.battleId);
   if (!runtime) return null;
 
   try {
@@ -707,21 +696,21 @@ export const applyTowerPostBattleResourceChange = async (params: {
   const runtime = getTowerBattleRuntime(params.battleId);
   if (!runtime) return;
 
-  const computed = await getCharacterComputedByCharacterId(runtime.characterId);
-  if (!computed) return;
+  const snapshot = await getOnlineBattleCharacterSnapshotByUserId(runtime.userId);
+  if (!snapshot) return;
 
   if (params.result === 'attacker_win') {
-    const healAmount = Math.floor(computed.max_qixue * 0.3);
-    await setCharacterResourcesByCharacterId(runtime.characterId, {
-      qixue: Math.min(computed.max_qixue, computed.qixue + healAmount),
-      lingqi: computed.lingqi,
+    const healAmount = Math.floor(snapshot.computed.max_qixue * 0.3);
+    await setOnlineBattleCharacterResources(runtime.characterId, {
+      qixue: Math.min(snapshot.computed.max_qixue, snapshot.computed.qixue + healAmount),
+      lingqi: snapshot.computed.lingqi,
     });
     return;
   }
 
   if (params.result === 'defender_win') {
-    const loss = Math.floor(computed.max_qixue * 0.1);
-    await applyCharacterResourceDeltaByCharacterId(
+    const loss = Math.floor(snapshot.computed.max_qixue * 0.1);
+    await applyOnlineBattleCharacterResourceDelta(
       runtime.characterId,
       { qixue: -loss },
       { minQixue: 1 },
@@ -742,29 +731,9 @@ export const getTowerRankList = async (limit: number = 50): Promise<{
 }> => {
   try {
     const normalizedLimit = Math.max(1, Math.min(100, Math.floor(limit)));
-    const result = await query<TowerRankQueryRow>(
-      `
-        SELECT
-          ROW_NUMBER() OVER (
-            ORDER BY ctp.best_floor DESC, ctp.reached_at ASC NULLS LAST, ctp.character_id ASC
-          )::int AS rank,
-          ctp.character_id,
-          COALESCE(NULLIF(c.nickname, ''), CONCAT('修士', c.id::text)) AS name,
-          COALESCE(c.realm, '凡人') AS realm,
-          ctp.best_floor,
-          ctp.reached_at
-        FROM character_tower_progress ctp
-        JOIN characters c ON c.id = ctp.character_id
-        WHERE ctp.best_floor > 0
-        ORDER BY rank
-        LIMIT $1
-      `,
-      [normalizedLimit],
-    );
-
     return {
       success: true,
-      data: result.rows.map(normalizeTowerRankRow),
+      data: (await listTowerRankProjection()).slice(0, normalizedLimit),
     };
   } catch (error) {
     return {

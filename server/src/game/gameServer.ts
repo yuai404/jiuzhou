@@ -6,7 +6,7 @@ import { Server as SocketServer, Socket } from "socket.io";
 import { randomUUID } from "crypto";
 import type { CharacterAttributes } from "./gameState.js";
 import { dbToCharacterAttributes } from "./gameState.js";
-import { query } from "../config/database.js";
+import { isDatabaseAccessForbidden, query } from "../config/database.js";
 import { verifyToken, verifySession } from "../services/authService.js";
 import { applyStaminaRecoveryByUserId } from "../services/staminaService.js";
 import {
@@ -36,6 +36,10 @@ import { getMonthCardActiveMapByCharacterIds } from "../services/shared/monthCar
 import { assertChatPhoneBindingReady } from "../services/marketPhoneBindingService.js";
 import { AsyncShutdownGate } from "../utils/asyncShutdownGate.js";
 import { emitLatestGameTimeSnapshot } from "../services/gameTimeService.js";
+import {
+  getOnlineBattleCharacterSnapshotByUserId,
+  type OnlineBattleCharacterSnapshot,
+} from "../services/onlineBattleProjectionService.js";
 import {
   waitForUserConnectionSlot,
 } from "../shared/userConnectionSlots.js";
@@ -101,6 +105,43 @@ const CHARACTER_PUSH_DEBOUNCE_MS = 80;
 const MAX_CONCURRENT_GAME_AUTH_PER_USER = 1;
 const GAME_AUTH_QUEUE_WAIT_MS = 3_000;
 type AsyncSocketHandler<TArgs extends SocketTaskArg[]> = (...args: TArgs) => Promise<void>;
+
+const buildCharacterAttributesFromOnlineBattleSnapshot = (
+  snapshot: OnlineBattleCharacterSnapshot,
+  previousCharacter: CharacterAttributes | null,
+): CharacterAttributes => {
+  return dbToCharacterAttributes({
+    ...snapshot.computed,
+    month_card_active: previousCharacter?.monthCardActive ?? false,
+    dungeon_no_stamina_cost: previousCharacter?.dungeonNoStaminaCost ?? false,
+    feature_unlocks: previousCharacter?.featureUnlocks ?? [],
+  });
+};
+
+const mergeRuntimeStaminaFromOnlineBattleSnapshot = (
+  character: CharacterAttributes,
+  snapshot: OnlineBattleCharacterSnapshot | null,
+): CharacterAttributes => {
+  if (!snapshot || snapshot.characterId !== character.id) {
+    return character;
+  }
+
+  const runtimeStamina = Math.max(
+    0,
+    Math.min(
+      character.staminaMax,
+      Math.floor(Number(snapshot.computed.stamina) || 0),
+    ),
+  );
+  if (runtimeStamina === character.stamina) {
+    return character;
+  }
+
+  return {
+    ...character,
+    stamina: runtimeStamina,
+  };
+};
 
 // 游戏服务器类
 class GameServer {
@@ -736,12 +777,24 @@ class GameServer {
   // 加载角色数据
   private async loadCharacter(
     userId: number,
+    options?: {
+      previousCharacter?: CharacterAttributes | null;
+    },
   ): Promise<CharacterAttributes | null> {
     if (this.shutdownGate.isShuttingDown()) {
       return null;
     }
 
     try {
+      if (isDatabaseAccessForbidden()) {
+        const snapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
+        if (!snapshot) return null;
+        return buildCharacterAttributesFromOnlineBattleSnapshot(
+          snapshot,
+          options?.previousCharacter ?? null,
+        );
+      }
+
       await applyStaminaRecoveryByUserId(userId);
       const computed = await getCharacterComputedByUserId(userId);
       if (!computed) return null;
@@ -752,8 +805,13 @@ class GameServer {
           month_card_active: monthCardActiveMap.get(computed.id) ?? false,
         },
       );
-      return dbToCharacterAttributes(
+      const character = dbToCharacterAttributes(
         characterWithUnlockedFeatures,
+      );
+      const runtimeSnapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
+      return mergeRuntimeStaminaFromOnlineBattleSnapshot(
+        character,
+        runtimeSnapshot,
       );
     } catch (error) {
       console.error("加载角色失败:", error);
@@ -920,7 +978,9 @@ class GameServer {
 
         const session = this.sessions.get(socketId);
         const prevCharacter = session?.character ?? null;
-        const character = await this.loadCharacter(userId);
+        const character = await this.loadCharacter(userId, {
+          previousCharacter: prevCharacter,
+        });
         if (session) {
           this.syncCharacterSocketBinding(socketId, prevCharacter, character);
           session.character = character;

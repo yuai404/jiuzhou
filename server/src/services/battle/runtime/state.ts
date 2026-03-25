@@ -19,7 +19,6 @@
  * 2) characterOwnerCache 有 TTL，防止用户换号后缓存不刷新
  */
 
-import { query } from "../../../config/database.js";
 import { BattleEngine } from "../../../battle/battleEngine.js";
 import type { BattleState, BattleUnit } from "../../../battle/types.js";
 import { getGameServer } from "../../../game/gameServer.js";
@@ -27,6 +26,7 @@ import {
   scheduleBattleCooldownPush,
 } from "../cooldownManager.js";
 import type { BattleResult, BattleStartCooldownValidation } from "../battleTypes.js";
+import { getOnlineBattleCharacterSnapshotByCharacterId } from "../../onlineBattleProjectionService.js";
 import { resolveBattleStartedDispatchPolicy } from "./startDispatchPolicy.js";
 
 // ============================================================
@@ -171,10 +171,8 @@ export async function getUserIdByCharacterId(
     return cached.userId;
 
   try {
-    const res = await query("SELECT user_id FROM characters WHERE id = $1", [
-      characterId,
-    ]);
-    const userId = Number(res.rows?.[0]?.user_id);
+    const snapshot = await getOnlineBattleCharacterSnapshotByCharacterId(characterId);
+    const userId = Number(snapshot?.userId);
     if (!Number.isFinite(userId) || userId <= 0) return null;
     characterOwnerCache.set(characterId, { userId, at: now });
     return userId;

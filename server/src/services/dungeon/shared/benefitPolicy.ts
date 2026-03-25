@@ -20,7 +20,7 @@
  * 2) 批量读取只返回数据库中存在的角色；调用方必须自行校验缺失角色，避免把脏数据当成默认值继续执行。
  */
 
-import { query } from '../../../config/database.js';
+import { getOnlineBattleCharacterSnapshotsByCharacterIds } from '../../onlineBattleProjectionService.js';
 
 export interface DungeonBenefitPolicy {
   skipStaminaCost: boolean;
@@ -46,19 +46,11 @@ export const loadDungeonBenefitPolicyMap = async (
   const out = new Map<number, DungeonBenefitPolicy>();
   if (normalizedCharacterIds.length <= 0) return out;
 
-  const result = await query(
-    `
-      SELECT id, dungeon_no_stamina_cost
-      FROM characters
-      WHERE id = ANY($1::int[])
-    `,
-    [normalizedCharacterIds],
-  );
-
-  for (const row of result.rows as Array<{ id: unknown; dungeon_no_stamina_cost: unknown }>) {
-    const characterId = Math.floor(Number(row.id));
-    if (!Number.isFinite(characterId) || characterId <= 0) continue;
-    out.set(characterId, resolveDungeonBenefitPolicy(row.dungeon_no_stamina_cost));
+  const snapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(normalizedCharacterIds);
+  for (const characterId of normalizedCharacterIds) {
+    const snapshot = snapshots.get(characterId);
+    if (!snapshot) continue;
+    out.set(characterId, resolveDungeonBenefitPolicy(snapshot.computed.dungeon_no_stamina_cost));
   }
 
   return out;

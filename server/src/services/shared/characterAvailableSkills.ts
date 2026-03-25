@@ -36,6 +36,7 @@ import {
 } from './techniqueUpgradeRules.js';
 
 type EquippedTechniqueLite = {
+  characterId: number;
   techniqueId: string;
   currentLayer: number;
   slotType: 'main' | 'sub';
@@ -43,6 +44,7 @@ type EquippedTechniqueLite = {
 };
 
 type EquippedTechniqueRow = {
+  character_id: number;
   technique_id: string;
   current_layer: number;
   slot_type: 'main' | 'sub' | null;
@@ -80,37 +82,75 @@ export const getEnabledSkillDefMap = createStaticDefinitionIndexGetter({
   include: (entry) => entry.enabled !== false,
 });
 
+const mapEquippedTechniqueRows = (
+  rows: EquippedTechniqueRow[],
+): Map<number, EquippedTechniqueLite[]> => {
+  const result = new Map<number, EquippedTechniqueLite[]>();
+
+  for (const row of rows) {
+    const characterId = Number(row.character_id ?? 0) || 0;
+    const techniqueId = typeof row.technique_id === 'string' ? row.technique_id : '';
+    const currentLayer = Number(row.current_layer ?? 0) || 0;
+    const slotType = row.slot_type === 'main' ? 'main' : row.slot_type === 'sub' ? 'sub' : null;
+    const slotIndex = row.slot_index === null || row.slot_index === undefined ? null : Number(row.slot_index);
+    if (characterId <= 0 || !techniqueId || !slotType) continue;
+
+    const currentList = result.get(characterId) ?? [];
+    currentList.push({
+      characterId,
+      techniqueId,
+      currentLayer,
+      slotType,
+      slotIndex: Number.isFinite(slotIndex ?? NaN) ? Math.floor(Number(slotIndex)) : null,
+    });
+    result.set(characterId, currentList);
+  }
+
+  return result;
+};
+
+const loadEquippedTechniqueLiteMap = async (
+  characterIds: number[],
+): Promise<Map<number, EquippedTechniqueLite[]>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const resultMap = new Map<number, EquippedTechniqueLite[]>();
+  if (normalizedCharacterIds.length <= 0) {
+    return resultMap;
+  }
+
+  const result = await query(
+    `
+      SELECT character_id, technique_id, current_layer, slot_type, slot_index
+      FROM character_technique
+      WHERE character_id = ANY($1) AND slot_type IS NOT NULL
+      ORDER BY character_id ASC, slot_type ASC, slot_index ASC, id ASC
+    `,
+    [normalizedCharacterIds],
+  );
+
+  return mapEquippedTechniqueRows(result.rows as EquippedTechniqueRow[]);
+};
+
 const loadEquippedTechniqueLite = async (characterId: number): Promise<EquippedTechniqueLite[]> => {
   const result = await query(
     `
-      SELECT technique_id, current_layer, slot_type, slot_index
+      SELECT character_id, technique_id, current_layer, slot_type, slot_index
       FROM character_technique
       WHERE character_id = $1 AND slot_type IS NOT NULL
     `,
     [characterId],
   );
 
-  return (result.rows as EquippedTechniqueRow[])
-    .map((row) => {
-      const techniqueId = typeof row.technique_id === 'string' ? row.technique_id : '';
-      const currentLayer = Number(row.current_layer ?? 0) || 0;
-      const slotType = row.slot_type === 'main' ? 'main' : row.slot_type === 'sub' ? 'sub' : null;
-      const slotIndex = row.slot_index === null || row.slot_index === undefined ? null : Number(row.slot_index);
-      if (!techniqueId || !slotType) return null;
-      return {
-        techniqueId,
-        currentLayer,
-        slotType,
-        slotIndex: Number.isFinite(slotIndex ?? NaN) ? Math.floor(Number(slotIndex)) : null,
-      };
-    })
-    .filter((entry): entry is EquippedTechniqueLite => Boolean(entry));
+  return mapEquippedTechniqueRows(result.rows as EquippedTechniqueRow[]).get(characterId) ?? [];
 };
 
-export const loadCharacterUnlockedSkillEntries = async (
-  characterId: number,
-): Promise<CharacterAvailableSkillEntry[]> => {
-  const equipped = await loadEquippedTechniqueLite(characterId);
+const buildCharacterUnlockedSkillEntriesFromEquipped = (
+  equipped: EquippedTechniqueLite[],
+): CharacterAvailableSkillEntry[] => {
   if (equipped.length === 0) return [];
 
   const techniqueIds = Array.from(new Set(equipped.map((entry) => entry.techniqueId)));
@@ -194,6 +234,26 @@ export const loadCharacterUnlockedSkillEntries = async (
   return entries.sort(
     (left, right) => left.techniqueName.localeCompare(right.techniqueName) || left.skillName.localeCompare(right.skillName),
   );
+};
+
+export const loadCharacterUnlockedSkillEntriesMap = async (
+  characterIds: number[],
+): Promise<Map<number, CharacterAvailableSkillEntry[]>> => {
+  const equippedMap = await loadEquippedTechniqueLiteMap(characterIds);
+  const result = new Map<number, CharacterAvailableSkillEntry[]>();
+
+  for (const [characterId, equipped] of equippedMap.entries()) {
+    result.set(characterId, buildCharacterUnlockedSkillEntriesFromEquipped(equipped));
+  }
+
+  return result;
+};
+
+export const loadCharacterUnlockedSkillEntries = async (
+  characterId: number,
+): Promise<CharacterAvailableSkillEntry[]> => {
+  const equipped = await loadEquippedTechniqueLite(characterId);
+  return buildCharacterUnlockedSkillEntriesFromEquipped(equipped);
 };
 
 export const loadCharacterAvailableSkillEntries = async (

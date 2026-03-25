@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { battleService } from '../domains/battle/index.js';
+import { runWithDatabaseAccessForbidden } from '../config/database.js';
 import { sendResult } from '../middleware/response.js';
 import { BusinessError } from '../middleware/BusinessError.js';
 
@@ -48,11 +49,14 @@ router.post('/action', requireAuth, asyncHandler(async (req, res) => {
     throw new BusinessError('缺少技能ID');
   }
 
-  const result = await battleService.playerAction(
-    userId,
-    battleId,
-    skillId,
-    targetIds || []
+  const result = await runWithDatabaseAccessForbidden(
+    'api/battle/action',
+    async () => await battleService.playerAction(
+      userId,
+      battleId,
+      skillId,
+      targetIds || []
+    ),
   );
 
   return sendResult(res, result);

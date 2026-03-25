@@ -30,7 +30,10 @@ import { battleParticipants } from '../battle/runtime/state.js';
 import { getBattleState } from '../battle/queries.js';
 import { startPVEBattle } from '../battle/pve.js';
 import { startPVPBattle } from '../battle/pvp.js';
-import { dungeonService } from '../dungeon/service.js';
+import {
+  nextDungeonInstance,
+  startDungeonInstance,
+} from '../dungeon/combat.js';
 import {
   advanceTowerRun,
   endTowerRunBySession,
@@ -160,11 +163,64 @@ const syncPveResumeIntentForSession = async (
   });
 };
 
+/**
+ * 异步调度普通 PVE 续战意图写入。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：把“用于重启后懒恢复的续战意图”移出 start/advance 的同步响应链，减少 Redis I/O 对首包时延的影响。
+ * 2. 做什么：统一收口 fire-and-forget 包装，避免 start/advance/状态迁移处各自散落 `void` 调用。
+ * 3. 不做什么：不改变 battle/session 的权威状态；即使这一步异步失败，也不影响当前会话已经成功推进。
+ *
+ * 输入/输出：
+ * - 输入：PVE session 记录或快照。
+ * - 输出：无同步返回；后台异步写入 Redis。
+ *
+ * 数据流/状态流：
+ * start/advance/状态迁移 -> 本函数排队微任务 -> syncPveResumeIntentForSession -> Redis 续战意图。
+ *
+ * 关键边界条件与坑点：
+ * 1. 这里只能用于非关键路径补偿数据；battle/session 权威状态仍必须先在内存投影完成更新。
+ * 2. 异步失败只记日志，不能回退当前已成功的会话推进结果。
+ */
+const schedulePveResumeIntentSyncForSession = (
+  session: BattleSessionRecord | BattleSessionSnapshot,
+): void => {
+  void Promise.resolve().then(async () => {
+    try {
+      await syncPveResumeIntentForSession(session);
+    } catch (error) {
+      battleSessionLogger.warn({
+        sessionId: session.sessionId,
+        ownerUserId: session.ownerUserId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      }, '异步写入 PVE 续战意图失败');
+    }
+  });
+};
+
 const deletePveResumeIntentForSession = async (
   session: BattleSessionRecord | BattleSessionSnapshot,
 ): Promise<void> => {
   if (session.type !== 'pve') return;
   await deletePveResumeIntentByUserId(session.ownerUserId);
+};
+
+const schedulePveResumeIntentDeletionForSession = (
+  session: BattleSessionRecord | BattleSessionSnapshot,
+): void => {
+  void Promise.resolve().then(async () => {
+    try {
+      await deletePveResumeIntentForSession(session);
+    } catch (error) {
+      battleSessionLogger.warn({
+        sessionId: session.sessionId,
+        ownerUserId: session.ownerUserId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      }, '异步删除 PVE 续战意图失败');
+    }
+  });
 };
 
 const createRunningSession = (params: {
@@ -483,7 +539,7 @@ export const startPVEBattleSession = async (
         .slice(0, 5),
     },
   });
-  await syncPveResumeIntentForSession(session);
+  schedulePveResumeIntentSyncForSession(session);
   return buildSessionSuccess(session, battleRes.data.state);
 };
 
@@ -491,7 +547,7 @@ export const startDungeonBattleSession = async (
   userId: number,
   instanceId: string,
 ): Promise<BattleSessionResponse> => {
-  const dungeonRes = await dungeonService.startDungeonInstance(userId, instanceId);
+  const dungeonRes = await startDungeonInstance(userId, instanceId);
   if (!dungeonRes.success || !dungeonRes.data?.battleId) {
     return {
       success: false,
@@ -597,7 +653,7 @@ export const getCurrentBattleSessionDetail = async (
         monsterIds: normalizePveMonsterIds(resumeIntent.monsterIds),
       },
     });
-    await syncPveResumeIntentForSession(restoredSession);
+    schedulePveResumeIntentSyncForSession(restoredSession);
     return buildSessionSuccess(restoredSession, battleRes.data.state);
   }
 
@@ -612,7 +668,7 @@ const completeSessionReturnToMap = async (
   if (session.type === 'tower') {
     await endTowerRunBySession(session);
   }
-  await deletePveResumeIntentForSession(session);
+  schedulePveResumeIntentDeletionForSession(session);
   const nextStatus = getSessionFinalStatus(session.type, session.lastResult);
   const settledBattleId = session.currentBattleId;
   const snapshot = finalizeBattleSession({
@@ -719,7 +775,7 @@ export const advanceBattleSession = async (
         },
       );
     }
-    await syncPveResumeIntentForSession(updated);
+    schedulePveResumeIntentSyncForSession(updated);
     slowLogger.mark('syncPveResumeIntentForSession');
     return flushAndReturn(
       buildSessionSuccess(updated, battleRes.data.state, false),
@@ -732,10 +788,8 @@ export const advanceBattleSession = async (
 
   if (session.type === 'dungeon') {
     const context = session.context as { instanceId: string };
-    // 统一复用 dungeonService 自己的 @Transactional 入口，避免 BattleSession
-    // 再额外包一层事务适配，让“秘境推进的事务单一入口”始终集中在 dungeonService。
-    const dungeonRes = await dungeonService.nextDungeonInstance(userId, context.instanceId);
-    slowLogger.mark('dungeonService.nextDungeonInstance', {
+    const dungeonRes = await nextDungeonInstance(userId, context.instanceId);
+    slowLogger.mark('nextDungeonInstance', {
       dungeonAdvanceSuccess: dungeonRes.success,
       dungeonFinished: Boolean(dungeonRes.success && dungeonRes.data?.finished),
     });
@@ -874,9 +928,9 @@ export const markBattleSessionFinished = async (
   if (!updated) return null;
   if (updated.type === 'pve') {
     if (policy.nextAction === 'advance') {
-      await syncPveResumeIntentForSession(updated);
+      schedulePveResumeIntentSyncForSession(updated);
     } else {
-      await deletePveResumeIntentForSession(updated);
+      schedulePveResumeIntentDeletionForSession(updated);
     }
   }
   if (updated.type === 'dungeon' && policy.nextAction === 'advance') {
@@ -895,7 +949,7 @@ export const markBattleSessionAbandoned = async (
   if (session.type === 'tower') {
     await endTowerRunBySession(session);
   }
-  await deletePveResumeIntentForSession(session);
+  schedulePveResumeIntentDeletionForSession(session);
   return finalizeBattleSession({
     sessionId: snapshot.sessionId,
     patch: {
@@ -953,7 +1007,7 @@ export const removeBattleSessionParticipantUser = async (
     participantUserIds: nextParticipantUserIds,
   });
   if (!updated) return null;
-  await syncPveResumeIntentForSession(updated);
+  schedulePveResumeIntentSyncForSession(updated);
   return toBattleSessionSnapshot(updated);
 };
 

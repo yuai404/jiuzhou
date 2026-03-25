@@ -24,7 +24,6 @@ import {
   getItemSetDefinitions,
   getTechniqueLayerDefinitions,
 } from './staticConfigLoader.js';
-import { getTitleDefinitionById } from './titleDefinitionService.js';
 import { extractFlatAffixDeltas, extractPercentAffixDeltas } from './shared/affixModifier.js';
 import {
   createCharacterPrimaryAttrs,
@@ -52,6 +51,7 @@ import {
   CHARACTER_RATIO_ATTR_KEY_SET,
   TITLE_EFFECT_KEY_SET,
 } from './shared/characterAttrRegistry.js';
+import { listTitleDefinitionsByIds } from './titleDefinitionService.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -241,6 +241,17 @@ const DEFAULT_ATTRS: CharacterComputedStats = Object.freeze({
 });
 
 let cachedRealmConfig: RealmBreakthroughConfigFile | null = null;
+let cachedRealmRewardSummaryByRealmText: Map<
+  string,
+  { pct: BreakthroughPctRewards; addPercent: BreakthroughAddPercentRewards }
+> | null = null;
+let cachedTechniquePassiveLayersSource: readonly ReturnType<typeof getTechniqueLayerDefinitions>[number][] | null = null;
+let cachedTechniquePassiveLayersByTechniqueId: Map<string, Array<{ layer: number; passives: Array<{ key: string; value: number }> }>> | null = null;
+let cachedComputedSetBonusSource: readonly ReturnType<typeof getItemSetDefinitions>[number][] | null = null;
+let cachedComputedSetBonusBySetId: Map<
+  string,
+  Array<{ piece_count: number; priority: number; effect_defs: object[] }>
+> | null = null;
 
 const clampNumber = (value: number, min: number, max: number): number => {
   if (value < min) return min;
@@ -327,6 +338,61 @@ const loadRealmBreakthroughConfig = async (): Promise<RealmBreakthroughConfigFil
   }
   cachedRealmConfig = parsed;
   return parsed;
+};
+
+const getRealmRewardSummaryByRealmText = async (): Promise<Map<
+  string,
+  { pct: BreakthroughPctRewards; addPercent: BreakthroughAddPercentRewards }
+>> => {
+  if (cachedRealmRewardSummaryByRealmText) {
+    return cachedRealmRewardSummaryByRealmText;
+  }
+
+  const cfg = await loadRealmBreakthroughConfig();
+  const rewardByFrom = new Map<string, RealmBreakthroughEntry>();
+  for (const row of cfg.breakthroughs) {
+    if (!row || typeof row !== 'object') continue;
+    const from = String(row.from || '').trim();
+    if (!from) continue;
+    rewardByFrom.set(from, row);
+  }
+
+  const summaryByRealmText = new Map<
+    string,
+    { pct: BreakthroughPctRewards; addPercent: BreakthroughAddPercentRewards }
+  >();
+  const runningPct: BreakthroughPctRewards = {};
+  const runningAddPercent: BreakthroughAddPercentRewards = {};
+
+  for (let index = 0; index < cfg.realmOrder.length; index += 1) {
+    const realmText = cfg.realmOrder[index];
+    if (index > 0) {
+      const previousRealmText = cfg.realmOrder[index - 1];
+      const entry = rewardByFrom.get(previousRealmText);
+      if (entry && String(entry.to || '').trim() === realmText) {
+        const pct = toRecord(entry.rewards?.pct) as BreakthroughPctRewards;
+        const addPercent = toRecord(entry.rewards?.addPercent) as BreakthroughAddPercentRewards;
+
+        if (Number.isFinite(pct.max_qixue)) runningPct.max_qixue = (runningPct.max_qixue || 0) + Number(pct.max_qixue);
+        if (Number.isFinite(pct.max_lingqi)) runningPct.max_lingqi = (runningPct.max_lingqi || 0) + Number(pct.max_lingqi);
+        if (Number.isFinite(pct.wugong)) runningPct.wugong = (runningPct.wugong || 0) + Number(pct.wugong);
+        if (Number.isFinite(pct.fagong)) runningPct.fagong = (runningPct.fagong || 0) + Number(pct.fagong);
+        if (Number.isFinite(pct.wufang)) runningPct.wufang = (runningPct.wufang || 0) + Number(pct.wufang);
+        if (Number.isFinite(pct.fafang)) runningPct.fafang = (runningPct.fafang || 0) + Number(pct.fafang);
+        if (Number.isFinite(addPercent.kongzhi_kangxing)) {
+          runningAddPercent.kongzhi_kangxing = (runningAddPercent.kongzhi_kangxing || 0) + Number(addPercent.kongzhi_kangxing);
+        }
+      }
+    }
+
+    summaryByRealmText.set(realmText, {
+      pct: { ...runningPct },
+      addPercent: { ...runningAddPercent },
+    });
+  }
+
+  cachedRealmRewardSummaryByRealmText = summaryByRealmText;
+  return summaryByRealmText;
 };
 
 const buildSignature = (base: CharacterBaseRow, monthCardFuyuanBonus: number): string => {
@@ -449,22 +515,20 @@ const applyTechniquePassiveAttrs = (
   }
 };
 
-const loadTechniquePassives = async (characterId: number): Promise<Record<string, number>> => {
-  const id = Number(characterId);
-  if (!Number.isFinite(id) || id <= 0) return {};
+const getTechniquePassiveLayersByTechniqueId = (): Map<
+  string,
+  Array<{ layer: number; passives: Array<{ key: string; value: number }> }>
+> => {
+  const techniqueLayerDefinitions = getTechniqueLayerDefinitions();
+  if (cachedTechniquePassiveLayersSource === techniqueLayerDefinitions && cachedTechniquePassiveLayersByTechniqueId) {
+    return cachedTechniquePassiveLayersByTechniqueId;
+  }
 
-  const passiveRows = await query(
-    `
-      SELECT technique_id, current_layer, slot_type
-      FROM character_technique ct
-      WHERE ct.character_id = $1
-        AND ct.slot_type IS NOT NULL
-    `,
-    [id],
-  );
-
-  const layersByTechnique = new Map<string, Array<{ layer: number; passives: Array<{ key: string; value: number }> }>>();
-  for (const entry of getTechniqueLayerDefinitions()) {
+  const layersByTechnique = new Map<
+    string,
+    Array<{ layer: number; passives: Array<{ key: string; value: number }> }>
+  >();
+  for (const entry of techniqueLayerDefinitions) {
     if (entry.enabled === false) continue;
     const techniqueId = String(entry.technique_id || '').trim();
     const layer = Math.floor(Number(entry.layer) || 0);
@@ -479,7 +543,7 @@ const loadTechniquePassives = async (characterId: number): Promise<Record<string
             if (!key || !Number.isFinite(value)) return null;
             return { key, value };
           })
-          .filter((v): v is { key: string; value: number } => Boolean(v))
+          .filter((value): value is { key: string; value: number } => value !== null)
       : [];
 
     const list = layersByTechnique.get(techniqueId) ?? [];
@@ -490,8 +554,25 @@ const loadTechniquePassives = async (characterId: number): Promise<Record<string
     list.sort((left, right) => left.layer - right.layer);
   }
 
+  cachedTechniquePassiveLayersSource = techniqueLayerDefinitions;
+  cachedTechniquePassiveLayersByTechniqueId = layersByTechnique;
+  return layersByTechnique;
+};
+
+type CharacterTechniquePassiveRow = {
+  character_id: number;
+  technique_id: string;
+  current_layer: number;
+  slot_type: string | null;
+};
+
+const accumulateTechniquePassives = (
+  rows: readonly CharacterTechniquePassiveRow[],
+  layersByTechnique: ReadonlyMap<string, Array<{ layer: number; passives: Array<{ key: string; value: number }> }>>,
+): Record<string, number> => {
   const passives: Record<string, number> = {};
-  for (const row of passiveRows.rows as Array<Record<string, unknown>>) {
+
+  for (const row of rows) {
     const slotTypeRaw = String(row.slot_type || '');
     const ratio = slotTypeRaw === 'main' ? 1 : slotTypeRaw === 'sub' ? 0.3 : 0;
     if (ratio <= 0) continue;
@@ -511,7 +592,27 @@ const loadTechniquePassives = async (characterId: number): Promise<Record<string
       }
     }
   }
+
   return passives;
+};
+
+const loadTechniquePassives = async (characterId: number): Promise<Record<string, number>> => {
+  const id = Number(characterId);
+  if (!Number.isFinite(id) || id <= 0) return {};
+
+  const passiveRows = await query(
+    `
+      SELECT technique_id, current_layer, slot_type
+      FROM character_technique ct
+      WHERE ct.character_id = $1
+        AND ct.slot_type IS NOT NULL
+    `,
+    [id],
+  );
+  return accumulateTechniquePassives(
+    passiveRows.rows as CharacterTechniquePassiveRow[],
+    getTechniquePassiveLayersByTechniqueId(),
+  );
 };
 
 const applyRealmRewardsToStats = async (
@@ -519,38 +620,22 @@ const applyRealmRewardsToStats = async (
   stats: CharacterComputedStats,
   pctModifiers: Record<string, number>,
 ): Promise<void> => {
-  const cfg = await loadRealmBreakthroughConfig();
   const realmText = composeRealmText(base.realm, base.sub_realm);
-  const currentIdx = cfg.realmOrder.indexOf(realmText);
-  if (currentIdx <= 0) return;
+  const rewardSummary = (await getRealmRewardSummaryByRealmText()).get(realmText);
+  if (!rewardSummary) return;
 
-  const rewardByFrom = new Map<string, RealmBreakthroughEntry>();
-  for (const row of cfg.breakthroughs) {
-    if (!row || typeof row !== 'object') continue;
-    const from = String(row.from || '').trim();
-    if (!from) continue;
-    rewardByFrom.set(from, row);
-  }
+  if (Number.isFinite(rewardSummary.pct.max_qixue)) pctModifiers.max_qixue = (pctModifiers.max_qixue || 0) + Number(rewardSummary.pct.max_qixue);
+  if (Number.isFinite(rewardSummary.pct.max_lingqi)) pctModifiers.max_lingqi = (pctModifiers.max_lingqi || 0) + Number(rewardSummary.pct.max_lingqi);
+  if (Number.isFinite(rewardSummary.pct.wugong)) pctModifiers.wugong = (pctModifiers.wugong || 0) + Number(rewardSummary.pct.wugong);
+  if (Number.isFinite(rewardSummary.pct.fagong)) pctModifiers.fagong = (pctModifiers.fagong || 0) + Number(rewardSummary.pct.fagong);
+  if (Number.isFinite(rewardSummary.pct.wufang)) pctModifiers.wufang = (pctModifiers.wufang || 0) + Number(rewardSummary.pct.wufang);
+  if (Number.isFinite(rewardSummary.pct.fafang)) pctModifiers.fafang = (pctModifiers.fafang || 0) + Number(rewardSummary.pct.fafang);
 
-  for (let i = 0; i < currentIdx; i += 1) {
-    const from = cfg.realmOrder[i];
-    const to = cfg.realmOrder[i + 1];
-    const entry = rewardByFrom.get(from);
-    if (!entry || String(entry.to || '').trim() !== to) continue;
-
-    const pct = toRecord(entry.rewards?.pct) as BreakthroughPctRewards;
-    const addPercent = toRecord(entry.rewards?.addPercent) as BreakthroughAddPercentRewards;
-
-    if (Number.isFinite(pct.max_qixue)) pctModifiers.max_qixue = (pctModifiers.max_qixue || 0) + Number(pct.max_qixue);
-    if (Number.isFinite(pct.max_lingqi)) pctModifiers.max_lingqi = (pctModifiers.max_lingqi || 0) + Number(pct.max_lingqi);
-    if (Number.isFinite(pct.wugong)) pctModifiers.wugong = (pctModifiers.wugong || 0) + Number(pct.wugong);
-    if (Number.isFinite(pct.fagong)) pctModifiers.fagong = (pctModifiers.fagong || 0) + Number(pct.fagong);
-    if (Number.isFinite(pct.wufang)) pctModifiers.wufang = (pctModifiers.wufang || 0) + Number(pct.wufang);
-    if (Number.isFinite(pct.fafang)) pctModifiers.fafang = (pctModifiers.fafang || 0) + Number(pct.fafang);
-
-    if (Number.isFinite(addPercent.kongzhi_kangxing)) {
-      stats.kongzhi_kangxing = Math.max(0, roundRatio(stats.kongzhi_kangxing + Number(addPercent.kongzhi_kangxing)));
-    }
+  if (Number.isFinite(rewardSummary.addPercent.kongzhi_kangxing)) {
+    stats.kongzhi_kangxing = Math.max(
+      0,
+      roundRatio(stats.kongzhi_kangxing + Number(rewardSummary.addPercent.kongzhi_kangxing)),
+    );
   }
 };
 
@@ -578,41 +663,80 @@ interface EquippedAttrBonuses {
   primaryAttrPctModifiers: Partial<Record<CharacterPrimaryAttrKey, number>>;
 }
 
-const loadEquippedAttrBonuses = async (characterId: number, effectiveLevel: number): Promise<EquippedAttrBonuses> => {
+type EquippedItemAttrRow = {
+  owner_character_id: number;
+  affixes: string | object[] | null;
+  strengthen_level: number | null;
+  refine_level: number | null;
+  socketed_gems: string | object[] | null;
+  item_def_id: string;
+  quality_rank: number | null;
+};
+
+const createEmptyEquippedAttrBonuses = (): EquippedAttrBonuses => {
   const flatStats = emptyStats();
   for (const key of Object.keys(flatStats) as Array<keyof CharacterComputedStats>) {
     flatStats[key] = 0;
   }
-  const pctModifiers: Record<string, number> = {};
-  const primaryAttrPctModifiers: Partial<Record<CharacterPrimaryAttrKey, number>> = {};
-  const ratingTotals: Partial<Record<CharacterAttrKey, number>> = {};
+  return {
+    flatStats,
+    pctModifiers: {},
+    primaryAttrPctModifiers: {},
+  };
+};
 
-  const equippedResult = await query(
-    `
-      SELECT
-        ii.affixes,
-        ii.strengthen_level,
-        ii.refine_level,
-        ii.socketed_gems,
-        ii.item_def_id,
-        ii.quality_rank
-      FROM item_instance ii
-      WHERE ii.owner_character_id = $1
-        AND ii.location = 'equipped'
-    `,
-    [characterId],
-  );
+const getComputedSetBonusBySetId = (): Map<
+  string,
+  Array<{ piece_count: number; priority: number; effect_defs: object[] }>
+> => {
+  const setDefinitions = getItemSetDefinitions();
+  if (cachedComputedSetBonusSource === setDefinitions && cachedComputedSetBonusBySetId) {
+    return cachedComputedSetBonusBySetId;
+  }
+
+  const staticSetBonusBySetId = new Map<
+    string,
+    Array<{ piece_count: number; priority: number; effect_defs: object[] }>
+  >();
+  for (const setDef of setDefinitions) {
+    if (setDef.enabled === false) continue;
+    const setId = String(setDef.id || '').trim();
+    if (!setId) continue;
+    const bonuses = Array.isArray(setDef.bonuses) ? setDef.bonuses : [];
+    const normalizedBonuses = bonuses
+      .map((bonus) => ({
+        piece_count: Math.max(0, Math.floor(Number(bonus.piece_count) || 0)),
+        priority: Math.max(0, Math.floor(Number(bonus.priority) || 0)),
+        effect_defs: Array.isArray(bonus.effect_defs) ? bonus.effect_defs.filter((effectDef): effectDef is object => typeof effectDef === 'object' && effectDef !== null) : [],
+      }))
+      .filter((bonus) => bonus.piece_count > 0)
+      .sort((left, right) => left.priority - right.priority || left.piece_count - right.piece_count);
+    staticSetBonusBySetId.set(setId, normalizedBonuses);
+  }
+
+  cachedComputedSetBonusSource = setDefinitions;
+  cachedComputedSetBonusBySetId = staticSetBonusBySetId;
+  return staticSetBonusBySetId;
+};
+
+const buildEquippedAttrBonusesFromRows = (
+  rows: readonly EquippedItemAttrRow[],
+  effectiveLevel: number,
+): EquippedAttrBonuses => {
+  const equippedAttrBonuses = createEmptyEquippedAttrBonuses();
+  const { flatStats, pctModifiers, primaryAttrPctModifiers } = equippedAttrBonuses;
+  const ratingTotals: Partial<Record<CharacterAttrKey, number>> = {};
 
   const itemDefIds = Array.from(
     new Set(
-      (equippedResult.rows as Array<Record<string, unknown>>)
+      rows
         .map((row) => String(row.item_def_id || '').trim())
         .filter((itemDefId) => itemDefId.length > 0),
     ),
   );
   const defs = getItemDefinitionsByIds(itemDefIds);
   const setCountMap = new Map<string, number>();
-  for (const row of equippedResult.rows as Array<Record<string, unknown>>) {
+  for (const row of rows) {
     const itemDefId = String(row.item_def_id || '').trim();
     if (!itemDefId) continue;
     const def = defs.get(itemDefId);
@@ -668,34 +792,9 @@ const loadEquippedAttrBonuses = async (characterId: number, effectiveLevel: numb
     if (setId) setCountMap.set(setId, (setCountMap.get(setId) || 0) + 1);
   }
 
-  const setIds = [...setCountMap.keys()];
-  if (setIds.length === 0) {
-    return { flatStats, pctModifiers, primaryAttrPctModifiers };
-  }
-
-  const staticSetBonusBySetId = new Map<
-    string,
-    Array<{ piece_count: number; priority: number; effect_defs: unknown[] }>
-  >();
-  for (const setDef of getItemSetDefinitions()) {
-    if (setDef.enabled === false) continue;
-    const setId = String(setDef.id || '').trim();
-    if (!setId) continue;
-    const bonuses = Array.isArray(setDef.bonuses) ? setDef.bonuses : [];
-    const normalizedBonuses = bonuses
-      .map((bonus) => ({
-        piece_count: Math.max(0, Math.floor(Number(bonus.piece_count) || 0)),
-        priority: Math.max(0, Math.floor(Number(bonus.priority) || 0)),
-        effect_defs: Array.isArray(bonus.effect_defs) ? bonus.effect_defs : [],
-      }))
-      .filter((bonus) => bonus.piece_count > 0)
-      .sort((left, right) => left.priority - right.priority || left.piece_count - right.piece_count);
-    staticSetBonusBySetId.set(setId, normalizedBonuses);
-  }
-
-  for (const setId of setIds) {
+  for (const setId of setCountMap.keys()) {
     const equippedCount = setCountMap.get(setId) || 0;
-    const bonusRows = staticSetBonusBySetId.get(setId) ?? [];
+    const bonusRows = getComputedSetBonusBySetId().get(setId) ?? [];
     for (const bonus of bonusRows) {
       if (equippedCount < bonus.piece_count) continue;
       for (const effectRaw of bonus.effect_defs) {
@@ -720,13 +819,42 @@ const loadEquippedAttrBonuses = async (characterId: number, effectiveLevel: numb
     applyAttrDelta(flatStats, attrKey, projectedValue);
   }
 
-  return { flatStats, pctModifiers, primaryAttrPctModifiers };
+  return equippedAttrBonuses;
+};
+
+const loadEquippedAttrBonuses = async (characterId: number, effectiveLevel: number): Promise<EquippedAttrBonuses> => {
+  const equippedResult = await query(
+    `
+      SELECT
+        ii.owner_character_id,
+        ii.affixes,
+        ii.strengthen_level,
+        ii.refine_level,
+        ii.socketed_gems,
+        ii.item_def_id,
+        ii.quality_rank
+      FROM item_instance ii
+      WHERE ii.owner_character_id = $1
+        AND ii.location = 'equipped'
+    `,
+    [characterId],
+  );
+
+  return buildEquippedAttrBonusesFromRows(
+    equippedResult.rows as EquippedItemAttrRow[],
+    effectiveLevel,
+  );
+};
+
+type EquippedTitleRow = {
+  character_id: number;
+  title_id: string;
 };
 
 const loadEquippedTitleEffects = async (characterId: number): Promise<Record<string, number>> => {
   const result = await query(
     `
-      SELECT title_id
+      SELECT character_id, title_id
       FROM character_title ct
       WHERE ct.character_id = $1
         AND ct.is_equipped = true
@@ -737,11 +865,152 @@ const loadEquippedTitleEffects = async (characterId: number): Promise<Record<str
   );
   if (result.rows.length <= 0) return {};
 
-  const titleId = String(result.rows[0]?.title_id || '').trim();
+  const titleId = String((result.rows[0] as EquippedTitleRow | undefined)?.title_id || '').trim();
   if (!titleId) return {};
-  const titleDef = await getTitleDefinitionById(titleId);
+  const titleDef = (await listTitleDefinitionsByIds([titleId])).get(titleId) ?? null;
   if (!titleDef) return {};
   return parseTitleEffects(titleDef.effects);
+};
+
+const loadTechniquePassivesMap = async (
+  characterIds: number[],
+): Promise<Map<number, Record<string, number>>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const result = new Map<number, Record<string, number>>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  const passiveRows = await query(
+    `
+      SELECT character_id, technique_id, current_layer, slot_type
+      FROM character_technique ct
+      WHERE ct.character_id = ANY($1)
+        AND ct.slot_type IS NOT NULL
+      ORDER BY ct.character_id ASC, ct.id ASC
+    `,
+    [normalizedCharacterIds],
+  );
+
+  const rowsByCharacterId = new Map<number, CharacterTechniquePassiveRow[]>();
+  for (const row of passiveRows.rows as CharacterTechniquePassiveRow[]) {
+    const characterId = Math.floor(Number(row.character_id) || 0);
+    if (characterId <= 0) continue;
+    const currentRows = rowsByCharacterId.get(characterId) ?? [];
+    currentRows.push(row);
+    rowsByCharacterId.set(characterId, currentRows);
+  }
+
+  const layersByTechnique = getTechniquePassiveLayersByTechniqueId();
+  for (const [characterId, rows] of rowsByCharacterId.entries()) {
+    result.set(characterId, accumulateTechniquePassives(rows, layersByTechnique));
+  }
+
+  return result;
+};
+
+const loadEquippedAttrBonusesMap = async (
+  characterIds: number[],
+  effectiveLevelByCharacterId: ReadonlyMap<number, number>,
+): Promise<Map<number, EquippedAttrBonuses>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const result = new Map<number, EquippedAttrBonuses>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  const equippedResult = await query(
+    `
+      SELECT
+        ii.owner_character_id,
+        ii.affixes,
+        ii.strengthen_level,
+        ii.refine_level,
+        ii.socketed_gems,
+        ii.item_def_id,
+        ii.quality_rank
+      FROM item_instance ii
+      WHERE ii.owner_character_id = ANY($1)
+        AND ii.location = 'equipped'
+      ORDER BY ii.owner_character_id ASC, ii.id ASC
+    `,
+    [normalizedCharacterIds],
+  );
+
+  const rowsByCharacterId = new Map<number, EquippedItemAttrRow[]>();
+  for (const row of equippedResult.rows as EquippedItemAttrRow[]) {
+    const characterId = Math.floor(Number(row.owner_character_id) || 0);
+    if (characterId <= 0) continue;
+    const currentRows = rowsByCharacterId.get(characterId) ?? [];
+    currentRows.push(row);
+    rowsByCharacterId.set(characterId, currentRows);
+  }
+
+  for (const characterId of normalizedCharacterIds) {
+    result.set(
+      characterId,
+      buildEquippedAttrBonusesFromRows(
+        rowsByCharacterId.get(characterId) ?? [],
+        effectiveLevelByCharacterId.get(characterId) ?? 0,
+      ),
+    );
+  }
+
+  return result;
+};
+
+const loadEquippedTitleEffectsMap = async (
+  characterIds: number[],
+): Promise<Map<number, Record<string, number>>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const result = new Map<number, Record<string, number>>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  const queryResult = await query(
+    `
+      SELECT character_id, title_id
+      FROM character_title ct
+      WHERE ct.character_id = ANY($1)
+        AND ct.is_equipped = true
+        AND (ct.expires_at IS NULL OR ct.expires_at > NOW())
+      ORDER BY ct.character_id ASC, ct.id ASC
+    `,
+    [normalizedCharacterIds],
+  );
+
+  const titleIdByCharacterId = new Map<number, string>();
+  for (const row of queryResult.rows as EquippedTitleRow[]) {
+    const characterId = Math.floor(Number(row.character_id) || 0);
+    const titleId = String(row.title_id || '').trim();
+    if (characterId <= 0 || !titleId || titleIdByCharacterId.has(characterId)) continue;
+    titleIdByCharacterId.set(characterId, titleId);
+  }
+  if (titleIdByCharacterId.size <= 0) {
+    return result;
+  }
+
+  const titleDefs = await listTitleDefinitionsByIds([...new Set(titleIdByCharacterId.values())]);
+  for (const [characterId, titleId] of titleIdByCharacterId.entries()) {
+    const titleDef = titleDefs.get(titleId);
+    if (!titleDef) continue;
+    result.set(characterId, parseTitleEffects(titleDef.effects));
+  }
+
+  return result;
 };
 
 interface ResolvedStaticAttrs {
@@ -749,19 +1018,19 @@ interface ResolvedStaticAttrs {
   primaryAttrs: CharacterPrimaryAttrs;
 }
 
-const computeStaticAttrs = async (
+type StaticAttrComputationDependencies = {
+  equipBonuses: EquippedAttrBonuses;
+  titleEffects: Record<string, number>;
+  techniquePassives: Record<string, number>;
+};
+
+const computeStaticAttrsFromDependencies = async (
   base: CharacterBaseRow,
   monthCardFuyuanBonus: number,
+  dependencies: StaticAttrComputationDependencies,
 ): Promise<ResolvedStaticAttrs> => {
   const stats = emptyStats();
   const pctModifiers: Record<string, number> = {};
-  const effectiveLevel = getEffectiveLevelByRealm(base.realm, base.sub_realm);
-
-  const [equipBonuses, titleEffects, techniquePassives] = await Promise.all([
-    loadEquippedAttrBonuses(base.id, effectiveLevel),
-    loadEquippedTitleEffects(base.id),
-    loadTechniquePassives(base.id),
-  ]);
 
   const primaryAttrs = resolveCharacterPrimaryAttrs(
     createCharacterPrimaryAttrs({
@@ -769,24 +1038,24 @@ const computeStaticAttrs = async (
       qi: base.qi,
       shen: base.shen,
     }),
-    equipBonuses.primaryAttrPctModifiers,
+    dependencies.equipBonuses.primaryAttrPctModifiers,
   );
 
   applyCharacterPrimaryAttrsToStats(stats, primaryAttrs);
   await applyRealmRewardsToStats(base, stats, pctModifiers);
   applyInsightRewardsToStats(base, pctModifiers);
 
-  for (const [key, value] of Object.entries(equipBonuses.flatStats)) {
+  for (const [key, value] of Object.entries(dependencies.equipBonuses.flatStats)) {
     applyAttrDelta(stats, key, value);
   }
-  for (const [key, value] of Object.entries(equipBonuses.pctModifiers)) {
+  for (const [key, value] of Object.entries(dependencies.equipBonuses.pctModifiers)) {
     if (!Number.isFinite(value) || value === 0) continue;
     pctModifiers[key] = (pctModifiers[key] || 0) + value;
   }
-  for (const [key, value] of Object.entries(titleEffects)) {
+  for (const [key, value] of Object.entries(dependencies.titleEffects)) {
     applyAttrDelta(stats, key, value);
   }
-  applyTechniquePassiveAttrs(stats, techniquePassives, pctModifiers);
+  applyTechniquePassiveAttrs(stats, dependencies.techniquePassives, pctModifiers);
 
   for (const [key, pct] of Object.entries(pctModifiers)) {
     if (pct === 0) continue;
@@ -803,6 +1072,25 @@ const computeStaticAttrs = async (
     attrs: normalizeStats(stats),
     primaryAttrs,
   };
+};
+
+const computeStaticAttrs = async (
+  base: CharacterBaseRow,
+  monthCardFuyuanBonus: number,
+): Promise<ResolvedStaticAttrs> => {
+  const effectiveLevel = getEffectiveLevelByRealm(base.realm, base.sub_realm);
+
+  const [equipBonuses, titleEffects, techniquePassives] = await Promise.all([
+    loadEquippedAttrBonuses(base.id, effectiveLevel),
+    loadEquippedTitleEffects(base.id),
+    loadTechniquePassives(base.id),
+  ]);
+
+  return computeStaticAttrsFromDependencies(base, monthCardFuyuanBonus, {
+    equipBonuses,
+    titleEffects,
+    techniquePassives,
+  });
 };
 
 const getStaticCacheKey = (characterId: number): string => {
@@ -841,6 +1129,61 @@ const readStaticAttrsFromCache = async (characterId: number): Promise<StaticAttr
   }
 };
 
+const readStaticAttrsFromCacheMap = async (
+  characterIds: number[],
+): Promise<Map<number, StaticAttrsCachePayload>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const result = new Map<number, StaticAttrsCachePayload>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  const now = Date.now();
+  const uncachedCharacterIds: number[] = [];
+  for (const characterId of normalizedCharacterIds) {
+    const cachedMem = staticAttrsMemoryCache.get(characterId);
+    if (cachedMem && cachedMem.expiresAt > now) {
+      result.set(characterId, cachedMem.payload);
+      continue;
+    }
+    uncachedCharacterIds.push(characterId);
+  }
+  if (uncachedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  try {
+    const rawValues = await redis.mget(...uncachedCharacterIds.map((characterId) => getStaticCacheKey(characterId)));
+    uncachedCharacterIds.forEach((characterId, index) => {
+      const raw = rawValues[index];
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as StaticAttrsCachePayload;
+      if (!parsed || typeof parsed !== 'object') return;
+      if (typeof parsed.signature !== 'string' || !parsed.attrs || !parsed.primaryAttrs) return;
+      if (
+        !Number.isFinite(parsed.primaryAttrs.jing) ||
+        !Number.isFinite(parsed.primaryAttrs.qi) ||
+        !Number.isFinite(parsed.primaryAttrs.shen)
+      ) {
+        return;
+      }
+      staticAttrsMemoryCache.set(characterId, {
+        payload: parsed,
+        expiresAt: now + STATIC_ATTR_MEMORY_TTL_MS,
+      });
+      result.set(characterId, parsed);
+    });
+  } catch {
+    return result;
+  }
+
+  return result;
+};
+
 const writeStaticAttrsCache = async (characterId: number, payload: StaticAttrsCachePayload): Promise<void> => {
   const now = Date.now();
   staticAttrsMemoryCache.set(characterId, {
@@ -849,6 +1192,33 @@ const writeStaticAttrsCache = async (characterId: number, payload: StaticAttrsCa
   });
   try {
     await redis.setex(getStaticCacheKey(characterId), STATIC_ATTR_CACHE_TTL_SECONDS, JSON.stringify(payload));
+  } catch {
+    // ignore redis failure
+  }
+};
+
+const writeStaticAttrsCacheBatch = async (
+  entries: Array<{ characterId: number; payload: StaticAttrsCachePayload }>,
+): Promise<void> => {
+  if (entries.length <= 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const multi = redis.multi();
+  for (const entry of entries) {
+    staticAttrsMemoryCache.set(entry.characterId, {
+      payload: entry.payload,
+      expiresAt: now + STATIC_ATTR_MEMORY_TTL_MS,
+    });
+    multi.setex(
+      getStaticCacheKey(entry.characterId),
+      STATIC_ATTR_CACHE_TTL_SECONDS,
+      JSON.stringify(entry.payload),
+    );
+  }
+  try {
+    await multi.exec();
   } catch {
     // ignore redis failure
   }
@@ -879,6 +1249,58 @@ const readResourceStateFromCache = async (characterId: number): Promise<Characte
   }
 };
 
+const readResourceStateFromCacheMap = async (
+  characterIds: number[],
+): Promise<Map<number, CharacterResourceState>> => {
+  const normalizedCharacterIds = [...new Set(
+    characterIds
+      .map((characterId) => Math.floor(Number(characterId)))
+      .filter((characterId) => Number.isFinite(characterId) && characterId > 0),
+  )];
+  const result = new Map<number, CharacterResourceState>();
+  if (normalizedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  const now = Date.now();
+  const uncachedCharacterIds: number[] = [];
+  for (const characterId of normalizedCharacterIds) {
+    const cachedMem = resourceMemoryCache.get(characterId);
+    if (cachedMem && cachedMem.expiresAt > now) {
+      result.set(characterId, cachedMem.payload);
+      continue;
+    }
+    uncachedCharacterIds.push(characterId);
+  }
+  if (uncachedCharacterIds.length <= 0) {
+    return result;
+  }
+
+  try {
+    const rawValues = await redis.mget(...uncachedCharacterIds.map((characterId) => getResourceCacheKey(characterId)));
+    uncachedCharacterIds.forEach((characterId, index) => {
+      const raw = rawValues[index];
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as CharacterResourceState;
+      if (!parsed || typeof parsed !== 'object') return;
+      if (!Number.isFinite(parsed.qixue) || !Number.isFinite(parsed.lingqi)) return;
+      const normalized: CharacterResourceState = {
+        qixue: Math.floor(parsed.qixue),
+        lingqi: Math.floor(parsed.lingqi),
+      };
+      resourceMemoryCache.set(characterId, {
+        payload: normalized,
+        expiresAt: now + RESOURCE_MEMORY_TTL_MS,
+      });
+      result.set(characterId, normalized);
+    });
+  } catch {
+    return result;
+  }
+
+  return result;
+};
+
 const writeResourceStateCache = async (characterId: number, state: CharacterResourceState): Promise<void> => {
   const normalized: CharacterResourceState = {
     qixue: Math.floor(state.qixue),
@@ -891,6 +1313,33 @@ const writeResourceStateCache = async (characterId: number, state: CharacterReso
   });
   try {
     await redis.set(getResourceCacheKey(characterId), JSON.stringify(normalized));
+  } catch {
+    // ignore redis failure
+  }
+};
+
+const writeResourceStateCacheBatch = async (
+  entries: Array<{ characterId: number; state: CharacterResourceState }>,
+): Promise<void> => {
+  if (entries.length <= 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const multi = redis.multi();
+  for (const entry of entries) {
+    const normalized: CharacterResourceState = {
+      qixue: Math.floor(entry.state.qixue),
+      lingqi: Math.floor(entry.state.lingqi),
+    };
+    resourceMemoryCache.set(entry.characterId, {
+      payload: normalized,
+      expiresAt: now + RESOURCE_MEMORY_TTL_MS,
+    });
+    multi.set(getResourceCacheKey(entry.characterId), JSON.stringify(normalized));
+  }
+  try {
+    await multi.exec();
   } catch {
     // ignore redis failure
   }
@@ -1000,6 +1449,87 @@ const resolveStaticAttrs = async (
   return resolved;
 };
 
+const resolveStaticAttrsMap = async (
+  bases: CharacterBaseRow[],
+  options?: { bypassStaticCache?: boolean; monthCardFuyuanBonusByCharacterId?: ReadonlyMap<number, number> },
+): Promise<Map<number, ResolvedStaticAttrs>> => {
+  const result = new Map<number, ResolvedStaticAttrs>();
+  if (bases.length <= 0) {
+    return result;
+  }
+
+  const bypassStaticCache = options?.bypassStaticCache === true;
+  const monthCardFuyuanBonusByCharacterId = options?.monthCardFuyuanBonusByCharacterId ?? new Map<number, number>();
+  const signatureByCharacterId = new Map<number, string>();
+  for (const base of bases) {
+    signatureByCharacterId.set(
+      base.id,
+      buildSignature(base, monthCardFuyuanBonusByCharacterId.get(base.id) ?? 0),
+    );
+  }
+
+  const uncachedBases: CharacterBaseRow[] = [];
+  if (!bypassStaticCache) {
+    const cachedPayloadByCharacterId = await readStaticAttrsFromCacheMap(bases.map((base) => base.id));
+    for (const base of bases) {
+      const cachedPayload = cachedPayloadByCharacterId.get(base.id);
+      if (cachedPayload && cachedPayload.signature === signatureByCharacterId.get(base.id)) {
+        result.set(base.id, {
+          attrs: cachedPayload.attrs,
+          primaryAttrs: cachedPayload.primaryAttrs,
+        });
+        continue;
+      }
+      uncachedBases.push(base);
+    }
+  } else {
+    uncachedBases.push(...bases);
+  }
+
+  if (uncachedBases.length <= 0) {
+    return result;
+  }
+
+  const effectiveLevelByCharacterId = new Map<number, number>();
+  for (const base of uncachedBases) {
+    effectiveLevelByCharacterId.set(base.id, getEffectiveLevelByRealm(base.realm, base.sub_realm));
+  }
+
+  const [equipBonusesByCharacterId, titleEffectsByCharacterId, techniquePassivesByCharacterId] = await Promise.all([
+    loadEquippedAttrBonusesMap(
+      uncachedBases.map((base) => base.id),
+      effectiveLevelByCharacterId,
+    ),
+    loadEquippedTitleEffectsMap(uncachedBases.map((base) => base.id)),
+    loadTechniquePassivesMap(uncachedBases.map((base) => base.id)),
+  ]);
+
+  const cacheWrites: Array<{ characterId: number; payload: StaticAttrsCachePayload }> = [];
+  for (const base of uncachedBases) {
+    const resolved = await computeStaticAttrsFromDependencies(
+      base,
+      monthCardFuyuanBonusByCharacterId.get(base.id) ?? 0,
+      {
+        equipBonuses: equipBonusesByCharacterId.get(base.id) ?? createEmptyEquippedAttrBonuses(),
+        titleEffects: titleEffectsByCharacterId.get(base.id) ?? {},
+        techniquePassives: techniquePassivesByCharacterId.get(base.id) ?? {},
+      },
+    );
+    result.set(base.id, resolved);
+    cacheWrites.push({
+      characterId: base.id,
+      payload: {
+        signature: signatureByCharacterId.get(base.id) ?? '',
+        attrs: resolved.attrs,
+        primaryAttrs: resolved.primaryAttrs,
+      },
+    });
+  }
+  await writeStaticAttrsCacheBatch(cacheWrites);
+
+  return result;
+};
+
 const buildComputedRow = async (
   base: CharacterBaseRow,
   options?: { bypassStaticCache?: boolean; monthCardFuyuanBonus?: number },
@@ -1026,6 +1556,42 @@ const buildComputedRow = async (
   };
 };
 
+const ensureResourceStateMap = async (
+  entries: Array<{ characterId: number; maxQixue: number; maxLingqi: number }>,
+): Promise<Map<number, CharacterResourceState>> => {
+  const result = new Map<number, CharacterResourceState>();
+  if (entries.length <= 0) {
+    return result;
+  }
+
+  const existingResourceStateByCharacterId = await readResourceStateFromCacheMap(
+    entries.map((entry) => entry.characterId),
+  );
+  const cacheWrites: Array<{ characterId: number; state: CharacterResourceState }> = [];
+
+  for (const entry of entries) {
+    const existing = existingResourceStateByCharacterId.get(entry.characterId) ?? null;
+    const initState: CharacterResourceState = existing ?? {
+      qixue: entry.maxQixue,
+      lingqi: 0,
+    };
+    const normalized: CharacterResourceState = {
+      qixue: clampNumber(Math.floor(initState.qixue), 0, entry.maxQixue),
+      lingqi: clampNumber(Math.floor(initState.lingqi), 0, entry.maxLingqi),
+    };
+    if (!existing || existing.qixue !== normalized.qixue || existing.lingqi !== normalized.lingqi) {
+      cacheWrites.push({
+        characterId: entry.characterId,
+        state: normalized,
+      });
+    }
+    result.set(entry.characterId, normalized);
+  }
+
+  await writeResourceStateCacheBatch(cacheWrites);
+  return result;
+};
+
 const loadMonthCardFuyuanBonusMap = async (characterIds: number[]): Promise<Map<number, number>> => {
   const activeMap = await getMonthCardActiveMapByCharacterIds(characterIds);
   const monthCardFuyuanBonus = getMonthCardFuyuanBonus();
@@ -1033,6 +1599,55 @@ const loadMonthCardFuyuanBonusMap = async (characterIds: number[]): Promise<Map<
 
   for (const characterId of characterIds) {
     result.set(characterId, activeMap.get(characterId) === true ? monthCardFuyuanBonus : 0);
+  }
+
+  return result;
+};
+
+const buildCharacterComputedRowMap = async (
+  rows: CharacterBaseRow[],
+  options?: { bypassStaticCache?: boolean },
+): Promise<Map<number, CharacterComputedRow>> => {
+  const result = new Map<number, CharacterComputedRow>();
+  if (rows.length <= 0) {
+    return result;
+  }
+
+  const monthCardFuyuanBonusMap = await loadMonthCardFuyuanBonusMap(rows.map((row) => row.id));
+  const staticAttrsByCharacterId = await resolveStaticAttrsMap(rows, {
+    bypassStaticCache: options?.bypassStaticCache === true,
+    monthCardFuyuanBonusByCharacterId: monthCardFuyuanBonusMap,
+  });
+  const resourceStateByCharacterId = await ensureResourceStateMap(
+    rows.map((row) => {
+      const staticSnapshot = staticAttrsByCharacterId.get(row.id);
+      return {
+        characterId: row.id,
+        maxQixue: staticSnapshot?.attrs.max_qixue ?? 1,
+        maxLingqi: staticSnapshot?.attrs.max_lingqi ?? 0,
+      };
+    }),
+  );
+
+  for (const row of rows) {
+    const staticSnapshot = staticAttrsByCharacterId.get(row.id);
+    const resources = resourceStateByCharacterId.get(row.id);
+    if (!staticSnapshot || !resources) {
+      continue;
+    }
+    const staminaMax = calcCharacterStaminaMaxByInsightLevel(row.insight_level);
+    const stamina = clampNumber(Math.floor(Number(row.stamina) || 0), 0, staminaMax);
+    const { insight_level: _ignoredInsightLevel, ...baseWithoutInsight } = row;
+
+    result.set(row.id, {
+      ...baseWithoutInsight,
+      ...staticSnapshot.primaryAttrs,
+      stamina,
+      stamina_max: staminaMax,
+      ...staticSnapshot.attrs,
+      qixue: resources.qixue,
+      lingqi: resources.lingqi,
+    });
   }
 
   return result;
@@ -1073,8 +1688,7 @@ export const getCharacterComputedBatchByCharacterIds = async (
   options?: { bypassStaticCache?: boolean },
 ): Promise<Map<number, CharacterComputedRow>> => {
   const ids = [...new Set(characterIds.map((id) => Math.floor(Number(id))).filter((id) => Number.isFinite(id) && id > 0))];
-  const out = new Map<number, CharacterComputedRow>();
-  if (ids.length <= 0) return out;
+  if (ids.length <= 0) return new Map<number, CharacterComputedRow>();
 
   const result = await query(
     `
@@ -1089,17 +1703,7 @@ export const getCharacterComputedBatchByCharacterIds = async (
   );
 
   const rows = result.rows as CharacterBaseRow[];
-  const monthCardFuyuanBonusMap = await loadMonthCardFuyuanBonusMap(rows.map((row) => row.id));
-  await Promise.all(
-    rows.map(async (row) => {
-      const computed = await buildComputedRow(row, {
-        ...options,
-        monthCardFuyuanBonus: monthCardFuyuanBonusMap.get(row.id) ?? 0,
-      });
-      out.set(computed.id, computed);
-    }),
-  );
-  return out;
+  return buildCharacterComputedRowMap(rows, options);
 };
 
 export const getCharacterComputedBatchByUserIds = async (
@@ -1110,16 +1714,10 @@ export const getCharacterComputedBatchByUserIds = async (
   const out = new Map<number, CharacterComputedRow>();
   if (rows.length <= 0) return out;
 
-  const monthCardFuyuanBonusMap = await loadMonthCardFuyuanBonusMap(rows.map((row) => row.id));
-  await Promise.all(
-    rows.map(async (row) => {
-      const computed = await buildComputedRow(row, {
-        ...options,
-        monthCardFuyuanBonus: monthCardFuyuanBonusMap.get(row.id) ?? 0,
-      });
-      out.set(computed.user_id, computed);
-    }),
-  );
+  const computedByCharacterId = await buildCharacterComputedRowMap(rows, options);
+  for (const computed of computedByCharacterId.values()) {
+    out.set(computed.user_id, computed);
+  }
   return out;
 };
 

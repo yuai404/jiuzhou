@@ -48,6 +48,15 @@ import {
   initializeWanderJobRunner,
   shutdownWanderJobRunner,
 } from "../services/wanderJobRunner.js";
+import {
+  warmupOnlineBattleProjectionService,
+} from "../services/onlineBattleProjectionService.js";
+import { warmupFrozenTowerPoolCache } from "../services/tower/frozenPool.js";
+import { dungeonExpiredInstanceCleanupService } from "../services/dungeonExpiredInstanceCleanupService.js";
+import {
+  initializeOnlineBattleSettlementRunner,
+  shutdownOnlineBattleSettlementRunner,
+} from "../services/onlineBattleSettlementRunner.js";
 import { getGameServer } from "../game/gameServer.js";
 import {
   initializeAfdianMessageRetryService,
@@ -60,6 +69,24 @@ export interface StartServerOptions {
   host: string;
   port: number;
 }
+
+const formatStepDuration = (durationMs: number): string => {
+  if (durationMs < 1_000) {
+    return `${durationMs}ms`;
+  }
+  return `${(durationMs / 1_000).toFixed(2)}s`;
+};
+
+const runStartupStep = async <T>(
+  label: string,
+  task: () => Promise<T>,
+): Promise<T> => {
+  const startAt = Date.now();
+  console.log(`→ ${label}`);
+  const result = await task();
+  console.log(`✓ ${label}（耗时 ${formatStepDuration(Date.now() - startAt)}）`);
+  return result;
+};
 
 /**
  * 服务启动流水线（连接检查 -> 数据准备 -> 启动恢复 -> 监听端口）
@@ -79,12 +106,12 @@ export const startServerWithPipeline = async (
     console.warn("⚠ Redis 连接失败，战斗状态将不会持久化");
   }
 
-  await initTables();
-  await ensurePerformanceIndexes();
-  await refreshGeneratedTechniqueSnapshots();
-  await refreshGeneratedPartnerSnapshots();
-  await clearAllAvatarsOnce();
-  await itemDataCleanupService.cleanupUndefinedItemDataOnStartup();
+  await runStartupStep("数据准备", initTables);
+  await runStartupStep("性能索引同步", ensurePerformanceIndexes);
+  await runStartupStep("生成功法快照刷新", refreshGeneratedTechniqueSnapshots);
+  await runStartupStep("动态伙伴快照失效", refreshGeneratedPartnerSnapshots);
+  await runStartupStep("头像清理检查", clearAllAvatarsOnce);
+  await runStartupStep("异常物品数据清理", () => itemDataCleanupService.cleanupUndefinedItemDataOnStartup());
 
   // 初始化 Worker 池
   console.log("正在初始化 Worker 池...");
@@ -96,31 +123,62 @@ export const startServerWithPipeline = async (
   console.log(`  - CPU 核心数: ${cpuCount}，启动 ${workerCount} 个 Worker`);
   console.log("  - 挂机战斗怪物解析复用普通战斗服务配置");
 
-  await initializeWorkerPool({
-    workerCount,
-  });
+  await runStartupStep("Worker 池初始化", () =>
+    initializeWorkerPool({
+      workerCount,
+    }),
+  );
   console.log(`✓ Worker 池已就绪（${workerCount} 个 Worker）\n`);
-  await initializeTechniqueGenerationJobRunner();
+  await runStartupStep("洞府研修 worker 协调器初始化", initializeTechniqueGenerationJobRunner);
   console.log("✓ 洞府研修 worker 协调器已就绪\n");
-  await initializePartnerRecruitJobRunner();
+  await runStartupStep("AI 伙伴招募 worker 协调器初始化", initializePartnerRecruitJobRunner);
   console.log("✓ AI 伙伴招募 worker 协调器已就绪\n");
-  await initializePartnerFusionJobRunner();
+  await runStartupStep("三魂归契 worker 协调器初始化", initializePartnerFusionJobRunner);
   console.log("✓ 三魂归契 worker 协调器已就绪\n");
-  await initializeWanderJobRunner();
+  await runStartupStep("云游奇遇 worker 协调器初始化", initializeWanderJobRunner);
   console.log("✓ 云游奇遇 worker 协调器已就绪\n");
-  await initializeAfdianMessageRetryService();
+  const expiredDungeonCleanupSummary = await runStartupStep(
+    "过期秘境实例收口",
+    () => dungeonExpiredInstanceCleanupService.runCleanupOnce(),
+  );
+  console.log(
+    `✓ 过期秘境实例已收口（preparing ${expiredDungeonCleanupSummary.abandonedPreparingCount} / running ${expiredDungeonCleanupSummary.abandonedRunningCount} / 结算保护 ${expiredDungeonCleanupSummary.protectedInstanceCount}）\n`,
+  );
+  const frozenTowerPoolSummary = await runStartupStep(
+    "千层塔冻结怪物池预热",
+    warmupFrozenTowerPoolCache,
+  );
+  console.log(
+    `✓ 千层塔冻结怪物池已预热（冻结前沿 ${frozenTowerPoolSummary.frontier.frozenFloorMax}）\n`,
+  );
+  const onlineBattleWarmupSummary = await runStartupStep(
+    "在线战斗投影预热",
+    warmupOnlineBattleProjectionService,
+  );
+  console.log(
+    `✓ 在线战斗投影已预热（角色 ${onlineBattleWarmupSummary.characterCount} / 竞技场 ${onlineBattleWarmupSummary.arenaCount} / 秘境 ${onlineBattleWarmupSummary.dungeonCount} / 千层塔 ${onlineBattleWarmupSummary.towerCount}）\n`,
+  );
+  await runStartupStep("在线战斗延迟结算协调器初始化", initializeOnlineBattleSettlementRunner);
+  console.log("✓ 在线战斗延迟结算协调器已就绪\n");
+  await runStartupStep("爱发电私信重试调度器初始化", initializeAfdianMessageRetryService);
   console.log("✓ 爱发电私信重试调度器已就绪\n");
 
-  await initGameTimeService();
-  await initArenaWeeklySettlementService();
-  await startCleanupWorker();
+  await runStartupStep("游戏时间服务初始化", initGameTimeService);
+  await runStartupStep("竞技场周结算服务初始化", async () => {
+    initArenaWeeklySettlementService();
+  });
+  await runStartupStep("清理 Worker 启动", async () => {
+    await startCleanupWorker();
+  });
 
   if (redisConnected) {
-    console.log("正在恢复战斗状态...");
-    await recoverBattlesFromRedis();
+    await runStartupStep("战斗状态恢复", async () => {
+      console.log("正在恢复战斗状态...");
+      await recoverBattlesFromRedis();
+    });
   }
 
-  await recoverActiveIdleSessions();
+  await runStartupStep("挂机会话恢复", recoverActiveIdleSessions);
 
   await new Promise<void>((resolve, reject) => {
     options.httpServer.listen(options.port, options.host, () => {
@@ -186,6 +244,9 @@ export const registerGracefulShutdown = (httpServer: HttpServer): void => {
 
       await shutdownWanderJobRunner();
       console.log("✓ 云游奇遇 worker 协调器已关闭");
+
+      await shutdownOnlineBattleSettlementRunner();
+      console.log("✓ 在线战斗延迟结算协调器已关闭");
 
       stopAfdianMessageRetryService();
       console.log("✓ 爱发电私信重试调度器已关闭");

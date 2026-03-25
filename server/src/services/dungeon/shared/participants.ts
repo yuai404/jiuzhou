@@ -14,7 +14,11 @@
  * 2) getUserAndCharacter 拼接 realm + sub_realm 为完整境界名。
  */
 
-import { query } from '../../../config/database.js';
+import {
+  getOnlineBattleCharacterSnapshotByUserId,
+  getOnlineBattleCharacterSnapshotsByCharacterIds,
+  getTeamProjectionByUserId,
+} from '../../onlineBattleProjectionService.js';
 import { asObject, asArray, asString } from './typeUtils.js';
 import type { DungeonInstanceParticipant } from '../types.js';
 
@@ -59,13 +63,12 @@ export const getParticipantNicknameMap = async (participants: DungeonInstancePar
     ),
   );
   if (characterIds.length === 0) return new Map<number, string>();
-
-  const rows = await query('SELECT id, nickname FROM characters WHERE id = ANY($1::int[])', [characterIds]);
+  const snapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(characterIds);
   const nicknameMap = new Map<number, string>();
-  for (const row of rows.rows as Array<Record<string, unknown>>) {
-    const characterId = Number(row.id);
-    if (!Number.isFinite(characterId) || characterId <= 0) continue;
-    const nickname = asString(row.nickname, '').trim();
+  for (const characterId of characterIds) {
+    const snapshot = snapshots.get(characterId);
+    if (!snapshot) continue;
+    const nickname = asString(snapshot.computed.nickname, '').trim();
     if (!nickname) continue;
     nicknameMap.set(characterId, nickname);
   }
@@ -84,14 +87,13 @@ export const getParticipantRealmMap = async (
     ),
   );
   if (characterIds.length === 0) return new Map<number, string>();
-
-  const rows = await query('SELECT id, realm, sub_realm FROM characters WHERE id = ANY($1::int[])', [characterIds]);
+  const snapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(characterIds);
   const realmMap = new Map<number, string>();
-  for (const row of rows.rows as Array<Record<string, unknown>>) {
-    const characterId = Number(row.id);
-    if (!Number.isFinite(characterId) || characterId <= 0) continue;
-    const realm = asString(row.realm, '凡人').trim() || '凡人';
-    const subRealm = asString(row.sub_realm, '').trim();
+  for (const characterId of characterIds) {
+    const snapshot = snapshots.get(characterId);
+    if (!snapshot) continue;
+    const realm = asString(snapshot.computed.realm, '凡人').trim() || '凡人';
+    const subRealm = asString(snapshot.computed.sub_realm, '').trim();
     realmMap.set(characterId, getFullRealm(realm, subRealm || null));
   }
   return realmMap;
@@ -110,38 +112,37 @@ export const getUserAndCharacter = async (
   | { ok: true; userId: number; characterId: number; realm: string; teamId: string | null; isLeader: boolean }
   | { ok: false; message: string }
 > => {
-  const charRes = await query(`SELECT id, realm, sub_realm FROM characters WHERE user_id = $1 LIMIT 1`, [userId]);
-  if (charRes.rows.length === 0) return { ok: false, message: '角色不存在' };
-  const characterId = Number(charRes.rows[0]?.id);
-  if (!Number.isFinite(characterId) || characterId <= 0) return { ok: false, message: '角色不存在' };
-  const realm = getFullRealm(String(charRes.rows[0]?.realm || '凡人'), (charRes.rows[0]?.sub_realm ?? null) as string | null);
-
-  const memberRes = await query(`SELECT team_id, role FROM team_members WHERE character_id = $1 LIMIT 1`, [characterId]);
-  const teamId = memberRes.rows.length > 0 ? asString(memberRes.rows[0]?.team_id, '') : '';
-  const role = memberRes.rows.length > 0 ? asString(memberRes.rows[0]?.role, '') : '';
-  return { ok: true, userId, characterId, realm, teamId: teamId || null, isLeader: role === 'leader' };
+  const snapshot = await getOnlineBattleCharacterSnapshotByUserId(userId);
+  if (!snapshot) return { ok: false, message: '角色不存在' };
+  const teamProjection = await getTeamProjectionByUserId(userId);
+  return {
+    ok: true,
+    userId,
+    characterId: snapshot.characterId,
+    realm: getFullRealm(snapshot.computed.realm, snapshot.computed.sub_realm),
+    teamId: teamProjection?.teamId ?? null,
+    isLeader: teamProjection?.role === 'leader',
+  };
 };
 
 /** 获取队伍所有成员作为秘境参与者 */
-export const getTeamParticipants = async (teamId: string): Promise<DungeonInstanceParticipant[]> => {
-  const res = await query(
-    `
-      SELECT c.user_id, c.id AS character_id, tm.role
-      FROM team_members tm
-      JOIN characters c ON c.id = tm.character_id
-      WHERE tm.team_id = $1
-      ORDER BY tm.role DESC, tm.joined_at ASC
-    `,
-    [teamId]
-  );
+export const getTeamParticipants = async (leaderUserId: number): Promise<DungeonInstanceParticipant[]> => {
+  const teamProjection = await getTeamProjectionByUserId(leaderUserId);
+  if (!teamProjection?.teamId || teamProjection.memberCharacterIds.length <= 0) {
+    return [];
+  }
+  const snapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(teamProjection.memberCharacterIds);
   const list: DungeonInstanceParticipant[] = [];
-  for (const row of res.rows as Array<Record<string, unknown>>) {
-    const userId = Number(row.user_id);
-    const characterId = Number(row.character_id);
-    const role = row.role === 'leader' ? 'leader' : 'member';
+  for (const characterId of teamProjection.memberCharacterIds) {
+    const snapshot = snapshots.get(characterId);
+    if (!snapshot) continue;
+    const userId = Number(snapshot.userId);
+    const role = userId === leaderUserId ? 'leader' : 'member';
     if (!Number.isFinite(userId) || userId <= 0) continue;
-    if (!Number.isFinite(characterId) || characterId <= 0) continue;
     list.push({ userId, characterId, role });
   }
-  return list;
+  return list.sort((left, right) => {
+    if (left.role !== right.role) return left.role === 'leader' ? -1 : 1;
+    return left.characterId - right.characterId;
+  });
 };

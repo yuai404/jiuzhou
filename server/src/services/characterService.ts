@@ -12,6 +12,10 @@ import {
   invalidateCharacterComputedCache,
   type CharacterComputedRow,
 } from './characterComputedService.js';
+import {
+  setOnlineBattleCharacterDungeonNoStaminaCost,
+  setOnlineBattleCharacterPosition,
+} from './onlineBattleProjectionService.js';
 import { withUnlockedFeatures } from './featureUnlockService.js';
 import { createInventoryForCharacter } from './shared/inventoryPersistence.js';
 import { loadCharacterIdByUserIdDirect, primeCharacterIdByUserIdCache } from './shared/characterId.js';
@@ -251,6 +255,10 @@ export const updateCharacterPosition = async (
 
   const characterId = Number(result.rows?.[0]?.id);
   if (Number.isFinite(characterId) && characterId > 0) {
+    await setOnlineBattleCharacterPosition(characterId, {
+      currentMapId: mapId,
+      currentRoomId: roomId,
+    });
     await updateSectionProgress(characterId, { type: 'reach', roomId });
     await updateAchievementProgress(characterId, `map:discover:${mapId}`, 1);
     await updateAchievementProgress(characterId, `room:reach:${roomId}`, 1);
@@ -318,11 +326,17 @@ export const updateCharacterDungeonNoStaminaCostSetting = async (
     SET dungeon_no_stamina_cost = $1,
         updated_at = CURRENT_TIMESTAMP
     WHERE user_id = $2
+    RETURNING id
   `;
   const result = await query(sql, [Boolean(enabled), userId]);
 
   if (result.rowCount === 0) {
     return { success: false, message: '角色不存在' };
+  }
+
+  const characterId = Number(result.rows?.[0]?.id);
+  if (Number.isFinite(characterId) && characterId > 0) {
+    await setOnlineBattleCharacterDungeonNoStaminaCost(characterId, Boolean(enabled));
   }
 
   return { success: true, message: '设置已保存' };

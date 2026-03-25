@@ -32,7 +32,10 @@ import type { SkillDefConfig } from "../../staticConfigLoader.js";
 import {
   buildEffectiveTechniqueSkillData,
 } from "../../shared/techniqueSkillProgression.js";
-import { loadCharacterBattleSkillEntries } from "../../shared/characterBattleSkills.js";
+import {
+  loadCharacterBattleSkillEntries,
+  loadCharacterBattleSkillEntriesMap,
+} from "../../shared/characterBattleSkills.js";
 import { resolveSkillTriggerType } from "../../../shared/skillTriggerType.js";
 import { toNumber, uniqueStringIds } from "./helpers.js";
 import { getEnabledBattleSkillDefinitionMap } from "./staticDefinitionIndex.js";
@@ -66,6 +69,32 @@ const buildSkillDataFromEffectiveDefinition = (
   }),
   ai_priority: effective.ai_priority,
 });
+
+const buildSkillDataWithBatchCache = (params: {
+  definition: SkillDefConfig;
+  skillId: string;
+  upgradeLevel: number;
+  cache: Map<string, SkillData>;
+}): SkillData => {
+  const cacheKey = `${params.skillId}:${params.upgradeLevel}`;
+  const cached = params.cache.get(cacheKey);
+  if (cached) {
+    return {
+      ...cached,
+      effects: cached.effects.map((effect) => ({ ...effect })),
+    };
+  }
+
+  const skillData = buildSkillDataFromEffectiveDefinition(
+    params.definition,
+    buildEffectiveTechniqueSkillData(params.definition, params.upgradeLevel),
+  );
+  params.cache.set(cacheKey, skillData);
+  return {
+    ...skillData,
+    effects: skillData.effects.map((effect) => ({ ...effect })),
+  };
+};
 
 /** 静态配置行 -> 战斗用 SkillData */
 export function toBattleSkillData(row: SkillDefConfig): SkillData {
@@ -127,17 +156,66 @@ export async function getCharacterBattleSkillData(
   }
 
   const skills: SkillData[] = [];
+  const batchSkillDataCache = new Map<string, SkillData>();
   for (const slot of orderedSkillSlots) {
     const row = byId.get(slot.skillId);
     if (!row) continue;
 
-    skills.push(
-      buildSkillDataFromEffectiveDefinition(
-        row,
-        buildEffectiveTechniqueSkillData(row, slot.upgradeLevel),
-      ),
-    );
+    skills.push(buildSkillDataWithBatchCache({
+      definition: row,
+      skillId: slot.skillId,
+      upgradeLevel: slot.upgradeLevel,
+      cache: batchSkillDataCache,
+    }));
   }
 
   return skills;
+}
+
+export async function getCharacterBattleSkillDataMap(
+  characterIds: number[],
+): Promise<Map<number, SkillData[]>> {
+  const battleSkillEntriesMap = await loadCharacterBattleSkillEntriesMap(characterIds);
+  const result = new Map<number, SkillData[]>();
+  if (battleSkillEntriesMap.size <= 0) {
+    return result;
+  }
+
+  const allSkillIds = Array.from(
+    new Set(
+      Array.from(battleSkillEntriesMap.values())
+        .flatMap((entries) => entries.map((entry) => entry.skillId)),
+    ),
+  );
+  if (allSkillIds.length <= 0) {
+    return result;
+  }
+
+  const skillDefinitionById = getEnabledBattleSkillDefinitionMap();
+  const byId = new Map<string, SkillDefConfig>();
+  for (const skillId of allSkillIds) {
+    const definition = skillDefinitionById.get(skillId);
+    if (definition) {
+      byId.set(skillId, definition);
+    }
+  }
+
+  const batchSkillDataCache = new Map<string, SkillData>();
+  for (const [characterId, battleSkillEntries] of battleSkillEntriesMap.entries()) {
+    const skills: SkillData[] = [];
+    for (const entry of battleSkillEntries) {
+      const row = byId.get(entry.skillId);
+      if (!row) continue;
+
+      skills.push(buildSkillDataWithBatchCache({
+        definition: row,
+        skillId: entry.skillId,
+        upgradeLevel: entry.upgradeLevel,
+        cache: batchSkillDataCache,
+      }));
+    }
+    result.set(characterId, skills);
+  }
+
+  return result;
 }
