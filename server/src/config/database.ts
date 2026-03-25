@@ -30,6 +30,7 @@ import dotenv from 'dotenv';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Pool as PgPool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 import { resolveDatabaseConnectionString } from './databaseConnection.js';
+import { isTransientPgError } from './databaseRuntimeError.js';
 
 dotenv.config();
 
@@ -54,6 +55,15 @@ export const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   statement_timeout: 30000, // 单条语句超时 30 秒，防止锁等待过久
+});
+
+pool.on('error', (error) => {
+  if (isTransientPgError(error)) {
+    console.error('数据库连接池检测到可恢复异常，后续查询将按需重建连接:', error);
+    return;
+  }
+
+  console.error('数据库连接池检测到非预期异常:', error);
 });
 
 type TransactionContext = {

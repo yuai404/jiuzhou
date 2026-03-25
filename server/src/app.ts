@@ -10,6 +10,7 @@ import { buildCorsOriginOption } from './bootstrap/cors.js';
 import { registerRoutes } from './bootstrap/registerRoutes.js';
 import { registerGracefulShutdown, startServerWithPipeline } from './bootstrap/startupPipeline.js';
 import { isTransactionRollbackOnlyError } from './config/database.js';
+import { isTransientPgError } from './config/databaseRuntimeError.js';
 import { setGameTimeSnapshotBroadcaster } from './services/gameTimeService.js';
 
 dotenv.config();
@@ -27,15 +28,6 @@ const HOST = String(process.env.HOST ?? '0.0.0.0').trim() || '0.0.0.0';
 const PORT = Number(process.env.PORT || 6011);
 const corsOriginOption = buildCorsOriginOption(process.env.CORS_ORIGIN);
 const corsOrigin = corsOriginOption as CorsOptions['origin'];
-
-const hasPgErrorCode = (error: unknown, code: string): boolean => {
-  if (!error || typeof error !== 'object') return false;
-  return 'code' in error && (error as { code?: unknown }).code === code;
-};
-
-const isTransientPgError = (error: unknown): boolean => {
-  return hasPgErrorCode(error, '55P03') || hasPgErrorCode(error, '57014');
-};
 
 // 中间件
 app.use(cors({ origin: corsOrigin, credentials: true }));
@@ -62,7 +54,7 @@ process.on('unhandledRejection', (reason) => {
     console.error('捕获未处理的事务回滚异常，已阻止进程崩溃:', reason);
     return;
   }
-  if (isTransientPgError(reason)) {
+  if (reason instanceof Error && isTransientPgError(reason)) {
     console.error('捕获未处理的瞬时数据库异常，已阻止进程崩溃:', reason);
     return;
   }
