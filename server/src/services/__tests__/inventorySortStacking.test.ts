@@ -120,10 +120,15 @@ const createInventoryQueryMock = (
 
     if (sql.includes('UPDATE item_instance') && sql.includes('SET qty = $1')) {
       const nextQty = Number(params?.[0]);
-      const itemId = Number(params?.[1]);
+      const hasBindTypeUpdate = sql.includes('bind_type = $2');
+      const nextBindType = hasBindTypeUpdate ? String(params?.[1] ?? '') : null;
+      const itemId = Number(params?.[hasBindTypeUpdate ? 2 : 1]);
       const target = itemRows.find((row) => row.id === itemId);
       assert.ok(target, `未找到待更新数量的物品: ${itemId}`);
       target.qty = nextQty;
+      if (hasBindTypeUpdate) {
+        target.bind_type = nextBindType || 'none';
+      }
       return { rows: [] };
     }
 
@@ -308,6 +313,54 @@ test('整理背包时应把空语义字段的 9999 堆上限实例继续视为�
     [
       { id: 31, qty: 9999, location_slot: 0 },
       { id: 32, qty: 9000, location_slot: 1 },
+    ],
+  );
+});
+
+test('整理背包时应把未标准化的未绑定 bind_type 归一后继续合并', async (t) => {
+  const itemRows: MockInventoryRow[] = [
+    {
+      id: 41,
+      item_def_id: 'mat-9999',
+      qty: 9000,
+      quality: null,
+      quality_rank: null,
+      bind_type: '',
+      metadata_text: null,
+      location: 'bag',
+      location_slot: 9,
+    },
+    {
+      id: 42,
+      item_def_id: 'mat-9999',
+      qty: 2000,
+      quality: null,
+      quality_rank: null,
+      bind_type: ' NONE ',
+      metadata_text: null,
+      location: 'bag',
+      location_slot: 1,
+    },
+  ];
+  createInventoryQueryMock(t, itemRows);
+
+  const result = await sortInventory(1004, 'bag');
+
+  assert.equal(result.success, true);
+  assert.equal(result.message, '整理完成');
+  assert.deepEqual(
+    itemRows
+      .slice()
+      .sort((left, right) => (left.location_slot ?? 999) - (right.location_slot ?? 999))
+      .map(({ id, qty, bind_type, location_slot }) => ({
+        id,
+        qty,
+        bind_type,
+        location_slot,
+      })),
+    [
+      { id: 41, qty: 9999, bind_type: 'none', location_slot: 0 },
+      { id: 42, qty: 1001, bind_type: 'none', location_slot: 1 },
     ],
   );
 });

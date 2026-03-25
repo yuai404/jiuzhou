@@ -33,6 +33,7 @@ import {
   getItemDefinitionsByIds,
 } from "../staticConfigLoader.js";
 import { lockCharacterInventoryMutex } from "../inventoryMutex.js";
+import { normalizeItemBindType } from "../shared/itemBindType.js";
 import { resolveQualityRankFromName } from "../shared/itemQuality.js";
 import { normalizeItemInstanceObtainedFrom } from "../shared/itemInstanceSource.js";
 import { tryInsertItemInstanceWithSlot } from "../shared/itemInstanceSlotInsert.js";
@@ -256,7 +257,7 @@ export const addItemToInventory = async (
     await lockCharacterInventoryMutex(characterId);
 
     const location = options.location || "bag";
-    const bindType = options.bindType || "none";
+    const requestedBindType = normalizeItemBindType(options.bindType);
 
     const itemDef = getStaticItemDef(itemDefId);
     if (!itemDef) {
@@ -264,8 +265,11 @@ export const addItemToInventory = async (
     }
 
     const stack_max = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
-    const def_bind_type = String(itemDef.bind_type || "none");
-    const actualBindType = bindType !== "none" ? bindType : def_bind_type;
+    const defaultBindType = normalizeItemBindType(
+      typeof itemDef.bind_type === "string" ? itemDef.bind_type : null,
+    );
+    const actualBindType =
+      requestedBindType !== "none" ? requestedBindType : defaultBindType;
     const obtainedFrom = normalizeItemInstanceObtainedFrom(
       options.obtainedFrom,
     ).value;
@@ -505,7 +509,9 @@ export const moveItemInstanceToBagWithStacking = async (
 
   const stackMax = Math.max(1, Math.floor(Number(itemDef.stack_max) || 1));
   const sourceQty = Math.max(1, Math.floor(Number(source.qty) || 1));
-  const bindType = String(source.bind_type || "none");
+  const bindType = normalizeItemBindType(
+    typeof source.bind_type === "string" ? source.bind_type : null,
+  );
 
   let stackRows: MoveToBagStackRow[] = [];
   if (stackMax > 1) {
@@ -594,12 +600,13 @@ export const moveItemInstanceToBagWithStacking = async (
       UPDATE item_instance
       SET location = 'bag',
           location_slot = $1,
+          bind_type = $2,
           equipped_slot = NULL,
           updated_at = NOW()
-      WHERE id = $2
+      WHERE id = $3
       RETURNING id
     `,
-    [targetSlot, itemInstanceId],
+    [targetSlot, bindType, itemInstanceId],
   );
 
   if (moveResult.rows.length === 0) {
@@ -1141,9 +1148,10 @@ type SortInventoryCompactedRow = SortInventoryRow & {
   resolvedQualityRank: number;
 };
 
-type SortInventoryQtyUpdate = {
+type SortInventoryRowUpdate = {
   itemId: number;
   nextQty: number;
+  nextBindType: string;
 };
 
 /**
@@ -1165,42 +1173,51 @@ type SortInventoryQtyUpdate = {
  *
  * 关键边界条件与坑点：
  * 1. 仅 `metadata/quality/quality_rank` 都为空的普通实例允许自动堆叠，和统一入包口径保持一致，避免特殊实例被误合并。
- * 2. 归并时优先保留数量更大的旧实例，尽量减少写操作与实例 ID 抖动，降低整理后的列表波动。
+ * 2. 整理阶段会同步把保留下来的 `bind_type` 规范回标准值，避免历史脏值导致玩家视角相同的未绑定物品继续分裂成多组。
  */
 const compactRowsForSortStacking = (
   rows: SortInventoryRow[],
   stackMaxByItemDefId: Map<string, number>,
 ): {
   compactedRows: SortInventoryRow[];
-  qtyUpdates: SortInventoryQtyUpdate[];
+  rowUpdates: SortInventoryRowUpdate[];
   deleteIds: number[];
 } => {
   const compactedRows: SortInventoryRow[] = [];
-  const qtyUpdates: SortInventoryQtyUpdate[] = [];
   const deleteIds: number[] = [];
   const stackableGroups = new Map<string, SortInventoryRow[]>();
+  const sourceRowById = new Map<number, SortInventoryRow>();
 
   for (const row of rows) {
+    sourceRowById.set(Number(row.id), row);
     const stackMax = stackMaxByItemDefId.get(String(row.item_def_id || "").trim()) ?? 1;
+    const normalizedBindType = normalizeItemBindType(row.bind_type);
+    const normalizedRow =
+      normalizedBindType === row.bind_type
+        ? row
+        : {
+            ...row,
+            bind_type: normalizedBindType,
+          };
     const canAutoStack =
       stackMax > 1 &&
       isPlainStackingState({
-        metadataText: row.metadata_text,
-        quality: row.quality,
-        qualityRank: row.quality_rank,
+        metadataText: normalizedRow.metadata_text,
+        quality: normalizedRow.quality,
+        qualityRank: normalizedRow.quality_rank,
       });
     if (!canAutoStack) {
-      compactedRows.push(row);
+      compactedRows.push(normalizedRow);
       continue;
     }
 
-    const groupKey = `${String(row.item_def_id || "").trim()}::${String(row.bind_type || "none").trim()}`;
+    const groupKey = `${String(normalizedRow.item_def_id || "").trim()}::${normalizedBindType}`;
     const group = stackableGroups.get(groupKey);
     if (group) {
-      group.push(row);
+      group.push(normalizedRow);
       continue;
     }
-    stackableGroups.set(groupKey, [row]);
+    stackableGroups.set(groupKey, [normalizedRow]);
   }
 
   for (const groupRows of stackableGroups.values()) {
@@ -1225,12 +1242,6 @@ const compactRowsForSortStacking = (
 
       const nextQty = Math.min(stackMax, remainingQty);
       remainingQty -= nextQty;
-      if (nextQty !== row.qty) {
-        qtyUpdates.push({
-          itemId: Number(row.id),
-          nextQty,
-        });
-      }
       compactedRows.push({
         ...row,
         qty: nextQty,
@@ -1238,9 +1249,25 @@ const compactRowsForSortStacking = (
     }
   }
 
+  const rowUpdates: SortInventoryRowUpdate[] = [];
+  for (const row of compactedRows) {
+    const sourceRow = sourceRowById.get(Number(row.id));
+    if (!sourceRow) {
+      continue;
+    }
+    if (row.qty === sourceRow.qty && row.bind_type === sourceRow.bind_type) {
+      continue;
+    }
+    rowUpdates.push({
+      itemId: Number(row.id),
+      nextQty: row.qty,
+      nextBindType: row.bind_type,
+    });
+  }
+
   return {
     compactedRows,
-    qtyUpdates,
+    rowUpdates,
     deleteIds,
   };
 };
@@ -1287,20 +1314,21 @@ export const sortInventory = async (
       Math.max(1, Math.floor(Number(itemDef?.stack_max) || 1)),
     );
   }
-  const { compactedRows, qtyUpdates, deleteIds } = compactRowsForSortStacking(
+  const { compactedRows, rowUpdates, deleteIds } = compactRowsForSortStacking(
     rows,
     stackMaxByItemDefId,
   );
 
-  for (const { itemId, nextQty } of qtyUpdates) {
+  for (const { itemId, nextQty, nextBindType } of rowUpdates) {
     await query(
       `
         UPDATE item_instance
         SET qty = $1,
+            bind_type = $2,
             updated_at = NOW()
-        WHERE id = $2 AND owner_character_id = $3
+        WHERE id = $3 AND owner_character_id = $4
       `,
-      [nextQty, itemId, characterId],
+      [nextQty, nextBindType, itemId, characterId],
     );
   }
 

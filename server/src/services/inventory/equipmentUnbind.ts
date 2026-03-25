@@ -17,6 +17,7 @@
  * 2) 目标装备被锁定时必须拒绝解绑，保持背包锁与使用道具语义一致。
  */
 import { query } from '../../config/database.js';
+import { normalizeItemBindType } from '../shared/itemBindType.js';
 import { getStaticItemDef } from './shared/helpers.js';
 
 type QueryResultLike = {
@@ -44,12 +45,6 @@ type EquipmentUnbindResult = {
   success: boolean;
   message: string;
   itemInstanceId?: number;
-};
-
-const normalizeBindType = (value: unknown): string => {
-  if (typeof value !== 'string') return 'none';
-  const normalized = value.trim().toLowerCase();
-  return normalized || 'none';
 };
 
 export const unbindEquipmentBindingByInstanceId = async ({
@@ -87,7 +82,11 @@ export const unbindEquipmentBindingByInstanceId = async ({
     return { success: false, message: '目标装备已锁定' };
   }
 
-  if (normalizeBindType(targetRow?.bind_type) === 'none') {
+  if (
+    normalizeItemBindType(
+      typeof targetRow?.bind_type === 'string' ? targetRow.bind_type : null,
+    ) === 'none'
+  ) {
     return { success: false, message: '目标装备尚未绑定' };
   }
 
