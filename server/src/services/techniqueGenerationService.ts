@@ -80,6 +80,11 @@ import {
   buildTechniqueBurningWordPromptContext,
   guardTechniqueBurningWordPrompt,
 } from './shared/techniqueBurningWordPrompt.js';
+import {
+  TECHNIQUE_RECENT_SUCCESSFUL_DESCRIPTION_LIMIT,
+  buildTechniqueRecentSuccessfulDescriptionPromptContext,
+  type TechniqueRecentSuccessfulDescriptionPromptContext,
+} from './shared/techniqueRecentSuccessfulDescriptionPrompt.js';
 
 export type TechniqueGenerationStatus =
   | 'pending'
@@ -424,6 +429,21 @@ const generateCandidateWithRetry = async (args: {
   });
 };
 
+const buildTechniqueResearchPromptContext = (params: {
+  burningWordPrompt: string | null;
+  recentSuccessfulDescriptionPromptContext?: TechniqueRecentSuccessfulDescriptionPromptContext;
+}) => {
+  const burningWordPromptContext = buildTechniqueBurningWordPromptContext(params.burningWordPrompt);
+  if (!burningWordPromptContext && !params.recentSuccessfulDescriptionPromptContext) {
+    return undefined;
+  }
+
+  return {
+    ...(burningWordPromptContext ?? {}),
+    ...(params.recentSuccessfulDescriptionPromptContext ?? {}),
+  };
+};
+
 const remapGeneratedSkillIds = (
   candidate: TechniqueGenerationCandidate,
 ): TechniqueGenerationCandidate => {
@@ -431,6 +451,44 @@ const remapGeneratedSkillIds = (
 };
 
 class TechniqueGenerationService {
+  private async loadRecentSuccessfulTechniqueDescriptionPromptContext(
+    characterId: number,
+  ): Promise<TechniqueRecentSuccessfulDescriptionPromptContext | undefined> {
+    const recentRes = await query<{
+      technique_name: string;
+      quality: TechniqueQuality;
+      type: string;
+      description: string;
+      long_desc: string;
+    }>(
+      `
+        SELECT
+          d.name AS technique_name,
+          d.quality,
+          d.type,
+          COALESCE(d.description, '') AS description,
+          COALESCE(d.long_desc, '') AS long_desc
+        FROM technique_generation_job j
+        JOIN generated_technique_def d ON d.generation_id = j.id
+        WHERE j.character_id = $1
+          AND (COALESCE(d.description, '') <> '' OR COALESCE(d.long_desc, '') <> '')
+        ORDER BY COALESCE(j.finished_at, j.created_at) DESC, j.id DESC
+        LIMIT $2
+      `,
+      [characterId, TECHNIQUE_RECENT_SUCCESSFUL_DESCRIPTION_LIMIT],
+    );
+
+    return buildTechniqueRecentSuccessfulDescriptionPromptContext(
+      recentRes.rows.map((row) => ({
+        name: asString(row.technique_name),
+        quality: row.quality,
+        type: asString(row.type),
+        description: asString(row.description),
+        longDesc: asString(row.long_desc),
+      })),
+    );
+  }
+
   private async broadcastHeavenTechniquePublish(
     characterId: number,
     techniqueId: string,
@@ -1142,24 +1200,30 @@ class TechniqueGenerationService {
     const { characterId, generationId, techniqueType, quality } = args;
 
     try {
-      const jobRes = await query(
-        `
-          SELECT burning_word_prompt
-          FROM technique_generation_job
-          WHERE id = $1 AND character_id = $2
-          LIMIT 1
-        `,
-        [generationId, characterId],
-      );
+      const [jobRes, recentSuccessfulDescriptionPromptContext] = await Promise.all([
+        query<{ burning_word_prompt: string | null }>(
+          `
+            SELECT burning_word_prompt
+            FROM technique_generation_job
+            WHERE id = $1 AND character_id = $2
+            LIMIT 1
+          `,
+          [generationId, characterId],
+        ),
+        this.loadRecentSuccessfulTechniqueDescriptionPromptContext(characterId),
+      ]);
       const burningWordPrompt = asString(
-        (jobRes.rows[0] as Record<string, unknown> | undefined)?.burning_word_prompt,
+        jobRes.rows[0]?.burning_word_prompt ?? '',
       ) || null;
       const generated = await generateCandidateWithRetry({
         generationId,
         characterId,
         techniqueType,
         quality,
-        promptContext: buildTechniqueBurningWordPromptContext(burningWordPrompt),
+        promptContext: buildTechniqueResearchPromptContext({
+          burningWordPrompt,
+          recentSuccessfulDescriptionPromptContext,
+        }),
       });
       const executionResult = await generateTechniqueCandidateWithIcons({
         quality,
