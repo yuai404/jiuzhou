@@ -620,7 +620,7 @@
       "category": "daily",
       "title": "心魔日修",
       "realm": "炼炁化神·炼己期",
-      "description": "完成一次炼己期秘境修行。",
+      "description": "完成一次心魔幻境修行。",
       "giver_npc_id": "npc-youming-guardian",
       "map_id": "map-youming-valley",
       "room_id": "room-youming-palace-front",
@@ -628,7 +628,7 @@
         {
           "id": "obj-001",
           "type": "dungeon_clear",
-          "text": "通关任意炼己期秘境 1 次",
+          "text": "通关心魔幻境 1 次",
           "target": 1,
           "params": {
             "dungeon_id": "dungeon-lianqi-xinmo-huanjing"

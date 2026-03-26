@@ -123,3 +123,43 @@ test('getTaskOverview: 养气期应返回同阶及以下日常，且自动接取
   assert.deepEqual(result.tasks.map((task) => task.id), ['task-daily-001', 'task-daily-002']);
   assert.deepEqual(autoAcceptedTaskIds, [['task-daily-001', 'task-daily-002', 'task-event-002']]);
 });
+
+test('getTaskOverview: 炼己期心魔日修应展示真实副本名与目标文案', async (t) => {
+  t.mock.method(
+    database,
+    'query',
+    async (sql: string) => {
+      if (sql.includes('SELECT realm, sub_realm FROM characters')) {
+        return {
+          rows: [{ realm: '炼炁化神', sub_realm: '炼己期' }],
+        };
+      }
+
+      if (sql.includes('FROM unnest($2::varchar[]) AS daily_task(task_id)')) {
+        return { rows: [] };
+      }
+
+      if (sql.includes('SELECT task_id, status AS progress_status, tracked, progress')) {
+        return { rows: [] };
+      }
+
+      if (sql.includes('SELECT task_id') && sql.includes('FROM character_task_progress')) {
+        return { rows: [] };
+      }
+
+      return { rows: [] };
+    },
+  );
+
+  const result = await getTaskOverview(1003, 'daily');
+  const task = result.tasks.find((entry) => entry.id === 'task-lianji-daily-004');
+
+  assert.ok(task, '应返回心魔日修');
+  assert.equal(task.description, '完成一次心魔幻境修行。');
+
+  const objective = task.objectives[0];
+  assert.ok(objective, '心魔日修应存在任务目标');
+  assert.equal(objective.text, '通关心魔幻境 1 次');
+  assert.equal(objective.mapName, '心魔幻境');
+  assert.equal(objective.mapNameType, 'dungeon');
+});

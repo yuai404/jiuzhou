@@ -223,6 +223,23 @@ const resolveMapName = (mapId: string | null): string | null => {
 };
 
 /**
+ * 从所有副本定义中构建 dungeon_id → 副本名称 的缓存
+ * 用于让任务目标直接展示真实副本名，而不是笼统的“秘境”
+ */
+let dungeonNameCache: Map<string, string> | null = null;
+
+const buildDungeonNameCache = (): Map<string, string> => {
+  if (dungeonNameCache) return dungeonNameCache;
+  const cache = new Map<string, string>();
+  for (const dungeon of getDungeonDefinitions()) {
+    if (!dungeon.id || !dungeon.name) continue;
+    cache.set(dungeon.id, dungeon.name);
+  }
+  dungeonNameCache = cache;
+  return cache;
+};
+
+/**
  * 从 map_def.json 的房间数据中构建 entity_id → 地图名称 的缓存
  * 用于将怪物/资源 ID 解析到其所在的地图
  */
@@ -291,7 +308,7 @@ const buildMonsterDungeonNameCache = (): Map<string, string> => {
 
 /**
  * 根据目标参数解析该目标实际执行的地点标签及类型
- * - dungeon_clear：有具体 dungeon_id 时返回 "秘境"；无则返回 null
+ * - dungeon_clear：有具体 dungeon_id 时返回对应副本名称；配置缺失时返回 null
  * - kill_monster：优先从副本波次查找所属副本名，其次从地图房间查找地图名
  * - gather_resource：从地图房间查找地图名
  * - 无具体目标：返回 null
@@ -301,7 +318,10 @@ const resolveObjectiveMapName = (
 ): { name: string; type: 'map' | 'dungeon' } | null => {
   if (!params) return null;
   const dungeonId = asNonEmptyString(params.dungeon_id);
-  if (dungeonId) return { name: '秘境', type: 'dungeon' };
+  if (dungeonId) {
+    const dungeonName = buildDungeonNameCache().get(dungeonId);
+    return dungeonName ? { name: dungeonName, type: 'dungeon' } : null;
+  }
   const monsterId = asNonEmptyString(params.monster_id);
   if (monsterId) {
     const dungeonName = buildMonsterDungeonNameCache().get(monsterId);
