@@ -32,7 +32,6 @@ import {
 } from "../equipmentGrowthRules.js";
 import {
   getCharacterComputedByCharacterId,
-  invalidateCharacterComputedCache,
 } from "../characterComputedService.js";
 import {
   isGemItemDefinition,
@@ -47,6 +46,7 @@ import {
   applyEquipmentDiffIfEquipped,
 } from "./shared/attrDelta.js";
 import { clampInt, getStaticItemDef, getEnabledStaticItemDef } from "./shared/helpers.js";
+import { refreshCharacterBattleStateAfterEquipmentChange } from "./shared/battleStateRefresh.js";
 
 // ============================================
 // 宝石孔位纯函数工具
@@ -458,7 +458,7 @@ export const socketEquipment = async (
   if (!applyDiffRes.success) {
     return { success: false, message: applyDiffRes.message };
   }
-  await invalidateCharacterComputedCache(characterId);
+  await refreshCharacterBattleStateAfterEquipmentChange(characterId);
   const character = await getCharacterComputedByCharacterId(characterId, {
     bypassStaticCache: true,
   });

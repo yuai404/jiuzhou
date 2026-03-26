@@ -56,7 +56,6 @@ import { getAffixPoolDefinitions } from "../staticConfigLoader.js";
 import type { GeneratedAffix } from "../equipmentService.js";
 import {
   getCharacterComputedByCharacterId,
-  invalidateCharacterComputedCache,
 } from "../characterComputedService.js";
 import {
   getRealmRankOneBasedForEquipment,
@@ -81,6 +80,7 @@ import type { InventoryLocation, SlottedInventoryLocation } from "./shared/types
 import { consumeMaterialByDefId, consumeCharacterCurrencies } from "./shared/consume.js";
 import { getEnhanceItemState, getRefineItemState, getRerollItemState } from "./shared/validation.js";
 import { clampInt, getStaticItemDef } from "./shared/helpers.js";
+import { refreshCharacterBattleStateAfterEquipmentChange } from "./shared/battleStateRefresh.js";
 import { findEmptySlots } from "./bag.js";
 
 // ============================================
@@ -283,7 +283,7 @@ export const equipItem = async (
   mergeDelta(setBonusDelta, afterSetBonus);
   mergeDelta(setBonusDelta, invertDelta(beforeSetBonus));
   await applyCharacterAttrDelta(characterId, setBonusDelta);
-  await invalidateCharacterComputedCache(characterId);
+  await refreshCharacterBattleStateAfterEquipmentChange(characterId);
   return {
     success: true,
     message: "穿戴成功",
@@ -380,7 +380,7 @@ export const unequipItem = async (
   mergeDelta(setBonusDelta, afterSetBonus);
   mergeDelta(setBonusDelta, invertDelta(beforeSetBonus));
   await applyCharacterAttrDelta(characterId, setBonusDelta);
-  await invalidateCharacterComputedCache(characterId);
+  await refreshCharacterBattleStateAfterEquipmentChange(characterId);
   return {
     success: true,
     message: "卸下成功",
@@ -521,7 +521,7 @@ export const enhanceEquipment = async (
       return { success: false, message: applyDiffRes.message };
     }
   }
-  await invalidateCharacterComputedCache(characterId);
+  await refreshCharacterBattleStateAfterEquipmentChange(characterId);
   const character = await getCharacterComputedByCharacterId(characterId, {
     bypassStaticCache: true,
   });
@@ -648,7 +648,7 @@ export const refineEquipment = async (
   if (!applyDiffRes.success) {
     return { success: false, message: applyDiffRes.message };
   }
-  await invalidateCharacterComputedCache(characterId);
+  await refreshCharacterBattleStateAfterEquipmentChange(characterId);
   const character = await getCharacterComputedByCharacterId(characterId, {
     bypassStaticCache: true,
   });
@@ -1176,7 +1176,7 @@ export const rerollEquipmentAffixes = async (
     if (!applyDiffRes.success) {
       return { success: false, message: applyDiffRes.message };
     }
-    await invalidateCharacterComputedCache(characterId);
+    await refreshCharacterBattleStateAfterEquipmentChange(characterId);
     const character = await getCharacterComputedByCharacterId(characterId, {
       bypassStaticCache: true,
     });
