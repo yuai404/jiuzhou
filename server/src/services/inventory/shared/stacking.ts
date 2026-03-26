@@ -16,7 +16,7 @@
  * - 调用方再基于该结果决定是否纳入普通堆叠分组。
  *
  * 关键边界条件与坑点：
- * 1. `qualityRank = 0`、空字符串质量、`metadata::text = 'null'` 在业务语义上都应视为“未设置”，否则会把普通实例误判为特殊实例。
+ * 1. `qualityRank = 0`、空字符串质量、`metadata::text = 'null' / '{}'` 在业务语义上都应视为“未设置”，否则会把普通实例误判为特殊实例。
  * 2. 非空 `metadata` 仍必须排除在普通堆叠之外，避免把真实带实例特征的数据错误合并。
  */
 
@@ -35,7 +35,11 @@ type PlainStackingSqlColumns = {
 const isPlainMetadataText = (metadataText: string | null): boolean => {
   if (metadataText === null) return true;
   const normalized = metadataText.trim().toLowerCase();
-  return normalized.length === 0 || normalized === "null";
+  return (
+    normalized.length === 0 ||
+    normalized === "null" ||
+    normalized === "{}"
+  );
 };
 
 const isPlainQuality = (quality: string | null): boolean => {
@@ -51,7 +55,7 @@ const isPlainQualityRank = (qualityRank: number | null): boolean => {
 };
 
 const buildPlainMetadataSql = (metadataColumn: string): string => {
-  return `(${metadataColumn} IS NULL OR LOWER(BTRIM(${metadataColumn}::text)) = 'null')`;
+  return `(${metadataColumn} IS NULL OR LOWER(BTRIM(${metadataColumn}::text)) IN ('null', '{}'))`;
 };
 
 const buildPlainQualitySql = (qualityColumn: string): string => {

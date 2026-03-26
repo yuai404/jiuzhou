@@ -236,6 +236,16 @@ const runInventoryMutation = async <T extends { success: boolean }>(
   return await executor();
 };
 
+const serializeInventoryMetadata = (
+  metadata: object | null | undefined,
+): string | null => {
+  if (!metadata) {
+    return null;
+  }
+
+  return Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null;
+};
+
 type PlainAutoStackLookupRow = {
   id: number;
   qty: number;
@@ -372,7 +382,7 @@ export const addItemToInventory = async (
     const obtainedFrom = normalizeItemInstanceObtainedFrom(
       options.obtainedFrom,
     ).value;
-    const metadataJson = options.metadata ? JSON.stringify(options.metadata) : null;
+    const metadataJson = serializeInventoryMetadata(options.metadata);
     const quality = typeof options.quality === "string" && options.quality.trim().length > 0
       ? options.quality.trim()
       : null;

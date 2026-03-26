@@ -16,7 +16,7 @@
  * - 最后断言数量、`bind_type` 与空语义字段都被收敛到当前标准格式。
  *
  * 关键边界条件与坑点：
- * 1. 旧实例里的 `bind_type='' / metadata::text='null' / quality='' / quality_rank=0` 都应被视为普通堆叠实例，而不是继续拆成孤立堆。
+ * 1. 旧实例里的 `bind_type='' / metadata::text='null' / metadata::text='{}' / quality='' / quality_rank=0` 都应被视为普通堆叠实例，而不是继续拆成孤立堆。
  * 2. 回包路径必须和新增入包走同一口径，否则邮件/交易回收的旧实例仍会和新掉落分裂成两组。
  */
 import assert from "node:assert/strict";
@@ -62,7 +62,12 @@ const isPlainStackRow = (row: MockStackRow): boolean => {
   const normalizedQuality = row.quality?.trim() ?? null;
   const normalizedQualityRank = Number(row.quality_rank);
   return (
-    (normalizedMetadata === null || normalizedMetadata.length === 0 || normalizedMetadata === "null") &&
+    (
+      normalizedMetadata === null ||
+      normalizedMetadata.length === 0 ||
+      normalizedMetadata === "null" ||
+      normalizedMetadata === "{}"
+    ) &&
     (normalizedQuality === null || normalizedQuality.length === 0) &&
     (row.quality_rank === null ||
       !Number.isFinite(normalizedQualityRank) ||
@@ -258,6 +263,52 @@ test("新掉落的普通可堆叠物品应能和旧空语义实例自动堆叠",
       qty: 9999,
       location: "bag",
       location_slot: 3,
+      bind_type: "none",
+      quality: null,
+      quality_rank: null,
+      metadata_text: null,
+    },
+  ]);
+});
+
+test("空对象 metadata 的普通可堆叠物品应归一后自动叠加到旧实例", async (t) => {
+  const rows: MockStackRow[] = [
+    {
+      id: 51,
+      owner_user_id: 2003,
+      owner_character_id: 1003,
+      item_def_id: "mat-9999",
+      qty: 103,
+      location: "bag",
+      location_slot: 6,
+      bind_type: "none",
+      quality: null,
+      quality_rank: null,
+      metadata_text: "{}",
+    },
+  ];
+  installCommonMocks(t, rows);
+
+  const result = await addItemToInventory(1003, 2003, "mat-9999", 1, {
+    location: "bag",
+    obtainedFrom: "battle_drop",
+    metadata: {},
+  });
+
+  assert.deepEqual(result, {
+    success: true,
+    message: "添加成功",
+    itemIds: [51],
+  });
+  assert.deepEqual(rows, [
+    {
+      id: 51,
+      owner_user_id: 2003,
+      owner_character_id: 1003,
+      item_def_id: "mat-9999",
+      qty: 104,
+      location: "bag",
+      location_slot: 6,
       bind_type: "none",
       quality: null,
       quality_rank: null,
