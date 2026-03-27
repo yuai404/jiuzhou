@@ -19,10 +19,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildTechniqueResearchRefundRewardPayload,
   resolveTechniqueResearchRefundFragments,
   TECHNIQUE_RESEARCH_EXPIRED_DRAFT_REFUND_RATE,
   TECHNIQUE_RESEARCH_FULL_REFUND_RATE,
 } from '../shared/techniqueResearchRefund.js';
+import {
+  TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_TOKEN_COST,
+  TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_TOKEN_ITEM_DEF_ID,
+} from '../shared/techniqueResearchCooldownBypass.js';
+import { TECHNIQUE_RESEARCH_FRAGMENT_ITEM_DEF_ID } from '../shared/techniqueResearchCost.js';
 
 test('resolveTechniqueResearchRefundFragments: 失败退款默认应全额返还', () => {
   assert.equal(
@@ -42,4 +48,25 @@ test('resolveTechniqueResearchRefundFragments: 异常输入应保守回退到非
   assert.equal(resolveTechniqueResearchRefundFragments(-100, 1), 0);
   assert.equal(resolveTechniqueResearchRefundFragments(101, 0.5), 50);
   assert.equal(resolveTechniqueResearchRefundFragments(100, -1), 0);
+});
+
+test('buildTechniqueResearchRefundRewardPayload: pending 失败且消耗过顿悟符时应同时返还残页与顿悟符', () => {
+  assert.deepEqual(
+    buildTechniqueResearchRefundRewardPayload({
+      refundFragments: 2_500,
+      refundCooldownBypassToken: true,
+    }),
+    {
+      items: [
+        {
+          itemDefId: TECHNIQUE_RESEARCH_FRAGMENT_ITEM_DEF_ID,
+          quantity: 2_500,
+        },
+        {
+          itemDefId: TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_TOKEN_ITEM_DEF_ID,
+          quantity: TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_TOKEN_COST,
+        },
+      ],
+    },
+  );
 });

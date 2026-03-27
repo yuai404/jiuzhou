@@ -65,7 +65,11 @@ import {
 import { lockTechniqueResearchCreationMutex } from './shared/characterOperationMutex.js';
 import { loadCharacterRealmSnapshot } from './shared/characterRealm.js';
 import {
+  hasGrantedRewardPayload,
+} from './shared/rewardPayload.js';
+import {
   resolveTechniqueResearchRefundFragments,
+  buildTechniqueResearchRefundRewardPayload,
   TECHNIQUE_RESEARCH_EXPIRED_DRAFT_REFUND_RATE,
   TECHNIQUE_RESEARCH_FULL_REFUND_RATE,
 } from './shared/techniqueResearchRefund.js';
@@ -73,6 +77,7 @@ import {
   resolveTechniqueResearchFragmentCost,
   TECHNIQUE_RESEARCH_BASE_FRAGMENT_COST,
   TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_FRAGMENT_COST,
+  TECHNIQUE_RESEARCH_FRAGMENT_ITEM_DEF_ID,
 } from './shared/techniqueResearchCost.js';
 import { persistGeneratedTechniqueCandidateTx } from './shared/generatedTechniquePersistence.js';
 import { getGeneratedTechniqueDefinitionById } from './generatedTechniqueConfigStore.js';
@@ -247,15 +252,20 @@ const isTechniqueGenerationRollbackError = (
 const DRAFT_EXPIRE_HOURS = 24;
 const GENERATED_TECHNIQUE_BOOK_ITEM_DEF_ID = 'book-generated-technique';
 const DEFAULT_GENERATED_SKILL_ICON = '/assets/skills/icon_skill_44.png';
-const TECHNIQUE_RESEARCH_FRAGMENT_ITEM_DEF_ID = 'mat-gongfa-canye';
 const TECHNIQUE_RESEARCH_REFUND_MAIL_TITLE = '洞府研修退款通知';
 const TECHNIQUE_RESEARCH_REFUND_HINT = '对应返还已通过邮件发放，请前往邮箱领取。';
 const TECHNIQUE_RESEARCH_EXPIRED_DRAFT_MESSAGE = '草稿已过期，系统已通过邮件返还一半功法残页，请重新领悟';
 
-const buildTechniqueResearchRefundMailContent = (reason: string): string => {
+const buildTechniqueResearchRefundMailContent = (
+  reason: string,
+  refundCooldownBypassToken: boolean,
+): string => {
   const lines = [
     '本次洞府研修未能成法，系统已将本次返还通过邮件发放。',
   ];
+  if (refundCooldownBypassToken) {
+    lines.push('本次额外消耗的顿悟符也已一并返还。');
+  }
   const normalizedReason = reason.trim();
   if (normalizedReason) {
     lines.push(`结算原因：${normalizedReason}`);
@@ -628,9 +638,19 @@ class TechniqueGenerationService {
     return userId > 0 ? userId : null;
   }
 
-  private async refundFragmentsByMailTx(characterId: number, generationId: string, qty: number, reason: string): Promise<void> {
-    const refundQty = Math.max(0, Math.floor(asNumber(qty, 0)));
-    if (refundQty <= 0) return;
+  private async refundRewardsByMailTx(
+    characterId: number,
+    generationId: string,
+    refundFragments: number,
+    refundCooldownBypassToken: boolean,
+    reason: string,
+  ): Promise<void> {
+    const safeRefundFragments = Math.max(0, Math.floor(asNumber(refundFragments, 0)));
+    const refundRewards = buildTechniqueResearchRefundRewardPayload({
+      refundFragments: safeRefundFragments,
+      refundCooldownBypassToken,
+    });
+    if (!hasGrantedRewardPayload(refundRewards)) return;
 
     const userId = await this.loadCharacterUserId(characterId);
     if (!userId) {
@@ -644,21 +664,15 @@ class TechniqueGenerationService {
       senderName: '系统',
       mailType: 'reward',
       title: TECHNIQUE_RESEARCH_REFUND_MAIL_TITLE,
-      content: buildTechniqueResearchRefundMailContent(reason),
-      attachRewards: {
-        items: [
-          {
-            itemDefId: TECHNIQUE_RESEARCH_FRAGMENT_ITEM_DEF_ID,
-            quantity: refundQty,
-          },
-        ],
-      },
+      content: buildTechniqueResearchRefundMailContent(reason, refundCooldownBypassToken),
+      attachRewards: refundRewards,
       expireDays: 30,
       source: 'technique_research_refund',
       sourceRefId: generationId,
       metadata: {
         generationId,
-        refundFragments: refundQty,
+        refundFragments: safeRefundFragments,
+        refundCooldownBypassToken,
         reason,
       },
     });
@@ -667,16 +681,24 @@ class TechniqueGenerationService {
     }
   }
 
-  private async applyGenerationFragmentRefundTx(
+  private async applyGenerationRefundByMailTx(
     characterId: number,
-    refundEntries: Array<{ generationId: string; refundFragments: number; reason: string }>,
+    refundEntries: Array<{
+      generationId: string;
+      refundFragments: number;
+      refundCooldownBypassToken: boolean;
+      reason: string;
+    }>,
   ): Promise<void> {
-    const refundableEntries = refundEntries.filter((entry) => entry.generationId && entry.refundFragments > 0);
+    const refundableEntries = refundEntries.filter((entry) => {
+      return entry.generationId && (entry.refundFragments > 0 || entry.refundCooldownBypassToken);
+    });
     for (const entry of refundableEntries) {
-      await this.refundFragmentsByMailTx(
+      await this.refundRewardsByMailTx(
         characterId,
         entry.generationId,
         entry.refundFragments,
+        entry.refundCooldownBypassToken,
         entry.reason,
       );
     }
@@ -699,7 +721,7 @@ class TechniqueGenerationService {
 
     if (expiredRes.rows.length === 0) return;
 
-    await this.applyGenerationFragmentRefundTx(
+    await this.applyGenerationRefundByMailTx(
       characterId,
       (expiredRes.rows as Array<Record<string, unknown>>).map((row) => ({
         generationId: asString(row.id),
@@ -707,6 +729,7 @@ class TechniqueGenerationService {
           asNumber(row.cost_points, 0),
           TECHNIQUE_RESEARCH_EXPIRED_DRAFT_REFUND_RATE,
         ),
+        refundCooldownBypassToken: false,
         reason: TECHNIQUE_RESEARCH_EXPIRED_DRAFT_MESSAGE,
       })),
     );
@@ -1203,7 +1226,7 @@ class TechniqueGenerationService {
   ): Promise<void> {
     const jobRes = await query(
       `
-        SELECT status, cost_points
+        SELECT status, cost_points, used_cooldown_bypass_token
         FROM technique_generation_job
         WHERE id = $1 AND character_id = $2
         FOR UPDATE
@@ -1215,13 +1238,15 @@ class TechniqueGenerationService {
     const row = jobRes.rows[0] as Record<string, unknown>;
     const status = asString(row.status);
     const costPoints = Math.max(0, Math.floor(asNumber(row.cost_points, 0)));
+    const usedCooldownBypassToken = row.used_cooldown_bypass_token === true;
     if (status === 'refunded' || status === 'failed' || status === 'published') return;
 
     const refundErrorMessage = appendTechniqueResearchRefundHint(reason);
-    await this.applyGenerationFragmentRefundTx(characterId, [
+    await this.applyGenerationRefundByMailTx(characterId, [
       {
         generationId,
         refundFragments: resolveTechniqueResearchRefundFragments(costPoints, refundRate),
+        refundCooldownBypassToken: status === 'pending' && usedCooldownBypassToken,
         reason: refundErrorMessage,
       },
     ]);
