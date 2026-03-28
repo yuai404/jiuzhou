@@ -801,6 +801,36 @@ export const runWithDatabaseAccessForbidden = async <T>(
   );
 };
 
+/**
+ * 在当前异步子树中显式清除“禁止访问数据库”规则。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：为后台微任务、定时器、延迟结算等真正需要落库的异步分支提供单一出口，避免上游禁 DB 规则继续污染子链路。
+ * 2. 做什么：仅重置 `databaseAccessRuleStorage`，让后续 `query/withTransaction` 能按正常事务语义执行。
+ * 3. 不做什么：不绕过事务约束，不替代权限校验，也不吞掉回调内部异常。
+ *
+ * 输入/输出：
+ * - 输入：一个同步或异步回调。
+ * - 输出：原样返回回调结果；若回调抛错，则继续向上抛出。
+ *
+ * 数据流/状态流：
+ * - 外层请求链路可能先通过 `runWithDatabaseAccessForbidden` 打上禁 DB 标记。
+ * - 需要落库的后台子任务调用本函数后，会在独立 AsyncLocalStorage 子树中把该标记重置为 `null`。
+ * - 子任务内部继续创建的 Promise / timer 会继承“允许访问数据库”的上下文，避免再次命中禁 DB 拦截。
+ *
+ * 关键边界条件与坑点：
+ * 1. 只能用于已经确认需要访问数据库的后台分支，不能拿来规避同步首包链路的禁 DB 约束。
+ * 2. 该函数只清除数据库访问规则，不会创建事务；需要原子性时仍必须显式使用 `withTransaction` / `@Transactional`。
+ */
+export const runWithDatabaseAccessAllowed = async <T>(
+  callback: () => T | Promise<T>,
+): Promise<T> => {
+  return await databaseAccessRuleStorage.run(
+    null,
+    async () => await callback(),
+  );
+};
+
 export const isDatabaseAccessForbidden = (): boolean => {
   return getActiveDatabaseAccessRule() !== null;
 };

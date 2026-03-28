@@ -24,6 +24,7 @@
  */
 
 import crypto from 'crypto';
+import { runWithDatabaseAccessAllowed } from '../../config/database.js';
 import { getBattleLogCursor } from '../../battle/logStream.js';
 import { getGameServer } from '../../game/gameServer.js';
 import { battleParticipants } from '../battle/runtime/state.js';
@@ -629,23 +630,25 @@ const emitDungeonSessionAutoAdvanceSnapshot = (params: {
 const scheduleDungeonSessionAutoAdvance = (sessionId: string): void => {
   clearDungeonSessionAutoAdvanceTimer(sessionId);
   const timer = setTimeout(async () => {
-    dungeonSessionAutoAdvanceTimers.delete(sessionId);
-    const session = getBattleSessionRecord(sessionId);
-    if (!session) return;
-    if (session.type !== 'dungeon') return;
-    if (session.status !== 'waiting_transition') return;
-    if (session.nextAction !== 'advance' || !session.canAdvance) return;
+    await runWithDatabaseAccessAllowed(async () => {
+      dungeonSessionAutoAdvanceTimers.delete(sessionId);
+      const session = getBattleSessionRecord(sessionId);
+      if (!session) return;
+      if (session.type !== 'dungeon') return;
+      if (session.status !== 'waiting_transition') return;
+      if (session.nextAction !== 'advance' || !session.canAdvance) return;
 
-    const advanceResult = await advanceBattleSession(session.ownerUserId, sessionId, {
-      endNotificationScope: 'all_participants',
-    });
-    if (!advanceResult.success) return;
+      const advanceResult = await advanceBattleSession(session.ownerUserId, sessionId, {
+        endNotificationScope: 'all_participants',
+      });
+      if (!advanceResult.success) return;
 
-    const nextSession = advanceResult.data.session;
-    if (!nextSession.currentBattleId || advanceResult.data.finished) return;
-    emitDungeonSessionAutoAdvanceSnapshot({
-      session: nextSession,
-      state: advanceResult.data.state,
+      const nextSession = advanceResult.data.session;
+      if (!nextSession.currentBattleId || advanceResult.data.finished) return;
+      emitDungeonSessionAutoAdvanceSnapshot({
+        session: nextSession,
+        state: advanceResult.data.state,
+      });
     });
   }, DUNGEON_SESSION_SERVER_AUTO_ADVANCE_DELAY_MS);
   dungeonSessionAutoAdvanceTimers.set(sessionId, timer);

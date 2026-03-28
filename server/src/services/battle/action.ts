@@ -13,6 +13,7 @@
  */
 
 import { getGameServer } from "../../game/gameServer.js";
+import { runWithDatabaseAccessAllowed } from "../../config/database.js";
 import {
   applyOnlineBattleCharacterResourceDelta,
   getOnlineBattleCharacterSnapshotByUserId,
@@ -78,7 +79,9 @@ const scheduleFinishedBattleProgressUpdate = (
 ): void => {
   void Promise.resolve().then(async () => {
     try {
-      await emitBattleProgressUpdateSafely(battleId, engine);
+      await runWithDatabaseAccessAllowed(
+        async () => await emitBattleProgressUpdateSafely(battleId, engine),
+      );
     } catch (error) {
       battleActionLogger.error({
         battleId,
