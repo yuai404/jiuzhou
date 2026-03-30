@@ -216,7 +216,7 @@ type LatestEventReplayOptions = {
   emitCurrent?: boolean;
 };
 type AchievementUpdateListener = (data: AchievementUpdatePayload) => void;
-export type TaskOverviewScope = "task" | "bounty";
+export type TaskOverviewScope = "task";
 export interface TaskOverviewUpdatePayload {
   characterId: number;
   scopes: TaskOverviewScope[];

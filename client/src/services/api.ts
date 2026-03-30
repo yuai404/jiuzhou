@@ -8,7 +8,6 @@ export * from './api/profile';
 export * from './api/accountSecurity';
 export * from './api/phoneBinding';
 export * from './api/world';
-export * from './api/bounty';
 export * from './api/inventory';
 export * from './api/market-mail';
 export * from './api/info-config';

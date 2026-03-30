@@ -4,8 +4,6 @@ import { requireCharacter } from '../middleware/auth.js';
 import {
   acceptTaskFromNpc,
   claimTaskReward,
-  getBountyTaskOverview,
-  getBountyTaskOverviewSummary,
   getTaskOverview,
   getTaskOverviewSummary,
   npcTalk,
@@ -22,7 +20,6 @@ const router = Router();
 
 
 router.get('/overview', requireCharacter, asyncHandler(async (req, res) => {
-    const userId = req.userId!;
     const characterId = req.characterId!;
 
     const categoryValue = getSingleQueryValue(req.query.category);
@@ -40,23 +37,7 @@ router.get('/overview/summary', requireCharacter, asyncHandler(async (req, res) 
     return sendSuccess(res, data);
 }));
 
-router.get('/bounty/overview', requireCharacter, asyncHandler(async (req, res) => {
-    const userId = req.userId!;
-    const characterId = req.characterId!;
-
-    const data = await getBountyTaskOverview(characterId);
-    return sendSuccess(res, data);
-}));
-
-router.get('/bounty/overview/summary', requireCharacter, asyncHandler(async (req, res) => {
-    const characterId = req.characterId!;
-
-    const data = await getBountyTaskOverviewSummary(characterId);
-    return sendSuccess(res, data);
-}));
-
 router.post('/track', requireCharacter, asyncHandler(async (req, res) => {
-    const userId = req.userId!;
     const characterId = req.characterId!;
 
     const body = req.body as { taskId?: unknown; tracked?: unknown };
@@ -77,12 +58,11 @@ router.post('/claim', requireCharacter, asyncHandler(async (req, res) => {
     const result = await claimTaskReward(userId, characterId, taskId);
     if (!result.success) return sendResult(res, result);
     await safePushCharacterUpdate(userId);
-    await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
+    await notifyTaskOverviewUpdate(characterId, ['task']);
     return sendResult(res, result);
 }));
 
 router.post('/npc/talk', requireCharacter, asyncHandler(async (req, res) => {
-    const userId = req.userId!;
     const characterId = req.characterId!;
 
     const body = req.body as { npcId?: unknown };
@@ -92,7 +72,6 @@ router.post('/npc/talk', requireCharacter, asyncHandler(async (req, res) => {
 }));
 
 router.post('/npc/accept', requireCharacter, asyncHandler(async (req, res) => {
-    const userId = req.userId!;
     const characterId = req.characterId!;
 
     const body = req.body as { npcId?: unknown; taskId?: unknown };
@@ -106,7 +85,6 @@ router.post('/npc/accept', requireCharacter, asyncHandler(async (req, res) => {
 }));
 
 router.post('/npc/submit', requireCharacter, asyncHandler(async (req, res) => {
-    const userId = req.userId!;
     const characterId = req.characterId!;
 
     const body = req.body as { npcId?: unknown; taskId?: unknown };

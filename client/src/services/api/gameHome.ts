@@ -6,7 +6,6 @@ import type { InventoryItemDto } from './inventory';
 import type { PhoneBindingStatusDto } from './phoneBinding';
 import type { RealmOverviewDto } from './combat-realm';
 import type {
-  BountyTaskOverviewSummaryRowDto,
   TaskOverviewSummaryRowDto,
 } from './task-achievement';
 
@@ -49,7 +48,6 @@ export interface GameHomeOverviewDto {
   };
   task: {
     tasks: TaskOverviewSummaryRowDto[];
-    bountyTasks: BountyTaskOverviewSummaryRowDto[];
   };
   mainQuest: MainQuestProgressDto;
 }

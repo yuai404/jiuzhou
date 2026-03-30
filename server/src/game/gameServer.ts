@@ -327,7 +327,7 @@ class GameServer {
 	            // 重连期间可能错过 task:update，认证成功后补发一次脏通知让前端回源最新任务快照。
 	            socket.emit("task:update", {
 	              characterId: character.id,
-	              scopes: ["task", "bounty"] as const,
+	              scopes: ["task"] as const,
 	            });
 	          }
 

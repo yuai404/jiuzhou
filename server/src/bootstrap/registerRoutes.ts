@@ -24,7 +24,6 @@ import rankRoutes from '../routes/rankRoutes.js';
 import realmRoutes from '../routes/realmRoutes.js';
 import battlePassRoutes from '../routes/battlePassRoutes.js';
 import taskRoutes from '../routes/taskRoutes.js';
-import bountyRoutes from '../routes/bountyRoutes.js';
 import timeRoutes from '../routes/timeRoutes.js';
 import mainQuestRoutes from '../routes/mainQuestRoutes.js';
 import arenaRoutes from '../routes/arenaRoutes.js';
@@ -68,7 +67,6 @@ export const registerRoutes = (app: Express): void => {
   app.use('/api/rank', rankRoutes);
   app.use('/api/realm', realmRoutes);
   app.use('/api/task', taskRoutes);
-  app.use('/api/bounty', bountyRoutes);
   app.use('/api/time', timeRoutes);
   app.use('/api/main-quest', mainQuestRoutes);
   app.use('/api/arena', arenaRoutes);

@@ -13,9 +13,7 @@ import {
   type TeamInfo,
 } from './teamService.js';
 import {
-  getBountyTaskOverviewSummary,
   getTaskOverviewSummary,
-  type BountyTaskOverviewSummaryDto,
   type TaskOverviewSummaryDto,
 } from './taskService.js';
 
@@ -61,7 +59,6 @@ export interface GameHomeOverviewDto {
   };
   task: {
     tasks: TaskOverviewSummaryDto[];
-    bountyTasks: BountyTaskOverviewSummaryDto[];
   };
   mainQuest: MainQuestProgressDto;
 }
@@ -127,7 +124,6 @@ export const getGameHomeOverview = async (
     idleSession,
     team,
     taskOverview,
-    bountyTaskOverview,
     mainQuest,
   ] = await Promise.all([
     signInService.getOverview(userId, currentMonth),
@@ -138,7 +134,6 @@ export const getGameHomeOverview = async (
     idleSessionService.getActiveIdleSession(characterId),
     loadTeamOverview(characterId),
     getTaskOverviewSummary(characterId),
-    getBountyTaskOverviewSummary(characterId),
     getMainQuestProgress(characterId),
   ]);
 
@@ -161,7 +156,6 @@ export const getGameHomeOverview = async (
     team,
     task: {
       tasks: taskOverview.tasks,
-      bountyTasks: bountyTaskOverview.tasks,
     },
     mainQuest,
   };

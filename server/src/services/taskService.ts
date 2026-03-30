@@ -1351,7 +1351,7 @@ const recordTalkNpcEvent = async (characterId: number, npcId: string): Promise<v
 
   await updateAchievementProgress(characterId, `talk:npc:${nid}`, 1);
   if (taskOverviewChanged) {
-    await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
+    await notifyTaskOverviewUpdate(characterId, ['task']);
   }
 };
 
@@ -1408,7 +1408,7 @@ export const recordKillMonsterEvents = async (
   }
 
   if (taskOverviewChanged) {
-    await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
+    await notifyTaskOverviewUpdate(characterId, ['task']);
   }
 };
 
@@ -1427,7 +1427,7 @@ export const recordGatherResourceEvent = async (characterId: number, resourceId:
   await updateAchievementProgress(characterId, `gather:resource:${rid}`, c);
   await updateAchievementProgress(characterId, `item:obtain:${rid}`, c);
   if (taskOverviewChanged) {
-    await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
+    await notifyTaskOverviewUpdate(characterId, ['task']);
   }
 };
 
@@ -1469,7 +1469,7 @@ export const recordDungeonClearEvent = async (
     await updateAchievementProgress(characterId, `team:dungeon:clear:${did}`, c);
   }
   if (taskOverviewChanged) {
-    await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
+    await notifyTaskOverviewUpdate(characterId, ['task']);
   }
 };
 
@@ -1510,7 +1510,7 @@ export const recordCraftItemEvent = async (
   if (kind) await updateAchievementProgress(characterId, `craft:kind:${kind}`, c);
   if (iid) await updateAchievementProgress(characterId, `craft:item:${iid}`, c);
   if (taskOverviewChanged) {
-    await notifyTaskOverviewUpdate(characterId, ['task', 'bounty']);
+    await notifyTaskOverviewUpdate(characterId, ['task']);
   }
 };
 

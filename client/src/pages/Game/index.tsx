@@ -70,7 +70,6 @@ import {
 } from '../../services/api';
 import { getUnifiedApiErrorMessage } from '../../services/api';
 import type {
-  BountyTaskOverviewSummaryRowDto,
   GameHomeOverviewDto,
   InventoryItemDto,
   NpcTalkResponse,
@@ -132,13 +131,10 @@ import {
 } from './shared/teamBattleReplayContext';
 import { resolveCurrentCharacterTeamRole } from './shared/teamIdentity';
 import {
-  countCompletableBountyTaskOverviewRows,
   countCompletableTaskOverviewRows,
-  getNextBountyTaskExpiryTs,
 } from './shared/taskIndicator';
 import {
   clearTaskOverviewRequestScope,
-  loadSharedBountyTaskOverviewSummary,
   loadSharedTaskOverviewSummary,
 } from './shared/taskOverviewRequests';
 import { hydratePhoneBindingStatus, invalidatePhoneBindingStatus } from './shared/usePhoneBindingStatus';
@@ -350,15 +346,8 @@ const resolveTrackedRoomIdsForMap = (
 
 const resolveTaskIndicatorSnapshot = (
   taskRows: TaskOverviewSummaryRowDto[],
-  bountyTasks: BountyTaskOverviewSummaryRowDto[],
-  nowTs: number,
-): { count: number; nextExpiryTs: number | null } => {
-  const taskCount = countCompletableTaskOverviewRows(taskRows);
-  const bountyCount = countCompletableBountyTaskOverviewRows(bountyTasks, nowTs);
-  return {
-    count: taskCount + bountyCount,
-    nextExpiryTs: getNextBountyTaskExpiryTs(bountyTasks, nowTs),
-  };
+): number => {
+  return countCompletableTaskOverviewRows(taskRows);
 };
 
 const mapInventoryItemsToEquippedViews = (
@@ -822,8 +811,6 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const lastKeepalivePositionKeyRef = useRef<string>('');
   const teamBattleAutoCloseTimerRef = useRef<number | null>(null);
   const taskIndicatorQueuedRefreshTimerRef = useRef<number | null>(null);
-  const taskIndicatorExpiryTimerRef = useRef<number | null>(null);
-  const latestBountyOverviewTasksRef = useRef<BountyTaskOverviewSummaryRowDto[]>([]);
   const activeBattleSessionRef = useRef<BattleSessionSnapshotDto | null>(null);
   const reconnectBattleIdRef = useRef<string | null>(null);
   const viewModeRef = useRef<'map' | 'battle'>('map');
@@ -2121,54 +2108,27 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     taskIndicatorQueuedRefreshTimerRef.current = null;
   }, []);
 
-  const clearTaskIndicatorExpiryTimer = useCallback(() => {
-    if (taskIndicatorExpiryTimerRef.current == null) return;
-    window.clearTimeout(taskIndicatorExpiryTimerRef.current);
-    taskIndicatorExpiryTimerRef.current = null;
-  }, []);
-
   const applyTaskIndicatorSnapshot = useCallback((
     taskRows: TaskOverviewSummaryRowDto[],
-    bountyTasks: BountyTaskOverviewSummaryRowDto[],
-    onExpiry: () => void,
   ) => {
-    const nowTs = Date.now();
-    const { count, nextExpiryTs } = resolveTaskIndicatorSnapshot(taskRows, bountyTasks, nowTs);
-    latestBountyOverviewTasksRef.current = bountyTasks;
-    clearTaskIndicatorExpiryTimer();
-    if (nextExpiryTs != null) {
-      const delayMs = Math.max(0, nextExpiryTs - nowTs + 1000);
-      taskIndicatorExpiryTimerRef.current = window.setTimeout(() => {
-        taskIndicatorExpiryTimerRef.current = null;
-        onExpiry();
-      }, delayMs);
-    }
-    setTaskCompletableCount(count);
-  }, [clearTaskIndicatorExpiryTimer]);
+    setTaskCompletableCount(resolveTaskIndicatorSnapshot(taskRows));
+  }, []);
 
   const refreshTaskIndicator = useCallback(async () => {
     if (!characterId) {
-      latestBountyOverviewTasksRef.current = [];
-      clearTaskIndicatorExpiryTimer();
       setTaskCompletableCount(0);
       return;
     }
 
-    const [taskResult, bountyResult] = await Promise.allSettled([
+    const [taskResult] = await Promise.allSettled([
       loadSharedTaskOverviewSummary(taskOverviewRequestScopeKeyRef.current),
-      loadSharedBountyTaskOverviewSummary(taskOverviewRequestScopeKeyRef.current),
     ]);
 
     const taskRows = taskResult.status === 'fulfilled' && taskResult.value.success && taskResult.value.data
       ? taskResult.value.data.tasks || []
       : [];
-    const bountyTasks = bountyResult.status === 'fulfilled' && bountyResult.value.success && bountyResult.value.data
-      ? bountyResult.value.data.tasks || []
-      : [];
-    applyTaskIndicatorSnapshot(taskRows, bountyTasks, () => {
-      void refreshTaskIndicator();
-    });
-  }, [applyTaskIndicatorSnapshot, characterId, clearTaskIndicatorExpiryTimer]);
+    applyTaskIndicatorSnapshot(taskRows);
+  }, [applyTaskIndicatorSnapshot, characterId]);
 
   const queueTaskIndicatorRefresh = useCallback((delayMs: number = 240) => {
     if (!characterId) return;
@@ -2219,9 +2179,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
         applyTeamOverview(overview.team);
         pendingHomeTaskSnapshotRef.current = overview.task;
         pendingHomeMainQuestSnapshotRef.current = overview.mainQuest;
-        applyTaskIndicatorSnapshot(overview.task.tasks, overview.task.bountyTasks, () => {
-          void refreshTaskIndicator();
-        });
+        applyTaskIndicatorSnapshot(overview.task.tasks);
         homeOverviewLoadingRef.current = false;
         setHomeOverviewSettled(true);
       } catch {
@@ -2260,18 +2218,15 @@ const Game: FC<GameProps> = ({ onLogout }) => {
       setAchievementClaimableCount(0);
       setShowSignInDot(false);
       setTrackedRoomIds([]);
-      latestBountyOverviewTasksRef.current = [];
       clearTaskIndicatorQueuedRefreshTimer();
-      clearTaskIndicatorExpiryTimer();
       setTaskCompletableCount(0);
       return;
     }
 
     return () => {
       clearTaskIndicatorQueuedRefreshTimer();
-      clearTaskIndicatorExpiryTimer();
     };
-  }, [applyTeamOverview, characterId, clearTaskIndicatorExpiryTimer, clearTaskIndicatorQueuedRefreshTimer]);
+  }, [applyTeamOverview, characterId, clearTaskIndicatorQueuedRefreshTimer]);
 
   useEffect(() => {
     if (!characterId) return;

@@ -3,23 +3,22 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：统一定义“哪些任务分类会出现在任务入口列表”和“哪些状态算可完成”，让 Game 页角标与 TaskModal 使用同一套口径。
- * 2. 做什么：分别提供普通任务与悬赏任务的可完成数量计算，以及任务弹窗左侧分类红点映射，避免页面层再次散落 `category/status` 判断。
+ * 2. 做什么：提供普通任务的可完成数量计算，以及任务弹窗左侧分类红点映射，避免页面层再次散落 `category/status` 判断。
  * 3. 不做什么：不发起接口请求、不管理 React state，也不处理主线任务独立面板的进度口径。
  *
  * 输入/输出：
- * - 输入：普通任务 `TaskOverviewRowDto[]`、悬赏任务 `BountyTaskOverviewRowDto[]`，或单个任务状态/分类。
+ * - 输入：普通任务 `TaskOverviewRowDto[]`，或单个任务状态/分类。
  * - 输出：分类布尔判断、状态布尔判断、可完成数量数字、任务弹窗分类红点布尔映射。
  *
  * 数据流/状态流：
- * - `/task/overview` / `/task/bounty/overview` 响应 -> 本文件过滤分类与状态 -> Game 页功能角标 / TaskModal 保持一致。
+ * - `/task/overview` / `/task/overview/summary` 响应 -> 本文件过滤分类与状态 -> Game 页功能角标 / TaskModal 保持一致。
  *
  * 关键边界条件与坑点：
  * 1. 普通任务角标必须排除 `main`，因为主线展示与刷新走独立面板，不能把两套来源混在同一个数字里。
- * 2. 日常委托有过期时间，角标与 TaskModal 都必须按同一套 `expiresAt` 口径排除已过期条目，否则同一时刻会出现“面板已消失但角标还在”的漂移。
- * 3. “可完成”只认 `turnin/claimable`，不能把 `ongoing` 视作红点，否则会误导玩家把进行中任务当成可领奖。
+ * 2. “可完成”只认 `turnin/claimable`，不能把 `ongoing` 视作红点，否则会误导玩家把进行中任务当成可领奖。
+ * 3. 角标统计必须与任务弹窗分类共用同一组 `category/status` 规则，避免首页数字和弹窗红点不一致。
  */
 import type {
-  BountyTaskOverviewSummaryRowDto,
   TaskOverviewSummaryRowDto,
   TaskStatus,
 } from '../../../services/api';
@@ -29,19 +28,13 @@ export type TaskIndicatorListCategory = Extract<
   'side' | 'daily' | 'event'
 >;
 
-export type TaskIndicatorCategory = TaskOverviewSummaryRowDto['category'] | 'bounty';
+export type TaskIndicatorCategory = TaskOverviewSummaryRowDto['category'];
 
 export type TaskCategoryIndicatorMap = Record<TaskIndicatorCategory, boolean>;
 
 type TaskIndicatorTaskRow = {
   category: TaskIndicatorCategory;
   status: TaskStatus;
-};
-
-type BountyTaskIndicatorRow = {
-  status: TaskStatus;
-  sourceType?: BountyTaskOverviewSummaryRowDto['sourceType'];
-  expiresAt?: string | null;
 };
 
 const TASK_INDICATOR_COMPLETABLE_STATUS: ReadonlySet<TaskStatus> = new Set([
@@ -61,36 +54,6 @@ export const isTaskIndicatorCompletableStatus = (
   return TASK_INDICATOR_COMPLETABLE_STATUS.has(status);
 };
 
-export const getBountyTaskRemainingSeconds = (
-  expiresAt: string | null | undefined,
-  nowTs: number,
-): number | null => {
-  if (!expiresAt) return null;
-  const ms = Date.parse(expiresAt);
-  if (!Number.isFinite(ms)) return null;
-  return Math.max(0, Math.floor((ms - nowTs) / 1000));
-};
-
-export const hasExpiredBountyTaskOverviewRow = (
-  task: BountyTaskIndicatorRow,
-  nowTs: number,
-): boolean => {
-  if (task.sourceType !== 'daily') return false;
-  if (!task.expiresAt) return false;
-  const remainingSeconds = getBountyTaskRemainingSeconds(task.expiresAt, nowTs);
-  return remainingSeconds == null || remainingSeconds <= 0;
-};
-
-export const isActiveBountyTaskOverviewRow = (
-  task: BountyTaskIndicatorRow,
-  nowTs: number,
-): boolean => {
-  if (task.sourceType !== 'daily') return true;
-  if (!task.expiresAt) return true;
-  const remainingSeconds = getBountyTaskRemainingSeconds(task.expiresAt, nowTs);
-  return remainingSeconds != null && remainingSeconds > 0;
-};
-
 export const countCompletableTaskOverviewRows = (
   tasks: TaskIndicatorTaskRow[],
 ): number => {
@@ -100,26 +63,14 @@ export const countCompletableTaskOverviewRows = (
   }, 0);
 };
 
-export const countCompletableBountyTaskOverviewRows = (
-  tasks: BountyTaskIndicatorRow[],
-  nowTs: number = Date.now(),
-): number => {
-  return tasks.reduce((total, task) => (
-    isActiveBountyTaskOverviewRow(task, nowTs) && isTaskIndicatorCompletableStatus(task.status) ? total + 1 : total
-  ), 0);
-};
-
 export const buildTaskCategoryIndicatorMap = (
   tasks: TaskIndicatorTaskRow[],
-  bountyTasks: BountyTaskIndicatorRow[],
-  nowTs: number = Date.now(),
 ): TaskCategoryIndicatorMap => {
   const indicators: TaskCategoryIndicatorMap = {
     main: false,
     side: false,
     daily: false,
     event: false,
-    bounty: false,
   };
 
   for (const task of tasks) {
@@ -128,35 +79,5 @@ export const buildTaskCategoryIndicatorMap = (
     indicators[task.category] = true;
   }
 
-  for (const task of bountyTasks) {
-    if (!isActiveBountyTaskOverviewRow(task, nowTs)) continue;
-    if (!isTaskIndicatorCompletableStatus(task.status)) continue;
-    indicators.bounty = true;
-    break;
-  }
-
   return indicators;
-};
-
-export const getNextBountyTaskExpiryTs = (
-  tasks: BountyTaskIndicatorRow[],
-  nowTs: number = Date.now(),
-): number | null => {
-  let nextExpiryTs: number | null = null;
-  for (const task of tasks) {
-    if (task.sourceType !== 'daily' || !task.expiresAt) continue;
-    const expiryTs = Date.parse(task.expiresAt);
-    if (!Number.isFinite(expiryTs) || expiryTs <= nowTs) continue;
-    if (nextExpiryTs == null || expiryTs < nextExpiryTs) {
-      nextExpiryTs = expiryTs;
-    }
-  }
-  return nextExpiryTs;
-};
-
-export const hasPendingBountyTaskExpiry = (
-  tasks: BountyTaskIndicatorRow[],
-  nowTs: number = Date.now(),
-): boolean => {
-  return getNextBountyTaskExpiryTs(tasks, nowTs) != null;
 };

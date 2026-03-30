@@ -6,7 +6,6 @@ import {
   claimTaskReward,
   setTaskTracked,
   submitTaskToNpc,
-  submitBountyMaterials,
 } from '../../../../services/api';
 import { gameSocket, type TaskOverviewScope } from '../../../../services/gameSocket';
 import { getMainQuestProgress, type MainQuestProgressDto } from '../../../../services/mainQuestApi';
@@ -14,13 +13,8 @@ import { useIsMobile } from '../../shared/responsive';
 import { getRealmRankFromLiteral as getRealmRank } from '../../shared/realm';
 import {
   buildTaskCategoryIndicatorMap,
-  getBountyTaskRemainingSeconds,
-  hasPendingBountyTaskExpiry,
-  hasExpiredBountyTaskOverviewRow,
-  isActiveBountyTaskOverviewRow,
 } from '../../shared/taskIndicator';
 import {
-  loadSharedBountyTaskOverview,
   loadSharedTaskOverview,
 } from '../../shared/taskOverviewRequests';
 import { formatTaskRewardsToText } from '../../shared/taskRewardText';
@@ -35,7 +29,6 @@ import {
   createEmptyTaskRowsByCategory,
   groupTaskOverviewRowsByCategory,
   isTaskListCategory,
-  mapBountyTaskOverviewRows,
   type TaskCategory,
   type TaskItem,
   type TaskListCategory,
@@ -75,15 +68,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [query, setQuery] = useState('');
   const [activeId, setActiveId] = useState<string>('');
   const [loadingByCategory, setLoadingByCategory] = useState<Record<TaskCategory, boolean>>(() => createEmptyTaskLoadedState());
-  const [submittingTaskId, setSubmittingTaskId] = useState<string>('');
   const [taskRowsByCategory, setTaskRowsByCategory] = useState<Record<TaskListCategory, TaskItem[]>>(() => createEmptyTaskRowsByCategory());
-  const [bountyTasks, setBountyTasks] = useState<TaskItem[]>([]);
   const [mainQuestProgress, setMainQuestProgress] = useState<MainQuestProgressDto | null>(null);
-  const [nowTs, setNowTs] = useState<number>(() => Date.now());
-  const lastExpireRefreshAtRef = useRef<number>(0);
   const socketRefreshTimerRef = useRef<number | null>(null);
   const socketRefreshTaskListRef = useRef<boolean>(false);
-  const socketRefreshBountyRef = useRef<boolean>(false);
   const loadedByCategoryRef = useRef<Record<TaskCategory, boolean>>(createEmptyTaskLoadedState());
   const inflightRequestsRef = useRef<Record<TaskCategory | 'taskList', Promise<void> | null>>({
     main: null,
@@ -91,7 +79,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     side: null,
     daily: null,
     event: null,
-    bounty: null,
   });
 
   const appendSystemChat = useCallback((content: string) => {
@@ -108,24 +95,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
         },
       }),
     );
-  }, []);
-
-  const getRemainingSeconds = useCallback((expiresAt?: string | null): number | null => {
-    return getBountyTaskRemainingSeconds(expiresAt, nowTs);
-  }, [nowTs]);
-
-  const formatCountdown = useCallback((seconds: number): string => {
-    const s = Math.max(0, Math.floor(seconds));
-    if (s <= 0) return '已过期';
-    const hours = Math.floor(s / 3600);
-    const minutes = Math.floor((s % 3600) / 60);
-    const secs = s % 60;
-    if (hours >= 24) {
-      const days = Math.floor(hours / 24);
-      const hh = hours % 24;
-      return `${days}天${String(hh).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, []);
 
   const setCategoryLoading = useCallback((targetCategory: TaskCategory, nextLoading: boolean) => {
@@ -211,46 +180,21 @@ const TaskModal: React.FC<TaskModalProps> = ({
     });
   }, [runCategoryRequest, setTaskListLoaded, setTaskListLoading, taskOverviewRequestScopeKey]);
 
-  const loadBountyTaskOverview = useCallback(async (forceRefresh: boolean): Promise<void> => {
-    if (!forceRefresh && loadedByCategoryRef.current.bounty) return;
-
-    await runCategoryRequest('bounty', async () => {
-      setCategoryLoading('bounty', true);
-      setCategoryLoaded('bounty', false);
-      try {
-        const response = await loadSharedBountyTaskOverview(taskOverviewRequestScopeKey, { forceRefresh });
-        if (!response.success || !response.data) return;
-        setBountyTasks(mapBountyTaskOverviewRows(response.data.tasks || []));
-        setCategoryLoaded('bounty', true);
-      } finally {
-        setCategoryLoading('bounty', false);
-      }
-    });
-  }, [runCategoryRequest, setCategoryLoaded, setCategoryLoading, taskOverviewRequestScopeKey]);
-
   const ensureCategoryLoaded = useCallback(async (targetCategory: TaskCategory): Promise<void> => {
     if (targetCategory === 'main') {
       await loadMainQuestProgress(false);
       return;
     }
-    if (targetCategory === 'bounty') {
-      await loadBountyTaskOverview(false);
-      return;
-    }
     await loadTaskOverview(false);
-  }, [loadBountyTaskOverview, loadMainQuestProgress, loadTaskOverview]);
+  }, [loadMainQuestProgress, loadTaskOverview]);
 
   const refreshCategory = useCallback(async (targetCategory: TaskCategory): Promise<void> => {
     if (targetCategory === 'main') {
       await loadMainQuestProgress(true);
       return;
     }
-    if (targetCategory === 'bounty') {
-      await loadBountyTaskOverview(true);
-      return;
-    }
     await loadTaskOverview(true);
-  }, [loadBountyTaskOverview, loadMainQuestProgress, loadTaskOverview]);
+  }, [loadMainQuestProgress, loadTaskOverview]);
 
   const clearSocketRefreshTimer = useCallback(() => {
     if (socketRefreshTimerRef.current == null) return;
@@ -260,14 +204,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   const flushSocketRefresh = useCallback(() => {
     const shouldRefreshTaskList = socketRefreshTaskListRef.current;
-    const shouldRefreshBounty = socketRefreshBountyRef.current;
     socketRefreshTaskListRef.current = false;
-    socketRefreshBountyRef.current = false;
     if (shouldRefreshTaskList) {
       void refreshCategory('side');
-    }
-    if (shouldRefreshBounty) {
-      void refreshCategory('bounty');
     }
   }, [refreshCategory]);
 
@@ -276,11 +215,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
       if (scope === 'task') {
         socketRefreshTaskListRef.current = true;
       }
-      if (scope === 'bounty') {
-        socketRefreshBountyRef.current = true;
-      }
     }
-    if (!socketRefreshTaskListRef.current && !socketRefreshBountyRef.current) return;
+    if (!socketRefreshTaskListRef.current) return;
     clearSocketRefreshTimer();
     socketRefreshTimerRef.current = window.setTimeout(() => {
       socketRefreshTimerRef.current = null;
@@ -295,10 +231,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   }, []);
 
   const updateTaskInCategory = useCallback((targetCategory: TaskCategory, taskId: string, updater: (task: TaskItem) => TaskItem) => {
-    if (targetCategory === 'bounty') {
-      setBountyTasks((prev) => prev.map((task) => (task.id === taskId ? updater(task) : task)));
-      return;
-    }
     if (!isTaskListCategory(targetCategory)) return;
     setTaskRowsByCategory((prev) => ({
       ...prev,
@@ -315,7 +247,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     setMobilePane('list');
     void refreshCategory('main');
     void refreshCategory('side');
-    void refreshCategory('bounty');
   }, [markCategoriesStale, open, refreshCategory]);
 
   useEffect(() => {
@@ -324,37 +255,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   }, [category, ensureCategoryLoaded, open]);
 
   useEffect(() => {
-    if (!open) return;
-    if (category === 'bounty') {
-      setNowTs(Date.now());
-      const timer = window.setInterval(() => setNowTs(Date.now()), 1000);
-      return () => window.clearInterval(timer);
-    }
-    if (!hasPendingBountyTaskExpiry(bountyTasks, nowTs)) return;
-
-    // 非悬赏页签只需要驱动左侧红点过期，不需要维持详情区的秒级倒计时。
-    const timer = window.setTimeout(() => setNowTs(Date.now()), 1000);
-    return () => window.clearTimeout(timer);
-  }, [bountyTasks, category, nowTs, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (category !== 'bounty') return;
-    if (loadingByCategory.bounty) return;
-
-    const hasExpiredDaily = bountyTasks.some((task) => hasExpiredBountyTaskOverviewRow(task, nowTs));
-    if (!hasExpiredDaily) return;
-
-    const now = Date.now();
-    if (now - lastExpireRefreshAtRef.current < 5000) return;
-    lastExpireRefreshAtRef.current = now;
-    void refreshCategory('bounty');
-  }, [bountyTasks, category, loadingByCategory.bounty, nowTs, open, refreshCategory]);
-
-  useEffect(() => {
     if (!open) {
       socketRefreshTaskListRef.current = false;
-      socketRefreshBountyRef.current = false;
       clearSocketRefreshTimer();
       return;
     }
@@ -376,8 +278,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
     [taskRowsByCategory],
   );
   const taskCategoryIndicatorMap = useMemo(
-    () => buildTaskCategoryIndicatorMap(taskOverviewRows, bountyTasks, nowTs),
-    [bountyTasks, nowTs, taskOverviewRows],
+    () => buildTaskCategoryIndicatorMap(taskOverviewRows),
+    [taskOverviewRows],
   );
   const renderTaskCategoryLabel = useCallback((targetCategory: TaskCategory, label: string) => (
     <span className="task-category-label">
@@ -390,21 +292,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
     [renderTaskCategoryLabel, taskCategoryKeys],
   );
   const currentTasks = useMemo(() => {
-    if (category === 'bounty') return bountyTasks;
     if (!isTaskListCategory(category)) return [];
     return taskRowsByCategory[category];
-  }, [bountyTasks, category, taskRowsByCategory]);
+  }, [category, taskRowsByCategory]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = currentTasks
-      .filter((task) => (category === 'bounty' ? isActiveBountyTaskOverviewRow(task, nowTs) : true));
+    const list = currentTasks;
     const searched = q ? list.filter((t) => t.title.toLowerCase().includes(q)) : list;
     const rank: Record<TaskStatus, number> = { claimable: 0, turnin: 1, ongoing: 2, completed: 3 };
     return [...searched].sort(
       (a, b) => rank[a.status] - rank[b.status] || getRealmRank(a.realm) - getRealmRank(b.realm) || a.id.localeCompare(b.id),
     );
-  }, [category, currentTasks, nowTs, query]);
+  }, [currentTasks, query]);
 
   const safeActiveId = useMemo(() => {
     if (activeId && filtered.some((t) => t.id === activeId)) return activeId;
@@ -478,25 +378,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
       void 0;
     }
   }, [appendSystemChat, message, onTaskCompletedChange, refreshCategory]);
-
-  const submitMaterials = useCallback(
-    async (task: TaskItem | null) => {
-      if (!task?.id) return;
-      setSubmittingTaskId(task.id);
-      try {
-        await submitBountyMaterials(task.id);
-        message.success('提交成功');
-        appendSystemChat(`【悬赏】已提交材料：${task.title}`);
-        await refreshCategory('bounty');
-        onTaskCompletedChange?.();
-      } catch {
-        void 0;
-      } finally {
-        setSubmittingTaskId('');
-      }
-    },
-    [appendSystemChat, message, onTaskCompletedChange, refreshCategory],
-  );
 
   const refreshMainQuestProgress = useCallback(async () => {
     await Promise.all([
@@ -620,9 +501,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       <div className="task-item-meta">
                         <span>推荐境界 {t.realm}</span>
                         <span>目标 {t.objectives.length} 项</span>
-                        {t.category === 'bounty' && t.sourceType === 'daily' ? (
-                          <span>剩余 {formatCountdown(getRemainingSeconds(t.expiresAt ?? null) ?? 0)}</span>
-                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -643,9 +521,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <div className="task-detail-tags">
                           <Tag color={TASK_STATUS_COLOR[activeTask.status]}>{TASK_STATUS_TEXT[activeTask.status]}</Tag>
                           <Tag color="default">推荐境界 {activeTask.realm}</Tag>
-                          {activeTask.category === 'bounty' && activeTask.sourceType === 'daily' && activeTask.expiresAt ? (
-                            <Tag color="volcano">剩余 {formatCountdown(getRemainingSeconds(activeTask.expiresAt) ?? 0)}</Tag>
-                          ) : null}
                         </div>
                       </div>
                       <div className="task-detail-desc">{activeTask.desc}</div>
@@ -681,17 +556,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <Button className="task-action" type={activeTask.tracked ? 'primary' : 'default'} onClick={toggleTrack} disabled={loading}>
                           {activeTask.tracked ? '取消追踪' : '追踪'}
                         </Button>
-                        {activeTask.status === 'turnin' && activeTask.objectives.some((o) => o.text.includes('提交材料')) ? (
-                          <Button
-                            className="task-action"
-                            type="primary"
-                            disabled={loading || submittingTaskId === activeTask.id}
-                            loading={submittingTaskId === activeTask.id}
-                            onClick={() => submitMaterials(activeTask)}
-                          >
-                            提交材料
-                          </Button>
-                        ) : null}
                         <Button
                           className="task-action"
                           type="primary"
