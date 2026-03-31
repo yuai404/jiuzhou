@@ -59,7 +59,9 @@ import {
 
 const RUNNER_INTERVAL_MS = 1500;
 const MAX_CONCURRENT_SETTLEMENT_TASKS = 4;
-const SETTLEMENT_TICK_TIME_BUDGET_MS = 1200;
+const SETTLEMENT_TICK_DRAIN_TAIL_RESERVE_MS = 350;
+const SETTLEMENT_TICK_DISPATCH_BUDGET_MS =
+  RUNNER_INTERVAL_MS - SETTLEMENT_TICK_DRAIN_TAIL_RESERVE_MS;
 const MAX_SETTLEMENT_TASKS_PER_TICK = MAX_CONCURRENT_SETTLEMENT_TASKS * 2;
 const settlementRunnerLogger = createScopedLogger('onlineBattle.settlementRunner');
 
@@ -967,7 +969,9 @@ class OnlineBattleSettlementRunner {
           onlyArena: options?.onlyArena === true,
           maxConcurrency: MAX_CONCURRENT_SETTLEMENT_TASKS,
           drainAll: options?.drainAll === true,
-          timeBudgetMs: SETTLEMENT_TICK_TIME_BUDGET_MS,
+          tickBudgetMs: RUNNER_INTERVAL_MS,
+          dispatchBudgetMs: SETTLEMENT_TICK_DISPATCH_BUDGET_MS,
+          drainTailReserveMs: SETTLEMENT_TICK_DRAIN_TAIL_RESERVE_MS,
           maxDispatchedTaskCount: MAX_SETTLEMENT_TASKS_PER_TICK,
         },
         thresholdMs: RUNNER_INTERVAL_MS,
@@ -992,7 +996,8 @@ class OnlineBattleSettlementRunner {
               drainAll: options?.drainAll === true,
               elapsedMs: Date.now() - drainStartedAt,
               dispatchedTaskCount,
-              timeBudgetMs: SETTLEMENT_TICK_TIME_BUDGET_MS,
+              tickBudgetMs: RUNNER_INTERVAL_MS,
+              drainTailReserveMs: SETTLEMENT_TICK_DRAIN_TAIL_RESERVE_MS,
               maxDispatchedTaskCount: MAX_SETTLEMENT_TASKS_PER_TICK,
             })
           ) {
