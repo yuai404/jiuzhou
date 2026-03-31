@@ -38,7 +38,9 @@ import {
   rejectIfIdling,
   withBattleStartResources,
   scheduleBattleStartResourcesSyncForUsers,
+  prepareFixedTeamBattleParticipants,
   prepareTeamBattleParticipants,
+  type FixedBattleParticipant,
 } from "./shared/preparation.js";
 import {
   DUNGEON_FLOW_PVE_BATTLE_START_POLICY,
@@ -50,6 +52,7 @@ import { uniqueStringIds, randomIntInclusive } from "./shared/helpers.js";
 import { buildBattleSnapshotState } from "./runtime/realtime.js";
 import { createScopedLogger } from "../../utils/logger.js";
 import { createSlowOperationLogger } from "../../utils/slowOperationLogger.js";
+import type { OnlineBattleCharacterSnapshot } from "../onlineBattleProjectionService.js";
 
 const battlePveLogger = createScopedLogger("battle.pve");
 
@@ -61,6 +64,11 @@ export type PveBattleRegisteredPayload = {
 export type StartPVEBattleOptions = {
   onBattleRegistered?: (payload: PveBattleRegisteredPayload) => void;
   deferBattleActivation?: boolean;
+  fixedTeamContext?: {
+    starterSnapshot: OnlineBattleCharacterSnapshot;
+    participants: FixedBattleParticipant[];
+    snapshotsByCharacterId: ReadonlyMap<number, OnlineBattleCharacterSnapshot>;
+  };
 };
 
 export async function startPVEBattle(
@@ -363,17 +371,21 @@ export const startResolvedPVEBattleByPolicy = async (params: {
   errorMessage: string;
   onBattleRegistered?: (payload: PveBattleRegisteredPayload) => void;
   deferBattleActivation?: boolean;
+  fixedTeamContext?: StartPVEBattleOptions['fixedTeamContext'];
 }): Promise<BattleResult> => {
   try {
-    const baseCharacterSnapshot = await getOnlineBattleCharacterSnapshotByUserId(params.userId);
+    const baseCharacterSnapshot = params.fixedTeamContext?.starterSnapshot
+      ?? await getOnlineBattleCharacterSnapshotByUserId(params.userId);
     if (!baseCharacterSnapshot) {
       return { success: false, message: '角色不存在' };
     }
     const baseCharacter = baseCharacterSnapshot.computed;
 
     const characterId = Number(baseCharacter.id);
-    const idleReject = await rejectIfIdling(characterId);
-    if (idleReject) return idleReject;
+    if (!params.fixedTeamContext) {
+      const idleReject = await rejectIfIdling(characterId);
+      if (idleReject) return idleReject;
+    }
 
     const characterBattleLoadout = baseCharacterSnapshot.loadout;
     if (!characterBattleLoadout) {
@@ -408,11 +420,19 @@ export const startResolvedPVEBattleByPolicy = async (params: {
     const character = withBattleStartResources(characterWithSetBonus);
 
     const validTeamMembersPromise = params.allowTeamBattle
-      ? prepareTeamBattleParticipants(
-          params.userId,
-          character.id,
-          { startPolicy: params.startPolicy },
-        )
+      ? (
+        params.fixedTeamContext
+          ? Promise.resolve(prepareFixedTeamBattleParticipants({
+              selfCharacterId: character.id,
+              participants: params.fixedTeamContext.participants,
+              snapshotsByCharacterId: params.fixedTeamContext.snapshotsByCharacterId,
+            }))
+          : prepareTeamBattleParticipants(
+              params.userId,
+              character.id,
+              { startPolicy: params.startPolicy },
+            )
+      )
       : Promise.resolve({
           success: true as const,
           validTeamMembers: [],
@@ -511,6 +531,7 @@ const startDungeonPVEBattleByPolicy = async (
       errorMessage: '发起秘境战斗失败',
       onBattleRegistered: options?.onBattleRegistered,
       deferBattleActivation: options?.deferBattleActivation,
+      fixedTeamContext: options?.fixedTeamContext,
     });
   } catch (error) {
     battlePveLogger.error({

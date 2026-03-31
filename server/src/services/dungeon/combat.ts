@@ -29,6 +29,7 @@ import {
   type DungeonEntryCountProjectionRecord,
   getDungeonProjection,
   getOnlineBattleCharacterSnapshotsByCharacterIds,
+  type OnlineBattleCharacterSnapshot,
   upsertDungeonProjection,
 } from '../onlineBattleProjectionService.js';
 import { applyStaminaRecoveryByCharacterIds } from '../staminaService.js';
@@ -80,6 +81,30 @@ type DungeonCombatResponse =
       };
     }
   | { success: false; message: string };
+
+const buildDungeonFixedTeamContext = (params: {
+  starterCharacterId: number;
+  participants: DungeonInstanceParticipant[];
+  participantSnapshots: ReadonlyMap<number, OnlineBattleCharacterSnapshot>;
+}): {
+  starterSnapshot: OnlineBattleCharacterSnapshot;
+  participants: Array<{ userId: number; characterId: number }>;
+  snapshotsByCharacterId: ReadonlyMap<number, OnlineBattleCharacterSnapshot>;
+} | null => {
+  const starterSnapshot = params.participantSnapshots.get(params.starterCharacterId);
+  if (!starterSnapshot) {
+    return null;
+  }
+
+  return {
+    starterSnapshot,
+    participants: params.participants.map((participant) => ({
+      userId: participant.userId,
+      characterId: participant.characterId,
+    })),
+    snapshotsByCharacterId: params.participantSnapshots,
+  };
+};
 
 const buildDeferredSettlementParticipants = async (
   participants: DungeonInstanceParticipant[],
@@ -215,6 +240,11 @@ export const startDungeonInstance = async (
   return runDungeonStartFlow({
     startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds, {
       onBattleRegistered: options?.onBattleRegistered,
+      fixedTeamContext: buildDungeonFixedTeamContext({
+        starterCharacterId: user.characterId,
+        participants,
+        participantSnapshots,
+      }) ?? undefined,
     }),
     commitOnBattleStarted: async ({ battleId, state }) => {
       const startTime = new Date().toISOString();
@@ -497,9 +527,28 @@ export const nextDungeonInstance = async (
     return flushAndReturn({ success: false, message: '该波次未配置怪物' }, { reason: 'monster_wave_empty' });
   }
 
+  const participantCharacterIds = Array.from(
+    new Set(
+      projection.participants.map((participant) => participant.characterId),
+    ),
+  );
+  const participantSnapshots = await getOnlineBattleCharacterSnapshotsByCharacterIds(participantCharacterIds);
+  const fixedTeamContext = buildDungeonFixedTeamContext({
+    starterCharacterId: user.characterId,
+    participants: projection.participants,
+    participantSnapshots,
+  });
+  if (!fixedTeamContext) {
+    return flushAndReturn(
+      { success: false, message: '当前角色在线战斗快照缺失' },
+      { reason: 'starter_snapshot_missing' },
+    );
+  }
+
   const response = await runDungeonStartFlow({
     startBattle: () => startDungeonPVEBattleForDungeonFlow(userId, monsterDefIds, {
       onBattleRegistered: options?.onBattleRegistered,
+      fixedTeamContext,
     }),
     commitOnBattleStarted: async ({ battleId, state }) => {
       await upsertDungeonProjection({

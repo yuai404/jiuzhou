@@ -25,6 +25,7 @@ import { idleSessionService } from "../../idle/idleSessionService.js";
 import {
   getOnlineBattleCharacterSnapshotsByCharacterIds,
   getTeamProjectionByUserId,
+  type OnlineBattleCharacterSnapshot,
 } from "../../onlineBattleProjectionService.js";
 import type { BattleResult } from "../battleTypes.js";
 import { getBattleStartCooldownRemainingMs, isCharacterInBattle } from "../runtime/state.js";
@@ -50,6 +51,11 @@ export type TeamBattlePreparationResult =
 
 export type TeamBattlePreparationOptions = {
   startPolicy: PveBattleStartPolicy;
+};
+
+export type FixedBattleParticipant = {
+  userId: number;
+  characterId: number;
 };
 
 type SyncBattleStartResourcesOptions = {
@@ -287,3 +293,82 @@ export async function prepareTeamBattleParticipants(
 
   return { success: true, validTeamMembers, participantUserIds };
 }
+
+/**
+ * 基于已冻结的参战名单构建组队参战结果。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：复用秘境/千层塔这类“参战成员已经在上游冻结”的场景，直接按传入名单组装队友数据，避免重复查询队伍投影。
+ * 2. 做什么：保持参战顺序与上游传入名单一致，只在这里做最小必要的快照存在性过滤。
+ * 3. 不做什么：不重新校验队伍归属、不做挂机拦截，也不做成员冷却筛选；这些规则由冻结名单生成时保证。
+ *
+ * 输入/输出：
+ * - 输入：当前角色 ID、固定参与者列表、按 characterId 索引的在线战斗快照。
+ * - 输出：与 `prepareTeamBattleParticipants` 同结构的参战结果。
+ *
+ * 数据流/状态流：
+ * dungeon/tower 上游冻结 participants -> 批量读取在线战斗快照
+ * -> 本函数组装队友 CharacterData/skills
+ * -> startResolvedPVEBattleByPolicy 直接创建 battle。
+ *
+ * 关键边界条件与坑点：
+ * 1. 冻结名单里缺少当前角色或其快照时必须直接失败，否则会进入“队友存在、自己缺失”的非法 battle 状态。
+ * 2. 这里只按冻结名单裁剪成员，不会擅自回退到实时队伍投影，避免推进中的秘境被队伍变更污染。
+ */
+export const prepareFixedTeamBattleParticipants = (params: {
+  selfCharacterId: number;
+  participants: FixedBattleParticipant[];
+  snapshotsByCharacterId: ReadonlyMap<number, OnlineBattleCharacterSnapshot>;
+}): TeamBattlePreparationResult => {
+  const validTeamMembers: TeamBattleMember[] = [];
+  const participantUserIds: number[] = [];
+  const seenUserIds = new Set<number>();
+  let selfSnapshotExists = false;
+
+  for (const participant of params.participants) {
+    const userId = normalizeCharacterId(participant.userId);
+    const characterId = normalizeCharacterId(participant.characterId);
+    if (userId <= 0 || characterId <= 0) {
+      continue;
+    }
+
+    const snapshot = params.snapshotsByCharacterId.get(characterId);
+    if (!snapshot) {
+      return {
+        success: false,
+        result: { success: false, message: `参战角色快照缺失: ${characterId}` },
+      };
+    }
+
+    if (!seenUserIds.has(userId)) {
+      participantUserIds.push(userId);
+      seenUserIds.add(userId);
+    }
+
+    if (characterId === params.selfCharacterId) {
+      selfSnapshotExists = true;
+      continue;
+    }
+
+    validTeamMembers.push({
+      data: {
+        ...snapshot.computed,
+        setBonusEffects: snapshot.loadout.setBonusEffects,
+      },
+      skills: snapshot.loadout.skills,
+    });
+  }
+
+  if (!selfSnapshotExists) {
+    return {
+      success: false,
+      result: { success: false, message: '当前角色不在秘境参战名单中' },
+    };
+  }
+
+  return {
+    success: true,
+    validTeamMembers,
+    participantUserIds,
+  };
+};
