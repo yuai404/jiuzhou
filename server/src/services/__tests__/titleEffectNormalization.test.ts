@@ -30,6 +30,8 @@ test('normalizeTitleEffects: 平面值取整、比率值保留小数比率口径
     wugong: 18.9,
     baoji: 0.03456,
     kangbao: 0.02,
+    qixue: 30,
+    lingqi: 20,
     invalid_key: 999,
   });
 

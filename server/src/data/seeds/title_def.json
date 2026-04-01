@@ -7,7 +7,7 @@
       "color": "#d9d9d9",
       "effects": {
         "wugong": 5,
-        "qixue": 30
+        "max_qixue": 30
       },
       "source_type": "achievement",
       "source_id": "ach-kill-rabbit-30",

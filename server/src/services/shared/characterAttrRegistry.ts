@@ -38,7 +38,7 @@ const CHARACTER_ATTR_REGISTRY = [
     label: '气血',
     meaningLabel: '当前气血',
     valueKind: 'flat',
-    allowTitleEffect: true,
+    allowTitleEffect: false,
     equipmentBucket: 'survival',
   },
   {
@@ -55,7 +55,7 @@ const CHARACTER_ATTR_REGISTRY = [
     label: '灵气',
     meaningLabel: '当前灵气',
     valueKind: 'flat',
-    allowTitleEffect: true,
+    allowTitleEffect: false,
     equipmentBucket: 'survival',
   },
   {
@@ -330,7 +330,64 @@ export const TITLE_EFFECT_KEYS = Object.freeze(
     .map((entry) => entry.key),
 ) as readonly RegisteredCharacterAttrKey[];
 
+export type TitleEffectKey = (typeof TITLE_EFFECT_KEYS)[number];
+
 export const TITLE_EFFECT_KEY_SET = new Set<string>(TITLE_EFFECT_KEYS);
+
+/**
+ * AI 云游称号属性上限配置
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1) 做什么：集中维护 AI 生成正式称号时，各属性独立的数值上限，避免继续把高价值与低价值属性共用同一档封顶。
+ * 2) 做什么：为 prompt、结构化 JSON schema 与结果校验提供同一份上限来源，保证“提示词怎么写”和“服务端怎么收”完全一致。
+ * 3) 不做什么：不负责属性白名单判定，不负责实际战斗结算，也不改动静态成就/PVP 称号配置。
+ *
+ * 输入/输出：
+ * - 输入：称号属性 key。
+ * - 输出：该属性允许的最大值；固定值属性返回整数上限，百分比属性返回小数比率上限。
+ *
+ * 数据流/状态流：
+ * 云游 AI 模块读取本表 -> 构造属性上限提示/JSON schema -> 校验 AI 返回的称号属性 -> 动态称号入库。
+ *
+ * 复用设计说明：
+ * 1) 属性上限仍与属性注册表放在同一文件，属性 key、中文名、值类型、称号可用性与上限约束都从单点导出，避免多文件重复维护。
+ * 2) 未来若其他“AI 生成称号/词条”场景也需要按属性价值分档，可直接复用本表，而不必重新手写一套 key -> max 映射。
+ *
+ * 关键边界条件与坑点：
+ * 1) `qixue` / `lingqi` 在角色计算中会被映射到 `max_qixue` / `max_lingqi`，因此这里必须与上限类资源保持同档，不能沿用攻击类上限。
+ * 2) 百分比属性使用小数比率口径，例如 `0.04` 表示 4%；这里的上限不是百分数字符串，也不是整数百分数。
+ */
+export const TITLE_EFFECT_VALUE_MAX_MAP = Object.freeze({
+  max_qixue: 300,
+  max_lingqi: 200,
+  wugong: 100,
+  fagong: 100,
+  wufang: 150,
+  fafang: 150,
+  sudu: 30,
+  fuyuan: 15,
+  mingzhong: 0.08,
+  shanbi: 0.08,
+  zhaojia: 0.08,
+  baoji: 0.08,
+  baoshang: 0.08,
+  jianbaoshang: 0.08,
+  jianfantan: 0.08,
+  kangbao: 0.08,
+  zengshang: 0.08,
+  zhiliao: 0.08,
+  jianliao: 0.08,
+  xixue: 0.08,
+  lengque: 0.08,
+  kongzhi_kangxing: 0.08,
+  jin_kangxing: 0.08,
+  mu_kangxing: 0.08,
+  shui_kangxing: 0.08,
+  huo_kangxing: 0.08,
+  tu_kangxing: 0.08,
+  qixue_huifu: 20,
+  lingqi_huifu: 15,
+}) as Readonly<Record<TitleEffectKey, number>>;
 
 const TECHNIQUE_PASSIVE_SUFFIX_BY_MODE: Record<CharacterTechniquePassiveMode, string> = {
   flat: '（固定值加成）',
