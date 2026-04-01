@@ -72,7 +72,7 @@ test('还虚->合道突破配置应满足合道一期前置/消耗/奖励口径'
 
   const dungeonReq = requirements.find((row) => row.type === 'dungeon_clear_min');
   assert.equal(dungeonReq?.dungeonId, 'dungeon-lianshen-xuanjian-sitian-gong');
-  assert.equal(dungeonReq?.difficultyId, 'dd-jingxu-sitian-h');
+  assert.equal(dungeonReq?.difficultyId, undefined);
   assert.equal(dungeonReq?.minCount, 3);
 
   const chapterReq = requirements.find((row) => row.type === 'main_quest_chapter_completed');

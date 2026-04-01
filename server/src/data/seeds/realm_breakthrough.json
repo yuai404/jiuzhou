@@ -210,20 +210,18 @@
           "title": "多功法共修"
         },
         {
-          "id": "dungeon-clear-xinmo-hard-2",
+          "id": "dungeon-clear-xinmo-any-2",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianqi-xinmo-huanjing",
-          "difficultyId": "dd-lianqi-xinmo-h",
           "minCount": 2,
-          "title": "心魔幻境困难通关"
+          "title": "心魔幻境任意难度通关"
         },
         {
-          "id": "dungeon-clear-lingmai-hard-2",
+          "id": "dungeon-clear-lingmai-any-2",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianqi-lingmai-kuangyuan",
-          "difficultyId": "dd-lianqi-lingmai-h",
           "minCount": 2,
-          "title": "灵脉矿渊困难通关"
+          "title": "灵脉矿渊任意难度通关"
         },
         {
           "id": "main-quest-chapter-3",
@@ -302,12 +300,11 @@
           "title": "功法融会贯通"
         },
         {
-          "id": "dungeon-clear-jiutai-hard-3",
+          "id": "dungeon-clear-jiutai-any-3",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianqi-jiutai-gongque",
-          "difficultyId": "dd-lianqi-jiutai-h",
           "minCount": 3,
-          "title": "九台宫阙困难通关"
+          "title": "九台宫阙任意难度通关"
         },
         {
           "id": "main-quest-chapter-4",
@@ -386,12 +383,11 @@
           "title": "功法八重圆满"
         },
         {
-          "id": "dungeon-clear-xuling-hard-3",
+          "id": "dungeon-clear-xuling-any-3",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianshen-xuling-shendian",
-          "difficultyId": "dd-lianshen-xuling-h",
           "minCount": 3,
-          "title": "虚灵神殿困难通关"
+          "title": "虚灵神殿任意难度通关"
         },
         {
           "id": "main-quest-chapter-5",
@@ -470,12 +466,11 @@
           "title": "九重功法圆满"
         },
         {
-          "id": "dungeon-clear-huixu-hard-3",
+          "id": "dungeon-clear-huixu-any-3",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianshen-huixu-tiantai",
-          "difficultyId": "dd-huixu-tiantai-h",
           "minCount": 3,
-          "title": "还虚天台困难通关"
+          "title": "还虚天台任意难度通关"
         },
         {
           "id": "main-quest-chapter-6",
@@ -560,12 +555,11 @@
           "title": "九重功法圆满"
         },
         {
-          "id": "dungeon-clear-jingxu-hard-3",
+          "id": "dungeon-clear-jingxu-any-3",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianshen-xuanjian-sitian-gong",
-          "difficultyId": "dd-jingxu-sitian-h",
           "minCount": 3,
-          "title": "玄鉴司天宫困难通关"
+          "title": "玄鉴司天宫任意难度通关"
         },
         {
           "id": "main-quest-chapter-7",
@@ -653,9 +647,8 @@
           "id": "dungeon-clear-wanfa-daogong-4",
           "type": "dungeon_clear_min",
           "dungeonId": "dungeon-lianxu-wanfa-daogong",
-          "difficultyId": "dd-wanfa-daogong-h",
           "minCount": 4,
-          "title": "万法道宫高压问律"
+          "title": "万法道宫任意难度通关"
         },
         {
           "id": "chapter-8-complete",

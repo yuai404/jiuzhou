@@ -67,7 +67,7 @@ test('养神->还虚突破配置应满足还虚一期前置/消耗/奖励口径'
 
   const dungeonReq = requirements.find((row) => row.type === 'dungeon_clear_min');
   assert.equal(dungeonReq?.dungeonId, 'dungeon-lianshen-huixu-tiantai');
-  assert.equal(dungeonReq?.difficultyId, 'dd-huixu-tiantai-h');
+  assert.equal(dungeonReq?.difficultyId, undefined);
   assert.equal(dungeonReq?.minCount, 3);
 
   const chapterReq = requirements.find((row) => row.type === 'main_quest_chapter_completed');
