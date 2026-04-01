@@ -192,7 +192,7 @@
           "name": "困难",
           "difficulty_rank": 2,
           "monster_level_add": 2,
-          "monster_attr_mult": 1.18,
+          "monster_attr_mult": 1.5,
           "reward_mult": 1.2,
           "min_realm": "炼精化炁·养气期",
           "unlock_prev_difficulty": true,
