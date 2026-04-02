@@ -375,7 +375,7 @@ export interface SkillEffect {
   controlType?: string;
   chance?: number;  // 概率（0~1，1=100%）
   resourceType?: 'lingqi' | 'qixue';  // 资源类型
-  target?: 'self' | 'enemy' | 'ally';
+  target?: 'self' | 'target' | 'enemy' | 'ally';
   damageType?: 'physical' | 'magic' | 'true';
   element?: string;
   hit_count?: number;

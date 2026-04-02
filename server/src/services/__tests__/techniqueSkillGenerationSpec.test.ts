@@ -37,6 +37,21 @@ test('resource 效果应支持 ally 灵气回复机制', () => {
   assert.deepEqual(validation, { success: true });
 });
 
+test('buff 效果应支持显式指定自身为施加目标', () => {
+  const validation = validateTechniqueSkillEffect({
+    type: 'buff',
+    target: 'self',
+    buffKind: 'attr',
+    buffKey: 'buff-zengshang-up',
+    attrKey: 'zengshang',
+    applyType: 'percent',
+    value: 0.2,
+    duration: 2,
+  });
+
+  assert.deepEqual(validation, { success: true });
+});
+
 test('momentum 效果应支持 gain 势机制', () => {
   const validation = validateTechniqueSkillEffect({
     type: 'momentum',

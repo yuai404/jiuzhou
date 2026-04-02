@@ -293,6 +293,13 @@ const RESOURCE_EFFECT_TARGET_LABEL: Record<string, string> = {
   random_ally: '随机友方目标',
 };
 
+const BUFF_EFFECT_TARGET_PREFIX_LABEL: Record<string, string> = {
+  self: '对自身',
+  target: '对目标',
+  enemy: '对敌方目标',
+  ally: '对友方目标',
+};
+
 /**
  * 格式化光环子效果描述
  *
@@ -436,8 +443,10 @@ const formatBuffEffect = (
   const { name, attr, buffKey } = formatBuffName(effect, effectType);
   const valueText = formatBuffDetail(effect, buffKey, buffKind, attr, applyType);
   const duration = toPositiveInt(effect.duration);
+  const targetPrefix = BUFF_EFFECT_TARGET_PREFIX_LABEL[toText(effect.target)];
+  const actionText = effectType === 'buff' ? '施加增益' : '施加减益';
 
-  let text = `${effectType === 'buff' ? '施加增益' : '施加减益'}：${name}`;
+  let text = targetPrefix ? `${targetPrefix}${actionText}：${name}` : `${actionText}：${name}`;
   if (valueText) text += `（${valueText}）`;
   // 光环永久存在，不显示外层 duration
   if (duration > 0 && buffKind !== 'aura' && !options.ignoreDuration) text += `，持续${duration}回合`;

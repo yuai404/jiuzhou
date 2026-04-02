@@ -32,6 +32,7 @@ import {
   TECHNIQUE_SKILL_AURA_TARGET_LIST,
   TECHNIQUE_SKILL_AURA_SUB_EFFECT_TYPE_LIST,
   TECHNIQUE_SKILL_EFFECT_MAX_COUNT,
+  TECHNIQUE_SKILL_EFFECT_TARGET_LIST,
   TECHNIQUE_UPGRADE_DAMAGE_EFFECT_MAX_TOTAL_SCALE_RATE,
   TECHNIQUE_SKILL_TRIGGER_TYPE_LIST,
   TECHNIQUE_SKILL_MARK_CONSUME_MODE_LIST,
@@ -203,6 +204,7 @@ export const TECHNIQUE_PROMPT_GENERAL_RULES = [
   'technique.type 必须等于 techniqueType，禁止自行改成其他功法类型',
   'technique.requiredRealm 必须来自 realmEnum',
   'buff/debuff 必须使用结构化 Buff 字段（buffKind/buffKey/attrKey/applyType），禁止使用 buffId，且 buffKey/attrKey 必须来自 allowedBuffConfigRules',
+  'buff/debuff 未填写 target 时默认命中技能当前目标；只有需要显式改成自身/友方/敌方时才填写 target',
   'mark.markId 必须来自 allowedMarkIds',
   'effects 不支持 valueFormula，严禁返回该字段',
   'skills[*].upgrades 只允许使用 { layer, changes } 结构，不要返回 description/effectChanges/effectIndex',
@@ -235,6 +237,7 @@ export const TECHNIQUE_PROMPT_RESOURCE_TYPE_ENUM = TECHNIQUE_SKILL_RESOURCE_TYPE
 export const TECHNIQUE_PROMPT_DISPEL_TYPE_ENUM = TECHNIQUE_SKILL_DISPEL_TYPE_LIST;
 
 export const TECHNIQUE_PROMPT_RESOURCE_TARGET_ENUM = TECHNIQUE_SKILL_RESOURCE_TARGET_LIST;
+export const TECHNIQUE_PROMPT_EFFECT_TARGET_ENUM = TECHNIQUE_SKILL_EFFECT_TARGET_LIST;
 
 export const TECHNIQUE_PROMPT_CONTROL_TYPE_ENUM = TECHNIQUE_SKILL_CONTROL_TYPE_LIST;
 
@@ -501,7 +504,7 @@ export const TECHNIQUE_PROMPT_EFFECT_COMMON_FIELDS = {
   chance: '概率（0~1 浮点，建议范围见 numericRanges.effect.chance）',
   element: '元素（必须在 elementEnum 中）',
   damageType: '伤害类型（必须在 damageTypeEnum 中）',
-  target: '资源类效果目标（必须在 resourceTargetEnum 中）',
+  target: `效果目标。buff/debuff 可选 ${TECHNIQUE_SKILL_EFFECT_TARGET_LIST.join('/')}（未填默认跟随技能目标）；resource 仅支持 resourceTargetEnum`,
   momentumId: '势能资源 ID，momentum 效果必填，必须在 momentumIdEnum 中',
   gainStacks: '本次获得的势层数（整数，建议 1~99）',
   bonusType: '消耗势后加成的效果类别，必须在 momentumBonusTypeEnum 中',
@@ -563,10 +566,11 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
   buff: {
     meaning: '增益效果，使用结构化 Buff 配置（可扩展）',
     required: ['type', 'buffKind', 'buffKey'],
-    optional: ['attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
+    optional: ['target', 'attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
     rules: [
       'buffKind 必须在 allowedBuffConfigRules.kindEnum 中',
       'buffKey 必须在 allowedBuffConfigRules.buffKeyEnumByType.buff 中',
+      'target 如有填写，必须在 effectTargetEnum 中；未填写时默认命中技能当前目标',
       'buffKind=attr 时必须提供 attrKey，且 attrKey 必须在 allowedBuffConfigRules.attrKeyEnum 中',
       'applyType 如有填写，必须在 allowedBuffConfigRules.applyTypeEnum 中',
       'duration/stacks 建议为正整数（见 numericRanges.effect.duration / stacks）',
@@ -577,6 +581,7 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
     ],
     defaultTemplate: {
       type: 'buff',
+      target: 'self',
       buffKind: 'attr',
       buffKey: 'buff-shanbi-up',
       attrKey: 'shanbi',
@@ -589,10 +594,11 @@ export const TECHNIQUE_PROMPT_EFFECT_SCHEMA_BY_TYPE = {
   debuff: {
     meaning: '减益效果，使用结构化 Buff 配置（可扩展）',
     required: ['type', 'buffKind', 'buffKey'],
-    optional: ['attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
+    optional: ['target', 'attrKey', 'applyType', 'value', 'valueType', 'scaleAttr', 'scaleRate', 'duration', 'stacks'],
     rules: [
       'buffKind 必须在 allowedBuffConfigRules.kindEnum 中',
       'buffKey 必须在 allowedBuffConfigRules.buffKeyEnumByType.debuff 中',
+      'target 如有填写，必须在 effectTargetEnum 中；未填写时默认命中技能当前目标',
       'buffKind=attr 时必须提供 attrKey，且 attrKey 必须在 allowedBuffConfigRules.attrKeyEnum 中',
       'applyType 如有填写，必须在 allowedBuffConfigRules.applyTypeEnum 中',
       'buffKind=aura 时必须提供 auraTarget（all_ally/all_enemy/self）和 auraEffects（子效果数组，长度 ≤ 4）',
@@ -898,6 +904,7 @@ export const buildTechniqueGeneratorPromptInput = (params: {
       controlTypeEnum: [...TECHNIQUE_PROMPT_CONTROL_TYPE_ENUM],
       resourceTypeEnum: [...TECHNIQUE_PROMPT_RESOURCE_TYPE_ENUM],
       resourceTargetEnum: [...TECHNIQUE_PROMPT_RESOURCE_TARGET_ENUM],
+      effectTargetEnum: [...TECHNIQUE_PROMPT_EFFECT_TARGET_ENUM],
       dispelTypeEnum: [...TECHNIQUE_PROMPT_DISPEL_TYPE_ENUM],
       allowedMarkIds: [...TECHNIQUE_PROMPT_MARK_ID_ENUM],
       allowedMarkGuideById: MARK_TRAIT_GUIDE_BY_ID,

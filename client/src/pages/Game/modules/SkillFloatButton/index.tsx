@@ -969,6 +969,7 @@ const SkillFloatButton: React.FC<SkillFloatButtonProps> = ({
             const effectLines = formatSkillEffectLines(s.effects, {
               damageType: s.damageType,
               element: s.element,
+              targetType: s.targetType,
             });
             const costEntries = buildSkillCostEntries(normalizeSkillCost({
               costLingqi: s.costLingqi,

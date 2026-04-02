@@ -86,6 +86,7 @@ export const TECHNIQUE_SKILL_TRIGGER_TYPE_LIST = ['active', 'passive'] as const;
 export const TECHNIQUE_SKILL_VALUE_TYPE_LIST = ['flat', 'percent', 'scale', 'combined'] as const;
 export const TECHNIQUE_SKILL_RESOURCE_TYPE_LIST = ['lingqi', 'qixue'] as const;
 export const TECHNIQUE_SKILL_RESOURCE_TARGET_LIST = ['self', 'enemy', 'ally'] as const;
+export const TECHNIQUE_SKILL_EFFECT_TARGET_LIST = ['self', 'target', 'enemy', 'ally'] as const;
 export const TECHNIQUE_SKILL_DISPEL_TYPE_LIST = ['buff', 'debuff', 'all'] as const;
 export const TECHNIQUE_SKILL_SCALE_ATTR_LIST = [
   'max_qixue',
@@ -157,6 +158,7 @@ const EFFECT_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_EFFECT_TYPE_LIST);
 const VALUE_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_VALUE_TYPE_LIST);
 const RESOURCE_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_RESOURCE_TYPE_LIST);
 const RESOURCE_TARGET_SET = new Set<string>(TECHNIQUE_SKILL_RESOURCE_TARGET_LIST);
+const EFFECT_TARGET_SET = new Set<string>(TECHNIQUE_SKILL_EFFECT_TARGET_LIST);
 const DISPEL_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_DISPEL_TYPE_LIST);
 const SCALE_ATTR_SET = new Set<string>(TECHNIQUE_SKILL_SCALE_ATTR_LIST);
 const CONTROL_TYPE_SET = new Set<string>(TECHNIQUE_SKILL_CONTROL_TYPE_LIST);
@@ -502,6 +504,8 @@ export const validateTechniqueSkillEffect = (
 
     case 'buff':
     case 'debuff': {
+      const targetValidation = validateOptionalEnumField('target', effect.target, EFFECT_TARGET_SET);
+      if (!targetValidation.success) return targetValidation;
       const buffValidation = validateTechniqueStructuredBuffEffect(effect);
       if (!buffValidation.success) {
         return { success: false, reason: buffValidation.reason };

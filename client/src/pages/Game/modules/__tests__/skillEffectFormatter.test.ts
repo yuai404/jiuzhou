@@ -37,6 +37,25 @@ describe('skillEffectFormatter', () => {
     ]);
   });
 
+  it('应在自增益 Buff 文案中标出施加给自身', () => {
+    const lines = formatSkillEffectLines([
+      {
+        type: 'buff',
+        target: 'self',
+        duration: 2,
+        value: 0.15,
+        buffKey: 'buff-zengshang-up',
+        buffKind: 'attr',
+        attrKey: 'zengshang',
+        applyType: 'percent',
+      },
+    ]);
+
+    expect(lines).toEqual([
+      '对自身施加增益：增伤提升（幅度 15%），持续2回合',
+    ]);
+  });
+
   it('应将 mirror_crack 印记格式化为包含追击语义的中文文案', () => {
     const lines = formatSkillEffectLines([
       {

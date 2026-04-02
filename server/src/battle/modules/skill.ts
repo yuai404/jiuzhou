@@ -111,6 +111,12 @@ type SkillExecutionContext = {
 };
 
 type BuffOrDebuffEffect = SkillEffect & { type: 'buff' | 'debuff' };
+type SkillEffectTargetMode = NonNullable<SkillEffect['target']>;
+
+type SkillEffectTargetTeamContext = {
+  allyUnitIdSet: Set<string>;
+  enemyUnitIdSet: Set<string>;
+};
 
 function hasBuffRuntimeData(data: BuffRuntimeData): boolean {
   return Boolean(
@@ -140,6 +146,70 @@ function createSkillExecutionContext(): SkillExecutionContext {
     physicalDefenseIgnoreRate: 0,
     affixTriggerRuntimeState: createSkillAffixTriggerRuntimeState(),
   };
+}
+
+/**
+ * 技能目标结果构造器。
+ *
+ * 作用：
+ * - 把 `TargetResult` 的默认空数组初始化集中到单一入口，避免主流程和额外目标日志各自拼装一遍。
+ * - 供“技能主目标”和“效果显式改投给自身/其他对象”共用，保证日志结构稳定。
+ *
+ * 输入/输出：
+ * - 输入：命中的运行时单位。
+ * - 输出：可直接挂到 action 日志里的 `TargetResult`。
+ *
+ * 关键边界条件与坑点：
+ * 1) `buffsApplied/buffsRemoved/...` 必须始终初始化为空数组，避免后续 push 时反复判空。
+ * 2) 这里只负责结果容器，不做任何数值结算，避免把日志组装和技能逻辑耦在一起。
+ */
+function createTargetResult(target: BattleUnit): TargetResult {
+  return {
+    targetId: target.id,
+    targetName: target.name,
+    hits: [],
+    buffsApplied: [],
+    buffsRemoved: [],
+    marksApplied: [],
+    marksConsumed: [],
+  };
+}
+
+function getOrCreateTargetResult(
+  targetResults: TargetResult[],
+  targetResultById: Map<string, TargetResult>,
+  target: BattleUnit,
+): TargetResult {
+  const existing = targetResultById.get(target.id);
+  if (existing) {
+    return existing;
+  }
+
+  const nextResult = createTargetResult(target);
+  targetResults.push(nextResult);
+  targetResultById.set(target.id, nextResult);
+  return nextResult;
+}
+
+function buildSkillEffectTargetTeamContext(
+  state: BattleState,
+  caster: BattleUnit,
+): SkillEffectTargetTeamContext {
+  const isAttacker = state.teams.attacker.units.some((unit) => unit.id === caster.id);
+  const allies = isAttacker ? state.teams.attacker.units : state.teams.defender.units;
+  const enemies = isAttacker ? state.teams.defender.units : state.teams.attacker.units;
+  return {
+    allyUnitIdSet: new Set(allies.map((unit) => unit.id)),
+    enemyUnitIdSet: new Set(enemies.map((unit) => unit.id)),
+  };
+}
+
+function resolveSkillEffectTargetMode(raw: SkillEffect['target']): SkillEffectTargetMode {
+  if (raw === 'self') return 'self';
+  if (raw === 'enemy') return 'enemy';
+  if (raw === 'ally') return 'ally';
+  if (raw === 'target') return 'target';
+  return 'target';
 }
 
 function applyContextBonus(value: number, bonusRate: number): number {
@@ -812,9 +882,14 @@ export function executeSkill(
   if (isPoxuExtraAction && skill.damageType === 'physical') {
     context.physicalDefenseIgnoreRate = 0.25;
   }
+  const effectTargetTeamContext = buildSkillEffectTargetTeamContext(state, caster);
+  const processedBuffEffectTargets = new Set<string>();
 
   // 先落主动作日志，再按触发时机追加触发日志，保证日志顺序符合战斗时序
-  const targetResults: TargetResult[] = [];
+  const targetResults = targets.map((target) => createTargetResult(target));
+  const targetResultById = new Map<string, TargetResult>(
+    targetResults.map((result) => [result.targetId, result]),
+  );
   const log: ActionLog = {
     type: 'action',
     round: state.roundCount,
@@ -832,9 +907,22 @@ export function executeSkill(
   processMomentumEffectsByOperation(state, caster, skill, context, 'consume');
   consumeNextSkillBonusBuffs(caster, context);
 
-  for (const target of targets) {
-    const result = executeSkillOnTarget(state, caster, target, skill, context);
-    targetResults.push(result);
+  for (let index = 0; index < targets.length; index++) {
+    const target = targets[index];
+    const result = targetResults[index];
+    if (!target || !result) continue;
+    executeSkillOnTarget(
+      state,
+      caster,
+      target,
+      skill,
+      result,
+      targetResults,
+      targetResultById,
+      context,
+      effectTargetTeamContext,
+      processedBuffEffectTargets,
+    );
   }
 
   processMomentumEffectsByOperation(state, caster, skill, context, 'gain');
@@ -868,17 +956,13 @@ function executeSkillOnTarget(
   caster: BattleUnit,
   target: BattleUnit,
   skill: BattleSkill,
+  result: TargetResult,
+  targetResults: TargetResult[],
+  targetResultById: Map<string, TargetResult>,
   context: SkillExecutionContext,
-): TargetResult {
-  const result: TargetResult = {
-    targetId: target.id,
-    targetName: target.name,
-    hits: [],
-    buffsApplied: [],
-    buffsRemoved: [],
-    marksApplied: [],
-    marksConsumed: [],
-  };
+  effectTargetTeamContext: SkillEffectTargetTeamContext,
+  processedBuffEffectTargets: Set<string>,
+): void {
 
   // 先处理伤害效果，保持“先伤害后附加效果”的执行顺序
   let attemptedDamage = false;
@@ -903,14 +987,31 @@ function executeSkillOnTarget(
     if (!effect) continue;
     if (effect.type === 'damage' || effect.type === 'momentum') continue;
     // 控制效果走独立命中流程，避免重复概率判定
-    if (effect.type !== 'control' && typeof effect.chance === 'number' && !rollChance(state, effect.chance)) {
+    if (
+      effect.type !== 'control'
+      && effect.type !== 'buff'
+      && effect.type !== 'debuff'
+      && typeof effect.chance === 'number'
+      && !rollChance(state, effect.chance)
+    ) {
       continue;
     }
 
-    executeEffect(state, caster, target, skill, effect, result, context, effectIndex);
+    executeEffect(
+      state,
+      caster,
+      target,
+      skill,
+      effect,
+      result,
+      targetResults,
+      targetResultById,
+      context,
+      effectTargetTeamContext,
+      processedBuffEffectTargets,
+      effectIndex,
+    );
   }
-
-  return result;
 }
 
 /**
@@ -923,7 +1024,11 @@ function executeEffect(
   skill: BattleSkill,
   effect: SkillEffect,
   result: TargetResult,
+  targetResults: TargetResult[],
+  targetResultById: Map<string, TargetResult>,
   context: SkillExecutionContext,
+  effectTargetTeamContext: SkillEffectTargetTeamContext,
+  processedBuffEffectTargets: Set<string>,
   effectIndex: number,
 ): void {
   switch (effect.type) {
@@ -941,7 +1046,18 @@ function executeEffect(
 
     case 'buff':
     case 'debuff':
-      executeBuffEffect(caster, target, skill, effect as BuffOrDebuffEffect, result, effectIndex);
+      executeBuffEffectWithResolvedTarget(
+        state,
+        caster,
+        target,
+        skill,
+        effect as BuffOrDebuffEffect,
+        targetResults,
+        targetResultById,
+        effectTargetTeamContext,
+        processedBuffEffectTargets,
+        effectIndex,
+      );
       break;
 
     case 'dispel':
@@ -1124,6 +1240,85 @@ function executeHealEffect(
       heal: actualHeal,
     });
     appendBattleLogs(state, logs);
+  }
+}
+
+function resolveBuffEffectRecipientsForCurrentTarget(
+  caster: BattleUnit,
+  currentTarget: BattleUnit,
+  effect: BuffOrDebuffEffect,
+  effectTargetTeamContext: SkillEffectTargetTeamContext,
+): BattleUnit[] {
+  const targetMode = resolveSkillEffectTargetMode(effect.target);
+  if (targetMode === 'self') {
+    return [caster];
+  }
+  if (targetMode === 'target') {
+    return [currentTarget];
+  }
+  if (targetMode === 'enemy') {
+    return effectTargetTeamContext.enemyUnitIdSet.has(currentTarget.id) ? [currentTarget] : [];
+  }
+  if (targetMode === 'ally') {
+    return effectTargetTeamContext.allyUnitIdSet.has(currentTarget.id) ? [currentTarget] : [];
+  }
+  return [currentTarget];
+}
+
+/**
+ * 执行带显式目标语义的 Buff/Debuff。
+ *
+ * 作用：
+ * - 统一解析 buff/debuff 的真实受术单位，让“攻击目标 + 自身增益”与“默认跟随技能目标”走同一个入口。
+ * - 通过 effectIndex + recipientId 去重，避免群攻技能把同一个自增益按命中人数重复施加。
+ *
+ * 输入/输出：
+ * - 输入：当前命中目标、整次技能的目标结果集合、buff/debuff effect。
+ * - 输出：无；副作用为给真实受术单位挂 Buff，并把日志写入对应 `TargetResult`。
+ *
+ * 数据流/状态流：
+ * - skill.effects[*].target -> 当前命中目标/施法者 -> 解析真实受术单位
+ * - 真实受术单位 -> `executeBuffEffect` -> `TargetResult` 与单位 Buff 列表同步更新。
+ *
+ * 关键边界条件与坑点：
+ * 1) `target=self` 在群攻技能里必须整次施法只结算一次，不能按敌人数量重复叠加。
+ * 2) 旧技能未填写 target 时必须继续命中当前技能目标，避免历史配置整体迁移。
+ */
+function executeBuffEffectWithResolvedTarget(
+  state: BattleState,
+  caster: BattleUnit,
+  currentTarget: BattleUnit,
+  skill: BattleSkill,
+  effect: BuffOrDebuffEffect,
+  targetResults: TargetResult[],
+  targetResultById: Map<string, TargetResult>,
+  effectTargetTeamContext: SkillEffectTargetTeamContext,
+  processedBuffEffectTargets: Set<string>,
+  effectIndex: number,
+): void {
+  const recipients = resolveBuffEffectRecipientsForCurrentTarget(
+    caster,
+    currentTarget,
+    effect,
+    effectTargetTeamContext,
+  );
+  if (recipients.length <= 0) {
+    return;
+  }
+
+  for (const recipient of recipients) {
+    const processedKey = `${effectIndex}:${recipient.id}`;
+    if (processedBuffEffectTargets.has(processedKey)) {
+      continue;
+    }
+    processedBuffEffectTargets.add(processedKey);
+
+    if (typeof effect.chance === 'number' && !rollChance(state, effect.chance)) {
+      continue;
+    }
+
+    const recipientResult = getOrCreateTargetResult(targetResults, targetResultById, recipient);
+    executeBuffEffect(caster, recipient, skill, effect, recipientResult, effectIndex);
   }
 }
 
