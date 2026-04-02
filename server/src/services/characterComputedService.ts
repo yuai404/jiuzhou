@@ -1778,33 +1778,79 @@ export const getCharacterComputedBatchByUserIds = async (
   return out;
 };
 
-export const backfillCharacterRankSnapshots = async (): Promise<void> => {
-  type CharacterIdRow = { id: number | string };
-  const BATCH_SIZE = 200;
+type CharacterIdRow = { id: number | string };
+
+const CHARACTER_RANK_SNAPSHOT_REFRESH_BATCH_SIZE = 200;
+
+const loadCharacterIdsForRankSnapshotRefresh = async (
+  options: { onlyMissing: boolean },
+): Promise<number[]> => {
   const result = await query(
-    `
-      SELECT c.id
-      FROM characters c
-      LEFT JOIN character_rank_snapshot crs ON crs.character_id = c.id
-      WHERE crs.character_id IS NULL
-      ORDER BY c.id ASC
-    `,
+    options.onlyMissing
+      ? `
+          SELECT c.id
+          FROM characters c
+          LEFT JOIN character_rank_snapshot crs ON crs.character_id = c.id
+          WHERE crs.character_id IS NULL
+          ORDER BY c.id ASC
+        `
+      : `
+          SELECT c.id
+          FROM characters c
+          ORDER BY c.id ASC
+        `,
     [],
   );
 
-  const ids = (result.rows as CharacterIdRow[])
+  return (result.rows as CharacterIdRow[])
     .map((row) => Number(row.id))
     .filter((id) => Number.isFinite(id) && id > 0);
+};
 
-  if (ids.length <= 0) return;
+const refreshCharacterRankSnapshotsByIds = async (characterIds: number[]): Promise<void> => {
+  if (characterIds.length <= 0) return;
 
-  for (let index = 0; index < ids.length; index += BATCH_SIZE) {
-    const chunk = ids.slice(index, index + BATCH_SIZE);
+  for (let index = 0; index < characterIds.length; index += CHARACTER_RANK_SNAPSHOT_REFRESH_BATCH_SIZE) {
+    const chunk = characterIds.slice(index, index + CHARACTER_RANK_SNAPSHOT_REFRESH_BATCH_SIZE);
     const computedMap = await getCharacterComputedBatchByCharacterIds(chunk, { bypassStaticCache: true });
     for (const computed of computedMap.values()) {
       await upsertCharacterRankSnapshot(computed);
     }
   }
+};
+
+export const backfillCharacterRankSnapshots = async (): Promise<void> => {
+  const characterIds = await loadCharacterIdsForRankSnapshotRefresh({ onlyMissing: true });
+  await refreshCharacterRankSnapshotsByIds(characterIds);
+};
+
+/**
+ * 角色排行榜快照全量强刷
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：按角色 ID 全量重建 `character_rank_snapshot`，确保排行榜战力口径调整后已有快照也会被覆盖刷新。
+ * 2. 做什么：复用现有批量角色属性计算与统一快照写入链路，避免脚本、调度器或启动补偿各写一套战力公式。
+ * 3. 不做什么：不负责排行榜接口缓存失效，也不替代业务链路里的按角色增量刷新。
+ *
+ * 输入/输出：
+ * - 输入：无，内部查询全部角色 ID。
+ * - 输出：无；副作用是按批覆盖写入 `character_rank_snapshot`。
+ *
+ * 数据流/状态流：
+ * 夜间调度器 / 手动入口 -> 查询全部角色 ID -> 分批 `getCharacterComputedBatchByCharacterIds(..., { bypassStaticCache: true })`
+ * -> `upsertCharacterRankSnapshot` 覆盖写入 -> 排行榜查询继续只读快照表。
+ *
+ * 复用设计说明：
+ * 1. 与 `backfillCharacterRankSnapshots` 共享同一套批量刷新实现，只把“查哪些角色”保留为单一变化点。
+ * 2. 快照写入仍然集中在 `rankSnapshotService`，确保角色详情与排行榜继续共用同一战力口径。
+ *
+ * 关键边界条件与坑点：
+ * 1. 全量刷新必须强制绕过静态属性缓存；否则公式刚调整时会继续复用旧缓存，导致夜间任务写回旧战力。
+ * 2. 这里只覆盖当前仍存在的角色；不存在的角色删除仍应由增量失效链路负责，避免在全量任务里混入额外删除分支。
+ */
+export const refreshAllCharacterRankSnapshots = async (): Promise<void> => {
+  const characterIds = await loadCharacterIdsForRankSnapshotRefresh({ onlyMissing: false });
+  await refreshCharacterRankSnapshotsByIds(characterIds);
 };
 
 export const invalidateCharacterComputedCache = async (characterId: number): Promise<void> => {

@@ -70,6 +70,10 @@ import {
   stopAfdianMessageRetryService,
 } from "../services/afdianMessageRetryService.js";
 import { ensurePerformanceIndexes } from "../services/shared/performanceIndexes.js";
+import {
+  initializeRankSnapshotNightlyRefreshScheduler,
+  stopRankSnapshotNightlyRefreshScheduler,
+} from "../services/rankSnapshotNightlyRefreshScheduler.js";
 
 export interface StartServerOptions {
   httpServer: HttpServer;
@@ -171,6 +175,8 @@ export const startServerWithPipeline = async (
   console.log("✓ 在线战斗延迟结算协调器已就绪\n");
   await runStartupStep("爱发电私信重试调度器初始化", initializeAfdianMessageRetryService);
   console.log("✓ 爱发电私信重试调度器已就绪\n");
+  await runStartupStep("角色排行榜快照夜间刷新调度器初始化", initializeRankSnapshotNightlyRefreshScheduler);
+  console.log("✓ 角色排行榜快照夜间刷新调度器已就绪\n");
 
   await runStartupStep("游戏时间服务初始化", initGameTimeService);
   await runStartupStep("竞技场周结算服务初始化", async () => {
@@ -266,6 +272,9 @@ export const registerGracefulShutdown = (httpServer: HttpServer): void => {
 
       stopAfdianMessageRetryService();
       console.log("✓ 爱发电私信重试调度器已关闭");
+
+      stopRankSnapshotNightlyRefreshScheduler();
+      console.log("✓ 角色排行榜快照夜间刷新调度器已关闭");
 
       await shutdownWorkerPool();
       console.log("✓ Worker 池已关闭");
