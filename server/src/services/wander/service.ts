@@ -514,7 +514,6 @@ class WanderService {
         dayIndex: row.day_index,
         locationName: resolveWanderStoryLocation({
           storySeed,
-          episodeIndex: row.day_index,
         }).fullName,
         title: row.episode_title,
         opening: row.opening,
@@ -647,7 +646,6 @@ class WanderService {
     const targetEpisodeCount = resolveWanderTargetEpisodeCount(storySeed);
     const storyLocation = resolveWanderStoryLocation({
       storySeed,
-      episodeIndex: nextEpisodeIndex,
     });
     const aiDraft = await generateWanderAiEpisodeSetupDraft({
       nickname: character.nickname,
@@ -938,7 +936,6 @@ class WanderService {
       const resolvedPreviousEpisodes = previousEpisodes.filter((entry) => entry.dayIndex !== targetEpisode.day_index);
       const storyLocation = resolveWanderStoryLocation({
         storySeed: storyRow.story_seed,
-        episodeIndex: targetEpisode.day_index,
       });
 
       try {
