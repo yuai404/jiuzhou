@@ -505,3 +505,71 @@ test('减益光环宿主不应计入自身减益，但仍应正常压制敌方',
   );
   assert.equal(enemy.currentAttrs.fagong, 176, '敌方应正常吃到 12% 法攻压制');
 });
+
+test('旧减益光环子效果缺失 target 且误写成 buff 时，仍应按敌方减益结算', () => {
+  const caster = createUnit({
+    id: 'player-legacy-debuff-aura-owner',
+    name: '玄潮使',
+  });
+  const enemy = createUnit({
+    id: 'monster-legacy-debuff-aura-target',
+    name: '海渊魇影',
+    type: 'monster',
+    attrs: {
+      mingzhong: 0.3,
+      sudu: 160,
+    },
+  });
+
+  const legacyDebuffAuraSkill: BattleSkill = {
+    id: 'skill-legacy-debuff-aura-target-default',
+    name: '玄潮蚀域',
+    source: 'technique',
+    cost: {},
+    cooldown: 0,
+    targetType: 'self',
+    targetCount: 1,
+    damageType: 'magic',
+    element: 'shui',
+    effects: [
+      {
+        type: 'debuff',
+        buffKind: 'aura',
+        buffKey: 'debuff-aura',
+        auraTarget: 'all_enemy',
+        auraEffects: [
+          {
+            type: 'buff',
+            buffKind: 'attr',
+            buffKey: 'debuff-mingzhong-down',
+            attrKey: 'mingzhong',
+            applyType: 'percent',
+            value: 0.15,
+          },
+          {
+            type: 'buff',
+            buffKind: 'attr',
+            buffKey: 'debuff-sudu-down',
+            attrKey: 'sudu',
+            applyType: 'flat',
+            value: 30,
+          },
+        ],
+      },
+    ],
+    triggerType: 'passive',
+    aiPriority: 80,
+  };
+  caster.skills = [legacyDebuffAuraSkill];
+
+  const state = createState({
+    attacker: [caster],
+    defender: [enemy],
+  });
+  const engine = new BattleEngine(state);
+
+  engine.startBattle();
+
+  assert.equal(enemy.currentAttrs.mingzhong, 0.15, '旧数据里的命中压制应按减益方向结算');
+  assert.equal(enemy.currentAttrs.sudu, 130, '旧数据里的减速光环应真正压到敌方速度');
+});

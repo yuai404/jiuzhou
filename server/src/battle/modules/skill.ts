@@ -53,6 +53,7 @@ import {
 } from './momentum.js';
 import { applyReactiveDamage, applyReactiveTrueDamage, calculateReactiveDamageByRate } from './reactiveDamage.js';
 import { resolveSkillCostForResourceState } from '../../shared/skillCost.js';
+import { resolveExpectedAuraHostType } from '../../shared/auraSemantic.js';
 import {
   applySkillCooldownAfterCast,
   getSkillCooldownBlockedMessage,
@@ -442,6 +443,38 @@ function resolveAuraTarget(raw: string | undefined): AuraTargetType | null {
 }
 
 /**
+ * 归一化旧光环子 Buff 的运行时类型。
+ *
+ * 作用：
+ * - 把“旧生成技能里外层 aura 宿主语义与子效果整体语义不一致”的历史数据收敛到单一入口。
+ * - 保证旧技能在战斗运行时按 `auraEffects` 的整体正负语义结算，不再受错误外层 `type` 影响。
+ *
+ * 输入 / 输出：
+ * - 输入：外层光环 effect、已解析的 auraTarget、单个光环子效果。
+ * - 输出：用于运行时结算的子效果类型（buff / debuff）。
+ *
+ * 数据流：
+ * 技能定义 auraEffects[*] -> 本函数判定旧数据语义 -> resolveAuraSubEffects/buildBuffRuntimeData 统一复用。
+ *
+ * 关键边界条件与坑点：
+ * 1) 只处理“子效果未显式填写 target”的旧数据；一旦子效果写了 target，就尊重原始配置，不额外改写。
+ * 2) 只有当外层 aura 能被共享语义模块明确判成“纯增益”或“纯减益”时才归一化；混合语义 aura 继续保留原始子效果类型。
+ */
+function resolveAuraSubBuffEffectType(
+  auraEffect: BuffOrDebuffEffect,
+  sub: BuffOrDebuffEffect,
+): 'buff' | 'debuff' {
+  if (typeof sub.target === 'string' && sub.target.trim().length > 0) {
+    return sub.type === 'debuff' ? 'debuff' : 'buff';
+  }
+  const expectedAuraHostType = resolveExpectedAuraHostType(auraEffect);
+  if (expectedAuraHostType) {
+    return expectedAuraHostType;
+  }
+  return sub.type === 'debuff' ? 'debuff' : 'buff';
+}
+
+/**
  * 解析光环子效果列表，按施法者属性快照计算数值。
  *
  * 作用：遍历光环的 auraEffects 配置，将每个子效果转换为运行时 AuraSubEffect。
@@ -455,6 +488,7 @@ function resolveAuraTarget(raw: string | undefined): AuraTargetType | null {
 function resolveAuraSubEffects(
   caster: BattleUnit,
   skill: BattleSkill,
+  auraEffect: BuffOrDebuffEffect,
   subEffects: SkillEffect[],
 ): AuraSubEffect[] {
   const results: AuraSubEffect[] = [];
@@ -481,16 +515,24 @@ function resolveAuraSubEffects(
     }
 
     if (subType === 'buff' || subType === 'debuff') {
+      const runtimeSubType = resolveAuraSubBuffEffectType(
+        auraEffect,
+        sub as BuffOrDebuffEffect,
+      );
       // 禁止嵌套光环
       if (normalizeBuffKind(sub.buffKind) === 'aura') continue;
-      const subRuntime = buildBuffRuntimeData(caster, caster, skill, sub as BuffOrDebuffEffect);
+      const normalizedSub = {
+        ...(sub as BuffOrDebuffEffect),
+        type: runtimeSubType,
+      };
+      const subRuntime = buildBuffRuntimeData(caster, caster, skill, normalizedSub);
       if (!hasBuffRuntimeData(subRuntime)) continue;
-      const buffDefId = resolveBuffEffectKey(sub as BuffOrDebuffEffect) || `aura-sub-${subType}`;
+      const buffDefId = resolveBuffEffectKey(normalizedSub) || `aura-sub-${runtimeSubType}`;
       results.push({
-        type: subType,
+        type: runtimeSubType,
         resolvedValue: subRuntime.attrModifiers?.[0]?.value ?? 0,
         buffDefId,
-        buffType: subType,
+        buffType: runtimeSubType,
         attrModifiers: subRuntime.attrModifiers,
         dot: subRuntime.dot,
         hot: subRuntime.hot,
@@ -568,7 +610,7 @@ function buildBuffRuntimeData(
     if (!auraTarget) return {};
     const auraSubEffects = Array.isArray(effect.auraEffects) ? effect.auraEffects : [];
     if (auraSubEffects.length === 0) return {};
-    const resolvedEffects = resolveAuraSubEffects(caster, skill, auraSubEffects);
+    const resolvedEffects = resolveAuraSubEffects(caster, skill, effect, auraSubEffects);
     if (resolvedEffects.length === 0) return {};
     return {
       aura: {
