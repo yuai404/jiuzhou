@@ -860,49 +860,81 @@ const settleDungeonClearInDb = async (
 const executeDeferredSettlementTask = async (
   task: DeferredSettlementTask,
 ): Promise<DeferredSettlementExecutionResult> => {
-  if (task.payload.dungeonStartConsumption) {
-    await settleDungeonStartConsumptionInDb(task);
-    return 'applied';
-  }
+  const slowLogger = createSlowOperationLogger({
+    label: 'onlineBattleSettlementRunner.executeTask',
+    fields: {
+      taskId: task.taskId,
+      battleId: task.battleId,
+      battleType: task.payload.battleType,
+      isDungeonBattle: task.payload.isDungeonBattle,
+      isTowerBattle: task.payload.isTowerBattle,
+      participantCount: task.payload.participants.length,
+      rewardParticipantCount: task.payload.rewardParticipants.length,
+    },
+    thresholdMs: 200,
+  });
+  let outcome: DeferredSettlementExecutionResult = 'applied';
 
-  if (task.payload.battleType === 'pve') {
-    if (
-      task.payload.result === 'attacker_win' &&
-      task.payload.rewardParticipants.length > 0 &&
-      task.payload.battleRewardPlan !== null &&
-      !task.payload.isTowerBattle
-    ) {
-      await battleDropService.settleBattleRewardPlan(task.payload.battleRewardPlan);
+  try {
+    if (task.payload.dungeonStartConsumption) {
+      await settleDungeonStartConsumptionInDb(task);
+      slowLogger.mark('settleDungeonStartConsumptionInDb');
+      return 'applied';
     }
 
-    if (task.payload.isTowerBattle && task.payload.rewardParticipants.length > 0) {
-      await settleTowerBattle({
-        battleId: task.battleId,
-        result: task.payload.result,
-        participants: task.payload.rewardParticipants,
-      });
-    }
-
-    if (task.payload.result === 'attacker_win' && task.payload.rewardParticipants.length > 0) {
-      const killMonsterEvents = buildKillMonsterEventsFromSnapshots(task.payload.monsters);
-      await recordKillMonsterEventsForParticipants(task.payload.rewardParticipants, killMonsterEvents);
-    }
-
-    if (task.payload.dungeonSettlement && task.payload.result === 'attacker_win') {
-      const result = await settleDungeonClearInDb(task);
-      if (result === 'discarded_missing_instance') {
-        return 'discarded';
+    if (task.payload.battleType === 'pve') {
+      if (
+        task.payload.result === 'attacker_win' &&
+        task.payload.rewardParticipants.length > 0 &&
+        task.payload.battleRewardPlan !== null &&
+        !task.payload.isTowerBattle
+      ) {
+        await battleDropService.settleBattleRewardPlan(task.payload.battleRewardPlan);
+        slowLogger.mark('settleBattleRewardPlan');
       }
+
+      if (task.payload.isTowerBattle && task.payload.rewardParticipants.length > 0) {
+        await settleTowerBattle({
+          battleId: task.battleId,
+          result: task.payload.result,
+          participants: task.payload.rewardParticipants,
+        });
+        slowLogger.mark('settleTowerBattle');
+      }
+
+      if (task.payload.result === 'attacker_win' && task.payload.rewardParticipants.length > 0) {
+        const killMonsterEvents = buildKillMonsterEventsFromSnapshots(task.payload.monsters);
+        await recordKillMonsterEventsForParticipants(task.payload.rewardParticipants, killMonsterEvents);
+        slowLogger.mark('recordKillMonsterEventsForParticipants', {
+          killMonsterEventCount: killMonsterEvents.length,
+        });
+      }
+
+      if (task.payload.dungeonSettlement && task.payload.result === 'attacker_win') {
+        const result = await settleDungeonClearInDb(task);
+        slowLogger.mark('settleDungeonClearInDb', {
+          dungeonClearOutcome: result,
+        });
+        if (result === 'discarded_missing_instance') {
+          outcome = 'discarded';
+          return 'discarded';
+        }
+      }
+      return 'applied';
     }
-    return 'applied';
-  }
 
-  if (task.payload.battleType === 'pvp') {
-    await settleArenaBattleInDb(task);
-    return 'applied';
-  }
+    if (task.payload.battleType === 'pvp') {
+      await settleArenaBattleInDb(task);
+      slowLogger.mark('settleArenaBattleInDb');
+      return 'applied';
+    }
 
-  return 'applied';
+    return 'applied';
+  } finally {
+    slowLogger.flush({
+      outcome,
+    });
+  }
 };
 
 class OnlineBattleSettlementRunner {

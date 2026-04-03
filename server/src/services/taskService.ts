@@ -3,6 +3,7 @@ import { itemService } from './itemService.js';
 import type { PoolClient } from 'pg';
 import { ensureMainQuestProgressForNewChapters, updateSectionProgress, updateSectionProgressBatch } from './mainQuest/index.js';
 import { updateAchievementProgress } from './achievementService.js';
+import { updateAchievementProgressBatch } from './achievement/progress.js';
 import { Transactional } from '../decorators/transactional.js';
 import {
   getDungeonDefinitions,
@@ -1403,9 +1404,13 @@ export const recordKillMonsterEvents = async (
     })),
   );
 
-  for (const event of normalizedEvents) {
-    await updateAchievementProgress(characterId, `kill:monster:${event.monsterId}`, event.count);
-  }
+  await updateAchievementProgressBatch(
+    normalizedEvents.map((event) => ({
+      characterId,
+      trackKey: `kill:monster:${event.monsterId}`,
+      increment: event.count,
+    })),
+  );
 
   if (taskOverviewChanged) {
     await notifyTaskOverviewUpdate(characterId, ['task']);
@@ -1457,17 +1462,36 @@ export const recordDungeonClearEvent = async (
 
   await updateSectionProgress(characterId, { type: 'dungeon_clear', dungeonId: did, difficultyId: diffId, count: c });
 
-  await updateAchievementProgress(characterId, `dungeon:clear:${did}`, c);
+  const achievementProgressInputs: Array<{
+    characterId: number;
+    trackKey: string;
+    increment: number;
+  }> = [
+    {
+      characterId,
+      trackKey: `dungeon:clear:${did}`,
+      increment: c,
+    },
+  ];
   if (diffId) {
     const difficultyDef = getDungeonDifficultyById(diffId);
     const difficultyName = typeof difficultyDef?.name === 'string' ? difficultyDef.name.trim() : '';
     if (difficultyName === '噩梦') {
-      await updateAchievementProgress(characterId, 'dungeon:clear:difficulty:nightmare', c);
+      achievementProgressInputs.push({
+        characterId,
+        trackKey: 'dungeon:clear:difficulty:nightmare',
+        increment: c,
+      });
     }
   }
   if (participantCount > 1) {
-    await updateAchievementProgress(characterId, `team:dungeon:clear:${did}`, c);
+    achievementProgressInputs.push({
+      characterId,
+      trackKey: `team:dungeon:clear:${did}`,
+      increment: c,
+    });
   }
+  await updateAchievementProgressBatch(achievementProgressInputs);
   if (taskOverviewChanged) {
     await notifyTaskOverviewUpdate(characterId, ['task']);
   }
