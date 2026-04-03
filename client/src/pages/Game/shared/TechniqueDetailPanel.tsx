@@ -219,6 +219,7 @@ const TechniqueDetailPanel: FC<TechniqueDetailPanelProps> = ({
               dataIndex: 'layer',
               key: 'layer',
               width: 70,
+              className: 'tech-layer-table-cell-middle',
               render: (value: number) => `第${value}层`,
             },
             {
@@ -226,6 +227,7 @@ const TechniqueDetailPanel: FC<TechniqueDetailPanelProps> = ({
               dataIndex: 'unlocked',
               key: 'unlocked',
               width: 86,
+              className: 'tech-layer-table-cell-middle',
               render: (value: boolean) => <Tag color={value ? 'green' : 'default'}>{value ? '已解锁' : '未解锁'}</Tag>,
             },
             {
