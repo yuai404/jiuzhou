@@ -1915,11 +1915,11 @@
         },
         {
           "id": "obj-004",
-          "type": "gather_resource",
+          "type": "collect",
           "text": "收集证道法印 4 份",
           "target": 4,
           "params": {
-            "resource_id": "mat-zhendao-fayin"
+            "item_id": "mat-zhendao-fayin"
           }
         }
       ],
