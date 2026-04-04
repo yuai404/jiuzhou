@@ -2,12 +2,12 @@
  * 功法模型联调共享模块
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：集中封装功法文本模型联调所需的参数解析辅助、模型请求、结果清洗、可选技能图标挂载与摘要提取。
+ * 1. 做什么：集中封装功法文本模型联调所需的参数解析辅助、模型请求、结果清洗、可选技能图标挂载、测试专用底模注入与摘要提取。
  * 2. 做什么：让单次联调脚本与批量功法书测试脚本共用同一套生成核心，避免 prompt、JSON 解析、校验与汇总逻辑再次分叉。
  * 3. 不做什么：不写数据库、不创建生成任务、不发放道具，也不决定批量文件如何命名与落盘。
  *
  * 输入 / 输出：
- * - 输入：功法品质、功法类型、可选 seed、是否生成技能图标。
+ * - 输入：功法品质、功法类型、可选 seed、可选底模、是否生成技能图标。
  * - 输出：包含模型名、seed、归一化 candidate、摘要信息的联调结果。
  *
  * 数据流 / 状态流：
@@ -30,6 +30,7 @@
 import { callConfiguredTextModel } from '../../services/ai/openAITextClient.js';
 import { readTextModelConfig } from '../../services/ai/modelConfig.js';
 import type { TechniqueGenerationCandidate, TechniqueQuality } from '../../services/techniqueGenerationService.js';
+import { validatePartnerRecruitRequestedBaseModel } from '../../services/shared/partnerRecruitBaseModel.js';
 import {
   buildTechniqueGenerationTextModelRequest,
   sanitizeTechniqueGenerationCandidateFromModelDetailed,
@@ -55,6 +56,7 @@ export type TechniqueModelDebugGenerateParams = {
   quality: TechniqueQuality;
   techniqueType: GeneratedTechniqueType;
   seed?: number;
+  baseModel?: string;
   includeSkillIcons: boolean;
 };
 
@@ -64,8 +66,21 @@ export type TechniqueModelDebugGenerateResult = {
   seed: number;
   quality: TechniqueQuality;
   requestedTechniqueType: GeneratedTechniqueType;
+  baseModel: string | null;
   candidate: TechniqueGenerationCandidate;
   summary: TechniqueModelDebugSummary;
+};
+
+type TechniqueModelDebugPromptContext = {
+  techniqueBaseModel: string;
+  techniqueBaseModelScopeRules: string[];
+};
+
+type TechniqueModelRequestUserPayload = {
+  constraints?: {
+    generalRules?: string[];
+  };
+  extraContext?: Record<string, string | string[]>;
 };
 
 const QUALITY_RANDOM_WEIGHT: Array<{ quality: TechniqueQuality; weight: number }> = [
@@ -81,6 +96,16 @@ export const QUALITY_MAX_LAYER: Record<TechniqueQuality, number> = {
   地: 7,
   天: 9,
 };
+
+export const TECHNIQUE_DEBUG_BASE_MODEL_GENERAL_RULE =
+  '若 extraContext.techniqueBaseModel 存在，它表示本次功法测试指定的底模；请围绕该底模延展功法命名、描述、技能意象、机制母题与整体文风，但不要把它原样重复成固定前缀，也不要输出额外字段解释底模。';
+export const TECHNIQUE_DEBUG_BASE_MODEL_SCOPE_GENERAL_RULE =
+  '若 extraContext.techniqueBaseModelScopeRules 存在，必须逐条遵守这些作用范围限制；底模只能收束主题、套路倾向与表现母题，不得借此突破品质、层数、效果数量、目标数量、倍率、冷却、被动预算等既有硬约束。';
+export const TECHNIQUE_DEBUG_BASE_MODEL_SCOPE_RULES = [
+  '底模只用于限定本次功法的主体意象、套路母题、命名气质、描述文风、技能表现与局部机制倾向，不直接决定品质、层数、技能数量、目标数量与任何数值预算。',
+  '若底模与当前功法类型不完全贴合，应做仙侠语境下的合理化转译；可以保留核心母题，但不要为了迎合底模强行拼接多体系、全覆盖或违和机制。',
+  '底模可以让功法风格更鲜明，但不能产出全能通吃、超大范围、多段超高倍率、超长控制、超高回复或明显超出既有硬约束与预算的结果。',
+] as const;
 
 const asString = (value: string | undefined): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -160,6 +185,14 @@ export const overrideTechniqueModelName = (modelName: string | undefined): void 
   process.env.AI_TECHNIQUE_MODEL_NAME = normalized;
 };
 
+export const resolveTechniqueDebugBaseModelArg = (raw: string | undefined): string | null => {
+  const validation = validatePartnerRecruitRequestedBaseModel(raw);
+  if (!validation.success) {
+    throw new Error(`CLI 参数 --base-model 无效：${validation.message}`);
+  }
+  return validation.value;
+};
+
 export const isTechniqueSkillImageGenerationConfigured = (): boolean => {
   const endpoint = asString(process.env.AI_TECHNIQUE_IMAGE_MODEL_URL);
   const apiKey = asString(process.env.AI_TECHNIQUE_IMAGE_MODEL_KEY);
@@ -212,6 +245,46 @@ const attachGeneratedSkillIcons = async (
   };
 };
 
+const buildTechniqueModelDebugPromptContext = (
+  baseModel: string | undefined,
+): TechniqueModelDebugPromptContext | undefined => {
+  const normalized = resolveTechniqueDebugBaseModelArg(baseModel);
+  if (!normalized) return undefined;
+
+  return {
+    techniqueBaseModel: normalized,
+    techniqueBaseModelScopeRules: [...TECHNIQUE_DEBUG_BASE_MODEL_SCOPE_RULES],
+  };
+};
+
+const applyTechniqueModelDebugPromptContext = (params: {
+  userMessage: string;
+  promptContext?: TechniqueModelDebugPromptContext;
+}): string => {
+  if (!params.promptContext) {
+    return params.userMessage;
+  }
+
+  const payload = JSON.parse(params.userMessage) as TechniqueModelRequestUserPayload;
+  const nextGeneralRules = [
+    ...(payload.constraints?.generalRules ?? []),
+    TECHNIQUE_DEBUG_BASE_MODEL_GENERAL_RULE,
+    TECHNIQUE_DEBUG_BASE_MODEL_SCOPE_GENERAL_RULE,
+  ];
+
+  return JSON.stringify({
+    ...payload,
+    constraints: {
+      ...(payload.constraints ?? {}),
+      generalRules: nextGeneralRules,
+    },
+    extraContext: {
+      ...(payload.extraContext ?? {}),
+      ...params.promptContext,
+    },
+  });
+};
+
 export const generateTechniqueModelDebugResult = async (
   params: TechniqueModelDebugGenerateParams,
 ): Promise<TechniqueModelDebugGenerateResult> => {
@@ -220,18 +293,23 @@ export const generateTechniqueModelDebugResult = async (
     throw new Error('缺少功法文本模型配置，请检查 AI_TECHNIQUE_MODEL_PROVIDER/URL/KEY/NAME');
   }
 
+  const debugPromptContext = buildTechniqueModelDebugPromptContext(params.baseModel);
   const request = buildTechniqueGenerationTextModelRequest({
     techniqueType: params.techniqueType,
     quality: params.quality,
     maxLayer: QUALITY_MAX_LAYER[params.quality],
     seed: params.seed,
   });
+  const userMessage = applyTechniqueModelDebugPromptContext({
+    userMessage: request.userMessage,
+    promptContext: debugPromptContext,
+  });
 
   const response = await callConfiguredTextModel({
     modelScope: 'technique',
     responseFormat: request.responseFormat,
     systemMessage: request.systemMessage,
-    userMessage: request.userMessage,
+    userMessage,
     seed: request.seed,
     temperature: request.temperature,
     timeoutMs: request.timeoutMs,
@@ -278,6 +356,7 @@ export const generateTechniqueModelDebugResult = async (
     seed: request.seed,
     quality: params.quality,
     requestedTechniqueType: params.techniqueType,
+    baseModel: debugPromptContext?.techniqueBaseModel ?? null,
     candidate,
     summary: buildTechniqueModelDebugSummary(candidate),
   };

@@ -54,6 +54,7 @@ const OUTPUT_WEBP_OPTIONS = {
   quality: 82,
   effort: 6,
 };
+const GRID_LINE_GUARD_PX = 2;
 
 /**
  * @typedef {{
@@ -760,10 +761,11 @@ function buildGridBoxesFromProjectionBands(verticalBands, horizontalBands) {
       const maxX = rightBand.end;
       const minY = topBand.start;
       const maxY = bottomBand.end;
-      const innerMinX = Math.max(minX, Math.min(maxX, leftBand.end + 1));
-      const innerMaxX = Math.max(innerMinX, Math.min(maxX, rightBand.start - 1));
-      const innerMinY = Math.max(minY, Math.min(maxY, topBand.end + 1));
-      const innerMaxY = Math.max(innerMinY, Math.min(maxY, bottomBand.start - 1));
+      // 共享网格线外沿会残留 1~2 像素抗锯齿，内框需要额外吃掉一圈保护带。
+      const innerMinX = Math.max(minX, Math.min(maxX, leftBand.end + GRID_LINE_GUARD_PX));
+      const innerMaxX = Math.max(innerMinX, Math.min(maxX, rightBand.start - GRID_LINE_GUARD_PX));
+      const innerMinY = Math.max(minY, Math.min(maxY, topBand.end + GRID_LINE_GUARD_PX));
+      const innerMaxY = Math.max(innerMinY, Math.min(maxY, bottomBand.start - GRID_LINE_GUARD_PX));
       const width = maxX - minX + 1;
       const height = maxY - minY + 1;
 
@@ -1397,6 +1399,57 @@ function refineRegionByContentIsolation(pixelData, imageWidth, channels, region)
   return isolated;
 }
 
+/**
+ * 统一净内容框收口：
+ * - 做什么：对最终选中的格子再次执行边框扫描，把像素级修边结果写回 `inner*` 坐标。
+ * - 不做什么：不参与网格检测评分，也不修改原始外框几何信息。
+ *
+ * 输入/输出：
+ * - 输入：最终已选格子、图片像素、边框 profile。
+ * - 输出：带稳定 `innerMinX/innerMinY/innerMaxX/innerMaxY` 的格子数组。
+ *
+ * 数据流/状态流：
+ * 1. 以格子外框作为扫描区域运行边框精修。
+ * 2. 将精修结果与已有内框求交，得到更保守也更干净的净内容框。
+ * 3. 输出回同一份 BorderBox，供后续裁切统一读取。
+ *
+ * 复用设计说明：
+ * - 投影路径与连通域路径都收口到这一层，避免“只修某一种检测结果”的分叉维护。
+ * - `toExtractRegion` 继续只读 `inner*` 坐标，不需要知道内框来自哪条检测链路。
+ *
+ * 关键边界条件与坑点：
+ * - 若 profile 对某个边缘不敏感，精修结果可能与外框一致，因此需要和现有内框求交而不是直接覆盖。
+ * - 若四边交集过小，必须保证最终宽高至少为 1，避免生成非法裁切区域。
+ */
+function attachInnerBoundsToBoxes(pixelData, imageWidth, imageHeight, channels, profile, boxes) {
+  return boxes.map((box) => {
+    const refined = refineRegionByBorderEdge(pixelData, imageWidth, imageHeight, channels, profile, {
+      left: box.minX,
+      top: box.minY,
+      width: box.width,
+      height: box.height,
+    });
+    const refinedRight = refined.left + refined.width - 1;
+    const refinedBottom = refined.top + refined.height - 1;
+    const baseInnerMinX = box.innerMinX ?? box.minX;
+    const baseInnerMinY = box.innerMinY ?? box.minY;
+    const baseInnerMaxX = box.innerMaxX ?? box.maxX;
+    const baseInnerMaxY = box.innerMaxY ?? box.maxY;
+    const innerMinX = Math.max(baseInnerMinX, refined.left);
+    const innerMinY = Math.max(baseInnerMinY, refined.top);
+    const innerMaxX = Math.max(innerMinX, Math.min(baseInnerMaxX, refinedRight));
+    const innerMaxY = Math.max(innerMinY, Math.min(baseInnerMaxY, refinedBottom));
+
+    return {
+      ...box,
+      innerMinX,
+      innerMinY,
+      innerMaxX,
+      innerMaxY,
+    };
+  });
+}
+
 async function saveMaskDebugImage(mask, width, height, outputPath) {
   const rgba = Buffer.alloc(width * height * 4);
 
@@ -1515,7 +1568,7 @@ async function detectGridBoxes(imageBuffer, debugMaskPath) {
     height,
     channels,
     pixelData: data,
-    boxes: bestResult.boxes,
+    boxes: attachInnerBoundsToBoxes(data, width, height, channels, bestResult.profile, bestResult.boxes),
     candidateCount: bestResult.candidateCount,
     borderProfile: bestResult.profile,
   };
@@ -1543,9 +1596,12 @@ async function splitSetImageByBorder({ setName, imageInput, includeBorder, debug
     const borderRefinedRegion = includeBorder
       ? initialRegion
       : refineRegionByBorderEdge(pixelData, width, height, channels, borderProfile, initialRegion);
-    const extractRegion = includeBorder
+    const contentIsolatedRegion = includeBorder
       ? borderRefinedRegion
       : refineRegionByContentIsolation(pixelData, width, channels, borderRefinedRegion);
+    const extractRegion = includeBorder
+      ? contentIsolatedRegion
+      : refineRegionByBorderEdge(pixelData, width, height, channels, borderProfile, contentIsolatedRegion);
 
     const fileName = buildOutputFileName(setName, slot);
     const outputPath = join(outputDir, fileName);

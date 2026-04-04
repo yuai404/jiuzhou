@@ -7,7 +7,7 @@
  * 2) 不做什么：不写数据库、不创建生成任务、不扣除研修点，仅做模型联调验证。
  *
  * 输入/输出：
- * - 输入：CLI 参数（可选）：`--quality <黄|玄|地|天>`、`--type <功法类型>`、`--seed <正整数>`、`--model-name <模型名>`。
+ * - 输入：CLI 参数（可选）：`--quality <黄|玄|地|天>`、`--type <功法类型>`、`--seed <正整数>`、`--base-model <底模>`、`--model-name <模型名>`。
  * - 输出：控制台打印模型响应、结构化 JSON、功法摘要。
  *
  * 数据流/状态流：
@@ -27,6 +27,7 @@ import {
   overrideTechniqueModelName,
   parseCliArgMap,
   resolveOptionalPositiveIntegerArg,
+  resolveTechniqueDebugBaseModelArg,
   resolveTechniqueQualityArg,
   resolveTechniqueQualityByRandom,
   resolveTechniqueTypeArg,
@@ -51,6 +52,7 @@ const main = async (): Promise<void> => {
   }
   const techniqueType = techniqueTypeArg ?? resolveTechniqueTypeByRandom();
   const seed = resolveOptionalPositiveIntegerArg(args.seed, 'seed');
+  const baseModel = resolveTechniqueDebugBaseModelArg(args['base-model']) ?? undefined;
   overrideTechniqueModelName(args['model-name']);
 
   const imageEnabled = isTechniqueSkillImageGenerationConfigured();
@@ -58,6 +60,7 @@ const main = async (): Promise<void> => {
     quality,
     techniqueType,
     seed,
+    baseModel,
     includeSkillIcons: imageEnabled,
   });
 
@@ -66,6 +69,7 @@ const main = async (): Promise<void> => {
   console.log(`请求品质: ${quality}`);
   console.log(`请求类型: ${techniqueType}`);
   console.log(`Seed: ${result.seed}`);
+  console.log(`底模: ${result.baseModel ?? '未指定'}`);
   console.log(`功法: ${result.summary.techniqueName}（${result.summary.techniqueType}）`);
   console.log(`技能数量: ${result.summary.skillCount}`);
   console.log(`层级数量: ${result.summary.layerCount}`);

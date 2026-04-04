@@ -5,11 +5,11 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：使用指定或当前环境中的功法文本模型，批量生成若干本功法书候选，并把每次生成结果落盘为 JSON 文件。
- * 2. 做什么：额外输出一份汇总文件，便于快速观察模型名、seed、功法名、技能数与层级数，集中评估模型生成质量。
+ * 2. 做什么：支持显式传入底模，并额外输出一份汇总文件，便于快速观察模型名、seed、底模、功法名、技能数与层级数，集中评估模型生成质量。
  * 3. 不做什么：不写数据库、不生成图片、不发放道具，也不改静态 seed。
  *
  * 输入 / 输出：
- * - 输入：`--count <正整数>`，可选 `--quality <黄|玄|地|天>`、`--type <功法类型>`、`--seed-start <正整数>`、`--model-name <模型名>`、`--output <目录>`。
+ * - 输入：`--count <正整数>`，可选 `--quality <黄|玄|地|天>`、`--type <功法类型>`、`--seed-start <正整数>`、`--base-model <底模>`、`--model-name <模型名>`、`--output <目录>`。
  * - 输出：默认写入 `server/tmp/technique-book-model-check/<时间戳>/` 下的多个 JSON 文件与 `summary.json`。
  *
  * 数据流 / 状态流：
@@ -40,6 +40,7 @@ import {
   overrideTechniqueModelName,
   parseCliArgMap,
   resolveOptionalPositiveIntegerArg,
+  resolveTechniqueDebugBaseModelArg,
   resolveTechniqueQualityArg,
   resolveTechniqueQualityByRandom,
   resolveTechniqueTypeArg,
@@ -51,6 +52,7 @@ type BatchScriptOptions = {
   quality?: TechniqueQuality;
   techniqueType?: GeneratedTechniqueType;
   seedStart?: number;
+  baseModel?: string;
   outputDir: string;
   modelName?: string;
 };
@@ -62,6 +64,7 @@ type BatchSummaryEntry = {
   seed: number;
   requestedQuality: TechniqueQuality;
   requestedTechniqueType: GeneratedTechniqueType;
+  baseModel: string | null;
   techniqueName: string;
   techniqueType: GeneratedTechniqueType;
   skillCount: number;
@@ -106,6 +109,7 @@ const parseBatchScriptOptions = (argv: string[]): BatchScriptOptions => {
     quality: quality ?? undefined,
     techniqueType: techniqueType ?? undefined,
     seedStart: resolveOptionalPositiveIntegerArg(args['seed-start'], 'seed-start'),
+    baseModel: resolveTechniqueDebugBaseModelArg(args['base-model']) ?? undefined,
     outputDir: normalizeOutputDir(args.output),
     modelName: (() => {
       const modelName = args['model-name']?.trim();
@@ -137,6 +141,7 @@ async function main(): Promise<void> {
       quality: requestedQuality,
       techniqueType: requestedTechniqueType,
       seed,
+      baseModel: options.baseModel,
       includeSkillIcons: false,
     });
 
@@ -149,6 +154,7 @@ async function main(): Promise<void> {
       seed: result.seed,
       requestedQuality,
       requestedTechniqueType,
+      baseModel: result.baseModel,
       summary: result.summary,
       candidate: result.candidate,
     });
@@ -160,6 +166,7 @@ async function main(): Promise<void> {
       seed: result.seed,
       requestedQuality,
       requestedTechniqueType,
+      baseModel: result.baseModel,
       techniqueName: result.summary.techniqueName,
       techniqueType: result.summary.techniqueType,
       skillCount: result.summary.skillCount,
@@ -168,7 +175,7 @@ async function main(): Promise<void> {
 
     console.log(
       `[${index + 1}/${options.count}] ${result.summary.techniqueName} ` +
-      `(${requestedQuality}/${result.summary.techniqueType}) ` +
+      `(${requestedQuality}/${result.summary.techniqueType}${result.baseModel ? `/${result.baseModel}` : ''}) ` +
       `seed=${result.seed} -> ${fileName}`,
     );
   }
@@ -179,6 +186,7 @@ async function main(): Promise<void> {
     requestedQuality: options.quality ?? null,
     requestedTechniqueType: options.techniqueType ?? null,
     seedStart: options.seedStart ?? null,
+    baseModel: options.baseModel ?? null,
     modelNameOverride: options.modelName ?? null,
     files: summary,
   });
