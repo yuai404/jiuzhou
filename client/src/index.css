@@ -1,3 +1,27 @@
+/**
+ * 作用：作为项目全局样式总入口，同时挂载 Tailwind 的原子类输出能力。
+ * 不做什么：不迁移现有 App.css / App.scss / 各业务模块 SCSS 的职责，不替代 Ant Design 主题覆盖。
+ * 输入/输出：
+ * - 输入：Tailwind 主题/工具层导入、`body.theme-dark` 主题状态、全局基础布局规则
+ * - 输出：供整个 React 应用复用的全局基础样式与可按需使用的 Tailwind utilities
+ * 数据流/状态流：
+ * - Vite 先加载本文件
+ * - Tailwind 只扫描 `src` 与 `index.html` 中的 class token 生成 utilities
+ * - App.tsx 后续导入的 `App.css` / `App.scss` 继续在当前文件之后生效，保持既有覆盖顺序
+ * 复用设计说明：
+ * - 把 Tailwind 接入集中在单一全局入口，后续新页面只需要直接写 className，不必在各模块重复声明 Tailwind 指令。
+ * - 暗色变体统一绑定到项目既有的 `body.theme-dark`，避免新旧样式体系各自维护一套主题开关。
+ * 关键边界条件与坑点：
+ * 1. 现有项目已经有全局 reset 与 Ant Design 覆盖，必须关闭 Tailwind Preflight，避免第三方组件和老样式被二次重置。
+ * 2. 仓库是 monorepo，Tailwind 默认扫描基准可能落在 workspace 根目录，因此这里显式声明 source，避免无关目录被扫描。
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@custom-variant dark (&:where(body.theme-dark, body.theme-dark *));
+@source "../index.html";
+@source "./";
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

@@ -36,6 +36,7 @@ import SignInModal from './modules/SignInModal';
 import PartnerModal from './modules/PartnerModal';
 import WanderModal from './modules/WanderModal';
 import TowerModal from './modules/TowerModal';
+import ChangeLogModal from './modules/ChangeLogModal';
 import GameHeader from './modules/GameHeader';
 import {
   buildWanderIndicator,
@@ -717,6 +718,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
   const [arenaModalOpen, setArenaModalOpen] = useState(false);
   const [rankModalOpen, setRankModalOpen] = useState(false);
   const [achievementModalOpen, setAchievementModalOpen] = useState(false);
+  const [changeLogModalOpen, setChangeLogModalOpen] = useState(false);
   const [towerModalOpen, setTowerModalOpen] = useState(false);
   const [achievementClaimableCount, setAchievementClaimableCount] = useState(0);
   const [taskCompletableCount, setTaskCompletableCount] = useState(0);
@@ -2352,6 +2354,7 @@ const Game: FC<GameProps> = ({ onLogout }) => {
     if (key === 'achievement') {
       setAchievementModalOpen(true);
     }
+    if (key === 'change-log') setChangeLogModalOpen(true);
     if (key === 'idle') setIdleModalOpen(true);
     if (key === 'battle-report') setMobileChatDrawerOpen(true);
     if (key === 'character') setPlayerInfoOpen(true);
@@ -3304,6 +3307,12 @@ const Game: FC<GameProps> = ({ onLogout }) => {
           onChanged={() => {
             gameSocket.refreshCharacter();
           }}
+        />
+      )}
+      {changeLogModalOpen && (
+        <ChangeLogModal
+          open={changeLogModalOpen}
+          onClose={() => setChangeLogModalOpen(false)}
         />
       )}
       <TowerModal

@@ -20,6 +20,7 @@ import {
   ClockCircleOutlined,
   UsergroupAddOutlined,
   ApartmentOutlined,
+  ReadOutlined,
 } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import { useIsMobile } from '../../shared/responsive';
@@ -78,6 +79,7 @@ const FunctionMenu: React.FC<FunctionMenuProps> = ({ onAction, indicators, itemS
       { key: 'arena', icon: <TrophyOutlined />, label: '竞技' },
       { key: 'rank', icon: <BarChartOutlined />, label: '排行' },
       { key: 'achievement', icon: <CrownOutlined />, label: '成就' },
+      { key: 'change-log', icon: <ReadOutlined />, label: '更新' },
       { key: 'idle', icon: <ClockCircleOutlined />, label: '挂机' },
     ];
     if (isMobile) {
