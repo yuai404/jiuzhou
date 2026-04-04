@@ -10,7 +10,6 @@ import {
   InboxOutlined,
   ProfileOutlined,
   CreditCardOutlined,
-  SafetyCertificateOutlined,
   BarChartOutlined,
   TrophyOutlined,
   CrownOutlined,
