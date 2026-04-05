@@ -38,6 +38,7 @@ import {
   buildBattleCooldownReplayKey,
   shouldReplayLatestBattleCooldown,
 } from './battleCooldownReplay';
+import { buildBattleActionKey } from './battleActionKey';
 import { BattleTeamPanel } from './BattleTeamPanel';
 import type { BattleFloatText, BattleUnit } from './types';
 export type { BattleUnit } from './types';
@@ -1161,9 +1162,8 @@ const BattleAreaComponent: React.FC<BattleAreaProps> = ({
   const turnCount = battleState?.roundCount ?? 0;
   const turnSide: 'enemy' | 'ally' = battleState?.currentTeam === 'defender' ? 'enemy' : 'ally';
   const actionKey = useMemo(() => {
-    if (!battleState) return 'idle';
-    return `${battleState.battleId}-${battleState.roundCount}-${battleState.currentTeam}-${battleState.currentUnitId ?? ''}-${activeUnitId ?? ''}`;
-  }, [activeUnitId, battleState]);
+    return buildBattleActionKey(battleState, activeUnitId, battleLogs.length);
+  }, [activeUnitId, battleLogs.length, battleState]);
 
   const battlePhase = battleState?.phase ?? null;
 
