@@ -26,11 +26,11 @@ import {
 } from '../shared/techniqueResearchCost.js';
 
 test('resolveTechniqueResearchFragmentCost: 未启用顿悟符时应返回基础残页消耗', () => {
-  assert.equal(TECHNIQUE_RESEARCH_BASE_FRAGMENT_COST, 4_000);
-  assert.equal(resolveTechniqueResearchFragmentCost(false), 4_000);
+  assert.equal(TECHNIQUE_RESEARCH_BASE_FRAGMENT_COST, 3_500);
+  assert.equal(resolveTechniqueResearchFragmentCost(false), 3_500);
 });
 
 test('resolveTechniqueResearchFragmentCost: 启用顿悟符时应返回半价残页消耗', () => {
-  assert.equal(TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_FRAGMENT_COST, 2_000);
-  assert.equal(resolveTechniqueResearchFragmentCost(true), 2_000);
+  assert.equal(TECHNIQUE_RESEARCH_COOLDOWN_BYPASS_FRAGMENT_COST, 1_750);
+  assert.equal(resolveTechniqueResearchFragmentCost(true), 1_750);
 });
