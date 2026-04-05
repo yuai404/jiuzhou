@@ -174,6 +174,41 @@ type RealmBreakthroughConfigFile = {
   breakthroughs: BreakthroughConfig[];
 };
 
+const assertRealmBreakthroughConfigIntegrity = (
+  config: RealmBreakthroughConfigFile,
+): void => {
+  const realmOrder = config.realmOrder.map((realm) => String(realm ?? '').trim());
+  if (realmOrder.length !== config.breakthroughs.length + 1) {
+    throw new Error('realm_breakthrough.json invalid: realmOrder 与 breakthroughs 数量不匹配');
+  }
+
+  for (let index = 0; index < realmOrder.length; index += 1) {
+    const realm = realmOrder[index];
+    if (!realm) {
+      throw new Error(`realm_breakthrough.json invalid: realmOrder[${index}] 不能为空`);
+    }
+  }
+
+  for (let index = 0; index < config.breakthroughs.length; index += 1) {
+    const breakthrough = config.breakthroughs[index];
+    const expectedFrom = realmOrder[index];
+    const expectedTo = realmOrder[index + 1];
+    const actualFrom = String(breakthrough.from ?? '').trim();
+    const actualTo = String(breakthrough.to ?? '').trim();
+
+    if (actualFrom !== expectedFrom) {
+      throw new Error(
+        `realm_breakthrough.json invalid: 第 ${index + 1} 档突破 from=${actualFrom || '<empty>'}，应为 ${expectedFrom}`,
+      );
+    }
+    if (actualTo !== expectedTo) {
+      throw new Error(
+        `realm_breakthrough.json invalid: 第 ${index + 1} 档突破 to=${actualTo || '<empty>'}，应为 ${expectedTo}`,
+      );
+    }
+  }
+};
+
 type EquippedMainTechniqueRow = {
   technique_id: string | null;
   current_layer: number | string | null;
@@ -332,6 +367,7 @@ const loadConfig = async (): Promise<RealmBreakthroughConfigFile> => {
   ) {
     throw new Error("realm_breakthrough.json invalid");
   }
+  assertRealmBreakthroughConfigIntegrity(parsed);
   cachedConfig = parsed;
   cachedConfigPath = configFile.path;
   cachedConfigMtimeMs = configFile.mtimeMs;
