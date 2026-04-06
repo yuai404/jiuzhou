@@ -30,6 +30,12 @@ export interface ChangeLogEntrySource {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntrySource[] = [
   {
+    releasedAt: '2026-04-06',
+    sections: [
+      '修复伙伴学习功法可通过刷新页面取消并且不会消耗功法书的问题',
+    ],
+  },
+  {
     releasedAt: '2026-04-05',
     sections: [
       '现在光环造成的伤害会受到防御属性影响',
